@@ -1,0 +1,881 @@
+@import 'tailwindcss';
+@import 'tailwindcss-primeui';
+@import 'primeicons/primeicons.css';
+@import './hero.css';
+
+@variant dark (&:where([data-theme="p-dark"], [data-theme="p-dark"] *));
+
+:root {
+  color-scheme: light;
+
+  --p-primary-50: var(--p-surface-50);
+  --p-primary-100: var(--p-surface-100);
+  --p-primary-200: var(--p-surface-200);
+  --p-primary-300: var(--p-surface-300);
+  --p-primary-400: var(--p-surface-400);
+  --p-primary-500: var(--p-surface-500);
+  --p-primary-600: var(--p-surface-600);
+  --p-primary-700: var(--p-surface-700);
+  --p-primary-800: var(--p-surface-800);
+  --p-primary-900: var(--p-surface-900);
+  --p-primary-950: var(--p-surface-950);
+
+  /* Default hero gradient fallback */
+  --hero-bold-gradient: linear-gradient(135deg, #3997d3 0%, #2176b6 50%, #175d96 100%);
+  --p-surface-0: #ffffff;
+  --p-surface-50: #f5faff;
+  --p-surface-100: #e3f0fb;
+  --p-surface-200: #c7e0f7;
+  --p-surface-300: #a3c9e9;
+  --p-surface-400: #7bb3dd;
+  --p-surface-500: #3997d3;
+  --p-surface-600: #2176b6;
+  --p-surface-700: #175d96;
+  --p-surface-800: #14476c;
+  --p-surface-900: #12344a;
+  --p-surface-950: #0d2230;
+  --p-content-border-radius: 6px;
+
+  /* Light Mode */
+  --p-primary-color: var(--p-primary-500);
+  --p-primary-contrast-color: var(--p-surface-0);
+  --p-primary-hover-color: var(--p-primary-600);
+  --p-primary-active-color: var(--p-primary-700);
+  --p-content-border-color: var(--p-surface-200);
+  --p-content-hover-background: var(--p-surface-100);
+  --p-content-hover-color: var(--p-surface-800);
+  --p-highlight-background: var(--p-primary-50);
+  --p-highlight-color: var(--p-primary-700);
+  --p-highlight-focus-background: var(--p-primary-100);
+  --p-highlight-focus-color: var(--p-primary-800);
+  --p-text-color: var(--p-surface-700);
+  --p-text-hover-color: var(--p-surface-800);
+  --p-text-muted-color: var(--p-surface-500);
+  --p-text-hover-muted-color: var(--p-surface-600);
+}
+
+/* Dark Mode */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Default dark hero gradient fallback */
+  --hero-bold-gradient: linear-gradient(135deg, #175d96 0%, #14476c 50%, #12344a 100%);
+
+  /* Dark surface colors - improved contrast */
+  --p-surface-0: #0a0a0a;
+  --p-surface-50: #111111;
+  --p-surface-100: #1a1a1a;
+  --p-surface-200: #262626;
+  --p-surface-300: #333333;
+  --p-surface-400: #4d4d4d;
+  --p-surface-500: #666666;
+  --p-surface-600: #808080;
+  --p-surface-700: #a6a6a6;  /* Lightened for better contrast */
+  --p-surface-800: #cccccc;  /* Lightened for better contrast */
+  --p-surface-900: #e6e6e6;  /* Lightened for better contrast */
+  --p-surface-950: #f5f5f5;  /* Lightened for better contrast */
+
+  /* Keep primary colors slightly adjusted for dark mode */
+  --p-primary-50: #0a1929;
+  --p-primary-100: #0f2847;
+  --p-primary-200: #143765;
+  --p-primary-300: #1a4780;
+  --p-primary-400: #2563a0;
+  --p-primary-500: #3997d3;
+  --p-primary-600: #4da8e0;
+  --p-primary-700: #6bb9e8;
+  --p-primary-800: #89caef;
+  --p-primary-900: #a7dbf5;
+  --p-primary-950: #c5ecfa;
+
+  /* Dark mode specific overrides - improved text contrast */
+  --p-primary-color: var(--p-primary-500);
+  --p-primary-contrast-color: var(--p-surface-0);
+  --p-primary-hover-color: var(--p-primary-400);
+  --p-primary-active-color: var(--p-primary-300);
+  --p-content-border-color: var(--p-surface-300);
+  --p-content-hover-background: var(--p-surface-200);
+  --p-content-hover-color: var(--p-surface-950);  /* Made lighter */
+  --p-highlight-background: var(--p-primary-100);
+  --p-highlight-color: var(--p-primary-700);
+  --p-highlight-focus-background: var(--p-primary-200);
+  --p-highlight-focus-color: var(--p-primary-800);
+  --p-text-color: #e0e0e0;  /* Much lighter for better readability */
+  --p-text-hover-color: #f5f5f5;  /* Even lighter on hover */
+  --p-text-muted-color: #b0b0b0;  /* Lighter muted text */
+  --p-text-hover-muted-color: #c5c5c5;  /* Lighter muted hover */
+}
+
+/* Dark mode page backgrounds and cards */
+[data-theme="dark"] .tech-services-page,
+[data-theme="dark"] .security-camera-page,
+[data-theme="dark"] .tech-repair-page,
+[data-theme="dark"] .tech-software-page,
+[data-theme="dark"] .tech-wifi-page,
+[data-theme="dark"] .tech-networking-page {
+  background: var(--p-surface-0) !important; /* Pure black background */
+}
+
+/* Dark mode cards and containers */
+[data-theme="dark"] .bg-white {
+  background-color: var(--p-surface-100) !important; /* Dark grey #1a1a1a */
+}
+
+[data-theme="dark"] .bg-gray-50 {
+  background-color: var(--p-surface-50) !important; /* Slightly lighter dark grey #111111 */
+}
+
+[data-theme="dark"] .bg-blue-50,
+[data-theme="dark"] .bg-indigo-50,
+[data-theme="dark"] .bg-purple-50,
+[data-theme="dark"] .bg-green-50,
+[data-theme="dark"] .bg-red-50 {
+  background-color: var(--p-surface-100) !important;
+}
+
+/* Dark mode gradient backgrounds */
+[data-theme="dark"] .bg-gradient-to-r,
+[data-theme="dark"] .bg-gradient-to-br {
+  background: var(--p-surface-100) !important;
+}
+
+/* Theme-aware surface section backgrounds */
+.surface-section {
+  background-color: var(--p-surface-50);
+  transition: background-color 0.3s ease;
+}
+
+[data-theme="dark"] .surface-section {
+  background-color: var(--p-surface-100);
+}
+
+/* Dark mode for custom card classes */
+[data-theme="dark"] .service-card,
+[data-theme="dark"] .camera-card,
+[data-theme="dark"] .package-card,
+[data-theme="dark"] .service-overview-card,
+[data-theme="dark"] .template-card,
+[data-theme="dark"] .example-card {
+  background: var(--p-surface-100) !important;
+  color: var(--p-text-color) !important;
+}
+
+[data-theme="dark"] .service-card:hover,
+[data-theme="dark"] .camera-card:hover,
+[data-theme="dark"] .package-card:hover,
+[data-theme="dark"] .service-overview-card:hover,
+[data-theme="dark"] .template-card:hover {
+  background: var(--p-surface-200) !important;
+}
+
+/* Dark mode navigation dropdowns */
+[data-theme="dark"] .p-menubar-submenu,
+[data-theme="dark"] .p-menu,
+[data-theme="dark"] .p-dropdown-panel,
+[data-theme="dark"] .p-contextmenu,
+[data-theme="dark"] .p-megamenu-panel {
+  background: var(--p-surface-100) !important;
+  border-color: var(--p-surface-300) !important;
+}
+
+[data-theme="dark"] .p-menubar-item:hover,
+[data-theme="dark"] .p-menu-item:hover,
+[data-theme="dark"] .p-dropdown-item:hover {
+  background: var(--p-surface-200) !important;
+}
+
+/* Dark mode cards - comprehensive fix */
+[data-theme="dark"] .p-card {
+  background: var(--p-surface-100) !important;
+  border-color: var(--p-surface-300) !important;
+  color: var(--p-text-color) !important;
+}
+
+[data-theme="dark"] .p-card-header {
+  background: var(--p-surface-50) !important;
+  color: var(--p-text-color) !important;
+  border-bottom-color: var(--p-surface-300) !important;
+}
+
+[data-theme="dark"] .p-card-body {
+  background: var(--p-surface-100) !important;
+  color: var(--p-text-color) !important;
+}
+
+[data-theme="dark"] .p-card-content {
+  background: var(--p-surface-100) !important;
+  color: var(--p-text-color) !important;
+}
+
+[data-theme="dark"] .p-card-footer {
+  background: var(--p-surface-50) !important;
+  color: var(--p-text-color) !important;
+  border-top-color: var(--p-surface-300) !important;
+}
+
+[data-theme="dark"] .p-card-title {
+  color: var(--p-text-color) !important;
+}
+
+[data-theme="dark"] .p-card-subtitle {
+  color: var(--p-text-muted-color) !important;
+}
+
+[data-theme="dark"] .p-card:hover {
+  border-color: var(--p-surface-400) !important;
+}
+
+/* Ensure text in cards is visible in dark mode */
+[data-theme="dark"] .p-card p,
+[data-theme="dark"] .p-card span,
+[data-theme="dark"] .p-card h1,
+[data-theme="dark"] .p-card h2,
+[data-theme="dark"] .p-card h3,
+[data-theme="dark"] .p-card h4,
+[data-theme="dark"] .p-card h5,
+[data-theme="dark"] .p-card h6,
+[data-theme="dark"] .p-card li,
+[data-theme="dark"] .p-card label {
+  color: var(--p-text-color) !important;
+}
+
+[data-theme="dark"] .p-card .text-gray-600,
+[data-theme="dark"] .p-card .text-gray-700,
+[data-theme="dark"] .p-card .text-gray-500 {
+  color: var(--p-text-muted-color) !important;
+}
+
+/* Dark mode inputs and form elements */
+[data-theme="dark"] .p-input,
+[data-theme="dark"] .p-textarea,
+[data-theme="dark"] .p-dropdown,
+[data-theme="dark"] .p-multiselect,
+[data-theme="dark"] .p-calendar-input {
+  background: var(--p-surface-50) !important;
+  border-color: var(--p-surface-300) !important;
+  color: var(--p-text-color) !important;
+}
+
+[data-theme="dark"] .p-input:hover,
+[data-theme="dark"] .p-textarea:hover,
+[data-theme="dark"] .p-dropdown:hover {
+  border-color: var(--p-surface-400) !important;
+}
+
+/* Dark mode tables */
+[data-theme="dark"] .p-datatable {
+  background: var(--p-surface-50) !important;
+}
+
+[data-theme="dark"] .p-datatable-header,
+[data-theme="dark"] .p-datatable-footer {
+  background: var(--p-surface-100) !important;
+}
+
+[data-theme="dark"] .p-datatable-tbody > tr {
+  background: var(--p-surface-50) !important;
+}
+
+[data-theme="dark"] .p-datatable-tbody > tr:hover {
+  background: var(--p-surface-100) !important;
+}
+
+/* Dark mode dialogs and overlays */
+[data-theme="dark"] .p-dialog,
+[data-theme="dark"] .p-sidebar,
+[data-theme="dark"] .p-overlaypanel {
+  background: var(--p-surface-100) !important;
+  border-color: var(--p-surface-300) !important;
+  color: var(--p-text-color) !important;
+}
+
+[data-theme="dark"] .p-dialog-header,
+[data-theme="dark"] .p-sidebar-header {
+  background: var(--p-surface-50) !important;
+  border-bottom-color: var(--p-surface-300) !important;
+  color: var(--p-text-color) !important;
+}
+
+/* Fix text colors in dark mode for all common text classes */
+[data-theme="dark"] .text-black {
+  color: var(--p-text-color) !important;
+}
+
+[data-theme="dark"] .text-gray-800,
+[data-theme="dark"] .text-gray-900 {
+  color: var(--p-text-color) !important;
+}
+
+[data-theme="dark"] .text-gray-400,
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-gray-600,
+[data-theme="dark"] .text-gray-700 {
+  color: var(--p-text-muted-color) !important;
+}
+
+/* Ensure all headings are visible in dark mode */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+  color: var(--p-text-color) !important;
+}
+
+/* Ensure paragraphs and lists are visible */
+[data-theme="dark"] p,
+[data-theme="dark"] li,
+[data-theme="dark"] span:not(.pi):not(.p-tag):not(.p-badge) {
+  color: inherit;
+}
+
+/* Fix specific component text visibility */
+[data-theme="dark"] .p-component {
+  color: var(--p-text-color);
+}
+
+/* Theme-aware link styles */
+a {
+  color: var(--theme-button-primary, var(--p-primary-color));
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--theme-hover, var(--p-primary-hover-color));
+}
+
+/* Theme-aware PrimeIcons - default color */
+.pi {
+  color: var(--theme-button-primary, var(--p-primary-color));
+  transition: color 0.3s ease;
+}
+
+/* PrimeIcon hover effect */
+.pi:hover {
+  color: var(--theme-hover, var(--p-primary-hover-color));
+}
+
+/* Button icons should inherit text color */
+.p-button .pi,
+.p-button-icon,
+button .pi {
+  color: inherit !important;
+}
+
+a.external {
+  text-decoration: underline;
+  color: var(--theme-info, var(--p-primary-color));
+}
+
+a.external:hover {
+  color: var(--theme-hover, var(--p-primary-900));
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+
+  min-height: 100vh;
+  max-width: 100vw;
+  background: var(--body-bg-gradient);
+  background-attachment: fixed;
+  margin: 0 auto;
+  transition: background 0.3s ease;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.navigation-anchor {
+  @apply rounded-xl flex items-center cursor-pointer p-4 text-surface-700 dark:text-surface-100 border-2 border-transparent duration-150;
+  transition: all 0.3s ease;
+}
+
+.navigation-anchor:hover {
+  border-color: var(--theme-button-primary, var(--p-surface-300)) !important;
+  background-color: rgba(var(--theme-button-primary-rgb, 86, 199, 244), 0.05) !important;
+  transform: translateX(4px);
+}
+
+.p-button {
+  transition: 0.5s;
+}
+
+/* Fix info button text contrast */
+.p-button-info:not(.p-button-outlined):not(.p-button-text) {
+  color: #ffffff !important;
+}
+
+.p-button-info:not(.p-button-outlined):not(.p-button-text):hover {
+  color: #ffffff !important;
+}
+
+/* Outlined info buttons should use the theme color for text */
+.p-button-outlined.p-button-info {
+  color: var(--p-info-color, var(--p-primary-color));
+}
+
+.p-button-outlined.p-button-info:hover {
+  color: #ffffff !important;
+}
+
+.p-datatable .p-overlay-mask {
+  background: unset;
+}
+
+.p-formfield {
+  margin-bottom: 1rem;
+}
+
+/*.btn-grad {background-image: linear-gradient(to right, #24C6DC 0%, #514A9D  51%, #24C6DC  100%)}*/
+/*.btn-grad {*/
+/*  margin: 10px;*/
+/*  padding: 15px 45px;*/
+/*  text-align: center;*/
+/*  text-transform: uppercase;*/
+/*  transition: 0.5s;*/
+/*  background-size: 200% auto;*/
+/*  color: white;*/
+/*  box-shadow: 0 0 20px #eee;*/
+/*  border-radius: 10px;*/
+/*  display: block;*/
+/*}*/
+
+#fixed-header {
+  width: 100%;
+  background-color: var(--p-surface-0);
+  /* box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); */
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  opacity: 1;
+}
+
+#fixed-header.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2000 !important;
+}
+
+.gradient-line {
+  height: 2px;
+  background-color: var(--theme-gradient-line);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+#main-content {
+  margin-top: 115px;
+}
+
+/* Responsive margin for mobile */
+@media (max-width: 1023px) {
+  #main-content {
+    margin-top: 65px; /* Reduced margin for mobile - just header height */
+  }
+}
+
+.leaflet-bottom {
+  z-index: 1;
+}
+
+.wide-box {
+  @apply shadow-sm rounded-xl items-center border border-gray-300 relative;
+  margin: 7.5rem auto 1rem auto;
+  width: 95%;
+  height: 400px;
+  overflow: hidden;
+  background-color: var(--p-surface-0);
+}
+
+.wide-card {
+  margin: 1rem;
+}
+
+.wide-card p {
+  margin-top: 1rem;
+}
+
+.dynamic-page-head {
+  width: 40%;
+  float: left;
+  margin-right: 1rem;
+}
+
+.dynamic-page-head .dynamic-page-image {
+}
+
+.dynamic-page-content {
+  float: left;
+  width: 50%;
+}
+
+@media (max-width: 800px) {
+  .dynamic-page-head {
+    width: 100%;
+    float: none;
+    display: block;
+  }
+  .dynamic-page-head .dynamic-page-image {
+    width: 100%;
+    height: 180px; /* adjust as needed */
+    object-fit: cover;
+    display: block;
+  }
+
+  .dynamic-page-content {
+    float: none;
+  }
+}
+
+.dynamic-page-content ul {
+  list-style: revert;
+  margin-block-start: revert;
+  padding-inline-start: revert;
+  margin-bottom: 1rem;
+}
+
+.p-message {
+  margin-bottom: 1px;
+}
+
+/* Theme-aware button styles using accent colors */
+
+/* Primary buttons - use theme's primary accent */
+.p-button:not(.p-button-secondary):not(.p-button-outlined):not(.p-button-text):not(.p-button-link) {
+  background-color: var(--theme-button-primary, var(--p-primary-color)) !important;
+  border-color: var(--theme-button-primary, var(--p-primary-color)) !important;
+  transition: all 0.3s ease;
+}
+
+.p-button:not(.p-button-secondary):not(.p-button-outlined):not(.p-button-text):not(.p-button-link):hover {
+  background-color: var(--theme-hover, var(--p-primary-hover-color)) !important;
+  border-color: var(--theme-hover, var(--p-primary-hover-color)) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Secondary buttons - improved contrast for light mode */
+.p-button-secondary {
+  background-color: var(--p-surface-200) !important;
+  color: var(--p-surface-700) !important;
+  border: 2px solid var(--p-surface-300) !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+  transition: all 0.3s ease;
+}
+
+.p-button-secondary:hover {
+  background-color: var(--p-surface-300) !important;
+  border-color: var(--p-surface-400) !important;
+  color: var(--p-surface-800) !important;
+  transform: translateY(-2px);
+}
+
+/* Dark mode secondary buttons */
+[data-theme="dark"] .p-button-secondary {
+  background-color: var(--p-surface-600) !important;
+  color: var(--p-surface-50) !important;
+  border-color: var(--p-surface-500) !important;
+}
+
+[data-theme="dark"] .p-button-secondary:hover {
+  background-color: var(--p-surface-500) !important;
+  border-color: var(--p-surface-400) !important;
+  color: var(--p-surface-0) !important;
+}
+
+/* Success buttons - use theme's success color */
+.p-button-success {
+  background-color: var(--theme-success, #22c55e) !important;
+  border-color: var(--theme-success, #22c55e) !important;
+  transition: all 0.3s ease;
+}
+
+.p-button-success:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+/* Warning buttons - use theme's warning color */
+.p-button-warning {
+  background-color: var(--theme-warning, #f59e0b) !important;
+  border-color: var(--theme-warning, #f59e0b) !important;
+  transition: all 0.3s ease;
+}
+
+.p-button-warning:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+/* Danger buttons - use theme's danger color */
+/*.p-button-danger {*/
+/*  border-color: var(--theme-danger, #ef4444) !important;*/
+/*  transition: all 0.3s ease;*/
+/*}*/
+
+.p-button-danger:hover {
+  filter: brightness(0.9);
+  transform: translateY(-2px);
+}
+
+/* Info buttons - use theme's info color */
+.p-button-info {
+  background-color: var(--theme-info, #3b82f6) !important;
+  border-color: var(--theme-info, #3b82f6) !important;
+  transition: all 0.3s ease;
+}
+
+.p-button-info:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+/* Outlined buttons - use theme accents */
+/*.p-button-outlined {*/
+/*  border-color: var(--theme-button-primary, #2563eb) !important;*/
+/*  color: var(--theme-button-primary, #2563eb) !important;*/
+/*  border-width: 2px !important;*/
+/*  font-weight: 600 !important;*/
+/*  transition: all 0.3s ease;*/
+/*}*/
+
+.p-button-outlined:hover {
+  background-color: var(--theme-button-primary, #2563eb) !important;
+  color: #ffffff !important;
+  border-color: var(--theme-button-primary, #2563eb) !important;
+  transform: translateY(-2px);
+}
+
+/* Outlined secondary buttons - improved contrast */
+.p-button-outlined.p-button-secondary {
+  border-color: var(--p-surface-400) !important;
+  color: var(--p-surface-600) !important;
+  background-color: transparent !important;
+}
+
+.p-button-outlined.p-button-secondary:hover {
+  background-color: var(--p-surface-200) !important;
+  border-color: var(--p-surface-500) !important;
+  color: var(--p-surface-700) !important;
+}
+
+/* Dark mode outlined secondary buttons */
+[data-theme="dark"] .p-button-outlined.p-button-secondary {
+  border-color: var(--p-surface-500) !important;
+  color: var(--p-surface-300) !important;
+}
+
+[data-theme="dark"] .p-button-outlined.p-button-secondary:hover {
+  background-color: var(--p-surface-600) !important;
+  border-color: var(--p-surface-400) !important;
+  color: var(--p-surface-100) !important;
+}
+
+/* Text buttons - use theme accents */
+.p-button-text {
+  color: var(--theme-button-primary, var(--p-primary-color)) !important;
+  transition: all 0.3s ease;
+}
+
+.p-button-text:hover {
+  color: var(--theme-hover, var(--p-primary-hover-color)) !important;
+  background-color: rgba(var(--theme-button-primary-rgb, 37, 99, 235), 0.1) !important;
+}
+
+/* DatePicker time spinner buttons - use theme accents */
+.p-datepicker-time-picker .p-link {
+  background-color: var(--theme-button-primary, #2563eb) !important;
+  color: #ffffff !important;
+  border: 2px solid var(--theme-button-primary, #2563eb) !important;
+  border-radius: 6px !important;
+  min-height: 32px !important;
+  min-width: 32px !important;
+  opacity: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 2px !important;
+  font-weight: bold !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.3s ease;
+}
+
+.p-datepicker-time-picker .p-link:hover {
+  background-color: var(--theme-hover, #1d4ed8) !important;
+  border-color: var(--theme-hover, #1d4ed8) !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.p-datepicker-time-picker .p-link:focus {
+  box-shadow: 0 0 0 3px var(--theme-focus, rgba(59, 130, 246, 0.5)) !important;
+  outline: none !important;
+}
+
+.p-datepicker-time-picker .p-link:active {
+  transform: scale(0.95) !important;
+  filter: brightness(0.9);
+}
+
+/* Theme-aware badges using accent colors */
+.p-badge {
+  background-color: var(--theme-button-secondary, var(--p-primary-color)) !important;
+  transition: all 0.3s ease;
+}
+
+.p-badge-success {
+  background-color: var(--theme-success, #22c55e) !important;
+}
+
+.p-badge-warning {
+  background-color: var(--theme-warning, #f59e0b) !important;
+}
+
+.p-badge-danger {
+  background-color: var(--theme-danger, #ef4444) !important;
+}
+
+.p-badge-info {
+  background-color: var(--theme-info, #3b82f6) !important;
+}
+
+/* Theme-aware tags */
+.p-tag {
+  border: 1px solid var(--theme-button-primary, var(--p-primary-200)) !important;
+  transition: all 0.3s ease;
+}
+
+.p-tag:hover {
+  background-color: var(--theme-hover, var(--p-primary-200)) !important;
+  transform: translateY(-1px);
+}
+
+/* Theme-aware cards and panels */
+.p-card {
+  border-color: var(--p-content-border-color) !important;
+  transition: all 0.3s ease;
+}
+
+.p-card:hover {
+  border-color: var(--theme-button-primary, var(--p-primary-300)) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Theme-aware input fields */
+.p-inputtext:focus,
+.p-dropdown:focus,
+.p-multiselect:focus,
+.p-calendar-input:focus {
+  border-color: var(--theme-focus, var(--p-primary-color)) !important;
+  box-shadow: 0 0 0 3px rgba(var(--theme-focus-rgb, 59, 130, 246), 0.1) !important;
+}
+
+/* Theme-aware menu items */
+.p-menuitem:hover {
+  background-color: rgba(var(--theme-hover-rgb, 130, 119, 171), 0.1) !important;
+}
+
+.p-menuitem-link:focus {
+  box-shadow: inset 0 0 0 2px var(--theme-focus, var(--p-primary-color)) !important;
+}
+
+/* Theme-aware table rows */
+.p-datatable .p-datatable-tbody > tr:hover {
+  background-color: rgba(var(--theme-button-secondary-rgb, 158, 199, 144), 0.05) !important;
+}
+
+.p-datatable .p-datatable-tbody > tr.p-row-selected {
+  background-color: rgba(var(--theme-button-primary-rgb, 86, 199, 244), 0.1) !important;
+}
+
+/* Theme-aware tooltips */
+.p-tooltip .p-tooltip-text {
+  background-color: var(--theme-button-tertiary, var(--p-surface-900)) !important;
+  color: var(--p-surface-0) !important;
+}
+
+/* Theme-aware progress bars */
+.p-progressbar-value {
+  background: linear-gradient(90deg,
+    var(--theme-button-primary, var(--p-primary-500)) 0%,
+    var(--theme-button-secondary, var(--p-primary-600)) 50%,
+    var(--theme-button-tertiary, var(--p-primary-700)) 100%) !important;
+}
+
+/* Theme-aware checkboxes and radio buttons */
+.p-checkbox-checked .p-checkbox-box,
+.p-radiobutton-checked .p-radiobutton-box {
+  background-color: var(--theme-button-primary, var(--p-primary-color)) !important;
+  border-color: var(--theme-button-primary, var(--p-primary-color)) !important;
+}
+
+.p-checkbox:hover .p-checkbox-box,
+.p-radiobutton:hover .p-radiobutton-box {
+  border-color: var(--theme-hover, var(--p-primary-hover-color)) !important;
+}
+
+/* Theme-aware switches/toggles */
+.p-inputswitch-checked .p-inputswitch-slider {
+  background-color: var(--theme-success, var(--p-primary-color)) !important;
+}
+
+.p-inputswitch:hover .p-inputswitch-slider {
+  background-color: var(--theme-hover, var(--p-primary-hover-color)) !important;
+}
+
+/* Theme-aware tabs */
+.p-tabview-nav-link:hover {
+  background-color: rgba(var(--theme-button-secondary-rgb, 158, 199, 144), 0.1) !important;
+}
+
+.p-tabview-selected .p-tabview-nav-link {
+  border-bottom-color: var(--theme-button-primary, var(--p-primary-color)) !important;
+  color: var(--theme-button-primary, var(--p-primary-color)) !important;
+}
+
+/* Theme-aware breadcrumb */
+.p-breadcrumb {
+  background-color: var(--p-surface-50);
+  border: 1px solid var(--p-surface-200);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+[data-theme="dark"] .p-breadcrumb {
+  background-color: var(--p-surface-100);
+  border-color: var(--p-surface-300);
+}
+
+.p-breadcrumb-item a:hover {
+  color: var(--theme-hover, var(--p-primary-hover-color)) !important;
+}
+
+/* Theme-aware steps indicator */
+.p-steps-item.p-steps-current .p-steps-number {
+  background-color: var(--theme-button-primary, var(--p-primary-color)) !important;
+  border-color: var(--theme-button-primary, var(--p-primary-color)) !important;
+}
+
+.p-steps-item.p-steps-complete .p-steps-number {
+  background-color: var(--theme-success, #22c55e) !important;
+  border-color: var(--theme-success, #22c55e) !important;
+}
+
+/* Only apply rotation to first-level menubar items */
+.p-menubar-root-list > .p-menubar-item > .p-menubar-item-content .p-menubar-submenu-icon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.p-menubar-root-list > .p-menubar-item-active > .p-menubar-item-content .p-menubar-submenu-icon {
+  transform: rotate(180deg);
+}

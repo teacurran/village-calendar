@@ -1,0 +1,79 @@
+{
+  "navigation": {
+    "sites": "Sitios",
+    "pages": "Páginas"
+  },
+  "home": {
+    "header": "vue i18n all examples",
+    "$tfunction": "hello text in function without import",
+    "iUseI18n": "ABCD text translation with import function",
+    "popularItem": "The most popular item on the website is the {item}, but not for long!",
+    "address": "{account}{'@'}{domain}",
+    "list": "{0} Sam, {1}"
+  },
+  "bootstrap": {
+    "title": "Bienvenido a VillageCompute",
+    "subtitle": "Inicializa tu aplicación creando un usuario administrador",
+    "username": "Nombre de usuario",
+    "usernameRequired": "El nombre de usuario es obligatorio",
+    "password": "Contraseña",
+    "passwordRequired": "La contraseña es obligatoria",
+    "passwordMinLength": "La contraseña debe tener al menos 8 caracteres",
+    "confirmPassword": "Confirmar contraseña",
+    "confirmPasswordRequired": "Por favor confirma tu contraseña",
+    "passwordsMustMatch": "Las contraseñas no coinciden",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "email": "Correo electrónico",
+    "createAdminUser": "Crear usuario administrador",
+    "success": "¡Usuario administrador creado exitosamente! Ahora puedes iniciar sesión.",
+    "error": "Error al crear el usuario administrador"
+  },
+  "initialRegistration": {
+    "title": "Crear usuario administrador",
+    "description": "Este servidor actualmente no tiene usuarios. Por favor, crea un usuario administrador para comenzar.",
+    "username": "Nombre de usuario",
+    "usernameRequired": "El nombre de usuario es obligatorio",
+    "password": "Contraseña",
+    "passwordRequired": "La contraseña es obligatoria",
+    "confirmPassword": "Confirmar contraseña",
+    "confirmPasswordRequired": "La confirmación de contraseña es obligatoria",
+    "passwordsMustMatch": "Las contraseñas deben coincidir",
+    "createInitialUser": "Crear usuario inicial"
+  },
+  "products": {
+    "title": "Productos",
+    "description": "Descubre nuestra selección de artículos nuevos, usados y en consignación"
+  },
+  "categories": {
+    "title": "Categorías",
+    "description": "Explora nuestras categorías de productos y encuentra lo que buscas"
+  },
+  "cart": {
+    "title": "Carrito de Compras",
+    "empty": {
+      "title": "Tu carrito está vacío",
+      "description": "¡Agrega algunos productos para comenzar!",
+      "continueShopping": "Continuar Comprando"
+    },
+    "item": "artículo",
+    "items": "artículos",
+    "addToCart": "Agregar al Carrito",
+    "removeFromCart": "Eliminar",
+    "quantity": "Cantidad",
+    "each": "cada uno",
+    "total": "Total",
+    "checkout": "Finalizar Compra",
+    "clearCart": "Vaciar Carrito",
+    "clearCartConfirm": "¿Estás seguro de que quieres vaciar tu carrito?",
+    "addedToCart": "Agregado al Carrito",
+    "addedToCartDetail": "{productName} ha sido agregado a tu carrito"
+  },
+  "admin": {
+    "accounts": {
+      "search": {
+        "placeholder": "Buscar..."
+      }
+    }
+  }
+}

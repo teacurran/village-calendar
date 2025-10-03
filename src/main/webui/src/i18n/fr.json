@@ -1,0 +1,212 @@
+{
+  "admin": {
+    "accounts": {
+      "title": "Comptes Admin",
+      "add": "Ajouter un compte admin",
+      "edit": {
+        "errorLoading": "Erreur lors du chargement du compte admin",
+        "errorSaving": "Erreur lors de l'enregistrement du compte admin",
+        "username": "Nom d'utilisateur",
+        "usernameRequired": "Le nom d'utilisateur est requis",
+        "firstName": "Prénom",
+        "firstNameRequired": "Le prénom est requis",
+        "lastName": "Nom de famille",
+        "lastNameRequired": "Le nom de famille est requis",
+        "email": "E-mail",
+        "emailRequired": "L'e-mail est requis",
+        "loading": "Chargement du compte admin...",
+        "saveSuccess": "Compte admin enregistré avec succès"
+      },
+      "list": {
+        "id": "Id",
+        "username": "Nom d'utilisateur",
+        "firstName": "Prénom",
+        "lastName": "Nom de famille",
+        "email": "E-mail",
+        "edit": "modifier",
+        "actions": "Actions",
+        "noData": "Aucun compte admin trouvé",
+        "loading": "Chargement des comptes admin...",
+        "errorLoading": "Erreur lors du chargement des comptes admin",
+        "address": "Adresse",
+        "name": "Nom",
+        "phone": "Téléphone"
+      },
+      "search": {
+        "placeholder": "Rechercher..."
+      }
+    }
+  },
+  "book": {
+    "title": "Prendre un rendez-vous",
+    "description": "Si vous souhaitez une consultation ou avez un travail d'impression, veuillez remplir le formulaire ci-dessous pour prendre rendez-vous avec nous.",
+    "name": "Nom",
+    "nameRequired": "Le nom est requis",
+    "email": "E-mail",
+    "emailRequired": "L'e-mail est requis",
+    "phone": "Téléphone",
+    "phoneRequired": "Le téléphone est requis",
+    "message": "Que souhaitez-vous discuter ?"
+  },
+  "film": {
+    "title": "Développement de film 35mm"
+  },
+  "hoursAndLocation": {
+    "title": "Horaires et emplacement"
+  },
+  "home": {
+    "header": "vue i18n tous les exemples",
+    "$tfunction": "texte de salutation dans la fonction sans importation",
+    "iUseI18n": "Traduction du texte ABCD avec la fonction d'importation",
+    "popularItem": "L'article le plus populaire sur le site est le {item}, mais pas pour longtemps !",
+    "address": "{account}{'@'}{domain}",
+    "list": "{0} Sam, {1}"
+  },
+  "bootstrap": {
+    "title": "Bienvenue à VillageCompute",
+    "subtitle": "Initialisez votre application en créant un utilisateur administrateur",
+    "username": "Nom d'utilisateur",
+    "usernameRequired": "Le nom d'utilisateur est requis",
+    "password": "Mot de passe",
+    "passwordRequired": "Le mot de passe est requis",
+    "passwordMinLength": "Le mot de passe doit contenir au moins 8 caractères",
+    "confirmPassword": "Confirmer le mot de passe",
+    "confirmPasswordRequired": "Veuillez confirmer votre mot de passe",
+    "passwordsMustMatch": "Les mots de passe ne correspondent pas",
+    "firstName": "Prénom",
+    "lastName": "Nom de famille",
+    "email": "Courriel",
+    "createAdminUser": "Créer un utilisateur administrateur",
+    "success": "Utilisateur administrateur créé avec succès ! Vous pouvez maintenant vous connecter.",
+    "error": "Échec de la création de l'utilisateur administrateur"
+  },
+  "initialRegistration": {
+    "title": "Créer un utilisateur admin",
+    "description": "Ce serveur n'a actuellement aucun utilisateur. Veuillez créer un utilisateur admin pour commencer.",
+    "username": "Nom d'utilisateur",
+    "usernameRequired": "Le nom d'utilisateur est requis",
+    "password": "Mot de passe",
+    "passwordRequired": "Le mot de passe est requis",
+    "confirmPassword": "Confirmer le mot de passe",
+    "confirmPasswordRequired": "La confirmation du mot de passe est requise",
+    "passwordsMustMatch": "Les mots de passe doivent correspondre",
+    "createInitialUser": "Créer l'utilisateur initial"
+  },
+  "login": {
+    "title": "Connexion",
+    "username": "Nom d'utilisateur",
+    "usernameRequired": "Le nom d'utilisateur est requis",
+    "password": "Mot de passe",
+    "passwordRequired": "Le mot de passe est requis",
+    "login": "Connexion",
+    "loginFailed": "Échec de la connexion. Veuillez vérifier votre nom d'utilisateur et votre mot de passe et réessayer."
+  },
+  "loginGateway": {
+    "initialRegistrationSuccess": "Inscription initiale réussie. Veuillez vous connecter."
+  },
+  "navigation": {
+    "sites": "Sites",
+    "pages": "Pages"
+  },
+  "photoVideo": {
+    "title": "Photo et Vidéo",
+    "printing": {
+      "title": "Impression photo",
+      "description": "Imprimez vos photos en haute qualité."
+    },
+    "photoboothRental": {
+      "title": "Location de photomaton",
+      "description": "Louez un photomaton pour votre événement."
+    },
+    "videoConversion": {
+      "title": "Conversion vidéo"
+    },
+    "passport": {
+      "title": "Photos d'identité",
+      "description": "Faites prendre vos photos d'identité."
+    }
+  },
+  "printing": {
+    "title": "Impression",
+    "description": "Imprimez vos documents et photos.",
+    "documents": {
+      "title": "Documents",
+      "description": "Services d'impression de documents de haute qualité."
+    },
+    "zines": {
+      "title": "Zines",
+      "description": "Services d'impression de zines personnalisés."
+    },
+    "posters": {
+      "title": "Affiches et supports promotionnels",
+      "description": "Services d'impression d'affiches grand format."
+    }
+  },
+  "scanning": {
+    "title": "Numérisation",
+    "description": "Numérisez vos documents et photos.",
+    "moreInfo": "plus d'infos",
+    "documentScanning": {
+      "title": "Numérisation de documents",
+      "description": "Numérisez vos documents rapidement et facilement."
+    },
+    "contentScanning": {
+      "title": "Numérisation de photos et d'œuvres d'art",
+      "description": "Numérisation de haute qualité pour photos et œuvres d'art."
+    },
+    "filmScanning": {
+      "title": "Numérisation de films",
+      "description": "Numérisez vos négatifs et diapositives."
+    }
+  },
+  "sites": {
+    "title": "Sites",
+    "add": "Ajouter un site",
+    "edit": {
+      "name": "Nom",
+      "nameRequired": "Le nom est requis",
+      "domain": "Nom de domaine",
+      "loading": "Chargement du site...",
+      "loadError": "Erreur lors du chargement du site",
+      "saveSuccess": "Site enregistré avec succès"
+    },
+    "list": {
+      "id": "Id",
+      "name": "Nom",
+      "edit": "modifier",
+      "domain": "Nom de domaine",
+      "actions": "Actions",
+      "noData": "Aucun site trouvé",
+      "loading": "Chargement des sites...",
+      "loadError": "Erreur lors du chargement des sites"
+    }
+  },
+  "products": {
+    "title": "Produits",
+    "description": "Découvrez notre sélection d'articles neufs, d'occasion et en consignation"
+  },
+  "categories": {
+    "title": "Catégories",
+    "description": "Parcourez nos catégories de produits et trouvez ce que vous cherchez"
+  },
+  "cart": {
+    "title": "Panier d'Achat",
+    "empty": {
+      "title": "Votre panier est vide",
+      "description": "Ajoutez quelques produits pour commencer !",
+      "continueShopping": "Continuer les Achats"
+    },
+    "item": "article",
+    "items": "articles",
+    "addToCart": "Ajouter au Panier",
+    "removeFromCart": "Supprimer",
+    "quantity": "Quantité",
+    "each": "chacun",
+    "total": "Total",
+    "checkout": "Finaliser l'Achat",
+    "clearCart": "Vider le Panier",
+    "clearCartConfirm": "Êtes-vous sûr de vouloir vider votre panier ?",
+    "addedToCart": "Ajouté au Panier",
+    "addedToCartDetail": "{productName} a été ajouté à votre panier"
+  }
+}

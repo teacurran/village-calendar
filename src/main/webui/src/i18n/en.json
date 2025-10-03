@@ -1,0 +1,245 @@
+{
+  "admin": {
+    "accounts": {
+      "title": "Accounts",
+      "add": "Create Account",
+      "edit": {
+        "errorLoading": "Error loading admin account",
+        "errorSaving": "Error saving admin account",
+        "username": "Username",
+        "usernameRequired": "Username is required",
+        "firstName": "First Name",
+        "firstNameRequired": "First Name is required",
+        "lastName": "Last Name",
+        "lastNameRequired": "Last Name is required",
+        "email": "Email",
+        "emailRequired": "Email is required",
+        "loading": "Loading admin account...",
+        "saveSuccess": "Admin Account saved successfully"
+      },
+      "list": {
+        "id": "Id",
+        "address": "Address",
+        "name": "Name",
+        "username": "Username",
+        "firstName": "First Name",
+        "lastName": "Last Name",
+        "email": "Email",
+        "edit": "edit",
+        "actions": "Actions",
+        "noData": "No admin accounts found",
+        "loading": "Loading admin accounts...",
+        "errorLoading": "Error loading admin accounts",
+        "phone": "Phone"
+      },
+      "search": {
+        "placeholder": "Search..."
+      }
+    }
+  },
+  "book": {
+    "title": "Book an Appointment",
+    "description": "If you would like a consultation or have a print job, please fill out the form below to book an appointment with us.",
+    "name": "Name",
+    "nameRequired": "Name is required",
+    "email": "Email",
+    "emailRequired": "Email is required",
+    "phone": "Phone",
+    "phoneRequired": "Phone is required",
+    "message": "What would you like to discuss?"
+  },
+  "film": {
+    "title": "35mm Film Processing"
+  },
+  "hoursAndLocation": {
+    "title": "Hours & Location"
+  },
+  "home": {
+    "header": "vue i18n all examples",
+    "$tfunction": "hello text in function without import",
+    "iUseI18n": "ABCD text translation with import function",
+    "popularItem": "The most popular item on the website is the {item}, but not for long!",
+    "address": "{account}{'@'}{domain}",
+    "list": "{0} Sam, {1}"
+  },
+  "bootstrap": {
+    "title": "Welcome to VillageCompute",
+    "subtitle": "Initialize your application by creating an admin user",
+    "username": "Username",
+    "usernameRequired": "Username is required",
+    "password": "Password",
+    "passwordRequired": "Password is required",
+    "passwordMinLength": "Password must be at least 8 characters long",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordRequired": "Please confirm your password",
+    "passwordsMustMatch": "Passwords do not match",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "createAdminUser": "Create Admin User",
+    "success": "Admin user created successfully! You can now log in.",
+    "error": "Failed to create admin user"
+  },
+  "initialRegistration": {
+    "title": "Create Admin User",
+    "description": "This server currently has no users.  Please create an admin user to get started.",
+    "username": "Username",
+    "usernameRequired": "Username is required",
+    "password": "Password",
+    "passwordRequired": "Password is required",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordRequired": "Confirm Password is required",
+    "passwordsMustMatch": "Passwords must match",
+    "createInitialUser": "Create Initial User"
+  },
+  "login": {
+    "title": "Login",
+    "username": "Username",
+    "usernameRequired": "Username is required",
+    "password": "Password",
+    "passwordRequired": "Password is required",
+    "login": "Login",
+    "loginFailed": "Login failed.  Please check your username and password and try again."
+  },
+  "loginGateway": {
+    "initialRegistrationSuccess": "Initial registration successful.  Please log in."
+  },
+  "navigation": {
+    "sites": "Sites",
+    "pages": "Pages"
+  },
+  "photoVideo": {
+    "title": "Photo and Video",
+    "printing": {
+      "title": "Photo Printing",
+      "description": "Print your photos in high quality."
+    },
+    "photoboothRental": {
+      "title": "Photo Booth Rental",
+      "description": "Rent a photo booth for your event."
+    },
+    "videoConversion": {
+      "title": "Video Conversion"
+    },
+    "passport": {
+      "title": "Passport Photos",
+      "description": "Get your passport photos taken."
+    }
+  },
+  "printing": {
+    "title": "Printing",
+    "description": "Print your documents and photos.",
+    "moreInfo": "more info",
+    "photo": {
+      "title": "Photo Printing",
+      "description": "Print your photos in high quality."
+    },
+    "documents": {
+      "title": "Color Laster Printing",
+      "description": "High-quality document printing services."
+    },
+    "zines": {
+      "title": "Zines",
+      "description": "Custom zine printing services."
+    },
+    "posters": {
+      "title": "Posters and Promotional Materials",
+      "description": "Large format poster printing services."
+    },
+    "large_format": {
+      "title": "Large Format Printing",
+      "description": "Wide format printing for posters, banners, and architectural plans."
+    }
+  },
+  "scanning": {
+    "title": "Scanning",
+    "description": "Scan your documents and photos.",
+    "moreInfo": "more info",
+    "documentScanning": {
+      "title": "Document Scanning",
+      "description": "Scan your documents quickly and easily."
+    },
+    "contentScanning": {
+      "title": "Photo and Artwork Scanning",
+      "description": "High-quality scanning for photos and artwork."
+    },
+    "filmScanning": {
+      "title": "Film Scanning",
+      "description": "Scan your film negatives and slides."
+    }
+  },
+  "tech": {
+    "title": "Tech Services",
+    "description": "Professional technology services and support",
+    "software": {
+      "title": "Software Engineering",
+      "description": "Enterprise-grade software development and DevOps solutions"
+    },
+    "wifi": {
+      "title": "WiFi Site Scan & Design",
+      "description": "Professional WiFi network analysis and optimization"
+    },
+    "networking": {
+      "title": "Business Networking",
+      "description": "Complete network infrastructure solutions"
+    },
+    "cameras": {
+      "title": "Security Cameras",
+      "description": "Professional security camera installation and monitoring"
+    },
+    "repair": {
+      "title": "Computer Repair",
+      "description": "Expert computer repair and maintenance services"
+    }
+  },
+  "sites": {
+    "title": "Sites",
+    "add": "Add Site",
+    "edit": {
+      "name": "Name",
+      "nameRequired": "Name is required",
+      "domain": "Domain Name",
+      "loading": "Loading site...",
+      "loadError": "Error loading site",
+      "saveSuccess": "Site saved successfully"
+    },
+    "list": {
+      "id": "Id",
+      "name": "Name",
+      "edit": "edit",
+      "domain": "Domain Name",
+      "actions": "Actions",
+      "noData": "No sites found",
+      "loading": "Loading sites...",
+      "loadError": "Error loading sites"
+    }
+  },
+  "products": {
+    "title": "Products",
+    "description": "Discover our selection of new, used, and consignment items"
+  },
+  "categories": {
+    "title": "Categories",
+    "description": "Browse our product categories and find what you're looking for"
+  },
+  "cart": {
+    "title": "Shopping Cart",
+    "empty": {
+      "title": "Your cart is empty",
+      "description": "Add some products to get started!",
+      "continueShopping": "Continue Shopping"
+    },
+    "item": "item",
+    "items": "items",
+    "addToCart": "Add to Cart",
+    "removeFromCart": "Remove",
+    "quantity": "Quantity",
+    "each": "each",
+    "total": "Total",
+    "checkout": "Checkout",
+    "clearCart": "Clear Cart",
+    "clearCartConfirm": "Are you sure you want to clear your cart?",
+    "addedToCart": "Added to Cart",
+    "addedToCartDetail": "{productName} has been added to your cart"
+  }
+}

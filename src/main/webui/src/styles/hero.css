@@ -1,0 +1,37 @@
+/* Hero section styles that inherit theme gradients */
+
+/* Hero sections get their own bold gradient */
+.hero-section {
+  background: var(--hero-bold-gradient) !important;
+  position: relative;
+}
+
+/* Remove inline gradient backgrounds from all hero sections */
+.hero-section[class*="bg-gradient"] {
+  background: var(--hero-bold-gradient) !important;
+}
+
+/* For hero overlays that need semi-transparent backgrounds */
+.hero-overlay {
+  background: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Ensure text remains visible on gradient backgrounds */
+.hero-section h1,
+.hero-section h2,
+.hero-section h3,
+.hero-section p {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .hero-overlay {
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .hero-section h1,
+[data-theme="dark"] .hero-section h2,
+[data-theme="dark"] .hero-section h3,
+[data-theme="dark"] .hero-section p {
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
