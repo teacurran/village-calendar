@@ -1,0 +1,272 @@
+---
+- name: Deploy Village Calendar to K3s
+  hosts: k3s_cluster
+  gather_facts: yes
+  become: yes
+  vars:
+    # Deployment variables (set by GitHub Actions)
+    image_tag: "{{ lookup('env', 'IMAGE_TAG') }}"
+    registry_user: "{{ lookup('env', 'REGISTRY_USER') }}"
+    registry_password: "{{ lookup('env', 'REGISTRY_PASSWORD') }}"
+
+    # Database configuration
+    db_host: "{{ lookup('env', 'DB_HOST') }}"
+    db_port: "{{ lookup('env', 'DB_PORT') }}"
+    db_name: "{{ lookup('env', 'DB_NAME') }}"
+    db_user: "{{ lookup('env', 'DB_USER') }}"
+    db_password: "{{ lookup('env', 'DB_PASSWORD') }}"
+
+    # Object storage configuration
+    object_storage_region: "{{ lookup('env', 'OBJECT_STORAGE_REGION') }}"
+    object_storage_bucket_name: "{{ lookup('env', 'OBJECT_STORAGE_BUCKET_NAME') }}"
+    object_storage_endpoint_url: "{{ lookup('env', 'OBJECT_STORAGE_ENDPOINT_URL') }}"
+    object_storage_cdn_url: "{{ lookup('env', 'OBJECT_STORAGE_CDN_URL') }}"
+    object_storage_access_key: "{{ lookup('env', 'OBJECT_STORAGE_ACCESS_KEY') }}"
+    object_storage_secret_key: "{{ lookup('env', 'OBJECT_STORAGE_SECRET_KEY') }}"
+
+    # Session configuration
+    session_encryption_key: "{{ lookup('env', 'SESSION_ENCRYPTION_KEY') }}"
+
+    # Kubernetes namespace
+    namespace: "village-calendar"
+
+    # Application configuration
+    app_name: "calendar"
+    replicas: 2
+
+  tasks:
+    - name: Check which kubectl command is available
+      shell: |
+        if command -v kubectl &> /dev/null; then
+          echo "kubectl"
+        elif [ -f /usr/local/bin/kubectl ]; then
+          echo "/usr/local/bin/kubectl"
+        else
+          echo "NONE"
+        fi
+      register: kubectl_cmd
+      changed_when: false
+
+    - name: Set kubectl command
+      set_fact:
+        kubectl: "{{ kubectl_cmd.stdout }}"
+
+    - name: Ensure namespace exists
+      shell: "{{ kubectl }} create namespace {{ namespace }} --dry-run=client -o yaml | {{ kubectl }} apply -f -"
+
+    - name: Create Docker registry secret
+      shell: |
+        {{ kubectl }} create secret docker-registry docker-registry-secret \
+          --docker-server=docker.io \
+          --docker-username={{ registry_user }} \
+          --docker-password={{ registry_password }} \
+          --namespace={{ namespace }} \
+          --dry-run=client -o yaml | {{ kubectl }} apply -f -
+      no_log: true
+
+    - name: Create database secret
+      shell: |
+        {{ kubectl }} create secret generic calendar-db-secret \
+          --from-literal=db-host={{ db_host }} \
+          --from-literal=db-port={{ db_port }} \
+          --from-literal=db-name={{ db_name }} \
+          --from-literal=db-user={{ db_user }} \
+          --from-literal=db-password={{ db_password }} \
+          --namespace={{ namespace }} \
+          --dry-run=client -o yaml | {{ kubectl }} apply -f -
+      no_log: true
+
+    - name: Create object storage secret
+      shell: |
+        {{ kubectl }} create secret generic calendar-storage-secret \
+          --from-literal=region={{ object_storage_region }} \
+          --from-literal=bucket-name={{ object_storage_bucket_name }} \
+          --from-literal=endpoint-url={{ object_storage_endpoint_url }} \
+          --from-literal=cdn-url={{ object_storage_cdn_url }} \
+          --from-literal=access-key={{ object_storage_access_key }} \
+          --from-literal=secret-key={{ object_storage_secret_key }} \
+          --namespace={{ namespace }} \
+          --dry-run=client -o yaml | {{ kubectl }} apply -f -
+      no_log: true
+
+    - name: Create session secret
+      shell: |
+        {{ kubectl }} create secret generic calendar-session-secret \
+          --from-literal=encryption-key={{ session_encryption_key }} \
+          --namespace={{ namespace }} \
+          --dry-run=client -o yaml | {{ kubectl }} apply -f -
+      no_log: true
+
+    - name: Generate Kubernetes manifest
+      copy:
+        dest: "/tmp/calendar-k8s.yaml"
+        content: |
+          ---
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: {{ app_name }}
+            namespace: {{ namespace }}
+            labels:
+              app: {{ app_name }}
+          spec:
+            replicas: {{ replicas }}
+            strategy:
+              type: RollingUpdate
+              rollingUpdate:
+                maxSurge: 1
+                maxUnavailable: 0
+            selector:
+              matchLabels:
+                app: {{ app_name }}
+            template:
+              metadata:
+                labels:
+                  app: {{ app_name }}
+              spec:
+                imagePullSecrets:
+                  - name: docker-registry-secret
+                containers:
+                  - name: {{ app_name }}
+                    image: {{ registry_user }}/village-calendar:{{ image_tag }}
+                    imagePullPolicy: Always
+                    ports:
+                      - containerPort: 8080
+                        name: http
+                        protocol: TCP
+                    env:
+                      # Database configuration
+                      - name: QUARKUS_DATASOURCE_JDBC_URL
+                        value: "jdbc:postgresql://$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
+                      - name: DB_HOST
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-db-secret
+                            key: db-host
+                      - name: DB_PORT
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-db-secret
+                            key: db-port
+                      - name: DB_NAME
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-db-secret
+                            key: db-name
+                      - name: QUARKUS_DATASOURCE_USERNAME
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-db-secret
+                            key: db-user
+                      - name: QUARKUS_DATASOURCE_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-db-secret
+                            key: db-password
+
+                      # Object storage configuration
+                      - name: OBJECT_STORAGE_REGION
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-storage-secret
+                            key: region
+                      - name: OBJECT_STORAGE_BUCKET_NAME
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-storage-secret
+                            key: bucket-name
+                      - name: OBJECT_STORAGE_ENDPOINT_URL
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-storage-secret
+                            key: endpoint-url
+                      - name: OBJECT_STORAGE_CDN_URL
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-storage-secret
+                            key: cdn-url
+                      - name: OBJECT_STORAGE_ACCESS_KEY
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-storage-secret
+                            key: access-key
+                      - name: OBJECT_STORAGE_SECRET_KEY
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-storage-secret
+                            key: secret-key
+
+                      # Session configuration
+                      - name: SESSION_ENCRYPTION_KEY
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-session-secret
+                            key: encryption-key
+
+                      # Application settings
+                      - name: QUARKUS_PROFILE
+                        value: "production"
+                      - name: QUARKUS_HTTP_PORT
+                        value: "8080"
+
+                    resources:
+                      requests:
+                        memory: "512Mi"
+                        cpu: "250m"
+                      limits:
+                        memory: "2Gi"
+                        cpu: "1000m"
+
+                    livenessProbe:
+                      httpGet:
+                        path: /q/health/live
+                        port: 8080
+                      initialDelaySeconds: 30
+                      periodSeconds: 10
+                      timeoutSeconds: 3
+                      failureThreshold: 3
+
+                    readinessProbe:
+                      httpGet:
+                        path: /q/health/ready
+                        port: 8080
+                      initialDelaySeconds: 10
+                      periodSeconds: 5
+                      timeoutSeconds: 3
+                      failureThreshold: 3
+
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: calendar-service
+            namespace: {{ namespace }}
+            labels:
+              app: {{ app_name }}
+          spec:
+            type: ClusterIP
+            sessionAffinity: ClientIP
+            sessionAffinityConfig:
+              clientIP:
+                timeoutSeconds: 10800
+            selector:
+              app: {{ app_name }}
+            ports:
+              - port: 80
+                targetPort: 8080
+                protocol: TCP
+                name: http
+
+    - name: Apply Kubernetes manifest
+      shell: "{{ kubectl }} apply -f /tmp/calendar-k8s.yaml"
+
+    - name: Wait for deployment to be ready
+      shell: "{{ kubectl }} rollout status deployment/{{ app_name }} -n {{ namespace }} --timeout=5m"
+
+    - name: Get deployment status
+      shell: "{{ kubectl }} get pods -n {{ namespace }} -l app={{ app_name }}"
+      register: deployment_status
+
+    - name: Display deployment status
+      debug:
+        msg: "{{ deployment_status.stdout_lines }}"

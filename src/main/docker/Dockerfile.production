@@ -1,0 +1,105 @@
+####
+# Multi-stage Docker build for Quarkus application with Quinoa (Vue.js)
+# Optimized for production deployment to K3s
+####
+
+# Stage 1: Build the application
+FROM registry.access.redhat.com/ubi9/openjdk-21:1.23 AS build
+
+USER root
+# Install newer Node.js (v20 LTS) and debugging tools
+# Clean yum cache first to ensure we have space
+RUN microdnf clean all && \
+    curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - && \
+    microdnf install -y nodejs zip unzip --setopt=install_weak_deps=0 && \
+    microdnf clean all && \
+    rm -rf /var/cache/yum && \
+    node --version && \
+    npm --version
+
+WORKDIR /app
+
+# Copy pom.xml for dependency download
+COPY --chown=185 pom.xml .
+
+# Download dependencies (cached layer)
+RUN mvn dependency:go-offline -B
+
+# Copy application source
+COPY --chown=185 src ./src
+
+# Build the application with Quinoa (includes frontend)
+RUN echo "Building frontend for production" && \
+    mvn clean package -DskipTests && \
+    echo "=== Checking build output ===" && \
+    ls -la target/ && \
+    ls -la target/quarkus-app/ && \
+    if [ -f target/quarkus-app/quarkus-run.jar ]; then \
+        echo "JAR size: $(du -h target/quarkus-app/quarkus-run.jar)" && \
+        unzip -l target/quarkus-app/quarkus-run.jar | head -20; \
+    fi
+
+# Stage 2: Runtime image - Using official Quarkus runtime pattern
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.6
+
+ARG JAVA_PACKAGE=java-21-openjdk-headless
+ARG RUN_JAVA_VERSION=1.3.8
+ENV LANG='en_US:en' LANGUAGE='en_US:en'
+
+# Install Java, run-java script, and libraries needed for image processing
+RUN microdnf -y install ca-certificates ${JAVA_PACKAGE} \
+    fontconfig \
+    libX11 \
+    libXext \
+    libXrender \
+    libXtst \
+    libXi \
+    freetype \
+    dejavu-sans-fonts \
+    dejavu-serif-fonts \
+    dejavu-sans-mono-fonts \
+    && microdnf -y update \
+    && microdnf -y clean all \
+    && fc-cache -f \
+    && mkdir /deployments \
+    && chown 185 /deployments \
+    && chmod "g+rwX" /deployments \
+    && chown 185:root /deployments \
+    && curl https://repo1.maven.org/maven2/io/fabric8/run-java-sh/${RUN_JAVA_VERSION}/run-java-sh-${RUN_JAVA_VERSION}-sh.sh -o /deployments/run-java.sh \
+    && chown 185 /deployments/run-java.sh \
+    && chmod 540 /deployments/run-java.sh \
+    && echo "securerandom.source=file:/dev/urandom" >> /etc/alternatives/jre/lib/security/java.security
+
+RUN mkdir -p /tmp/vertx-cache \
+    && chmod 1777 /tmp \
+    && chmod 1777 /tmp/vertx-cache \
+    && chown -R 185:0 /tmp/vertx-cache
+
+# We make four distinct layers so if there are application changes the library layers can be re-used
+# Copy into quarkus-app subdirectory for proper detection by run script
+COPY --from=build --chown=185 /app/target/quarkus-app/lib/ /deployments/lib/
+COPY --from=build --chown=185 /app/target/quarkus-app/*.jar /deployments/
+COPY --from=build --chown=185 /app/target/quarkus-app/app/ /deployments/app/
+COPY --from=build --chown=185 /app/target/quarkus-app/quarkus/ /deployments/quarkus/
+
+# Copy the built frontend assets (Quinoa bundles them into the JAR)
+# The frontend is already included in the JAR files above
+
+EXPOSE 8080
+USER 185
+
+# Set production profile
+ENV QUARKUS_PROFILE=prod
+
+# Configure the JAVA_OPTIONS for Quarkus (matching official pattern)
+# Also set Vert.x cache directory to avoid /tmp space issues
+ENV JAVA_OPTIONS="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager -Dvertx.cacheDirBase=/tmp/vertx-cache -Djava.io.tmpdir=/tmp"
+
+# Health check for K3s
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/q/health/ready || exit 1
+
+EXPOSE 8080
+USER 185
+
+ENTRYPOINT [ "/deployments/run-java.sh" ]

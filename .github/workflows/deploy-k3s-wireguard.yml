@@ -1,0 +1,251 @@
+name: Deploy to K3s via WireGuard
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: village-calendar
+  USE_WIREGUARD: ${{ secrets.USE_WIREGUARD || 'false' }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./src/main/docker/Dockerfile.production
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Option 1: Connect via WireGuard (Most Secure)
+      - name: Setup WireGuard
+        if: env.USE_WIREGUARD == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wireguard-tools
+
+          # Validate and clean secrets (remove any whitespace/newlines)
+          WG_ADDRESS=$(echo -n "${{ secrets.WIREGUARD_ADDRESS }}" | tr -d '[:space:]')
+          WG_PRIVATE_KEY=$(echo -n "${{ secrets.WIREGUARD_PRIVATE_KEY }}" | tr -d '[:space:]')
+          WG_PEER_PUBLIC_KEY=$(echo -n "${{ secrets.WIREGUARD_PEER_PUBLIC_KEY }}" | tr -d '[:space:]')
+          WG_ENDPOINT=$(echo -n "${{ secrets.WIREGUARD_ENDPOINT }}" | tr -d '[:space:]')
+          WG_ALLOWED_IPS=$(echo -n "${{ secrets.WIREGUARD_ALLOWED_IPS }}" | tr -d '[:space:]')
+
+          echo "=== Validating secrets ==="
+          echo "Address: ${WG_ADDRESS}"
+          echo "Address length: ${#WG_ADDRESS}"
+          echo "Private key length: ${#WG_PRIVATE_KEY}"
+          echo "Peer public key length: ${#WG_PEER_PUBLIC_KEY}"
+          echo "Endpoint: ${WG_ENDPOINT}"
+          echo "Endpoint length: ${#WG_ENDPOINT}"
+          echo "AllowedIPs: ${WG_ALLOWED_IPS}"
+          echo "AllowedIPs length: ${#WG_ALLOWED_IPS}"
+
+          # Validate endpoint format (should be host:port)
+          if [[ ! "$WG_ENDPOINT" =~ ^[^:]+:[0-9]+$ ]]; then
+            echo "ERROR: WIREGUARD_ENDPOINT format is invalid!"
+            echo "Expected format: hostname:port or ip:port"
+            echo "Example: vpn.example.com:51820 or 203.0.113.1:51820"
+            exit 1
+          fi
+
+          # Extract hostname and test DNS resolution
+          WG_HOST=$(echo "$WG_ENDPOINT" | cut -d: -f1)
+          WG_PORT=$(echo "$WG_ENDPOINT" | cut -d: -f2)
+          echo ""
+          echo "=== Testing endpoint resolution ==="
+          echo "Host part: ${WG_HOST:0:10}... (first 10 chars)"
+          echo "Port: $WG_PORT"
+
+          # Test if hostname resolves
+          if ! getent hosts "$WG_HOST" > /dev/null 2>&1; then
+            echo "WARNING: Cannot resolve hostname '$WG_HOST'"
+            echo "Trying direct IP check..."
+            if [[ ! "$WG_HOST" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "ERROR: Not a valid IP address either!"
+              echo "Please check your WIREGUARD_ENDPOINT secret."
+              echo "It should be either:"
+              echo "  - A resolvable hostname with port (e.g., vpn.example.com:51820)"
+              echo "  - An IP address with port (e.g., 203.0.113.1:51820)"
+              exit 1
+            else
+              echo "Valid IP format detected, continuing..."
+            fi
+          else
+            echo "Hostname resolves successfully"
+          fi
+
+          # Create WireGuard config
+          sudo mkdir -p /etc/wireguard
+
+          # Write config with cleaned values
+          sudo tee /etc/wireguard/wg0.conf > /dev/null <<EOF
+          [Interface]
+          Address = ${WG_ADDRESS}
+          PrivateKey = ${WG_PRIVATE_KEY}
+
+          [Peer]
+          PublicKey = ${WG_PEER_PUBLIC_KEY}
+          Endpoint = ${WG_ENDPOINT}
+          AllowedIPs = ${WG_ALLOWED_IPS}
+          PersistentKeepalive = 25
+          EOF
+
+          sudo chmod 600 /etc/wireguard/wg0.conf
+
+          # Debug: Show config structure (secrets will be masked by GitHub)
+          echo "=== WireGuard config structure ==="
+          sudo cat /etc/wireguard/wg0.conf
+
+          echo ""
+          echo "=== Config file line count ==="
+          sudo wc -l /etc/wireguard/wg0.conf
+
+          echo ""
+          echo "=== Checking for invalid characters ==="
+          sudo cat -A /etc/wireguard/wg0.conf | head -20
+
+          # Connect
+          echo ""
+          echo "=== Attempting to bring up WireGuard ==="
+          sudo wg-quick up wg0
+
+          # Test connection
+          ping -c 3 10.50.0.20
+
+      # Setup SSH keys (needed for both WireGuard and direct SSH)
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.K3S_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          # Add host key (use private IP if WireGuard, public if direct)
+          if [ "${{ env.USE_WIREGUARD }}" == "true" ]; then
+            # For WireGuard, accept any host key for the private IP (since it's over VPN)
+            echo "Host 10.50.0.20" >> ~/.ssh/config
+            echo "  StrictHostKeyChecking no" >> ~/.ssh/config
+            echo "  UserKnownHostsFile /dev/null" >> ~/.ssh/config
+          else
+            # For direct SSH, use the provided host key
+            echo "${{ secrets.K3S_HOST }} ssh-rsa ${{ secrets.K3S_HOST_KEY }}" >> ~/.ssh/known_hosts
+          fi
+
+      - name: Set image tag
+        id: image_tag
+        run: |
+          BRANCH_NAME="${{ github.ref_name }}"
+          SHORT_SHA="${{ github.sha }}"
+          SHORT_SHA="${SHORT_SHA:0:7}"
+          echo "tag=${BRANCH_NAME}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+      - name: Deploy with Ansible
+        env:
+          REGISTRY_USER: ${{ secrets.DOCKER_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          IMAGE_TAG: ${{ steps.image_tag.outputs.tag }}
+          K3S_HOST: ${{ env.USE_WIREGUARD == 'true' && '10.50.0.20' || secrets.K3S_HOST }}
+          K3S_USER: ${{ secrets.K3S_USER }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          OBJECT_STORAGE_REGION: ${{ secrets.OBJECT_STORAGE_REGION }}
+          OBJECT_STORAGE_BUCKET_NAME: ${{ secrets.OBJECT_STORAGE_BUCKET_NAME }}
+          OBJECT_STORAGE_ENDPOINT_URL: ${{ secrets.OBJECT_STORAGE_ENDPOINT_URL }}
+          OBJECT_STORAGE_CDN_URL: ${{ secrets.OBJECT_STORAGE_CDN_URL }}
+          OBJECT_STORAGE_ACCESS_KEY: ${{ secrets.OBJECT_STORAGE_ACCESS_KEY }}
+          OBJECT_STORAGE_SECRET_KEY: ${{ secrets.OBJECT_STORAGE_SECRET_KEY }}
+          SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY }}
+        run: |
+          # Install Ansible
+          python -m pip install --upgrade pip
+          pip install ansible docker
+
+          # Create inventory
+          cat > inventory.yml <<EOF
+          all:
+            hosts:
+              k3s_cluster:
+                ansible_host: ${K3S_HOST}
+                ansible_user: ${K3S_USER}
+                ansible_ssh_private_key_file: ~/.ssh/id_rsa
+                ansible_python_interpreter: /usr/bin/python3
+          EOF
+
+          # Run deployment
+          ansible-playbook \
+            -i inventory.yml \
+            ansible/deploy-calendar.yml
+
+      - name: Upload generated manifest for debugging
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8s-manifest
+          path: /tmp/calendar-k8s.yaml
+          retention-days: 1
+
+      - name: Disconnect WireGuard
+        if: always() && env.USE_WIREGUARD == 'true'
+        run: |
+          sudo wg-quick down wg0 || true
+
+      - name: Notify deployment
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = '${{ github.sha }}';
+            const shortSha = sha.substring(0, 7);
+
+            if (context.payload.pull_request) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `✅ Deployed to production (${shortSha})\n\nView at: https://calendar.villagecompute.com`
+              });
+            }
