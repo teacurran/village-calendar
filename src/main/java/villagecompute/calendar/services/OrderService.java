@@ -1,0 +1,210 @@
+package villagecompute.calendar.services;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
+import villagecompute.calendar.data.models.CalendarOrder;
+import villagecompute.calendar.data.models.CalendarUser;
+import villagecompute.calendar.data.models.UserCalendar;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * Service for managing calendar orders.
+ * Handles order creation, status updates, and order queries.
+ */
+@ApplicationScoped
+public class OrderService {
+
+    private static final Logger LOG = Logger.getLogger(OrderService.class);
+
+    /**
+     * Create a new order for a calendar.
+     * The order is created in PENDING status and needs payment confirmation.
+     *
+     * @param user User placing the order
+     * @param calendar Calendar being ordered
+     * @param quantity Number of calendars
+     * @param unitPrice Price per calendar
+     * @param shippingAddress Shipping address (JSON)
+     * @return Created order
+     */
+    @Transactional
+    public CalendarOrder createOrder(
+        CalendarUser user,
+        UserCalendar calendar,
+        Integer quantity,
+        BigDecimal unitPrice,
+        com.fasterxml.jackson.databind.JsonNode shippingAddress
+    ) {
+        LOG.infof("Creating order for user %s, calendar %s, quantity %d",
+            user.email, calendar.id, quantity);
+
+        // Validate inputs
+        if (quantity < 1) {
+            throw new IllegalArgumentException("Quantity must be at least 1");
+        }
+
+        if (unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Unit price must be positive");
+        }
+
+        // Calculate total price
+        BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
+
+        // Create the order
+        CalendarOrder order = new CalendarOrder();
+        order.user = user;
+        order.calendar = calendar;
+        order.quantity = quantity;
+        order.unitPrice = unitPrice;
+        order.totalPrice = totalPrice;
+        order.status = CalendarOrder.STATUS_PENDING;
+        order.shippingAddress = shippingAddress;
+
+        // Persist the order
+        order.persist();
+
+        LOG.infof("Created order %s with total price $%.2f", order.id, totalPrice);
+
+        return order;
+    }
+
+    /**
+     * Update order status (admin only).
+     * This method should only be called by authorized admin users.
+     *
+     * @param orderId Order ID
+     * @param newStatus New status
+     * @param notes Optional notes about the status change
+     * @return Updated order
+     */
+    @Transactional
+    public CalendarOrder updateOrderStatus(UUID orderId, String newStatus, String notes) {
+        LOG.infof("Updating order %s to status %s", orderId, newStatus);
+
+        // Find the order
+        Optional<CalendarOrder> orderOpt = CalendarOrder.<CalendarOrder>findByIdOptional(orderId);
+        if (orderOpt.isEmpty()) {
+            LOG.errorf("Order not found: %s", orderId);
+            throw new IllegalArgumentException("Order not found");
+        }
+
+        CalendarOrder order = orderOpt.get();
+
+        // Prevent updates to terminal orders
+        if (order.isTerminal()) {
+            LOG.errorf("Cannot update terminal order %s (status: %s)", orderId, order.status);
+            throw new IllegalStateException("Cannot update a completed or cancelled order");
+        }
+
+        // Validate status transition
+        validateStatusTransition(order.status, newStatus);
+
+        // Update the order
+        String oldStatus = order.status;
+        order.status = newStatus;
+
+        // Update timestamps based on status
+        if (CalendarOrder.STATUS_PAID.equals(newStatus)) {
+            order.paidAt = Instant.now();
+        } else if (CalendarOrder.STATUS_SHIPPED.equals(newStatus)) {
+            order.shippedAt = Instant.now();
+        }
+
+        // Append notes
+        if (notes != null && !notes.isBlank()) {
+            String timestamp = Instant.now().toString();
+            String noteEntry = String.format("[%s] Status changed from %s to %s: %s\n",
+                timestamp, oldStatus, newStatus, notes);
+            order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
+        }
+
+        order.persist();
+
+        LOG.infof("Updated order %s from %s to %s", orderId, oldStatus, newStatus);
+
+        return order;
+    }
+
+    /**
+     * Get orders by status.
+     *
+     * @param status Order status
+     * @return List of orders with the specified status
+     */
+    public List<CalendarOrder> getOrdersByStatus(String status) {
+        LOG.debugf("Fetching orders with status: %s", status);
+        return CalendarOrder.findByStatusOrderByCreatedDesc(status);
+    }
+
+    /**
+     * Get all orders for a specific user.
+     *
+     * @param userId User ID
+     * @return List of user's orders
+     */
+    public List<CalendarOrder> getUserOrders(UUID userId) {
+        LOG.debugf("Fetching orders for user: %s", userId);
+        return CalendarOrder.findByUser(userId).list();
+    }
+
+    /**
+     * Get a single order by ID.
+     *
+     * @param orderId Order ID
+     * @return Order if found
+     */
+    public Optional<CalendarOrder> getOrderById(UUID orderId) {
+        return CalendarOrder.<CalendarOrder>findByIdOptional(orderId);
+    }
+
+    /**
+     * Find an order by Stripe Payment Intent ID.
+     *
+     * @param paymentIntentId Stripe Payment Intent ID
+     * @return Order if found
+     */
+    public Optional<CalendarOrder> findByStripePaymentIntent(String paymentIntentId) {
+        return CalendarOrder.findByStripePaymentIntent(paymentIntentId).firstResultOptional();
+    }
+
+    /**
+     * Validate that a status transition is allowed.
+     *
+     * @param currentStatus Current order status
+     * @param newStatus New order status
+     * @throws IllegalStateException if transition is not allowed
+     */
+    private void validateStatusTransition(String currentStatus, String newStatus) {
+        // Define allowed transitions
+        boolean isValid = switch (currentStatus) {
+            case CalendarOrder.STATUS_PENDING ->
+                newStatus.equals(CalendarOrder.STATUS_PAID) ||
+                newStatus.equals(CalendarOrder.STATUS_CANCELLED);
+            case CalendarOrder.STATUS_PAID ->
+                newStatus.equals(CalendarOrder.STATUS_PROCESSING) ||
+                newStatus.equals(CalendarOrder.STATUS_SHIPPED) ||
+                newStatus.equals(CalendarOrder.STATUS_CANCELLED);
+            case CalendarOrder.STATUS_PROCESSING ->
+                newStatus.equals(CalendarOrder.STATUS_SHIPPED) ||
+                newStatus.equals(CalendarOrder.STATUS_CANCELLED);
+            case CalendarOrder.STATUS_SHIPPED ->
+                newStatus.equals(CalendarOrder.STATUS_DELIVERED);
+            case CalendarOrder.STATUS_DELIVERED, CalendarOrder.STATUS_CANCELLED ->
+                false; // Terminal states - no transitions allowed
+            default -> false;
+        };
+
+        if (!isValid) {
+            throw new IllegalStateException(
+                String.format("Invalid status transition from %s to %s", currentStatus, newStatus)
+            );
+        }
+    }
+}

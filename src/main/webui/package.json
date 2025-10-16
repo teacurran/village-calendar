@@ -8,9 +8,14 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --fix",
-    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,vue,css,scss,json,md}\""
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,vue,css,scss,json,md}\"",
+    "test:e2e": "playwright test",
+    "test:e2e:ci": "playwright test --workers=2",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
+    "@primevue/themes": "^4.3.2",
     "@stripe/stripe-js": "^7.9.0",
     "@tailwindcss/vite": "^4.0.15",
     "@vueuse/core": "^13.6.0",
@@ -26,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
+    "@playwright/test": "^1.48.2",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.6.0",

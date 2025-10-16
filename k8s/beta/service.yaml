@@ -1,0 +1,23 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: calendar-service
+  namespace: calendar-beta
+  labels:
+    app: calendar-app
+    environment: beta
+    service: calendar
+spec:
+  selector:
+    app: calendar-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8030
+      protocol: TCP
+  type: ClusterIP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800  # 3 hours - required for OAuth2 callback flow and file uploads

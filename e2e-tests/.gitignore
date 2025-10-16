@@ -1,0 +1,22 @@
+# Playwright
+playwright-report/
+test-results/
+screenshots/
+
+# Node modules
+node_modules/
+
+# Environment files
+.env
+.env.local
+
+# Storage state files
+*.storage.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db

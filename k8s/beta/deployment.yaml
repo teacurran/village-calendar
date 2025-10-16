@@ -1,0 +1,231 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: calendar-beta
+  labels:
+    environment: beta
+    service: calendar
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calendar-app
+  namespace: calendar-beta
+  labels:
+    app: calendar-app
+    environment: beta
+    service: calendar
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: calendar-app
+  template:
+    metadata:
+      labels:
+        app: calendar-app
+        environment: beta
+        service: calendar
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8030"
+        prometheus.io/path: "/q/metrics"
+    spec:
+      imagePullSecrets:
+        - name: docker-registry-secret
+      containers:
+        - name: calendar
+          image: teacurran/village-calendar:beta-latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8030
+              name: http
+              protocol: TCP
+          env:
+            # Database configuration
+            - name: QUARKUS_DATASOURCE_JDBC_URL
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: QUARKUS_DATASOURCE_JDBC_URL
+            - name: QUARKUS_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: QUARKUS_DATASOURCE_USERNAME
+            - name: QUARKUS_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: QUARKUS_DATASOURCE_PASSWORD
+
+            # OAuth2 / OIDC Configuration
+            - name: GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: GOOGLE_CLIENT_ID
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: GOOGLE_CLIENT_SECRET
+            - name: FACEBOOK_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: FACEBOOK_CLIENT_ID
+                  optional: true
+            - name: FACEBOOK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: FACEBOOK_CLIENT_SECRET
+                  optional: true
+
+            # JWT Configuration
+            - name: JWT_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: JWT_PUBLIC_KEY
+            - name: JWT_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: JWT_PRIVATE_KEY
+
+            # Mailer Configuration
+            - name: MAIL_FROM
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: MAIL_FROM
+            - name: MAIL_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: MAIL_HOST
+            - name: MAIL_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: MAIL_PORT
+            - name: MAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: MAIL_USERNAME
+            - name: MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: MAIL_PASSWORD
+            - name: MAIL_MOCK
+              valueFrom:
+                configMapKeyRef:
+                  name: calendar-config
+                  key: MAIL_MOCK
+
+            # Cloudflare R2 / S3 Configuration
+            - name: R2_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: R2_ENDPOINT
+            - name: R2_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: R2_BUCKET
+            - name: R2_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: R2_ACCESS_KEY
+            - name: R2_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: R2_SECRET_KEY
+            - name: R2_PUBLIC_URL
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: R2_PUBLIC_URL
+
+            # Stripe Configuration
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: STRIPE_SECRET_KEY
+            - name: STRIPE_PUBLISHABLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: STRIPE_PUBLISHABLE_KEY
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: STRIPE_WEBHOOK_SECRET
+
+            # Environment-specific settings from ConfigMap
+            - name: QUARKUS_PROFILE
+              valueFrom:
+                configMapKeyRef:
+                  name: calendar-config
+                  key: QUARKUS_PROFILE
+            - name: QUARKUS_HTTP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: calendar-config
+                  key: QUARKUS_HTTP_PORT
+            - name: QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION
+              valueFrom:
+                configMapKeyRef:
+                  name: calendar-config
+                  key: QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION
+            - name: QUARKUS_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: calendar-config
+                  key: QUARKUS_LOG_LEVEL
+            - name: QUARKUS_OTEL_SDK_DISABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: calendar-config
+                  key: QUARKUS_OTEL_SDK_DISABLED
+
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: 8030
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: 8030
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 2

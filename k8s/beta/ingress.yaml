@@ -1,0 +1,30 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: calendar-ingress
+  namespace: calendar-beta
+  labels:
+    app: calendar-app
+    environment: beta
+    service: calendar
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "calendar_route"
+    nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: beta.villagecompute.com
+      http:
+        paths:
+          - path: /calendar(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: calendar-service
+                port:
+                  number: 80

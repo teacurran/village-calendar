@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>villagecompute</groupId>
+  <artifactId>village-calendar-migrations</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>jar</packaging>
+  <name>Village Calendar MyBatis Migrations</name>
+  <description>Database migrations for Village Calendar service using MyBatis Migrations.</description>
+
+  <properties>
+    <migrations.plugin.version>1.2.0</migrations.plugin.version>
+    <postgresql.driver.version>42.7.4</postgresql.driver.version>
+    <migration.env>development</migration.env>
+    <migration.path>${project.basedir}/src/main/resources</migration.path>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>${postgresql.driver.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <groupId>org.mybatis.maven</groupId>
+        <artifactId>migrations-maven-plugin</artifactId>
+        <version>${migrations.plugin.version}</version>
+        <configuration>
+          <repository>${migration.path}</repository>
+          <environment>${migration.env}</environment>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.driver.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+    </plugins>
+  </build>
+</project>

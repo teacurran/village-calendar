@@ -1,0 +1,121 @@
+# Docker Compose configuration for Village Calendar local development
+# Based on VillageCMS docker-compose.yml
+#
+# Port assignments (avoiding conflicts with main VillageCMS):
+#   - Calendar App: 8030 (HTTP), 5030 (Debug), 9030 (Metrics)
+#   - Calendar DB: 5430 (PostgreSQL)
+#   - Mailpit: 8130 (Web UI), 1030 (SMTP)
+#   - Jaeger: 16687 (UI), 4318 (OTLP Collector)
+
+# YAML anchor for shared app configuration (DRY principle)
+x-CalendarAppBase: &calendar-app-base
+  image: calendar-app
+  platform: linux/amd64
+  build:
+    context: .
+    dockerfile: src/main/docker/Dockerfile.jvm
+  depends_on:
+    calendar-db:
+      condition: service_healthy
+    jaeger:
+      condition: service_started
+    mailpit:
+      condition: service_started
+  environment:
+    # Database configuration
+    QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://calendar-db:5432/village_calendar
+    QUARKUS_DATASOURCE_USERNAME: calendar_user
+    QUARKUS_DATASOURCE_PASSWORD: calendar_pass
+    QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: update
+    QUARKUS_HIBERNATE_ORM_MAPPING_FORMAT_GLOBAL: ignore
+    QUARKUS_HTTP_HOST: 0.0.0.0
+
+    # OpenTelemetry / Jaeger configuration
+    QUARKUS_OTEL_SDK_DISABLED: "false"
+    QUARKUS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4317
+
+    # Mailer configuration (Mailpit for local dev)
+    QUARKUS_MAILER_HOST: mailpit
+    QUARKUS_MAILER_PORT: 1025
+    QUARKUS_MAILER_MOCK: "false"
+    QUARKUS_MAILER_FROM: noreply@villagecompute.com
+
+    # Disable OIDC for local development
+    QUARKUS_OIDC_GOOGLE_ENABLED: "false"
+    QUARKUS_OIDC_FACEBOOK_ENABLED: "false"
+
+services:
+  calendar-app:
+    <<: *calendar-app-base
+    ports:
+      - "5030:5005"  # Debug port
+      - "8030:8030"  # HTTP port (Quarkus listens on 8030 inside container)
+      - "9030:9000"  # Metrics port
+      - "5176:5176"  # Vite dev server port
+    command:
+      - ./start_dev.sh
+    volumes:
+      - ./:/app
+    networks:
+      - calendar-network
+
+  calendar-db:
+    image: postgis/postgis:15-3.4
+    user: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: calendar_user
+      POSTGRES_PASSWORD: calendar_pass
+      POSTGRES_DB: village_calendar
+    volumes:
+      - calendar-db-data:/var/lib/postgresql/data
+      - ../villagecompute/infra/postgres-db/calendar-db-init.sql:/docker-entrypoint-initdb.d/01-init-calendar-db.sql:ro
+    ports:
+      - "5430:5432"
+    healthcheck:
+      test: 'pg_isready -U calendar_user --dbname=village_calendar'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - calendar-network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    volumes:
+      - mailpit-data:/data
+    ports:
+      - "8130:8025"  # Web UI
+      - "1030:1025"  # SMTP
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks:
+      - calendar-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    restart: unless-stopped
+    ports:
+      - "16687:16686"  # Web UI
+      - "14269:14268"  # Collector HTTP
+      - "14251:14250"  # Collector gRPC
+      - "4318:4317"    # OTLP gRPC
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      LOG_LEVEL: info
+    networks:
+      - calendar-network
+
+networks:
+  calendar-network:
+    driver: bridge
+
+volumes:
+  calendar-db-data:
+    driver: local
+  mailpit-data:
+    driver: local

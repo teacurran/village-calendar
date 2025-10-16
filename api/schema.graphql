@@ -1,0 +1,674 @@
+# ============================================================================
+# CUSTOM SCALARS
+# ============================================================================
+
+"""
+Custom scalar type for JSON data (stored as JSONB in PostgreSQL).
+Used for flexible configuration and customization fields that support
+dynamic, schema-less data structures.
+"""
+scalar JSON
+
+"""
+ISO-8601 date-time string (e.g., "2025-01-15T14:30:00Z").
+Represents a point in time with timezone information.
+"""
+scalar DateTime
+
+"""
+Arbitrary precision decimal number for currency values.
+Represents monetary amounts in USD with exactly 2 decimal places.
+All prices are stored and transmitted in dollars (not cents).
+"""
+scalar BigDecimal
+
+# ============================================================================
+# ENUMS
+# ============================================================================
+
+"""
+Order fulfillment status tracking through the order lifecycle.
+"""
+enum OrderStatus {
+  """Order cancelled by customer or admin before fulfillment"""
+  CANCELLED
+
+  """Order successfully delivered to customer"""
+  DELIVERED
+
+  """Payment successfully captured via Stripe"""
+  PAID
+
+  """Order created, awaiting payment confirmation from Stripe"""
+  PENDING
+
+  """Calendar is being printed and prepared for shipment"""
+  PROCESSING
+
+  """Payment refunded after cancellation"""
+  REFUNDED
+
+  """Order has been shipped to customer with tracking number"""
+  SHIPPED
+}
+
+"""
+Calendar generation status tracking.
+The calendar service generates PDF files asynchronously.
+"""
+enum CalendarStatus {
+  """Calendar created but PDF not yet generated"""
+  DRAFT
+
+  """PDF generation failed (error details in logs)"""
+  FAILED
+
+  """PDF generation in progress"""
+  GENERATING
+
+  """PDF successfully generated and available for download"""
+  READY
+}
+
+"""
+OAuth authentication providers supported by the calendar service.
+"""
+enum OAuthProvider {
+  """Facebook OAuth 2.0"""
+  FACEBOOK
+
+  """Google OAuth 2.0"""
+  GOOGLE
+}
+
+# ============================================================================
+# CORE TYPES
+# ============================================================================
+
+"""
+Authenticated user in the calendar service.
+Users authenticate via OAuth2 (Google or Facebook) and can create
+calendars and place orders for printed calendars.
+"""
+type CalendarUser {
+  """Calendars created by this user"""
+  calendars: [UserCalendar!]!
+
+  """Timestamp when user account was created"""
+  createdAt: DateTime!
+
+  """User's display name from OAuth profile"""
+  displayName: String
+
+  """User's email address from OAuth provider"""
+  email: String!
+
+  """Unique user identifier (UUID)"""
+  id: ID!
+
+  """Timestamp of user's most recent login"""
+  lastLoginAt: DateTime
+
+  """OAuth provider used for authentication"""
+  oauthProvider: OAuthProvider!
+
+  """OAuth subject claim (sub) - unique user ID from provider"""
+  oauthSubject: String!
+
+  """Orders placed by this user"""
+  orders: [CalendarOrder!]!
+
+  """URL to user's profile image from OAuth provider"""
+  profileImageUrl: String
+
+  """Timestamp when user account was last updated"""
+  updatedAt: DateTime!
+}
+
+"""
+Calendar template defining a design theme for calendars.
+Templates contain the base design, layout configuration, and styling
+that users can customize when creating their own calendars.
+"""
+type CalendarTemplate {
+  """JSONB configuration defining layout, fonts, colors, and design elements"""
+  configuration: JSON!
+
+  """Timestamp when template was created"""
+  createdAt: DateTime!
+
+  """Detailed description of the template's design and features"""
+  description: String
+
+  """Display order for sorting templates (lower numbers appear first)"""
+  displayOrder: Int!
+
+  """Unique template identifier (UUID)"""
+  id: ID!
+
+  """Whether this template is active and available for selection"""
+  isActive: Boolean!
+
+  """Whether this template should be featured in the gallery"""
+  isFeatured: Boolean!
+
+  """Human-readable template name"""
+  name: String!
+
+  """SVG preview rendering of the template"""
+  previewSvg: String
+
+  """URL to thumbnail image preview (for gallery display)"""
+  thumbnailUrl: String
+
+  """Timestamp when template was last updated"""
+  updatedAt: DateTime!
+
+  """Calendars created using this template"""
+  userCalendars: [UserCalendar!]!
+}
+
+"""
+User-created calendar based on a template.
+Represents a customized calendar for a specific year that can be
+ordered for printing.
+"""
+type UserCalendar {
+  """JSONB customization data (user overrides of template configuration)"""
+  configuration: JSON
+
+  """Timestamp when calendar was created"""
+  createdAt: DateTime!
+
+  """URL to generated PDF file (null until generation completes)"""
+  generatedPdfUrl: String
+
+  """Generated SVG rendering of the customized calendar"""
+  generatedSvg: String
+
+  """Unique calendar identifier (UUID)"""
+  id: ID!
+
+  """Whether this calendar is publicly visible (for sharing)"""
+  isPublic: Boolean!
+
+  """User-defined name for this calendar"""
+  name: String!
+
+  """Orders placed for this calendar"""
+  orders: [CalendarOrder!]!
+
+  """Session ID for anonymous users (before OAuth authentication)"""
+  sessionId: String
+
+  """PDF generation status"""
+  status: CalendarStatus!
+
+  """Template this calendar is based on"""
+  template: CalendarTemplate!
+
+  """Timestamp when calendar was last updated"""
+  updatedAt: DateTime!
+
+  """User who owns this calendar"""
+  user: CalendarUser
+
+  """Year for this calendar (e.g., 2025)"""
+  year: Int!
+}
+
+"""
+E-commerce order for printed calendars.
+Integrates with Stripe for payment processing. Orders are created
+after successful payment via Stripe webhook.
+"""
+type CalendarOrder {
+  """Calendar being ordered for printing"""
+  calendar: UserCalendar!
+
+  """Timestamp when order was created"""
+  createdAt: DateTime!
+
+  """Timestamp when order was delivered"""
+  deliveredAt: DateTime
+
+  """Unique order identifier (UUID)"""
+  id: ID!
+
+  """Admin notes about order fulfillment"""
+  notes: String
+
+  """Timestamp when payment was captured"""
+  paidAt: DateTime
+
+  """Number of calendar copies to print"""
+  quantity: Int!
+
+  """Timestamp when order was shipped"""
+  shippedAt: DateTime
+
+  """Shipping address (JSONB: street, city, state, postalCode, country)"""
+  shippingAddress: JSON!
+
+  """Order fulfillment status"""
+  status: OrderStatus!
+
+  """Stripe Charge ID (set after payment captured)"""
+  stripeChargeId: String
+
+  """Stripe Payment Intent ID"""
+  stripePaymentIntentId: String
+
+  """Total order price (quantity * unitPrice, USD)"""
+  totalPrice: BigDecimal!
+
+  """Shipment tracking number (set when order ships)"""
+  trackingNumber: String
+
+  """Price per calendar (USD)"""
+  unitPrice: BigDecimal!
+
+  """Timestamp when order was last updated"""
+  updatedAt: DateTime!
+
+  """User who placed this order"""
+  user: CalendarUser!
+}
+
+"""
+Stripe PaymentIntent for checkout flow.
+Returned by createOrder mutation to initiate payment on client.
+The client uses the clientSecret to complete payment via Stripe.js.
+The order entity is created by webhook after payment succeeds.
+"""
+type PaymentIntent {
+  """Amount in cents (USD) - multiply dollar amount by 100"""
+  amount: Int!
+
+  """Associated calendar ID (before order is created)"""
+  calendarId: ID!
+
+  """Client secret for Stripe.js (passed to confirmCardPayment)"""
+  clientSecret: String!
+
+  """Stripe PaymentIntent ID (pi_...)"""
+  id: ID!
+
+  """Requested quantity"""
+  quantity: Int!
+
+  """Payment status from Stripe"""
+  status: String!
+}
+
+"""
+Pagination information following the Relay specification.
+Currently included for spec compliance; cursor-based pagination
+will be implemented in v2.0.
+"""
+type PageInfo {
+  """Cursor pointing to the end of this page"""
+  endCursor: String
+
+  """Whether more pages exist after this cursor"""
+  hasNextPage: Boolean!
+
+  """Whether more pages exist before this cursor"""
+  hasPreviousPage: Boolean!
+
+  """Cursor pointing to the start of this page"""
+  startCursor: String
+}
+
+"""
+Connection type for paginated template results.
+Follows Relay cursor-based pagination spec. Planned for v2.0.
+"""
+type TemplateConnection {
+  """List of template edges"""
+  edges: [TemplateEdge!]!
+
+  """Pagination metadata"""
+  pageInfo: PageInfo!
+}
+
+"""
+Edge type for template connections.
+Contains a cursor and the template node.
+"""
+type TemplateEdge {
+  """Pagination cursor for this edge"""
+  cursor: String!
+
+  """The template node"""
+  node: CalendarTemplate!
+}
+
+# ============================================================================
+# INPUT TYPES
+# ============================================================================
+
+"""
+Input for creating or updating a calendar template (admin only).
+"""
+input TemplateInput {
+  """JSONB configuration defining design"""
+  configuration: JSON!
+
+  """Template description"""
+  description: String
+
+  """Display order"""
+  displayOrder: Int
+
+  """Whether template is active"""
+  isActive: Boolean
+
+  """Whether template is featured"""
+  isFeatured: Boolean
+
+  """Template name"""
+  name: String!
+
+  """SVG preview rendering"""
+  previewSvg: String
+
+  """URL to thumbnail image"""
+  thumbnailUrl: String
+}
+
+"""
+Input for creating a new calendar.
+"""
+input CalendarInput {
+  """User customization overrides (JSONB)"""
+  configuration: JSON
+
+  """Whether calendar is publicly visible"""
+  isPublic: Boolean
+
+  """Calendar name"""
+  name: String!
+
+  """Template to base calendar on"""
+  templateId: ID!
+
+  """Calendar year"""
+  year: Int!
+}
+
+"""
+Input for updating an existing calendar.
+"""
+input CalendarUpdateInput {
+  """Updated customization overrides (JSONB)"""
+  configuration: JSON
+
+  """Updated public visibility"""
+  isPublic: Boolean
+
+  """Updated calendar name"""
+  name: String
+}
+
+"""
+Shipping address for order delivery.
+"""
+input AddressInput {
+  """City"""
+  city: String!
+
+  """Country code (ISO 3166-1 alpha-2, e.g., "US")"""
+  country: String!
+
+  """Postal/ZIP code"""
+  postalCode: String!
+
+  """State/province code (e.g., "TN", "CA")"""
+  state: String!
+
+  """Street address"""
+  street: String!
+
+  """Apartment, suite, etc. (optional)"""
+  street2: String
+}
+
+"""
+Input for admin updating order status and fulfillment details.
+"""
+input OrderUpdateInput {
+  """Admin notes about the update"""
+  notes: String
+
+  """New order status"""
+  status: OrderStatus!
+
+  """Shipment tracking number (required when status = SHIPPED)"""
+  trackingNumber: String
+}
+
+# ============================================================================
+# QUERY ROOT
+# ============================================================================
+
+"""
+Root query type for read operations.
+"""
+type Query {
+  """
+  Get all orders across all users (admin only).
+  Requires ADMIN role in JWT claims.
+  """
+  allOrders(
+    """Filter by order status (optional)"""
+    status: OrderStatus
+
+    """Maximum number of orders to return"""
+    limit: Int = 50
+  ): [CalendarOrder!]!
+
+  """
+  Get all users (admin only).
+  Requires ADMIN role in JWT claims.
+  """
+  allUsers(
+    """Maximum number of users to return"""
+    limit: Int = 50
+  ): [CalendarUser!]!
+
+  """
+  Get a single calendar by ID.
+  Returns calendar if user owns it or if it's public.
+  """
+  calendar(
+    """Calendar ID"""
+    id: ID!
+  ): UserCalendar
+
+  """
+  Get the currently authenticated user.
+  Requires valid JWT token in Authorization header.
+  Returns null if not authenticated.
+  """
+  me: CalendarUser
+
+  """
+  Get calendars for the authenticated user.
+  Requires authentication.
+  """
+  myCalendars(
+    """Filter by calendar year (optional)"""
+    year: Int
+  ): [UserCalendar!]!
+
+  """
+  Get orders for the authenticated user.
+  Requires authentication.
+  """
+  myOrders(
+    """Filter by order status (optional)"""
+    status: OrderStatus
+  ): [CalendarOrder!]!
+
+  """
+  Get a single order by ID.
+  Returns order if user owns it (or user is admin).
+  """
+  order(
+    """Order ID"""
+    id: ID!
+  ): CalendarOrder
+
+  """
+  Get a single template by ID.
+  Returns null if template not found or inactive (unless user is admin).
+  """
+  template(
+    """Template ID"""
+    id: ID!
+  ): CalendarTemplate
+
+  """
+  Get all calendar templates.
+  """
+  templates(
+    """Filter by active status (default: true shows only active templates)"""
+    isActive: Boolean = true
+
+    """Filter by featured status (optional)"""
+    isFeatured: Boolean
+  ): [CalendarTemplate!]!
+
+  """
+  Get paginated calendar templates using cursor-based pagination.
+  Follows Relay Connection spec. Planned for v2.0 implementation.
+  """
+  templatesConnection(
+    """Number of templates to return"""
+    first: Int
+
+    """Cursor to fetch templates after"""
+    after: String
+
+    """Filter by active status"""
+    isActive: Boolean = true
+
+    """Filter by featured status"""
+    isFeatured: Boolean
+  ): TemplateConnection!
+}
+
+# ============================================================================
+# MUTATION ROOT
+# ============================================================================
+
+"""
+Root mutation type for write operations.
+"""
+type Mutation {
+  """
+  Create a new calendar based on a template.
+  Requires authentication.
+
+  The calendar is created in DRAFT status. PDF generation happens
+  asynchronously - poll the calendar query to check status.
+  """
+  createCalendar(
+    """Calendar creation data"""
+    input: CalendarInput!
+  ): UserCalendar!
+
+  """
+  Create a payment intent for ordering calendars.
+  Requires authentication.
+
+  Returns a Stripe PaymentIntent with client secret. The client must
+  complete payment using Stripe.js. The actual order entity is created
+  by Stripe webhook after payment succeeds.
+  """
+  createOrder(
+    """ID of calendar to order"""
+    calendarId: ID!
+
+    """Number of copies to print"""
+    quantity: Int!
+
+    """Delivery address"""
+    shippingAddress: AddressInput!
+  ): PaymentIntent!
+
+  """
+  Create a new calendar template (admin only).
+  Requires ADMIN role in JWT claims.
+  """
+  createTemplate(
+    """Template creation data"""
+    input: TemplateInput!
+  ): CalendarTemplate!
+
+  """
+  Delete a calendar.
+  Requires authentication and calendar ownership.
+  Cannot delete calendars with paid orders.
+  """
+  deleteCalendar(
+    """Calendar ID to delete"""
+    id: ID!
+  ): Boolean!
+
+  """
+  Delete a calendar template (admin only).
+  Requires ADMIN role in JWT claims.
+  Cannot delete templates with existing calendars.
+  """
+  deleteTemplate(
+    """Template ID to delete"""
+    id: ID!
+  ): Boolean!
+
+  """
+  Update an existing calendar's customization.
+  Requires authentication and calendar ownership.
+
+  Updates trigger PDF regeneration. Status changes to GENERATING,
+  then READY when complete.
+  """
+  updateCalendar(
+    """Calendar ID to update"""
+    id: ID!
+
+    """Calendar update data"""
+    input: CalendarUpdateInput!
+  ): UserCalendar!
+
+  """
+  Update order status and fulfillment details (admin only).
+  Requires ADMIN role in JWT claims.
+
+  Common workflows:
+  - Mark as PROCESSING: Admin starts printing
+  - Mark as SHIPPED: Admin ships order (requires trackingNumber)
+  - Mark as DELIVERED: Admin confirms delivery
+  - Mark as CANCELLED: Admin cancels order (triggers refund)
+  """
+  updateOrderStatus(
+    """Order ID to update"""
+    id: ID!
+
+    """Order status update data"""
+    input: OrderUpdateInput!
+  ): CalendarOrder!
+
+  """
+  Update an existing calendar template (admin only).
+  Requires ADMIN role in JWT claims.
+  """
+  updateTemplate(
+    """Template ID to update"""
+    id: ID!
+
+    """Template update data"""
+    input: TemplateInput!
+  ): CalendarTemplate!
+}

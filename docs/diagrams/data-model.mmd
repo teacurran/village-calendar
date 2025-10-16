@@ -1,0 +1,68 @@
+erDiagram
+    CalendarUser ||--o{ UserCalendar : "creates"
+    CalendarUser ||--o{ CalendarOrder : "places"
+    CalendarTemplate ||--o{ UserCalendar : "uses"
+    UserCalendar ||--o{ CalendarOrder : "orders"
+
+    CalendarUser {
+        uuid id PK
+        varchar oauth_provider "GOOGLE, FACEBOOK"
+        varchar oauth_subject "OAuth sub claim"
+        varchar email
+        varchar display_name
+        varchar profile_image_url
+        timestamptz last_login_at
+        timestamptz created
+        timestamptz updated
+        bigint version
+    }
+
+    CalendarTemplate {
+        uuid id PK
+        varchar name
+        text description
+        varchar thumbnail_url
+        boolean is_active
+        boolean is_featured
+        integer display_order
+        jsonb configuration "Template config"
+        text preview_svg
+        timestamptz created
+        timestamptz updated
+        bigint version
+    }
+
+    UserCalendar {
+        uuid id PK
+        uuid user_id FK "Nullable for anonymous"
+        varchar session_id "For anonymous users"
+        uuid template_id FK
+        varchar name
+        integer year "Calendar year"
+        boolean is_public
+        jsonb configuration "User customizations"
+        text generated_svg
+        varchar generated_pdf_url
+        timestamptz created
+        timestamptz updated
+        bigint version
+    }
+
+    CalendarOrder {
+        uuid id PK
+        uuid user_id FK
+        uuid calendar_id FK
+        integer quantity
+        decimal unit_price
+        decimal total_price
+        varchar status "PENDING, PAID, etc"
+        jsonb shipping_address
+        varchar stripe_payment_intent_id
+        varchar stripe_charge_id
+        text notes
+        timestamptz paid_at
+        timestamptz shipped_at
+        timestamptz created
+        timestamptz updated
+        bigint version
+    }

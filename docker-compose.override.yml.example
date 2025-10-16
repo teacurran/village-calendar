@@ -1,0 +1,68 @@
+# Docker Compose Override Example for Village Calendar
+#
+# Copy this file to docker-compose.override.yml to customize your local development environment.
+# The override file is gitignored and won't be committed to version control.
+#
+# Usage:
+#   cp docker-compose.override.yml.example docker-compose.override.yml
+#   # Edit docker-compose.override.yml with your local customizations
+#   docker-compose up
+#
+# Common use cases:
+#   - Change port mappings to avoid conflicts with other services
+#   - Enable debug logging for specific components
+#   - Mount additional volumes
+#   - Override environment variables
+#   - Add development tools or utilities
+
+version: '3.8'
+
+services:
+  calendar-app:
+    # Uncomment to change HTTP port (if 8030 conflicts with another service)
+    # ports:
+    #   - "8031:8080"
+    #   - "5031:5005"
+    #   - "9031:9000"
+    #   - "5177:5176"
+
+    # Uncomment to enable debug logging
+    # environment:
+    #   QUARKUS_LOG_LEVEL: DEBUG
+    #   QUARKUS_LOG_CATEGORY_ORG_HIBERNATE_SQL: DEBUG
+    #   QUARKUS_HIBERNATE_ORM_LOG_SQL: "true"
+    #   QUARKUS_OTEL_SDK_DISABLED: "true"  # Disable tracing for faster dev
+
+    # Uncomment to use a different database (e.g., external PostgreSQL)
+    # environment:
+    #   QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://my-external-db:5432/village_calendar
+    #   QUARKUS_DATASOURCE_USERNAME: my_user
+    #   QUARKUS_DATASOURCE_PASSWORD: my_password
+
+  calendar-db:
+    # Uncomment to change database port
+    # ports:
+    #   - "5431:5432"
+
+    # Uncomment to enable PostgreSQL query logging
+    # command: postgres -c log_statement=all -c log_duration=on
+
+  mailpit:
+    # Uncomment to change Mailpit ports
+    # ports:
+    #   - "8131:8025"
+    #   - "1031:1025"
+
+  jaeger:
+    # Uncomment to enable debug logging for Jaeger
+    # environment:
+    #   LOG_LEVEL: debug
+
+# Example: Add a local Redis cache for development
+# services:
+#   redis:
+#     image: redis:7-alpine
+#     ports:
+#       - "6379:6379"
+#     networks:
+#       - calendar-network

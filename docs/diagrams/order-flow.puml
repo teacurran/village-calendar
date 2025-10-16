@@ -1,0 +1,427 @@
+@startuml
+title Calendar Order Placement Flow - OAuth2 to Email Confirmation
+
+actor Customer
+participant "Vue SPA" as SPA
+participant "Google/Facebook\nOAuth Provider" as OAuth
+participant "GraphQL API\n(OrderGraphQL)" as GraphQL
+participant "AuthenticationService" as AuthSvc
+participant "CalendarGenerationService" as CalGenSvc
+participant "CalendarService" as CalSvc
+participant "PDFRenderingService" as PDFSvc
+participant "StorageService" as StorageSvc
+participant "Cloudflare R2" as R2
+participant "OrderService" as OrderSvc
+participant "PaymentService" as PaymentSvc
+participant "Stripe API" as Stripe
+participant "WebhookResource" as Webhook
+database "PostgreSQL" as DB
+participant "DelayedJob\nScheduler" as Scheduler
+participant "OrderEmailJobHandler" as EmailHandler
+participant "EmailService" as EmailSvc
+participant "SMTP Server" as SMTP
+
+== Authentication Phase ==
+
+Customer -> SPA : Clicks "Login with Google/Facebook"
+activate SPA
+
+SPA -> OAuth : Redirect to OAuth provider
+activate OAuth
+note right of OAuth
+  OAuth provider handles
+  authentication via
+  industry-standard flow
+end note
+
+Customer -> OAuth : Provides credentials
+OAuth -> OAuth : Validates credentials
+OAuth -> SPA : Redirect to callback with auth code
+deactivate OAuth
+
+SPA -> GraphQL : OAuth callback with code
+activate GraphQL
+
+GraphQL -> AuthSvc : handleOAuthCallback(provider, identity)
+activate AuthSvc
+
+AuthSvc -> DB : SELECT * FROM calendar_users\nWHERE oauth_provider = ? AND oauth_subject = ?
+activate DB
+DB --> AuthSvc : User (if exists)
+deactivate DB
+
+alt User Exists
+  AuthSvc -> DB : UPDATE calendar_users\nSET last_login_at = NOW()
+  activate DB
+  DB --> AuthSvc : Success
+  deactivate DB
+else New User
+  AuthSvc -> DB : INSERT INTO calendar_users\n(email, oauth_provider, oauth_subject, ...)
+  activate DB
+  DB --> AuthSvc : User ID
+  deactivate DB
+end
+
+AuthSvc -> AuthSvc : issueJWT(user)
+note right of AuthSvc
+  JWT valid for 24 hours
+  Contains: userId, email, roles
+end note
+
+AuthSvc --> GraphQL : JWT token
+deactivate AuthSvc
+
+GraphQL --> SPA : { jwt: "...", user: {...} }
+deactivate GraphQL
+
+SPA -> SPA : Store JWT in localStorage
+note right of SPA
+  Frontend includes JWT
+  in Authorization header
+  for all subsequent requests
+end note
+
+deactivate SPA
+
+== Calendar Creation Phase ==
+
+Customer -> SPA : Selects template, customizes options
+activate SPA
+
+SPA -> GraphQL : mutation createUserCalendar($input)
+activate GraphQL
+
+GraphQL -> DB : INSERT INTO user_calendars\n(user_id, template_id, year, configuration, ...)
+activate DB
+DB --> GraphQL : UserCalendar ID
+deactivate DB
+
+GraphQL --> SPA : { userCalendar: {...} }
+deactivate GraphQL
+
+Customer -> SPA : Clicks "Generate Calendar"
+
+SPA -> GraphQL : mutation generateCalendar($calendarId)
+activate GraphQL
+
+GraphQL -> CalGenSvc : generateCalendar(userCalendar)
+activate CalGenSvc
+note right of CalGenSvc
+  PDF generation takes 2-5 seconds
+  This is a synchronous operation
+end note
+
+CalGenSvc -> CalGenSvc : buildCalendarConfig(userCalendar)
+note right of CalGenSvc
+  Merges template config
+  with user customizations
+end note
+
+CalGenSvc -> CalSvc : generateCalendarSVG(config)
+activate CalSvc
+CalSvc -> CalSvc : Calculate moon phases,\nastronomical data, layout
+CalSvc --> CalGenSvc : SVG content
+deactivate CalSvc
+
+CalGenSvc -> PDFSvc : renderSVGToPDF(svgContent, year)
+activate PDFSvc
+PDFSvc -> PDFSvc : Apache PDFBox rendering\nwith Apache Batik SVG processing
+PDFSvc --> CalGenSvc : PDF bytes
+deactivate PDFSvc
+
+CalGenSvc -> StorageSvc : uploadFile(filename, pdfBytes, "application/pdf")
+activate StorageSvc
+
+StorageSvc -> R2 : PUT /bucket/calendar-{userId}-{year}-{uuid}.pdf
+activate R2
+R2 --> StorageSvc : 200 OK
+deactivate R2
+
+StorageSvc --> CalGenSvc : Public URL
+deactivate StorageSvc
+
+CalGenSvc -> DB : UPDATE user_calendars\nSET generated_pdf_url = ?, generated_svg = ?
+activate DB
+DB --> CalGenSvc : Success
+deactivate DB
+
+CalGenSvc --> GraphQL : PDF URL
+deactivate CalGenSvc
+
+GraphQL --> SPA : { pdfUrl: "https://..." }
+deactivate GraphQL
+
+SPA -> SPA : Display preview & download link
+deactivate SPA
+
+== Order Placement Phase ==
+
+Customer -> SPA : Clicks "Order Printed Calendar"
+activate SPA
+
+SPA -> SPA : Collect shipping address, quantity
+
+SPA -> GraphQL : mutation createOrder($input)
+activate GraphQL
+note right of GraphQL
+  @Transactional ensures
+  order + payment intent
+  created atomically
+end note
+
+GraphQL -> AuthSvc : getCurrentUser(jwt)
+activate AuthSvc
+AuthSvc -> DB : SELECT * FROM calendar_users WHERE id = ?
+activate DB
+DB --> AuthSvc : CalendarUser
+deactivate DB
+AuthSvc --> GraphQL : User
+deactivate AuthSvc
+
+GraphQL -> DB : SELECT * FROM user_calendars WHERE id = ?
+activate DB
+DB --> GraphQL : UserCalendar
+deactivate DB
+
+alt User doesn't own calendar
+  GraphQL --> SPA : Error: Unauthorized
+else User owns calendar
+  GraphQL -> OrderSvc : createOrder(user, calendar, quantity, unitPrice, shippingAddress)
+  activate OrderSvc
+
+  OrderSvc -> OrderSvc : Calculate totalPrice = unitPrice * quantity
+
+  OrderSvc -> DB : INSERT INTO calendar_orders\n(user_id, calendar_id, quantity, unit_price, total_price, status='PENDING', ...)
+  activate DB
+  DB --> OrderSvc : Order ID
+  deactivate DB
+
+  OrderSvc --> GraphQL : CalendarOrder (PENDING)
+  deactivate OrderSvc
+
+  GraphQL -> PaymentSvc : createPaymentIntent(totalPrice, "usd", orderId)
+  activate PaymentSvc
+
+  note right of PaymentSvc
+    Converts BigDecimal to cents
+    Idempotency key: "order_{orderId}_{timestamp}"
+  end note
+
+  PaymentSvc -> Stripe : POST /v1/payment_intents\n{ amount: cents, currency: "usd", metadata: {orderId} }
+  activate Stripe
+  Stripe --> PaymentSvc : { id: "pi_...", client_secret: "pi_...secret..." }
+  deactivate Stripe
+
+  PaymentSvc --> GraphQL : { clientSecret, paymentIntentId }
+  deactivate PaymentSvc
+
+  GraphQL -> DB : UPDATE calendar_orders\nSET stripe_payment_intent_id = ?
+  activate DB
+  DB --> GraphQL : Success
+  deactivate DB
+
+  GraphQL --> SPA : { order: {...}, clientSecret: "..." }
+  deactivate GraphQL
+
+  SPA -> SPA : Load Stripe.js with clientSecret
+
+  SPA -> Customer : Display Stripe payment form
+  deactivate SPA
+
+  Customer -> SPA : Enters payment details
+  activate SPA
+
+  SPA -> Stripe : Stripe.js: confirmPayment(clientSecret, paymentMethod)
+  activate Stripe
+  note right of Stripe
+    Stripe.js handles payment
+    securely in browser,
+    never exposing card details
+    to our backend
+  end note
+
+  alt Payment Authorized
+    Stripe --> SPA : { paymentIntent: { status: "succeeded" } }
+    SPA -> SPA : Show success message
+    SPA --> Customer : "Payment successful! Processing order..."
+    deactivate SPA
+  else Payment Declined
+    Stripe --> SPA : { error: "card_declined" }
+    activate SPA
+    SPA --> Customer : "Payment failed. Please try again."
+    deactivate SPA
+    deactivate Stripe
+    note right of Customer
+      Payment failure path ends here.
+      User can retry payment.
+      Order remains in PENDING status.
+    end note
+  end
+end
+
+== Async Webhook Processing ==
+note over Webhook
+  Stripe calls webhook asynchronously
+  1-3 seconds after payment succeeds
+end note
+
+Stripe ->> Webhook : POST /api/webhooks/stripe\n{ type: "payment_intent.succeeded", data: {...} }
+activate Webhook
+
+Webhook -> Webhook : Validate Stripe-Signature header
+note right of Webhook
+  Uses Webhook.constructEvent()
+  with webhook secret to verify
+  request authenticity
+end note
+
+alt Signature Invalid
+  Webhook --> Stripe : 400 Bad Request
+  note right of Webhook
+    Prevents malicious
+    webhook spoofing
+  end note
+else Signature Valid
+  Webhook -> OrderSvc : findByStripePaymentIntent(paymentIntentId)
+  activate OrderSvc
+
+  OrderSvc -> DB : SELECT * FROM calendar_orders\nWHERE stripe_payment_intent_id = ?
+  activate DB
+  DB --> OrderSvc : CalendarOrder
+  deactivate DB
+
+  OrderSvc --> Webhook : Order
+  deactivate OrderSvc
+
+  alt Order Not Found
+    Webhook -> Webhook : Log error
+    note right of Webhook
+      This shouldn't happen,
+      but we log and continue
+    end note
+  else Order Found
+    Webhook -> DB : UPDATE calendar_orders\nSET status = 'PAID', paid_at = NOW(), stripe_charge_id = ?
+    activate DB
+    DB --> Webhook : Success
+    deactivate DB
+
+    Webhook -> DB : INSERT INTO delayed_jobs\n(actor_id, queue, run_at, status, ...)\nVALUES (orderId, 'EMAIL_ORDER_CONFIRMATION', NOW(), 'PENDING', ...)
+    activate DB
+    DB --> Webhook : DelayedJob ID
+    deactivate DB
+
+    note right of Webhook
+      DelayedJob created with run_at = NOW()
+      for immediate execution by scheduler
+    end note
+  end
+
+  Webhook --> Stripe : 200 OK { status: "success" }
+  deactivate Webhook
+end
+
+== Background Email Delivery ==
+note over Scheduler
+  Scheduler polls delayed_jobs table
+  every 10 seconds for pending jobs
+end note
+
+Scheduler -> DB : SELECT * FROM delayed_jobs\nWHERE status = 'PENDING' AND run_at <= NOW()\nORDER BY priority, run_at LIMIT 10
+activate Scheduler
+activate DB
+DB --> Scheduler : List<DelayedJob>
+deactivate DB
+
+Scheduler -> DB : UPDATE delayed_jobs\nSET status = 'RUNNING', locked_at = NOW()
+activate DB
+DB --> Scheduler : Success
+deactivate DB
+
+Scheduler -> EmailHandler : run(actorId = orderId)
+activate EmailHandler
+note right of EmailHandler
+  @WithSpan for OpenTelemetry tracing
+  Executed on worker thread pool
+end note
+
+EmailHandler -> DB : SELECT * FROM calendar_orders o\nJOIN calendar_users u ON o.user_id = u.id\nJOIN user_calendars c ON o.calendar_id = c.id\nWHERE o.id = ?
+activate DB
+DB --> EmailHandler : CalendarOrder with user & calendar
+deactivate DB
+
+alt Order Not Found
+  EmailHandler -> EmailHandler : throw DelayedJobException(retryable=true)
+  note right of EmailHandler
+    Retryable exceptions trigger
+    exponential backoff:
+    5s + N^4 (max 7 days)
+  end note
+else Order Found
+  EmailHandler -> EmailHandler : Load CSS from resources:\nloadResourceAsString("css/email.css")
+
+  EmailHandler -> EmailHandler : Render Qute template:\nTemplates.orderConfirmation(order, css)
+  note right of EmailHandler
+    Qute template includes:
+    - Order details
+    - Calendar preview
+    - Shipping information
+    - PDF download link
+  end note
+
+  EmailHandler -> EmailSvc : sendHtmlEmail(from, to, subject, htmlContent)
+  activate EmailSvc
+
+  EmailSvc -> SMTP : SMTP transaction\nFROM: orders@villagecompute.com\nTO: user.email\nSubject: Order Confirmation
+  activate SMTP
+
+  alt SMTP Success
+    SMTP --> EmailSvc : 250 OK
+    deactivate SMTP
+
+    EmailSvc --> EmailHandler : Success
+    deactivate EmailSvc
+
+    EmailHandler --> Scheduler : Success
+    deactivate EmailHandler
+
+    Scheduler -> DB : UPDATE delayed_jobs\nSET status = 'SUCCESS', completed_at = NOW()
+    activate DB
+    DB --> Scheduler : Success
+    deactivate DB
+
+    note right of Scheduler
+      Email sent successfully.
+      Customer receives order
+      confirmation in inbox.
+    end note
+  else SMTP Failure
+    SMTP --> EmailSvc : Error: Connection timeout
+    activate SMTP
+    deactivate SMTP
+
+    EmailSvc --> EmailHandler : Exception
+    activate EmailSvc
+    deactivate EmailSvc
+
+    EmailHandler -> EmailHandler : throw DelayedJobException(retryable=false)
+
+    EmailHandler --> Scheduler : Exception
+    activate EmailHandler
+    deactivate EmailHandler
+
+    Scheduler -> DB : UPDATE delayed_jobs\nSET status = 'FAILED', attempts = attempts + 1,\nrun_at = NOW() + exponential_backoff
+    activate DB
+    DB --> Scheduler : Success
+    deactivate DB
+
+    note right of Scheduler
+      Job will retry with exponential backoff.
+      Retry formula: 5 seconds + N^4
+      Max retry time: 7 days
+    end note
+  end
+end
+
+deactivate Scheduler
+
+@enduml

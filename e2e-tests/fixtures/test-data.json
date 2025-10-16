@@ -1,0 +1,72 @@
+{
+  "users": {
+    "customer": {
+      "email": "customer@test.example.com",
+      "name": "Test Customer",
+      "address": {
+        "street": "123 Main Street",
+        "city": "Groton",
+        "state": "VT",
+        "zipCode": "05046",
+        "country": "US"
+      }
+    },
+    "admin": {
+      "email": "admin@test.example.com",
+      "name": "Test Admin",
+      "role": "ADMIN"
+    }
+  },
+  "templates": [
+    {
+      "id": "1",
+      "name": "2026 Lunar Calendar",
+      "description": "Beautiful lunar phase calendar with custom text support",
+      "basePrice": 29.99,
+      "paperType": "Matte"
+    },
+    {
+      "id": "2",
+      "name": "Family Calendar",
+      "description": "12-month family planner with notes section",
+      "basePrice": 34.99,
+      "paperType": "Glossy"
+    }
+  ],
+  "testCards": {
+    "success": {
+      "number": "4242424242424242",
+      "expiry": "1230",
+      "cvc": "123",
+      "description": "Visa test card - always succeeds"
+    },
+    "decline": {
+      "number": "4000000000000002",
+      "expiry": "1230",
+      "cvc": "123",
+      "description": "Visa test card - always declined"
+    },
+    "3dSecure": {
+      "number": "4000002500003155",
+      "expiry": "1230",
+      "cvc": "123",
+      "description": "Visa test card - requires 3D Secure"
+    }
+  },
+  "calendarCustomization": {
+    "year": "2026",
+    "customText": "My Family Calendar 2026",
+    "startMonth": "January",
+    "theme": "Modern"
+  },
+  "orderNotes": [
+    "Order confirmed by customer",
+    "Calendar generation in progress",
+    "PDF ready for download",
+    "Order shipped via USPS"
+  ],
+  "mailpitApi": {
+    "baseUrl": "http://localhost:8130/api/v1",
+    "messagesEndpoint": "/messages"
+  }
+}

@@ -1,0 +1,29 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: calendar-config
+  namespace: calendar-beta
+  labels:
+    app: calendar-app
+    environment: beta
+    service: calendar
+data:
+  # Application settings
+  QUARKUS_PROFILE: "beta"
+  QUARKUS_HTTP_PORT: "8030"
+  QUARKUS_LOG_LEVEL: "INFO"
+
+  # Database settings - use validate mode in deployed environments
+  # Migrations are handled separately via MyBatis
+  QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: "validate"
+
+  # Telemetry settings
+  QUARKUS_OTEL_SDK_DISABLED: "false"
+
+  # Mailer settings
+  MAIL_MOCK: "false"
+
+  # Feature flags (add as needed)
+  # FEATURE_CALENDAR_TEMPLATES_ENABLED: "true"
+  # FEATURE_PDF_GENERATION_ENABLED: "true"

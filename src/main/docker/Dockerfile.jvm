@@ -1,0 +1,50 @@
+# Village Calendar Development Dockerfile
+# Based on VillageCMS admin dev-jvm.dockerfile
+# This Dockerfile sets up a development environment with Maven, Java 21, and Node.js/pnpm
+
+# Use Debian base for better tooling support (protoc, etc.)
+FROM maven:3.9-amazoncorretto-21-debian
+
+# Create application directory
+RUN mkdir -p /app
+
+# Set locale
+ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en'
+
+# Configure Maven to use local repository inside /app (mounted volume)
+# This allows Maven dependencies to persist across container restarts
+RUN echo \
+    "<settings xmlns='http://maven.apache.org/SETTINGS/1.0.0' \
+    xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' \
+    xsi:schemaLocation='http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd'> \
+        <localRepository>/app/.m2/repository</localRepository> \
+        <interactiveMode>true</interactiveMode> \
+        <usePluginRegistry>false</usePluginRegistry> \
+        <offline>false</offline> \
+    </settings>" \
+    > /usr/share/maven/conf/settings.xml
+
+# Set working directory
+WORKDIR /app
+
+# Install curl (needed for health checks)
+RUN apt-get update && apt-get install -y curl
+
+# Install Node.js 20.x and pnpm (required for Quinoa/Vite frontend integration)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && apt-get install -y nodejs \
+  && npm install -g pnpm
+
+# Expose ports:
+# - 8080: HTTP port (mapped to 8030 on host)
+# - 5176: Vite dev server port (for frontend hot reload)
+# - 5005: Debug port (mapped to 5030 on host)
+EXPOSE 8080 5176 5005
+
+# Configure Java options for Quarkus dev mode
+ENV AB_JOLOKIA_OFF=""
+ENV JAVA_OPTS="-Dquarkus.http.host=0.0.0.0 -Djava.awt.headless=true -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+
+# Start the application using the dev startup script
+# This script runs MyBatis migrations and then starts Quarkus in dev mode
+CMD ["./start_dev.sh"]

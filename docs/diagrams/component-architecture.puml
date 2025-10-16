@@ -1,0 +1,67 @@
+@startuml component-architecture
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Village Calendar Service - Component Architecture
+
+LAYOUT_WITH_LEGEND()
+
+Container_Boundary(api, "API Layer") {
+    Component(graphql_api, "GraphQL API", "SmallRye GraphQL", "Primary API interface for calendar operations, templates, and orders")
+    Component(rest_endpoints, "REST Endpoints", "JAX-RS", "OAuth2 callbacks, Stripe webhooks, health checks")
+}
+
+Container_Boundary(services, "Service Layer") {
+    Component(auth_service, "Authentication Service", "Java Service", "OAuth2 integration via Quarkus OIDC\n- Google OAuth2\n- Facebook OAuth2\n- JWT token issuance\n- User session management")
+
+    Component(calendar_gen_service, "Calendar Generation Service", "Java Service", "PDF rendering and calendar creation\n- Apache PDFBox rendering\n- Apache Batik SVG processing\n- SunCalc astronomical calculations\n- Proj4J geographic projections\n- Template configuration processing\n- R2 storage upload")
+
+    Component(template_service, "Template Service", "Java Service", "Calendar template management\n- CRUD operations for CalendarTemplate\n- Admin-only mutations\n- Preview image management\n- JSONB configuration validation")
+
+    Component(order_service, "Order Service", "Java Service", "E-commerce and fulfillment\n- Stripe payment integration\n- Order lifecycle management\n- Admin fulfillment operations\n- Email notifications")
+}
+
+Container_Boundary(data, "Data Layer") {
+    ComponentDb(user_repo, "CalendarUserRepository", "Panache Repository", "OAuth2 user profiles")
+    ComponentDb(template_repo, "CalendarTemplateRepository", "Panache Repository", "Calendar template definitions")
+    ComponentDb(calendar_repo, "UserCalendarRepository", "Panache Repository", "Generated calendar metadata")
+    ComponentDb(order_repo, "CalendarOrderRepository", "Panache Repository", "Order and payment records")
+}
+
+Container_Boundary(external, "External Services") {
+    Component_Ext(google_oauth, "Google OAuth2", "External API", "Google authentication provider")
+    Component_Ext(facebook_oauth, "Facebook OAuth2", "External API", "Facebook authentication provider")
+    Component_Ext(r2_storage, "Cloudflare R2", "S3-Compatible Storage", "PDF storage and delivery")
+    Component_Ext(stripe_api, "Stripe API", "Payment Gateway", "Payment processing")
+    ComponentDb_Ext(postgres, "PostgreSQL Database", "Database", "Primary data store\n- User accounts\n- Templates\n- Orders\n- Generated calendars")
+}
+
+' API Layer relationships
+Rel(graphql_api, auth_service, "Authenticates requests", "JWT")
+Rel(graphql_api, calendar_gen_service, "Generate calendars")
+Rel(graphql_api, template_service, "Manage templates")
+Rel(graphql_api, order_service, "Process orders")
+
+Rel(rest_endpoints, auth_service, "OAuth2 callbacks")
+Rel(rest_endpoints, order_service, "Stripe webhooks")
+
+' Service to Repository relationships
+Rel(auth_service, user_repo, "Reads/Writes", "JPA")
+Rel(calendar_gen_service, template_repo, "Reads", "JPA")
+Rel(calendar_gen_service, calendar_repo, "Writes", "JPA")
+Rel(template_service, template_repo, "CRUD", "JPA")
+Rel(order_service, order_repo, "CRUD", "JPA")
+Rel(order_service, calendar_repo, "Reads", "JPA")
+
+' Repository to Database relationships
+Rel(user_repo, postgres, "SQL")
+Rel(template_repo, postgres, "SQL")
+Rel(calendar_repo, postgres, "SQL")
+Rel(order_repo, postgres, "SQL")
+
+' Service to External Service relationships
+Rel(auth_service, google_oauth, "OAuth2 flow", "HTTPS")
+Rel(auth_service, facebook_oauth, "OAuth2 flow", "HTTPS")
+Rel(calendar_gen_service, r2_storage, "Upload PDFs", "S3 API")
+Rel(order_service, stripe_api, "Process payments", "HTTPS")
+
+@enduml

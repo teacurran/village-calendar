@@ -42,6 +42,7 @@ lerna-debug.log*
 dist/
 dist-ssr/
 *.local
+.env
 .env.local
 .env.*.local
 
@@ -56,3 +57,9 @@ dist-ssr/
 *.swp
 *.swo
 *~
+
+# Security - Keys and certificates
+*.pem
+
+# Root package-lock.json (webui has its own)
+/package-lock.json
