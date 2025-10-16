@@ -124,7 +124,7 @@ log_info "Database: $DB_HOST:$DB_PORT/$DB_NAME"
 ################################################################################
 
 log_info "Testing database connection..."
-if ssh tea@10.50.0.20 "PGPASSWORD='$DB_PASSWORD' psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c 'SELECT version();'" > /dev/null 2>&1; then
+if ssh tea@10.50.0.20 "export PGPASSWORD='$DB_PASSWORD' && psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c 'SELECT version();'" > /dev/null 2>&1; then
     log_success "Database connection successful"
 else
     log_error "Database connection failed!"
