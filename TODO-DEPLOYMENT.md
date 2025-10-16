@@ -1,6 +1,6 @@
 # Village Calendar - Beta Deployment TODO
 
-**Status**: 85% Ready - Infrastructure Complete, Credentials In Progress
+**Status**: 100% Ready - All Credentials Obtained, Ready to Deploy!
 **Last Updated**: October 16, 2025
 
 ## ✅ Completed
@@ -33,62 +33,19 @@
 - [x] Maven build configuration
 - [x] Health checks configured
 
-### Credentials Obtained (65%)
+### Credentials Obtained (100%) ✅
 - [x] **JWT Keys** - Generated at `~/.village-secrets/`
 - [x] **Docker Hub** - teacurran account with access token
 - [x] **Google OAuth2** - Client ID and Secret configured
 - [x] **Database** - PostgreSQL credentials set
 - [x] **Email/SMTP** - AWS SES credentials available
-- [x] **Stripe Test Keys** - Publishable and Secret keys obtained
-- [ ] **Stripe Webhook** - Need webhook secret (create endpoint first)
-- [ ] **Cloudflare R2** - Need to create bucket and get credentials
+- [x] **Stripe Test Keys** - All keys obtained (publishable, secret, webhook)
+- [x] **Stripe Webhook** - Endpoint created and secret obtained
+- [x] **Cloudflare R2** - Bucket created via Terraform, API credentials obtained
 
-## 🔨 Remaining Tasks
+## ✅ All Setup Complete - Ready to Deploy!
 
-### 1. Complete Stripe Setup (5 minutes)
-
-**Current Status**: Have publishable and secret keys, missing webhook secret
-
-**Steps**:
-1. Go to https://dashboard.stripe.com/test/webhooks
-2. Click "Add endpoint"
-3. Endpoint URL: `https://beta.calendar.villagecompute.com/webhooks/stripe`
-4. Select events:
-   - `checkout.session.completed`
-   - `payment_intent.succeeded`
-   - `payment_intent.payment_failed`
-5. Copy the signing secret (starts with `whsec_`)
-6. Update in `set-beta-credentials.sh`:
-   ```bash
-   export STRIPE_WEBHOOK_SECRET="whsec_..."
-   ```
-
-### 2. Set Up Cloudflare R2 (10 minutes)
-
-**Steps**:
-1. Go to https://dash.cloudflare.com/?to=/:account/r2
-2. Click "Create bucket"
-   - Name: `village-calendar-beta`
-   - Location: Auto (closest to K3s cluster)
-3. Create API Token:
-   - Navigate to "Manage R2 API Tokens"
-   - Click "Create API token"
-   - Permissions: Object Read & Write
-   - Apply to bucket: `village-calendar-beta`
-   - Copy Access Key ID and Secret Access Key
-4. Enable Public Access:
-   - In bucket settings → "Public access" → "Connect Domain"
-   - Use R2.dev subdomain (free) or custom domain
-   - Note the public URL
-5. Update in `set-beta-credentials.sh`:
-   ```bash
-   export R2_ENDPOINT="https://5cd6a013116fd24457ed3964e1ccab36.r2.cloudflarestorage.com"
-   export R2_ACCESS_KEY="..."
-   export R2_SECRET_KEY="..."
-   export R2_PUBLIC_URL="https://village-calendar-beta.[random].r2.dev"
-   ```
-
-### 3. Deploy to Beta (20 minutes)
+### Deploy to Beta (20 minutes)
 
 Once all credentials are set:
 
@@ -116,7 +73,7 @@ The script will:
 
 **Expected deployment time**: 15-20 minutes
 
-### 4. Post-Deployment Verification (10 minutes)
+### Post-Deployment Verification (10 minutes)
 
 After deployment completes:
 
@@ -150,21 +107,20 @@ After deployment completes:
 |----------|----------|--------|
 | Infrastructure | 100% | ✅ Complete |
 | Automation | 100% | ✅ Complete |
-| Credentials | 65% | 🔨 In Progress |
-| Deployment | 0% | ⏸️ Waiting on credentials |
+| Credentials | 100% | ✅ Complete |
+| Deployment | 0% | ⏭️ Ready to execute |
 | Testing | 0% | ⏸️ Post-deployment |
 
-**Overall: 85% Ready**
+**Overall: 100% Ready - Deploy Now!**
 
-## 🎯 Next Session Goals
+## 🎯 Next Steps - Ready to Deploy!
 
-1. [ ] Complete Stripe webhook setup (5 min)
-2. [ ] Create Cloudflare R2 bucket and get credentials (10 min)
-3. [ ] Run `./deploy-to-beta.sh` (20 min)
-4. [ ] Verify deployment and run smoke tests (10 min)
-5. [ ] Update OAuth2 redirect URIs (5 min)
+1. [ ] Run `./deploy-to-beta.sh` (20 min)
+2. [ ] Verify deployment and run smoke tests (10 min)
+3. [ ] Update OAuth2 redirect URIs in Google Console (5 min)
+4. [ ] Test full application flow
 
-**Total estimated time**: ~50 minutes to full beta deployment
+**Total estimated time**: ~35 minutes to full beta deployment
 
 ## 📝 Notes
 

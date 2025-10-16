@@ -1,0 +1,15 @@
+# Village Calendar - Terraform Configuration Example
+# Copy this file to terraform.tfvars and fill in your values
+
+# Cloudflare Configuration
+cloudflare_account_id = "5cd6a013116fd24457ed3964e1ccab36"
+cloudflare_api_token  = "YOUR_CLOUDFLARE_API_TOKEN"
+
+# R2 Bucket Configuration
+r2_bucket_name = "village-calendar-beta"
+r2_location    = "WNAM" # Western North America
+
+# DNS Configuration (optional - only if you want to create custom domain)
+# If DNS is managed in the main villagecompute terraform, set create_dns_records = false
+zone_id             = "e35d3b616f6107243316b5a3d42fc9e7" # villagecompute.com zone
+create_dns_records  = false # Set to true to create calendars-beta.villagecompute.com
