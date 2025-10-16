@@ -5,7 +5,8 @@
   become: yes
   vars:
     # Deployment variables (set by GitHub Actions)
-    image_tag: "{{ lookup('env', 'IMAGE_TAG') }}"
+    # Use hash-based tags like 'beta-20167d7' instead of mutable 'beta-latest'
+    image_tag: "{{ lookup('env', 'IMAGE_TAG') | default('beta-latest', true) }}"
     registry_user: "{{ lookup('env', 'REGISTRY_USER') }}"
     registry_password: "{{ lookup('env', 'REGISTRY_PASSWORD') }}"
 
