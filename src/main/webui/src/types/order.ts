@@ -33,8 +33,8 @@ export interface CalendarOrder {
   trackingNumber?: string
   stripePaymentIntentId?: string
   stripeChargeId?: string
-  createdAt: string // DateTime
-  updatedAt: string // DateTime
+  created: string // DateTime
+  updated: string // DateTime
   paidAt?: string // DateTime
   shippedAt?: string // DateTime
   deliveredAt?: string // DateTime

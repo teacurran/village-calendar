@@ -91,8 +91,8 @@ export async function fetchTemplates(
         isActive
         isFeatured
         displayOrder
-        createdAt
-        updatedAt
+        created
+        updated
       }
     }
   `
@@ -122,8 +122,8 @@ export async function fetchTemplate(id: string): Promise<ServiceResponse<Calenda
         isActive
         isFeatured
         displayOrder
-        createdAt
-        updatedAt
+        created
+        updated
       }
     }
   `
@@ -159,8 +159,8 @@ export async function createTemplate(
         isActive
         isFeatured
         displayOrder
-        createdAt
-        updatedAt
+        created
+        updated
       }
     }
   `
@@ -197,8 +197,8 @@ export async function updateTemplate(
         isActive
         isFeatured
         displayOrder
-        createdAt
-        updatedAt
+        created
+        updated
       }
     }
   `

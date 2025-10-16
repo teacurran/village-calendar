@@ -298,9 +298,9 @@ onMounted(async () => {
         </template>
       </Column>
 
-      <Column field="createdAt" header="Order Date" sortable style="width: 12%">
+      <Column field="created" header="Order Date" sortable style="width: 12%">
         <template #body="{ data }">
-          {{ formatDate(data.createdAt) }}
+          {{ formatDate(data.created) }}
         </template>
       </Column>
 

@@ -95,7 +95,7 @@ type CalendarUser {
   calendars: [UserCalendar!]!
 
   """Timestamp when user account was created"""
-  createdAt: DateTime!
+  created: DateTime!
 
   """User's display name from OAuth profile"""
   displayName: String
@@ -122,7 +122,7 @@ type CalendarUser {
   profileImageUrl: String
 
   """Timestamp when user account was last updated"""
-  updatedAt: DateTime!
+  updated: DateTime!
 }
 
 """
@@ -135,7 +135,7 @@ type CalendarTemplate {
   configuration: JSON!
 
   """Timestamp when template was created"""
-  createdAt: DateTime!
+  created: DateTime!
 
   """Detailed description of the template's design and features"""
   description: String
@@ -162,7 +162,7 @@ type CalendarTemplate {
   thumbnailUrl: String
 
   """Timestamp when template was last updated"""
-  updatedAt: DateTime!
+  updated: DateTime!
 
   """Calendars created using this template"""
   userCalendars: [UserCalendar!]!
@@ -178,7 +178,7 @@ type UserCalendar {
   configuration: JSON
 
   """Timestamp when calendar was created"""
-  createdAt: DateTime!
+  created: DateTime!
 
   """URL to generated PDF file (null until generation completes)"""
   generatedPdfUrl: String
@@ -208,7 +208,7 @@ type UserCalendar {
   template: CalendarTemplate!
 
   """Timestamp when calendar was last updated"""
-  updatedAt: DateTime!
+  updated: DateTime!
 
   """User who owns this calendar"""
   user: CalendarUser
@@ -227,7 +227,7 @@ type CalendarOrder {
   calendar: UserCalendar!
 
   """Timestamp when order was created"""
-  createdAt: DateTime!
+  created: DateTime!
 
   """Timestamp when order was delivered"""
   deliveredAt: DateTime
@@ -269,7 +269,7 @@ type CalendarOrder {
   unitPrice: BigDecimal!
 
   """Timestamp when order was last updated"""
-  updatedAt: DateTime!
+  updated: DateTime!
 
   """User who placed this order"""
   user: CalendarUser!

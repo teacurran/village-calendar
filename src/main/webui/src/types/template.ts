@@ -13,8 +13,8 @@ export interface CalendarTemplate {
   isActive: boolean
   isFeatured: boolean
   displayOrder: number
-  createdAt: string // DateTime
-  updatedAt: string // DateTime
+  created: string // DateTime
+  updated: string // DateTime
 }
 
 export interface TemplateInput {

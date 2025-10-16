@@ -18,6 +18,10 @@ FROM maven:3.9-eclipse-temurin-21 AS build
 
 WORKDIR /build
 
+# Install Node.js and npm for Quinoa (frontend build)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs
+
 # Copy the Maven wrapper and pom.xml first for better layer caching
 COPY pom.xml ./
 COPY .mvn .mvn

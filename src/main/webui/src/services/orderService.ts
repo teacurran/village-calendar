@@ -187,8 +187,8 @@ export async function fetchOrderById(orderId: string, authToken: string): Promis
               shippedAt
               deliveredAt
               trackingNumber
-              createdAt
-              updatedAt
+              created
+              updated
               calendar {
                 id
                 name
@@ -252,7 +252,7 @@ export async function fetchUserOrders(authToken: string): Promise<any[]> {
               shippedAt
               deliveredAt
               trackingNumber
-              createdAt
+              created
               calendar {
                 id
                 name
@@ -367,8 +367,8 @@ export async function fetchOrderByPaymentIntent(
               shippedAt
               deliveredAt
               trackingNumber
-              createdAt
-              updatedAt
+              created
+              updated
               stripePaymentIntentId
               calendar {
                 id
@@ -446,8 +446,8 @@ export async function fetchAllOrdersAdmin(
               trackingNumber
               stripePaymentIntentId
               stripeChargeId
-              createdAt
-              updatedAt
+              created
+              updated
               paidAt
               shippedAt
               deliveredAt
@@ -514,8 +514,8 @@ export async function updateOrderStatusAdmin(
               trackingNumber
               stripePaymentIntentId
               stripeChargeId
-              createdAt
-              updatedAt
+              created
+              updated
               paidAt
               shippedAt
               deliveredAt

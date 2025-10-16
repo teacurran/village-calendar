@@ -8,7 +8,7 @@ export interface CalendarUser {
   profileImageUrl?: string
   oauthProvider: 'GOOGLE' | 'FACEBOOK'
   oauthSubject: string
-  createdAt: string
+  created: string
   lastLoginAt?: string
 }
 
@@ -59,7 +59,7 @@ export const useAuthStore = defineStore('auth', {
                   profileImageUrl
                   oauthProvider
                   oauthSubject
-                  createdAt
+                  created
                   lastLoginAt
                 }
               }

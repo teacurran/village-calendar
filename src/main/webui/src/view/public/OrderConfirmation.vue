@@ -40,7 +40,7 @@
               </div>
               <div class="info-row">
                 <span class="label">Order Date:</span>
-                <span class="value">{{ formatDateTime(order.createdAt) }}</span>
+                <span class="value">{{ formatDateTime(order.created) }}</span>
               </div>
               <div v-if="order.user" class="info-row">
                 <span class="label">Customer:</span>
@@ -140,7 +140,7 @@
                   <div class="timeline-marker"></div>
                   <div class="timeline-content">
                     <p class="timeline-title">Order Placed</p>
-                    <p class="timeline-date">{{ formatDate(order.createdAt) }}</p>
+                    <p class="timeline-date">{{ formatDate(order.created) }}</p>
                   </div>
                 </div>
                 <div class="timeline-item" :class="{ active: order.status === 'PROCESSING' || order.status === 'SHIPPED' || order.status === 'DELIVERED' }">
@@ -230,8 +230,8 @@ interface CalendarOrder {
   shippedAt: string | null
   deliveredAt: string | null
   trackingNumber: string | null
-  createdAt: string
-  updatedAt: string
+  created: string
+  updated: string
   calendar: {
     id: string
     name: string
@@ -261,7 +261,7 @@ const order = ref<CalendarOrder | null>(null)
 // Computed
 const estimatedDelivery = computed(() => {
   if (!order.value || order.value.deliveredAt) return null
-  return calculateEstimatedDelivery(new Date(order.value.createdAt))
+  return calculateEstimatedDelivery(new Date(order.value.created))
 })
 
 // Methods

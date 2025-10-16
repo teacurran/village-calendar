@@ -937,10 +937,10 @@
           <div class="mb-3">
             <h4 class="font-semibold">{{ calendar.name }}</h4>
             <p class="text-sm text-gray-500">
-              Created: {{ new Date(calendar.createdAt).toLocaleDateString() }}
+              Created: {{ new Date(calendar.created).toLocaleDateString() }}
             </p>
-            <p v-if="calendar.updatedAt" class="text-sm text-gray-500">
-              Updated: {{ new Date(calendar.updatedAt).toLocaleDateString() }}
+            <p v-if="calendar.updated" class="text-sm text-gray-500">
+              Updated: {{ new Date(calendar.updated).toLocaleDateString() }}
             </p>
           </div>
 

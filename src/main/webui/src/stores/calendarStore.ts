@@ -12,8 +12,8 @@ export interface CalendarTemplate {
   displayOrder: number
   isActive: boolean
   isFeatured: boolean
-  createdAt: string
-  updatedAt: string
+  created: string
+  updated: string
 }
 
 export interface UserCalendar {
@@ -26,8 +26,8 @@ export interface UserCalendar {
   generatedSvg?: string
   isPublic: boolean
   template: CalendarTemplate
-  createdAt: string
-  updatedAt: string
+  created: string
+  updated: string
 }
 
 export const useCalendarStore = defineStore('calendar', {
@@ -72,8 +72,8 @@ export const useCalendarStore = defineStore('calendar', {
                   displayOrder
                   isActive
                   isFeatured
-                  createdAt
-                  updatedAt
+                  created
+                  updated
                 }
               }
             `,
@@ -127,8 +127,8 @@ export const useCalendarStore = defineStore('calendar', {
                   displayOrder
                   isActive
                   isFeatured
-                  createdAt
-                  updatedAt
+                  created
+                  updated
                 }
               }
             `,
@@ -186,8 +186,8 @@ export const useCalendarStore = defineStore('calendar', {
                   generatedPdfUrl
                   generatedSvg
                   isPublic
-                  createdAt
-                  updatedAt
+                  created
+                  updated
                   template {
                     id
                     name
@@ -253,8 +253,8 @@ export const useCalendarStore = defineStore('calendar', {
                   generatedPdfUrl
                   generatedSvg
                   isPublic
-                  createdAt
-                  updatedAt
+                  created
+                  updated
                   template {
                     id
                     name
@@ -328,8 +328,8 @@ export const useCalendarStore = defineStore('calendar', {
                   generatedPdfUrl
                   generatedSvg
                   isPublic
-                  createdAt
-                  updatedAt
+                  created
+                  updated
                   template {
                     id
                     name
@@ -406,8 +406,8 @@ export const useCalendarStore = defineStore('calendar', {
                   generatedPdfUrl
                   generatedSvg
                   isPublic
-                  createdAt
-                  updatedAt
+                  created
+                  updated
                   template {
                     id
                     name
