@@ -63,3 +63,4 @@ dist-ssr/
 
 # Root package-lock.json (webui has its own)
 /package-lock.json
+set-beta-credentials.sh

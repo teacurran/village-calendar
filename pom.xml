@@ -46,6 +46,51 @@
       <artifactId>quarkus-smallrye-health</artifactId>
     </dependency>
 
+    <!-- Micrometer Prometheus for metrics -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
+    </dependency>
+
+    <!-- GraphQL dependencies -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-graphql</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-graphql-client</artifactId>
+    </dependency>
+
+    <!-- Extended GraphQL Scalars for JSON support -->
+    <dependency>
+      <groupId>com.graphql-java</groupId>
+      <artifactId>graphql-java-extended-scalars</artifactId>
+      <version>21.0</version>
+    </dependency>
+
+    <!-- OIDC for OAuth2 authentication -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-oidc</artifactId>
+    </dependency>
+
+    <!-- SmallRye JWT for JWT generation and validation -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-jwt</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-jwt-build</artifactId>
+    </dependency>
+
+    <!-- Mailer for email notifications -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-mailer</artifactId>
+    </dependency>
+
     <!-- Hibernate ORM specific dependencies -->
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -90,6 +135,19 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-vertx-http</artifactId>
+    </dependency>
+
+    <!-- Container image generation with Jib -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-container-image-jib</artifactId>
+    </dependency>
+
+    <!-- AWS SDK for S3 (Cloudflare R2 integration) -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
+      <version>2.20.162</version>
     </dependency>
 
     <!-- SunCalc library for astronomical calculations -->
@@ -153,8 +211,23 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-junit5-mockito</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>io.rest-assured</groupId>
       <artifactId>rest-assured</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jdbc-h2</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
