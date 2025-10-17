@@ -10,28 +10,28 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I1.T12",
+  "task_id": "I1.T13",
   "iteration_id": "I1",
   "iteration_goal": "Establish project infrastructure, define data models, create architectural artifacts, and implement foundational backend/frontend scaffolding",
-  "description": "Create GitHub Actions workflow for continuous integration and deployment. Workflow should trigger on push to `main` branch and pull requests. CI jobs: (1) Backend - Maven compile, run unit tests, build JAR; (2) Frontend - npm install, run linting (ESLint), build production bundle; (3) Docker - build Docker image, push to Docker Hub (villagecompute/calendar-api:${GIT_SHA} and :latest tags). CD job (production deployment): Connect to k3s cluster via WireGuard VPN, apply Kubernetes manifests (update image tag), wait for rollout completion, run smoke tests (health check, sample GraphQL query). Configure secrets: DOCKER_HUB_TOKEN, K3S_KUBECONFIG, WIREGUARD_PRIVATE_KEY. Create separate workflows for beta and production environments.",
-  "agent_type_hint": "SetupAgent",
-  "inputs": "CI/CD requirements from Plan Section 3.9.2, GitHub Actions documentation, Existing WireGuard VPN setup to k3s cluster",
+  "description": "Create JUnit 5 unit tests for all JPA entity models and Panache repositories. Test entity validation constraints (@NotNull, @Email, etc.), relationship mappings (cascade, fetch strategies), JSONB serialization/deserialization. Test repository methods: findById, listAll, persist, delete, custom queries (e.g., findByEmail, findByUserId). Use Quarkus test framework with @QuarkusTest annotation and in-memory H2 database for tests. Achieve >70% code coverage for model and repository packages. Configure JaCoCo Maven plugin for coverage reporting.",
+  "agent_type_hint": "BackendAgent",
+  "inputs": "Entity models from Task I1.T8, Quarkus testing documentation",
   "target_files": [
-    ".github/workflows/ci.yml",
-    ".github/workflows/deploy-beta.yml",
-    ".github/workflows/deploy-production.yml",
-    "docs/guides/cicd-setup.md"
+    "src/test/java/villagecompute/calendar/model/UserTest.java",
+    "src/test/java/villagecompute/calendar/model/CalendarTest.java",
+    "src/test/java/villagecompute/calendar/model/OrderTest.java",
+    "src/test/java/villagecompute/calendar/repository/UserRepositoryTest.java",
+    "src/test/java/villagecompute/calendar/repository/CalendarRepositoryTest.java",
+    "pom.xml"
   ],
   "input_files": [
-    "pom.xml",
-    "frontend/package.json",
-    "Dockerfile"
+    "src/main/java/villagecompute/calendar/model/*.java",
+    "src/main/java/villagecompute/calendar/repository/*.java"
   ],
-  "deliverables": "GitHub Actions CI workflow runs on every push/PR, CI workflow compiles backend, builds frontend, creates Docker image, Beta deployment workflow deploys to `calendar-beta` namespace on k3s, Production deployment workflow requires manual approval, deploys to `calendar-prod` namespace, CICD setup guide with secret configuration instructions",
-  "acceptance_criteria": "Push to `main` branch triggers CI workflow, all jobs pass, Docker image pushed to Docker Hub with correct tags, Beta deployment workflow successfully updates k3s deployment, Production workflow shows approval gate in GitHub Actions UI, Smoke tests pass after deployment (health check returns 200), CICD guide tested with fresh GitHub repository setup",
+  "deliverables": "Unit tests for all 11 entity classes, Unit tests for all repository classes, Tests run successfully with ./mvnw test, JaCoCo coverage report generated (target/site/jacoco/index.html), Coverage >70% for model and repository packages",
+  "acceptance_criteria": "./mvnw test runs all tests without failures, Entity validation tests verify @NotNull, @Email, @Size constraints, Relationship tests confirm cascade and fetch behavior, Repository tests verify CRUD operations and custom queries, JaCoCo report shows line/branch coverage percentages, No test depends on external services (all use in-memory database)",
   "dependencies": [
-    "I1.T1",
-    "I1.T10"
+    "I1.T8"
   ],
   "parallelizable": true,
   "done": false
@@ -44,61 +44,44 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: deployment-strategy (from 05_Operational_Architecture.md)
+### Context: testing-levels (from 03_Verification_and_Glossary.md)
 
 ```markdown
-<!-- anchor: deployment-strategy -->
-#### 3.9.2. Deployment Strategy
+### 5.1. Testing Levels
 
-**Continuous Deployment Pipeline (GitHub Actions):**
+The Village Calendar project employs a multi-layered testing strategy to ensure quality at every level of the system:
 
-1. **Trigger**: Git push to `main` branch or manual workflow dispatch
-2. **Build**:
-   - Compile Quarkus application (Maven `./mvnw package`)
-   - Build Vue.js frontend (Vite `npm run build`, bundled into Quarkus via Quinoa)
-   - Run unit tests (JUnit for backend, Vitest for frontend)
-   - Build Docker image (Quarkus native or JVM mode)
-   - Push image to Docker Hub (`villagecompute/calendar-api:${GIT_SHA}`)
-3. **Deploy**:
-   - Connect to k3s cluster via WireGuard VPN
-   - Apply Kubernetes manifests (Ansible playbook or `kubectl apply`)
-   - Update Deployment image tag (`kubectl set image deployment/calendar-api calendar-api=villagecompute/calendar-api:${GIT_SHA}`)
-   - Wait for rollout completion (`kubectl rollout status`)
-   - Run smoke tests (health check, sample GraphQL query)
-4. **Rollback**:
-   - If smoke tests fail: `kubectl rollout undo deployment/calendar-api`
-   - Notify #deploy-alerts Slack channel
+**1. Unit Testing (Iteration-Specific)**
 
-**Deployment Environments:**
+*   **Scope**: Individual classes, methods, and functions in isolation
+*   **Tools**: JUnit 5 (backend), Vitest (frontend)
+*   **Coverage Target**: 70%+ for service layer, repository layer, utility classes
+*   **Frequency**: Run on every commit (CI pipeline)
+*   **Examples**:
+    *   Entity validation tests (JPA constraint validation)
+    *   Service method tests (business logic, edge cases)
+    *   Repository query tests (custom queries, filters)
+    *   GraphQL resolver tests (authorization, error handling)
+    *   Utility class tests (astronomical calculations, PDF rendering helpers)
+*   **Iteration Integration**: Unit tests written alongside implementation in each iteration (I1.T13, I2.T2, I2.T3, I3.T2, I4.T2)
 
-- **Beta**: `calendar-beta.villagecompute.com` (Cloudflare Tunnel → k3s namespace `calendar-beta`)
-  - Purpose: Pre-production testing, early access features
-  - Data: Separate PostgreSQL database (copy of production schema, synthetic test data)
-  - Deployment: Automatic on merge to `beta` branch
-- **Production**: `calendar.villagecompute.com` (Cloudflare Tunnel → k3s namespace `calendar-prod`)
-  - Purpose: Live user traffic
-  - Data: Production PostgreSQL database
-  - Deployment: Manual approval required (GitHub Actions protected environment)
+**2. Integration Testing (Iteration-Specific)**
 
-**Rolling Update Strategy:**
-
-- **Max Surge**: 1 pod (allow N+1 pods during deployment for zero downtime)
-- **Max Unavailable**: 0 pods (ensure at least N pods always running)
-- **Health Checks**: New pod must pass readiness probe before old pod is terminated
-- **Rollout Timeline**: Stagger pod updates by 30 seconds (gradual traffic shift)
-
-**Database Migration Strategy:**
-
-- **Timing**: Migrations run before application deployment (Kubernetes init container or separate job)
-- **Locking**: PostgreSQL advisory locks prevent concurrent migrations
-- **Backward Compatibility**: Schema changes must support N and N-1 application versions (e.g., add column with default value, deploy app, then remove old column in next release)
-- **Rollback**: Down migrations supported in dev/staging, not used in production (forward-only migrations with feature flags)
+*   **Scope**: Component interactions, API endpoints, database operations, external service integrations
+*   **Tools**: Quarkus test framework with REST Assured, Testcontainers (PostgreSQL, Jaeger)
+*   **Coverage Target**: 70%+ for API layer, integration points
+*   **Frequency**: Run before merge to main branch
+*   **Examples**:
+    *   GraphQL API workflows (create calendar, place order, generate PDF)
+    *   Database transaction tests (ACID compliance, rollback scenarios)
+    *   Job queue processing (DelayedJob execution, retry logic)
+    *   External service integration (Stripe webhook, OAuth callback, R2 upload)
+*   **Iteration Integration**: Integration tests written at end of each iteration (I2.T10, I3.T9, I4.T10, I5.T10)
 ```
 
 ### Context: ci-cd-pipeline (from 03_Verification_and_Glossary.md)
 
 ```markdown
-<!-- anchor: ci-cd-pipeline -->
 ### 5.2. CI/CD Pipeline
 
 **Continuous Integration (CI) - Triggered on Every Push/Pull Request**
@@ -123,102 +106,28 @@ The following are the relevant sections from the architecture and plan documents
     *   (Optional) Scan image for vulnerabilities (Trivy, Snyk Container)
 6.  **Publish Artifact**:
     *   Push Docker image to Docker Hub with tags: `${GIT_SHA}`, `latest` (for main branch)
-
-**Continuous Deployment (CD) - Beta Environment**
-
-*   **Trigger**: Merge to `beta` branch
-*   **Steps**:
-    1.  Run CI pipeline (above)
-    2.  Connect to k3s cluster via WireGuard VPN
-    3.  Update Kubernetes deployment in `calendar-beta` namespace:
-        *   `kubectl set image deployment/calendar-api calendar-api=villagecompute/calendar-api:${GIT_SHA} -n calendar-beta`
-    4.  Wait for rollout completion (`kubectl rollout status deployment/calendar-api -n calendar-beta`)
-    5.  Run smoke tests:
-        *   Health check (`curl http://calendar-beta.villagecompute.com/q/health/ready`)
-        *   Sample GraphQL query (fetch templates)
-    6.  Run E2E tests (Cypress suite against beta environment)
-    7.  Notify Slack channel (#deploy-alerts) on success/failure
-
-**Continuous Deployment (CD) - Production Environment**
-
-*   **Trigger**: Merge to `main` branch + manual approval
-*   **Steps**:
-    1.  Run CI pipeline (above)
-    2.  Wait for manual approval (GitHub environment protection: "production")
-    3.  Pre-deployment checks:
-        *   Verify database migrations backward compatible
-        *   Review changelog/release notes
-    4.  Connect to k3s cluster via WireGuard VPN
-    5.  Apply Kubernetes manifests (Kustomize overlay for production):
-        *   `kubectl apply -k infrastructure/kubernetes/overlays/production/`
-    6.  Canary deployment strategy:
-        *   Deploy 1 pod, wait 5 minutes, monitor metrics
-        *   Scale to 50% (5 pods if current is 10), wait 10 minutes
-        *   Scale to 100% (full rollout)
-    7.  Run extensive smoke tests:
-        *   Health check
-        *   GraphQL query (calendar, order)
-        *   Place test order (use Stripe test mode or dedicated test account)
-    8.  Notify team on completion (Slack, email)
-    9.  Monitor for 1 hour post-deployment (error rate, latency, alerts)
-
-**Rollback Procedure**
-
-*   **Trigger**: Smoke tests fail, error rate >5%, critical bug reported
-*   **Steps**:
-    1.  `kubectl rollout undo deployment/calendar-api -n calendar-prod`
-    2.  Verify rollback success (health check, smoke tests)
-    3.  Notify team of rollback
-    4.  Investigate root cause, fix in `main` branch, re-deploy
 ```
 
-### Context: task-i1-t12 (from 02_Iteration_I1.md)
+### Context: code-quality-gates (from 03_Verification_and_Glossary.md)
 
 ```markdown
-<!-- anchor: task-i1-t12 -->
-### Task 1.12: Configure CI/CD Pipeline (GitHub Actions)
+### 5.3. Code Quality Gates
 
-**Task ID:** `I1.T12`
+**Mandatory Gates (CI Pipeline Fails If Not Met)**
 
-**Description:**
-Create GitHub Actions workflow for continuous integration and deployment. Workflow should trigger on push to `main` branch and pull requests. CI jobs: (1) Backend - Maven compile, run unit tests, build JAR; (2) Frontend - npm install, run linting (ESLint), build production bundle; (3) Docker - build Docker image, push to Docker Hub (villagecompute/calendar-api:${GIT_SHA} and :latest tags). CD job (production deployment): Connect to k3s cluster via WireGuard VPN, apply Kubernetes manifests (update image tag), wait for rollout completion, run smoke tests (health check, sample GraphQL query). Configure secrets: DOCKER_HUB_TOKEN, K3S_KUBECONFIG, WIREGUARD_PRIVATE_KEY. Create separate workflows for beta and production environments.
+1.  **Compilation Success**: Backend and frontend must compile without errors
+2.  **Unit Test Pass**: All unit tests must pass (0% failure tolerance)
+3.  **Code Coverage**: Minimum 70% line coverage for service layer, API layer, repository layer (JaCoCo enforcement)
+4.  **Linting**: ESLint must pass with 0 errors (warnings allowed, but discouraged)
+5.  **Security Scan**: No critical severity vulnerabilities in dependencies (Snyk/OWASP)
+6.  **Integration Test Pass**: All integration tests must pass
 
-**Agent Type Hint:** `SetupAgent`
+**Advisory Gates (Warnings, Manual Review Required)**
 
-**Inputs:**
-- CI/CD requirements from Plan Section 3.9.2
-- GitHub Actions documentation
-- Existing WireGuard VPN setup to k3s cluster
-
-**Input Files:**
-- `pom.xml`
-- `frontend/package.json`
-- `Dockerfile`
-
-**Target Files:**
-- `.github/workflows/ci.yml` (continuous integration)
-- `.github/workflows/deploy-beta.yml` (beta environment deployment)
-- `.github/workflows/deploy-production.yml` (production deployment with approval)
-- `docs/guides/cicd-setup.md` (guide for configuring GitHub secrets)
-
-**Deliverables:**
-- GitHub Actions CI workflow runs on every push/PR
-- CI workflow compiles backend, builds frontend, creates Docker image
-- Beta deployment workflow deploys to `calendar-beta` namespace on k3s
-- Production deployment workflow requires manual approval, deploys to `calendar-prod` namespace
-- CICD setup guide with secret configuration instructions
-
-**Acceptance Criteria:**
-- Push to `main` branch triggers CI workflow, all jobs pass
-- Docker image pushed to Docker Hub with correct tags
-- Beta deployment workflow successfully updates k3s deployment
-- Production workflow shows approval gate in GitHub Actions UI
-- Smoke tests pass after deployment (health check returns 200)
-- CICD guide tested with fresh GitHub repository setup
-
-**Dependencies:** `I1.T1` (requires Dockerfile), `I1.T10` (requires working backend for smoke tests)
-
-**Parallelizable:** Partially (CI workflow can be developed concurrently, CD requires working app)
+1.  **Code Coverage <80%**: Warning if coverage below 80% (target is 70%, stretch goal 80%)
+2.  **SonarQube Security Hotspots**: Security hotspots flagged for review (not blocking, but should be addressed)
+3.  **Dependency Vulnerabilities (Medium Severity)**: Medium severity vulnerabilities logged, should be addressed in next sprint
+4.  **Code Duplication >5%**: SonarQube detects code duplication exceeding 5% (refactoring recommended)
 ```
 
 ---
@@ -227,133 +136,174 @@ Create GitHub Actions workflow for continuous integration and deployment. Workfl
 
 The following analysis is based on my direct review of the current codebase. Use these notes and tips to guide your implementation.
 
-### CRITICAL FINDING: Task I1.T12 is Already Complete
-
-**Status:** ✅ **TASK COMPLETED - ALL DELIVERABLES EXIST AND ARE FUNCTIONAL**
-
-I have analyzed the codebase and discovered that **all deliverables for Task I1.T12 are already implemented**. Here's what exists:
-
 ### Relevant Existing Code
 
-#### **File:** `.github/workflows/ci.yml`
-*   **Summary:** Fully functional CI workflow that runs on every push and pull request. Includes three jobs: backend-build (Maven compile + unit tests), frontend-lint (ESLint), and docker-build (builds and pushes Docker image to Docker Hub).
-*   **Status:** ✅ COMPLETE - All requirements met
-*   **Key Features:**
-    - Triggers on push/PR to any branch
-    - Backend compilation with `./mvnw compile` and `./mvnw test`
-    - Frontend linting with ESLint in `src/main/webui`
-    - Docker image build with Buildx, pushed to `villagecompute/calendar-api`
-    - Image tags: `sha-<full-sha>` for all commits, `latest` only on default branch
-    - Uses GitHub Action secrets: `DOCKER_USERNAME`, `DOCKER_PASSWORD`
-    - Cache optimization with GitHub Actions cache
+*   **File:** `src/main/java/villagecompute/calendar/data/models/UserCalendar.java`
+    *   **Summary:** This is one of the primary entity models using Panache active record pattern. It extends `DefaultPanacheEntityWithTimestamps` and includes validation constraints (@NotNull, @Size), JSONB column mapping, relationships (@ManyToOne, @OneToMany), and custom query methods using the active record pattern.
+    *   **Recommendation:** This is an EXCELLENT reference for understanding the entity structure in this project. You MUST follow the same patterns when writing entity tests. Note the validation constraints, the JSONB handling for `configuration` field, and the relationship patterns.
+    *   **Key Details:**
+        - Uses `@JdbcTypeCode(SqlTypes.JSON)` for JSONB columns
+        - Has custom query methods like `findBySession()`, `findByUserAndYear()`, `findByUser()`
+        - Includes relationships with cascade and fetch strategies
+        - Extends base class for common fields (id, created, updated, version)
 
-#### **File:** `.github/workflows/deploy-beta.yml`
-*   **Summary:** Comprehensive beta deployment workflow with WireGuard VPN support, Ansible deployment, and smoke tests.
-*   **Status:** ✅ COMPLETE - Exceeds requirements
-*   **Key Features:**
-    - Triggers on push to `beta` or `main` branches, plus manual dispatch
-    - Builds Docker image with tags: `<branch>-<short-sha>`, `<full-sha>`, `beta-latest`
-    - Optional WireGuard VPN connection (controlled by `USE_WIREGUARD` secret)
-    - Extensive WireGuard validation (endpoint format, DNS resolution, connection test)
-    - SSH setup with support for both VPN (10.50.0.20) and direct connection
-    - Ansible-based deployment to `calendar-beta` namespace
-    - Environment variable injection for database, R2 storage, session encryption
-    - Rollout status monitoring with 5-minute timeout
-    - Comprehensive smoke tests: health check and GraphQL introspection query
-    - Kubernetes manifest artifact upload for debugging
-    - GitHub PR comment notification with deployment URL
+*   **File:** `src/main/java/villagecompute/calendar/data/repositories/UserCalendarRepository.java`
+    *   **Summary:** This is a Panache repository following the repository pattern (implements `PanacheRepository<UserCalendar>`). It's marked `@ApplicationScoped` and contains custom query methods.
+    *   **Recommendation:** You MUST follow this exact pattern for repository classes. Note that this project uses BOTH active record pattern (methods on entity) AND repository pattern (separate repository classes). The repositories provide additional custom query methods.
+    *   **Key Details:**
+        - Implements `PanacheRepository<T>`
+        - Uses `@ApplicationScoped` annotation
+        - Custom queries use Panache query methods: `find()`, `list()`, `firstResultOptional()`
+        - Query syntax uses positional parameters: "user.id = ?1 AND year = ?2"
 
-#### **File:** `.github/workflows/deploy-production.yml`
-*   **Summary:** Production deployment workflow with **manual approval gate** via GitHub Environments feature.
-*   **Status:** ✅ COMPLETE - Exceeds requirements
-*   **Key Features:**
-    - Triggers on push to `main` branch, plus manual dispatch
-    - **CRITICAL:** Uses `environment: production` which creates manual approval gate
-    - All features from beta workflow (WireGuard, Ansible, smoke tests)
-    - Deploys to `calendar-prod` namespace
-    - Production-specific environment variables
-    - Rollback instructions printed on deployment failure
-    - 7-day artifact retention (vs 1-day for beta)
+*   **File:** `src/main/java/villagecompute/calendar/data/models/DefaultPanacheEntityWithTimestamps.java`
+    *   **Summary:** This is the base entity class that all entities extend. It provides common fields: UUID id, created timestamp, updated timestamp, and version for optimistic locking.
+    *   **Recommendation:** You MUST understand this base class because ALL entity tests will involve these common fields. The `@CreationTimestamp` and `@UpdateTimestamp` annotations are from Hibernate and auto-populate on persist/update.
+    *   **Key Details:**
+        - Uses `@MappedSuperclass` (not an entity itself)
+        - UUID primary key with `@GeneratedValue`
+        - `@Version` for optimistic locking
+        - Timestamps are auto-managed by Hibernate
 
-#### **File:** `docs/guides/cicd-setup.md`
-*   **Summary:** Comprehensive 682-line documentation covering every aspect of CI/CD setup.
-*   **Status:** ✅ COMPLETE - Exceeds requirements
-*   **Key Features:**
-    - Complete secret configuration guide (Docker Hub, WireGuard, k3s, database, R2, sessions)
-    - Step-by-step GitHub Environment setup for manual approval
-    - Testing procedures for CI, beta, and production workflows
-    - Extensive troubleshooting section (8 categories, 40+ specific issues)
-    - WireGuard testing guide with local verification steps
-    - Rollback procedures
-    - Support resources and external documentation links
-
-#### **File:** `pom.xml`
-*   **Summary:** Maven project configuration with Quarkus 3.26.2, all required dependencies.
-*   **Recommendation:** This file is correctly configured. The CI workflow references it for Maven builds.
-
-#### **File:** `Dockerfile`
-*   **Summary:** Multi-stage Docker build with Maven + Node.js in build stage, optimized runtime image with Eclipse Temurin 21 JRE.
-*   **Recommendation:** This Dockerfile is production-ready with health checks, non-root user, and Quinoa integration for frontend builds.
-
-#### **File:** `src/main/webui/package.json`
-*   **Summary:** Frontend dependencies and scripts for the Vue.js application.
-*   **Location Note:** The frontend is at `src/main/webui/` (Quinoa standard), NOT `frontend/` as mentioned in task input_files.
+*   **File:** `src/test/java/villagecompute/calendar/data/repositories/UserCalendarRepositoryTest.java`
+    *   **Summary:** This is an EXISTING test file that demonstrates the exact testing pattern used in this project. It uses `@QuarkusTest`, `@Transactional` for setup/teardown, and includes a `TestDataCleaner` utility.
+    *   **Recommendation:** You MUST use this file as your PRIMARY template for writing new tests. This shows you:
+        - How to structure test classes (`@QuarkusTest` annotation)
+        - How to inject dependencies (`@Inject`)
+        - How to use `@Transactional` for test data setup
+        - How to use the `TestDataCleaner` for cleanup
+        - The assertion style and test naming conventions
+    *   **Key Details:**
+        - Uses `@BeforeEach` with `@Transactional` to set up test data
+        - Calls `testDataCleaner.deleteAll()` for clean slate
+        - Creates test entities and persists them before assertions
+        - Test method names follow pattern: `testMethodName()` (camelCase)
 
 ### Implementation Tips & Notes
 
-*   **Tip:** Task I1.T12 acceptance criteria are **100% satisfied**:
-    - ✅ Push to `main` triggers CI workflow
-    - ✅ Docker image pushed to Docker Hub with correct tags (`villagecompute/calendar-api:sha-<sha>` and `:latest`)
-    - ✅ Beta deployment workflow deploys to `calendar-beta` namespace
-    - ✅ Production workflow has approval gate (via GitHub Environments)
-    - ✅ Smoke tests pass after deployment (health check + GraphQL query)
-    - ✅ CICD setup guide is comprehensive (682 lines covering all scenarios)
+*   **Tip:** I found that there are already some repository tests in place (UserCalendarRepositoryTest, CalendarOrderRepositoryTest, CalendarUserRepositoryTest, CalendarTemplateRepositoryTest). You SHOULD review these for consistency in testing patterns.
 
-*   **Note:** The implementation **exceeds** the task requirements:
-    - Additional workflow: `deploy-k3s-wireguard.yml` (not in original spec)
-    - WireGuard support is optional (controlled by secret flag)
-    - Ansible deployment (more robust than direct kubectl)
-    - Environment-specific configurations (beta vs production databases)
-    - Extensive error handling and validation
-    - Artifact uploads for debugging
-    - GitHub PR notifications
+*   **Note:** The task description mentions testing "all 11 entity classes" but I see the actual entity package is `villagecompute.calendar.data.models` (NOT `villagecompute.calendar.model` as specified in target_files). You MUST adjust the package names accordingly.
 
-*   **Warning:** The workflows are **already live and functional**. Any modifications should be:
-    1. Tested in a feature branch first
-    2. Reviewed carefully to avoid breaking existing deployments
-    3. Documented in the CICD setup guide if behavior changes
+*   **Note:** The actual repository package is `villagecompute.calendar.data.repositories` (NOT `villagecompute.calendar.repository`). Update target file paths.
 
-*   **Architecture Alignment:** The workflows perfectly implement the architecture requirements:
-    - Rolling update strategy (implicit in Kubernetes deployment)
-    - Smoke tests (health check + GraphQL)
-    - Separate beta/production namespaces
-    - Manual approval for production (GitHub Environments)
-    - Rollback support (kubectl rollout undo)
+*   **Warning:** JaCoCo is NOT currently configured in pom.xml. You MUST add the JaCoCo Maven plugin configuration to generate coverage reports. This typically goes in the `<build><plugins>` section.
 
-*   **Port Configuration:** The application runs on port 8030 (not 8080). Health checks use `/q/health/live` and `/q/health/ready` endpoints at port 8030.
+*   **Tip:** The project uses Java 21 as indicated in pom.xml (`<maven.compiler.release>21</maven.compiler.release>`). Ensure your test code is compatible with Java 21 features if you use any.
 
-*   **Frontend Location:** The actual frontend is at `src/main/webui/`, not `frontend/`. The CI workflow correctly references this location.
+*   **Tip:** For testing JSONB fields (like `configuration` in UserCalendar), you'll need to use Jackson's `ObjectMapper` to create test JSON nodes. I see this pattern in the existing test: `ObjectMapper objectMapper` is injected and used to create `ObjectNode` instances.
 
-### Recommendation for Coder Agent
+*   **Tip:** The project already has a `TestDataCleaner` utility (in `src/test/java/villagecompute/calendar/data/repositories/TestDataCleaner.java`) that handles cleanup between tests. You MUST use this in all tests to ensure isolation.
 
-**ACTION REQUIRED:** Mark task I1.T12 as **DONE** and move to the next task in the iteration plan.
+*   **Tip:** Quarkus @QuarkusTest uses an in-memory database automatically for testing. You do NOT need to configure H2 separately - it's handled by Quarkus test infrastructure.
 
-**Reasoning:**
-1. All target files exist and are functional
-2. All deliverables are present and tested
-3. All acceptance criteria are satisfied
-4. Implementation exceeds original requirements
-5. Documentation is comprehensive and production-ready
+*   **Warning:** The task says to test "all 11 entity classes" but based on my file survey, the actual entity models are:
+    1. CalendarUser
+    2. UserCalendar
+    3. CalendarOrder
+    4. CalendarTemplate
+    5. DelayedJob
+    6. DelayedJobQueue
+    7. PageView
+    8. AnalyticsRollup
+    9. (and potentially others in enums subdirectory)
 
-**Next Steps:**
-- Update task status in tasks_I1.json: `"done": true` for I1.T12
-- Proceed to Task I1.T13 (unit tests for entity models and repositories)
-- No changes needed to CI/CD workflows unless new requirements emerge
+    You should verify the complete list by examining the `data/models` directory.
 
-**Optional Enhancements** (not required for task completion):
-- Add JaCoCo code coverage enforcement (mentioned in architecture but not yet in CI)
-- Add security scanning with Snyk/OWASP (mentioned in architecture but not yet in CI)
-- Add canary deployment strategy for production (mentioned in architecture but not yet implemented)
-- Add Slack notifications (mentioned in architecture but not yet configured)
+*   **Tip:** For testing validation constraints, you'll need to trigger validation. In Quarkus with Hibernate, validation happens on `persist()`. You can also manually trigger it by injecting a `Validator` and calling `validator.validate(entity)`.
 
-These enhancements can be deferred to Iteration 6 (Task I6.T9: "Finalize CI/CD pipeline for production readiness").
+*   **Tip:** For testing relationships and cascade behavior, create parent and child entities, persist the parent, and verify that the relationship is properly established or that cascade operations work (e.g., deleting parent deletes children with `CascadeType.ALL, orphanRemoval = true`).
+
+*   **Tip:** The existing tests show that you should test repository custom query methods with multiple scenarios (e.g., `testFindByUserAndYear` creates 3 calendars with 2 matching the query, then asserts only 2 are returned).
+
+### JaCoCo Configuration Guidance
+
+You MUST add the following to pom.xml in the `<build><plugins>` section:
+
+```xml
+<plugin>
+    <groupId>org.jacoco</groupId>
+    <artifactId>jacoco-maven-plugin</artifactId>
+    <version>0.8.11</version>
+    <executions>
+        <execution>
+            <id>prepare-agent</id>
+            <goals>
+                <goal>prepare-agent</goal>
+            </goals>
+        </execution>
+        <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+                <goal>report</goal>
+            </goals>
+        </execution>
+        <execution>
+            <id>jacoco-check</id>
+            <goals>
+                <goal>check</goal>
+            </goals>
+            <configuration>
+                <rules>
+                    <rule>
+                        <element>PACKAGE</element>
+                        <limits>
+                            <limit>
+                                <counter>LINE</counter>
+                                <value>COVEREDRATIO</value>
+                                <minimum>0.70</minimum>
+                            </limit>
+                        </limits>
+                    </rule>
+                </rules>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+This configuration will:
+- Prepare the JaCoCo agent before tests run
+- Generate the coverage report in `target/site/jacoco/index.html`
+- Enforce 70% line coverage minimum (build fails if not met)
+
+### Testing Strategy Summary
+
+1. **Start with entity validation tests**: Create test classes for each entity in `src/test/java/villagecompute/calendar/data/models/` and test all validation constraints.
+
+2. **Test JSONB serialization**: For entities with JSONB columns, verify that complex JSON objects can be persisted and retrieved correctly.
+
+3. **Test relationships**: Verify that `@ManyToOne`, `@OneToMany` relationships work, and test cascade/fetch strategies by creating related entities and performing operations.
+
+4. **Test repository CRUD**: For each repository, test basic operations: `persist()`, `findById()`, `listAll()`, `delete()`.
+
+5. **Test custom queries**: For repositories with custom query methods (like `findByUserAndYear()`), create test data and verify the queries return expected results.
+
+6. **Achieve 70% coverage**: Run `./mvnw test` and check the JaCoCo report to ensure coverage meets the threshold. Add more tests if needed.
+
+### Package Structure for Tests
+
+Based on the actual codebase structure, your test classes should be organized as:
+
+```
+src/test/java/villagecompute/calendar/
+├── data/
+│   ├── models/
+│   │   ├── CalendarUserTest.java
+│   │   ├── UserCalendarTest.java
+│   │   ├── CalendarOrderTest.java
+│   │   ├── CalendarTemplateTest.java
+│   │   ├── DelayedJobTest.java
+│   │   ├── PageViewTest.java
+│   │   └── AnalyticsRollupTest.java
+│   └── repositories/
+│       ├── (existing tests already present)
+│       └── (add any missing repository tests)
+```
+
+---
+
+## End of Task Briefing Package
+
+This briefing provides all the context, guidance, and strategic direction needed to complete task I1.T13 successfully. Follow the patterns established in existing tests, use the TestDataCleaner for isolation, configure JaCoCo for coverage reporting, and ensure all entity validation and repository query functionality is thoroughly tested.
