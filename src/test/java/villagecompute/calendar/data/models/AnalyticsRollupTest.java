@@ -267,22 +267,8 @@ class AnalyticsRollupTest {
 
         entityManager.flush();
 
-        // Debug: Check what we have
-        List<AnalyticsRollup> all = AnalyticsRollup.listAll();
-        System.out.println("Total rollups: " + all.size());
-        for (AnalyticsRollup r : all) {
-            System.out.println("  " + r.dimensionValue + ": " + r.periodStart + " to " + r.periodEnd);
-        }
-
-        // Try very permissive range
-        Instant veryEarly = Instant.parse("2020-01-01T00:00:00Z");
-        Instant veryLate = Instant.parse("2030-01-01T00:00:00Z");
-        List<AnalyticsRollup> allInRange = AnalyticsRollup.findByTimeRange(veryEarly, veryLate).list();
-        System.out.println("Rollups in very wide range: " + allInRange.size());
-
         // When
         List<AnalyticsRollup> recentRollups = AnalyticsRollup.findByTimeRange(yesterday.minusSeconds(1), now.plus(1, ChronoUnit.DAYS)).list();
-        System.out.println("Rollups in target range: " + recentRollups.size());
 
         // Then
         assertEquals(1, recentRollups.size());
