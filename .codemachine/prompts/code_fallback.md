@@ -12,119 +12,116 @@ Create PaymentService for handling Stripe payment processing: createPayment (sto
 
 ## Issues Detected
 
-### Test Failures (6 tests failing)
-
-All webhook processing tests are failing with HTTP 500 errors due to a `ClassCastException` when deserializing Stripe webhook events:
-
-*   **Test Failure:** `StripeWebhookControllerTest.testWebhook_CheckoutSessionCompleted_UpdatesOrderStatus` - Expected 200 but got 500
-*   **Test Failure:** `StripeWebhookControllerTest.testWebhook_CheckoutSessionCompleted_EnqueuesEmailJob` - Expected 200 but got 500
-*   **Test Failure:** `StripeWebhookControllerTest.testWebhook_IdempotentProcessing_NoDuplicateUpdates` - Expected 200 but got 500
-*   **Test Failure:** `StripeWebhookControllerTest.testWebhook_PaymentIntentSucceeded_UpdatesOrderStatus` - Expected 200 but got 500
-*   **Test Failure:** `StripeWebhookControllerTest.testWebhook_ChargeRefunded_UpdatesOrderNotes` - Expected 200 but got 500
-*   **Test Failure:** `StripeWebhookControllerTest.testWebhook_ChargeRefunded_IdempotentProcessing` - Expected 200 but got 500
-
-### Root Cause Analysis
-
-The stack trace shows:
-```
-java.lang.ClassCastException: class com.stripe.model.StripeObject cannot be cast to class com.stripe.model.checkout.Session
-	at villagecompute.calendar.api.rest.WebhookResource.handleCheckoutSessionCompleted(WebhookResource.java:195)
-```
-
-**Problem:** In `WebhookResource.java`, the methods `handleCheckoutSessionCompleted()`, `handlePaymentIntentSucceeded()`, and `handleChargeRefunded()` are directly casting the result of `event.getDataObjectDeserializer().getObject().orElseThrow()` to specific Stripe types (Session, PaymentIntent, Charge). However, when `Webhook.constructEvent()` is called with test webhook signatures and payloads, the Stripe SDK may not fully deserialize these objects to their specific types, leaving them as generic `StripeObject` instances.
-
-**Specific Issues:**
-1. **Line 195-197 in WebhookResource.java:** Direct cast to `Session` fails
-2. **Line 220-222:** Direct cast to `PaymentIntent` fails
-3. **Line 276-278:** Direct cast to `Charge` fails
-
-The Stripe SDK's `getDataObjectDeserializer().getObject()` returns an `Optional<StripeObject>`, not the specific typed object. When working with webhook events, especially in test environments, you need to either:
-- Use the raw JSON from `event.getData()` and manually parse it
-- Use Stripe's API classes to retrieve the objects by ID after extracting the ID from the event data
-- Use `deserializeUnsafe()` with proper type handling
+*   **Test Failure:** `testWebhook_CheckoutSessionCompleted_UpdatesOrderStatus` - Order status remains PENDING instead of being updated to PAID
+*   **Test Failure:** `testWebhook_PaymentIntentSucceeded_UpdatesOrderStatus` - Returns 500 error with "Order not found for PaymentIntent: pi_test_direct_flow"
+*   **Test Failure:** `testWebhook_ChargeRefunded_UpdatesOrderNotes` - Order notes are null, refund not being recorded
+*   **Test Failure:** `testWebhook_ChargeRefunded_IdempotentProcessing` - Refund not recorded (count is 0 instead of 1)
+*   **Root Cause:** Test data created in `@BeforeEach @Transactional setup()` method is not visible to the REST endpoint when called via RestAssured HTTP request. The test transaction is not committed before the HTTP request is made, so the webhook handler runs in a separate transaction and cannot see the test data.
 
 ---
 
 ## Best Approach to Fix
 
-### Fix the WebhookResource.java Event Deserialization
+You MUST modify the test file `src/test/java/villagecompute/calendar/api/rest/StripeWebhookControllerTest.java` to fix the transaction isolation issue:
 
-You MUST modify the event handling methods in `src/main/java/villagecompute/calendar/api/rest/WebhookResource.java` to safely extract data from webhook events without relying on direct type casting. Use one of these approaches:
+### Solution 1: Use QuarkusTransaction for Programmatic Transactions
 
-#### Approach 1: Parse JSON Directly (Recommended for Tests)
+Replace the `@Transactional` annotation on the `setup()` method with programmatic transaction management using `io.quarkus.narayana.jta.QuarkusTransaction`:
 
-Instead of casting the deserialized object, parse the event's JSON data directly:
+1. Remove `@Transactional` annotation from the `setup()` method
+2. Wrap the setup code in `QuarkusTransaction.requiringNew().run(() -> { ... })` to ensure data is committed
+3. This ensures test data is persisted and visible to subsequent HTTP requests
+
+Example fix:
 
 ```java
-private void handleCheckoutSessionCompleted(Event event) {
-    // Parse the data object as JSON
-    JsonObject dataObject = event.getDataObjectDeserializer()
-        .getObject()
-        .map(obj -> new Gson().toJsonTree(obj).getAsJsonObject())
-        .orElseThrow(() -> new IllegalStateException("Missing checkout session data"));
+@BeforeEach
+void setup() throws Exception {
+    // Wrap in programmatic transaction that commits immediately
+    QuarkusTransaction.requiringNew().run(() -> {
+        try {
+            // Create test user
+            testUser = new CalendarUser();
+            testUser.oauthProvider = "GOOGLE";
+            testUser.oauthSubject = "webhook-test-" + System.currentTimeMillis();
+            testUser.email = "webhook-test-" + System.currentTimeMillis() + "@example.com";
+            testUser.displayName = "Webhook Test User";
+            testUser.persist();
 
-    String sessionId = dataObject.get("id").getAsString();
-    String paymentIntentId = dataObject.get("payment_intent").getAsString();
+            // Create test template
+            testTemplate = new CalendarTemplate();
+            testTemplate.name = "Webhook Test Template";
+            testTemplate.description = "Template for webhook testing";
+            testTemplate.isActive = true;
+            testTemplate.isFeatured = false;
+            testTemplate.displayOrder = 1;
+            testTemplate.configuration = createTestConfiguration();
+            testTemplate.persist();
 
-    LOG.infof("Checkout session completed: %s (PaymentIntent: %s)", sessionId, paymentIntentId);
+            // Create test calendar
+            testCalendar = calendarService.createCalendar(
+                "Test Calendar for Order",
+                2025,
+                testTemplate.id,
+                null,
+                true,
+                testUser,
+                null
+            );
 
-    if (paymentIntentId == null || paymentIntentId.equals("null")) {
-        LOG.errorf("Checkout session %s has no PaymentIntent", sessionId);
-        return;
-    }
+            // Create test order in PENDING status
+            JsonNode shippingAddress = objectMapper.readTree("""
+                {
+                    "line1": "123 Test St",
+                    "city": "Test City",
+                    "state": "CA",
+                    "postalCode": "12345",
+                    "country": "US"
+                }
+                """);
 
-    paymentService.processPaymentSuccess(paymentIntentId, null);
+            testOrder = orderService.createOrder(
+                testUser,
+                testCalendar,
+                1,
+                new BigDecimal("19.99"),
+                shippingAddress
+            );
+
+            // Set payment intent ID for webhook correlation
+            testOrder.stripePaymentIntentId = TEST_PAYMENT_INTENT_ID;
+            testOrder.persist();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    });
 }
 ```
 
-Apply the same pattern to:
-- `handlePaymentIntentSucceeded()` - extract `id` and `latest_charge` from JSON
-- `handleChargeRefunded()` - extract `id` and navigate `refunds.data[0]` from JSON
-
-#### Approach 2: Use deserializeUnsafe() with Type Information
-
-Alternatively, use `deserializeUnsafe()` with the API version:
-
+4. Add the import statement at the top of the file:
 ```java
-private void handleCheckoutSessionCompleted(Event event) {
-    Session session = (Session) event.getDataObjectDeserializer()
-        .deserializeUnsafe();
-
-    if (session == null) {
-        throw new IllegalStateException("Failed to deserialize checkout session");
-    }
-
-    String sessionId = session.getId();
-    String paymentIntentId = session.getPaymentIntent();
-    // ... rest of the code
-}
+import io.quarkus.narayana.jta.QuarkusTransaction;
 ```
 
-### Detailed Instructions
+5. Similarly, update ANY test method that uses `@Transactional` and makes HTTP calls to use programmatic transactions instead, OR remove `@Transactional` from those methods entirely and let the cleanup method handle transaction management.
 
-1. **Update `handleCheckoutSessionCompleted()` in WebhookResource.java (line 194-210):**
-   - Replace the direct cast on line 195-197
-   - Use JSON parsing or `deserializeUnsafe()` to safely extract session data
-   - Extract `payment_intent` field from the session object
+6. Keep `@Transactional` on the `cleanup()` method as it doesn't make HTTP calls and just needs to clean up the database.
 
-2. **Update `handlePaymentIntentSucceeded()` in WebhookResource.java (line 219-230):**
-   - Replace the direct cast on line 220-222
-   - Use JSON parsing or `deserializeUnsafe()` to safely extract payment intent data
-   - Extract `id` and `latest_charge` fields
+7. For test methods that need to update test data before making HTTP calls (like `testWebhook_ChargeRefunded_UpdatesOrderNotes`), wrap the setup code in `QuarkusTransaction.requiringNew().run(() -> { ... })` to commit changes before the HTTP request.
 
-3. **Update `handleChargeRefunded()` in WebhookResource.java (line 275-298):**
-   - Replace the direct cast on line 276-278
-   - Use JSON parsing or `deserializeUnsafe()` to safely extract charge data
-   - Navigate to `refunds.data[0]` to get refund details (id and amount)
+### Critical Implementation Notes:
 
-4. **Ensure null safety:** Add null checks after extracting payment intent IDs, charge IDs, and refund data to prevent NPEs.
+- The test currently uses `@BeforeEach @Transactional` which keeps the transaction open throughout the entire test method execution
+- When RestAssured makes an HTTP call to `/api/webhooks/stripe`, the REST endpoint runs in a DIFFERENT transaction and cannot see uncommitted data from the test transaction
+- Using `QuarkusTransaction.requiringNew().run()` forces an immediate commit, making the data visible to subsequent HTTP requests
+- This pattern is REQUIRED for all integration tests that create data and then make HTTP requests to REST endpoints
 
-5. **Test the changes:** Run `mvn test -Dtest=StripeWebhookControllerTest` to verify all 9 tests pass.
+### Additional Fixes Needed:
 
-### Additional Notes
+1. In `testWebhook_PaymentIntentSucceeded_UpdatesOrderStatus`, the order created within the test method needs to be committed before the HTTP call:
+   - Wrap the order creation in `QuarkusTransaction.requiringNew().run(() -> { ... })`
 
-- The `handlePaymentIntentFailed()` method (line 238-266) uses the same casting pattern but wasn't tested. You SHOULD apply the same fix to that method for consistency.
-- The Stripe SDK's behavior differs between production (real webhook events) and test environments (manually constructed events). The JSON parsing approach is more robust across both environments.
-- Do NOT modify the signature validation logic - that part is working correctly (tests for invalid signatures pass).
-- Do NOT modify PaymentService - it's working correctly.
-- The integration tests are well-written and comprehensive - they just need the WebhookResource deserialization to be fixed.
+2. In `testWebhook_ChargeRefunded_UpdatesOrderNotes` and `testWebhook_ChargeRefunded_IdempotentProcessing`, the order status update needs to be committed before the HTTP call:
+   - Wrap the order update code in `QuarkusTransaction.requiringNew().run(() -> { ... })`
+
+This will ensure all test data is committed and visible to the webhook handler, allowing all tests to pass.

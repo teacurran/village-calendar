@@ -1,5 +1,7 @@
 package villagecompute.calendar.api.rest;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Charge;
 import com.stripe.model.Event;
@@ -47,6 +49,7 @@ import java.util.Optional;
 public class WebhookResource {
 
     private static final Logger LOG = Logger.getLogger(WebhookResource.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Inject
     PaymentService paymentService;
@@ -192,15 +195,22 @@ public class WebhookResource {
      * @param event Stripe event
      */
     private void handleCheckoutSessionCompleted(Event event) {
-        Session session = (Session) event.getDataObjectDeserializer()
-            .getObject()
-            .orElseThrow(() -> new IllegalStateException("Missing checkout session data"));
+        // Parse session data from JSON - works in both test and production
+        JsonNode sessionData;
+        try {
+            String dataJson = event.getData().toJson();
+            sessionData = MAPPER.readTree(dataJson).get("object");
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to parse checkout session data", e);
+        }
 
-        String sessionId = session.getId();
-        String paymentIntentId = session.getPaymentIntent();
+        String sessionId = sessionData.get("id").asText();
+        JsonNode paymentIntentNode = sessionData.get("payment_intent");
+        String paymentIntentId = paymentIntentNode != null ? paymentIntentNode.asText() : null;
+
         LOG.infof("Checkout session completed: %s (PaymentIntent: %s)", sessionId, paymentIntentId);
 
-        if (paymentIntentId == null) {
+        if (paymentIntentId == null || paymentIntentId.equals("null") || paymentIntentId.isEmpty()) {
             LOG.errorf("Checkout session %s has no PaymentIntent", sessionId);
             return;
         }
@@ -217,13 +227,25 @@ public class WebhookResource {
      * @param event Stripe event
      */
     private void handlePaymentIntentSucceeded(Event event) {
-        PaymentIntent paymentIntent = (PaymentIntent) event.getDataObjectDeserializer()
-            .getObject()
-            .orElseThrow(() -> new IllegalStateException("Missing payment intent data"));
+        // Parse payment intent data from JSON - works in both test and production
+        JsonNode paymentIntentData;
+        try {
+            String dataJson = event.getData().toJson();
+            paymentIntentData = MAPPER.readTree(dataJson).get("object");
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to parse payment intent data", e);
+        }
 
-        String paymentIntentId = paymentIntent.getId();
-        String chargeId = paymentIntent.getLatestCharge();
+        String paymentIntentId = paymentIntentData.get("id").asText();
+        JsonNode chargeNode = paymentIntentData.get("latest_charge");
+        String chargeId = chargeNode != null ? chargeNode.asText() : null;
+
         LOG.infof("Payment succeeded for PaymentIntent: %s (Charge: %s)", paymentIntentId, chargeId);
+
+        if (paymentIntentId == null || paymentIntentId.isEmpty()) {
+            LOG.errorf("Payment intent has no ID");
+            return;
+        }
 
         // Delegate to PaymentService for idempotent processing
         paymentService.processPaymentSuccess(paymentIntentId, chargeId);
@@ -236,12 +258,22 @@ public class WebhookResource {
      * @param event Stripe event
      */
     private void handlePaymentIntentFailed(Event event) {
-        PaymentIntent paymentIntent = (PaymentIntent) event.getDataObjectDeserializer()
-            .getObject()
-            .orElseThrow(() -> new IllegalStateException("Missing payment intent data"));
+        // Parse payment intent data from JSON - works in both test and production
+        JsonNode paymentIntentData;
+        try {
+            String dataJson = event.getData().toJson();
+            paymentIntentData = MAPPER.readTree(dataJson).get("object");
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to parse payment intent data", e);
+        }
 
-        String paymentIntentId = paymentIntent.getId();
+        String paymentIntentId = paymentIntentData.get("id").asText();
         LOG.warnf("Payment failed for PaymentIntent: %s", paymentIntentId);
+
+        if (paymentIntentId == null || paymentIntentId.isEmpty()) {
+            LOG.errorf("Payment intent has no ID");
+            return;
+        }
 
         // Find the order
         Optional<CalendarOrder> orderOpt = orderService.findByStripePaymentIntent(paymentIntentId);
@@ -252,9 +284,10 @@ public class WebhookResource {
 
         CalendarOrder order = orderOpt.get();
 
-        // Add failure note
-        String failureMessage = paymentIntent.getLastPaymentError() != null
-            ? paymentIntent.getLastPaymentError().getMessage()
+        // Add failure note - extract error message from last_payment_error
+        JsonNode errorNode = paymentIntentData.get("last_payment_error");
+        String failureMessage = (errorNode != null && errorNode.has("message"))
+            ? errorNode.get("message").asText()
             : "Unknown error";
 
         String timestamp = Instant.now().toString();
@@ -273,23 +306,39 @@ public class WebhookResource {
      * @param event Stripe event
      */
     private void handleChargeRefunded(Event event) {
-        Charge charge = (Charge) event.getDataObjectDeserializer()
-            .getObject()
-            .orElseThrow(() -> new IllegalStateException("Missing charge data"));
+        // Parse charge data from JSON - works in both test and production
+        JsonNode chargeData;
+        try {
+            String dataJson = event.getData().toJson();
+            chargeData = MAPPER.readTree(dataJson).get("object");
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to parse charge data", e);
+        }
 
-        String chargeId = charge.getId();
+        String chargeId = chargeData.get("id").asText();
         LOG.infof("Charge refunded: %s", chargeId);
 
+        if (chargeId == null || chargeId.isEmpty()) {
+            LOG.errorf("Charge has no ID");
+            return;
+        }
+
         // Get refund details from the charge
-        if (charge.getRefunds() == null || charge.getRefunds().getData().isEmpty()) {
+        JsonNode refundsNode = chargeData.get("refunds");
+        if (refundsNode == null || !refundsNode.has("data") || refundsNode.get("data").isEmpty()) {
             LOG.warnf("Charge %s refunded but no refund data available", chargeId);
             return;
         }
 
         // Get the most recent refund (Stripe sends one webhook per refund)
-        Refund refund = charge.getRefunds().getData().get(0);
-        String refundId = refund.getId();
-        Long amountRefunded = refund.getAmount();
+        JsonNode refundNode = refundsNode.get("data").get(0);
+        String refundId = refundNode.get("id").asText();
+        Long amountRefunded = refundNode.get("amount").asLong();
+
+        if (refundId == null || refundId.isEmpty() || amountRefunded == null) {
+            LOG.warnf("Charge %s refunded but missing refund ID or amount", chargeId);
+            return;
+        }
 
         LOG.infof("Processing refund %s for charge %s, amount: %d cents", refundId, chargeId, amountRefunded);
 
