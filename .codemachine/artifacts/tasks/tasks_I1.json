@@ -117,7 +117,7 @@
     "acceptance_criteria": "./mvnw compile succeeds with no compilation errors, ./mvnw quarkus:dev starts and Hibernate schema validation passes, Relationships correctly mapped (@ManyToOne, @OneToMany with proper cascade/fetch), JSONB columns handled (e.g., calendar.config as String with JSON serialization), Enums defined for all status/type fields (OrderStatus, ProductType, etc.), Entity classes include basic constructors, getters/setters (or Lombok if preferred)",
     "dependencies": ["I1.T7"],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T9",
