@@ -11,10 +11,13 @@ import ConfirmationService from 'primevue/confirmationservice'
 import App from './App.vue'
 import router from './router'
 import { createPinia } from 'pinia'
+import { useAuthStore } from './stores/authStore'
+
+const pinia = createPinia()
 
 const app = createApp(App)
 app.use(router)
-app.use(createPinia())
+app.use(pinia)
 app.use(PrimeVue, {
   theme: {
     preset: Aura,
@@ -35,4 +38,9 @@ app.use(ConfirmationService)
 app.directive('styleclass', StyleClass)
 app.directive('ripple', Ripple)
 app.use(i18n)
+
+// Initialize auth store to load user from token
+const authStore = useAuthStore()
+authStore.initialize()
+
 app.mount('#app')

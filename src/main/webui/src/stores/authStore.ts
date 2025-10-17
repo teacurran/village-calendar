@@ -1,5 +1,6 @@
 // ./stores/authStore.ts
 import { defineStore } from 'pinia'
+import { hasAdminRole } from '../navigation/adminRoutes'
 
 export interface CalendarUser {
   id: string
@@ -23,11 +24,30 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     /**
      * Initialize authentication by checking for existing token
-     * and fetching current user if authenticated
+     * and decoding user from JWT
      */
     async initialize() {
       if (this.token) {
-        await this.fetchCurrentUser()
+        try {
+          const parts = this.token.split('.')
+          const payload = JSON.parse(atob(parts[1]))
+
+          // Create user object from JWT payload
+          this.user = {
+            id: payload.sub,
+            email: payload.email,
+            displayName: payload.name,
+            profileImageUrl: undefined,
+            oauthProvider: 'GOOGLE',
+            oauthSubject: '',
+            created: '',
+            lastLoginAt: ''
+          }
+        } catch (err) {
+          console.error('Failed to decode JWT token on initialize:', err)
+          // Clear invalid token
+          this.logout()
+        }
       }
     },
 
@@ -113,13 +133,36 @@ export const useAuthStore = defineStore('auth', {
       this.token = token
       localStorage.setItem('auth_token', token)
 
-      // Fetch user info
-      await this.fetchCurrentUser()
+      // Decode user info from JWT token directly
+      try {
+        const parts = token.split('.')
+        const payload = JSON.parse(atob(parts[1]))
 
-      // Redirect to the original page or home
-      const returnTo = sessionStorage.getItem('auth_return_to') || '/'
-      sessionStorage.removeItem('auth_return_to')
-      window.location.href = returnTo
+        // Create user object from JWT payload
+        this.user = {
+          id: payload.sub,
+          email: payload.email,
+          displayName: payload.name,
+          profileImageUrl: undefined,
+          oauthProvider: 'GOOGLE',
+          oauthSubject: '',
+          created: '',
+          lastLoginAt: ''
+        }
+      } catch (err) {
+        console.error('Failed to decode JWT token:', err)
+      }
+
+      // Check if user is an admin
+      if (hasAdminRole()) {
+        // Redirect admin users to the admin dashboard
+        window.location.href = '/admin'
+      } else {
+        // Redirect regular users to the original page or home
+        const returnTo = sessionStorage.getItem('auth_return_to') || '/'
+        sessionStorage.removeItem('auth_return_to')
+        window.location.href = returnTo
+      }
     },
 
     /**
@@ -162,5 +205,10 @@ export const useAuthStore = defineStore('auth', {
      * Get user's profile image URL
      */
     userAvatar: (state) => state.user?.profileImageUrl || null,
+
+    /**
+     * Check if current user has admin role
+     */
+    isAdmin: () => hasAdminRole(),
   },
 })

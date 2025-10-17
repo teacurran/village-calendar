@@ -47,6 +47,12 @@ const router = createRouter({
       component: () => import('./view/public/Bootstrap.vue'),
       meta: { requiresAuth: false },
     },
+    {
+      path: '/refresh-auth',
+      name: 'refresh-auth',
+      component: () => import('./view/public/RefreshAuth.vue'),
+      meta: { requiresAuth: false },
+    },
     // Admin routes
     ...adminRoutes,
     // Legacy routes - keep for backward compatibility

@@ -1,5 +1,26 @@
 <template>
   <div class="calendar-browser">
+    <!-- Admin Button (floating) -->
+    <Button
+      v-if="authStore.isAdmin"
+      icon="pi pi-cog"
+      label="Admin"
+      class="admin-button"
+      severity="secondary"
+      @click="goToAdmin"
+    />
+
+    <!-- User Menu (floating) -->
+    <div v-if="authStore.isAuthenticated" class="user-menu">
+      <Button
+        :label="authStore.userName"
+        icon="pi pi-user"
+        outlined
+        @click="toggleUserMenu"
+      />
+      <Menu ref="userMenuRef" :model="userMenuItems" :popup="true" />
+    </div>
+
     <!-- Hero Section -->
     <section class="hero-section">
       <div class="hero-content-container">
@@ -151,6 +172,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useCalendarStore } from '../../stores/calendarStore'
+import { useAuthStore } from '../../stores/authStore'
 import { scaleSvgForThumbnail } from '../../services/calendarService'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
@@ -158,11 +180,14 @@ import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
 import Tag from 'primevue/tag'
 import Message from 'primevue/message'
+import Menu from 'primevue/menu'
 import type { CalendarTemplate } from '../../stores/calendarStore'
+import type { MenuItem } from 'primevue/menuitem'
 
 const router = useRouter()
 const toast = useToast()
 const calendarStore = useCalendarStore()
+const authStore = useAuthStore()
 
 // State
 const showPreviewModal = ref(false)
@@ -172,6 +197,24 @@ const previewLoading = ref(false)
 const templatePreviews = ref<Record<string, string>>({})
 const previewQueue = ref<string[]>([])
 const isGeneratingPreviews = ref(false)
+const userMenuRef = ref()
+
+// User menu items
+const userMenuItems = ref<MenuItem[]>([
+  {
+    label: 'Logout',
+    icon: 'pi pi-sign-out',
+    command: () => {
+      authStore.logout()
+      window.location.reload()
+    }
+  }
+])
+
+// Toggle user menu
+const toggleUserMenu = (event: Event) => {
+  userMenuRef.value.toggle(event)
+}
 
 // Load templates
 const loadTemplates = async () => {
@@ -297,6 +340,21 @@ const customizeTemplate = (template: CalendarTemplate | null) => {
   router.push({
     path: `/editor/${template.id}`,
   })
+}
+
+// Navigate to admin dashboard
+const goToAdmin = () => {
+  console.log('Admin button clicked')
+  console.log('Is admin?', authStore.isAdmin)
+  console.log('Current route:', router.currentRoute.value.path)
+
+  router.push('/admin')
+    .then(() => {
+      console.log('Navigation successful')
+    })
+    .catch((err) => {
+      console.error('Navigation failed:', err)
+    })
 }
 
 // Load templates on mount
@@ -505,5 +563,20 @@ onMounted(() => {
 .preview-modal-svg :deep(svg) {
   max-width: 100%;
   height: auto;
+}
+
+.admin-button {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.user-menu {
+  position: fixed;
+  top: 1rem;
+  right: 9rem;
+  z-index: 1000;
 }
 </style>
