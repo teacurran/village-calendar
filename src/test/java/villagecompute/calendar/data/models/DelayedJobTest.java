@@ -290,6 +290,129 @@ class DelayedJobTest {
         assertEquals(1, readyJobs.size());
     }
 
+    @Test
+    @Transactional
+    void testAllFields_SetAndRetrieve() {
+        // Given - Create entity with ALL fields set
+        Instant now = Instant.now();
+        DelayedJob job = new DelayedJob();
+        job.priority = 100;
+        job.attempts = 3;
+        job.queue = DelayedJobQueue.EMAIL_SHIPPING_NOTIFICATION;
+        job.actorId = "comprehensive-test-actor";
+        job.lastError = "Previous error message";
+        job.runAt = now.minus(1, ChronoUnit.HOURS);
+        job.locked = true;
+        job.lockedAt = now.minus(30, ChronoUnit.MINUTES);
+        job.failedAt = now.minus(20, ChronoUnit.MINUTES);
+        job.complete = false;
+        job.completedAt = null;
+        job.completedWithFailure = false;
+        job.failureReason = null;
+
+        // When
+        job.persist();
+        entityManager.flush();
+        entityManager.clear();
+
+        DelayedJob found = DelayedJob.findById(job.id);
+
+        // Then - Verify ALL fields
+        assertNotNull(found);
+        assertEquals(100, found.priority);
+        assertEquals(3, found.attempts);
+        assertEquals(DelayedJobQueue.EMAIL_SHIPPING_NOTIFICATION, found.queue);
+        assertEquals("comprehensive-test-actor", found.actorId);
+        assertEquals("Previous error message", found.lastError);
+        assertEquals(now.minus(1, ChronoUnit.HOURS), found.runAt);
+        assertTrue(found.locked);
+        assertNotNull(found.lockedAt);
+        assertNotNull(found.failedAt);
+        assertFalse(found.complete);
+        assertNull(found.completedAt);
+        assertFalse(found.completedWithFailure);
+        assertNull(found.failureReason);
+        assertNotNull(found.id);
+        assertNotNull(found.created);
+        assertNotNull(found.updated);
+        assertEquals(0L, found.version);
+    }
+
+    @Test
+    @Transactional
+    void testUpdate_ModifiesUpdatedTimestamp() {
+        // Given
+        DelayedJob job = createValidJob();
+        job.persist();
+        entityManager.flush();
+
+        Instant originalUpdated = job.updated;
+        Long originalVersion = job.version;
+
+        // Wait to ensure timestamp changes
+        try { Thread.sleep(10); } catch (InterruptedException e) {}
+
+        // When
+        job.attempts = 5;
+        job.lastError = "New error";
+        job.persist();
+        entityManager.flush();
+
+        // Then
+        assertTrue(job.updated.isAfter(originalUpdated));
+        assertEquals(originalVersion + 1, job.version);
+    }
+
+    @Test
+    @Transactional
+    void testDelete_Success() {
+        // Given
+        DelayedJob job = createValidJob();
+        job.persist();
+        entityManager.flush();
+
+        Object jobId = job.id;
+        assertNotNull(DelayedJob.findById(jobId));
+
+        // When
+        job.delete();
+        entityManager.flush();
+
+        // Then
+        assertNull(DelayedJob.findById(jobId));
+    }
+
+    @Test
+    @Transactional
+    void testListAll_Success() {
+        // Given
+        createValidJob().persist();
+        createValidJob().persist();
+        createValidJob().persist();
+        entityManager.flush();
+
+        // When
+        List<DelayedJob> all = DelayedJob.listAll();
+
+        // Then
+        assertTrue(all.size() >= 3);
+    }
+
+    @Test
+    @Transactional
+    void testCount_Success() {
+        // Given
+        createValidJob().persist();
+        createValidJob().persist();
+        entityManager.flush();
+
+        // When
+        long count = DelayedJob.count();
+
+        // Then
+        assertTrue(count >= 2);
+    }
+
     private DelayedJob createValidJob() {
         DelayedJob job = new DelayedJob();
         job.actorId = "test-actor-" + System.nanoTime();

@@ -433,6 +433,117 @@ class AnalyticsRollupTest {
         assertEquals(new BigDecimal("123456789012.99"), found.value);
     }
 
+    @Test
+    @Transactional
+    void testAllFields_SetAndRetrieve() {
+        // Given - Create entity with ALL fields set
+        Instant now = Instant.now();
+        Instant periodStart = now.minus(1, ChronoUnit.DAYS);
+        Instant periodEnd = now;
+
+        AnalyticsRollup rollup = new AnalyticsRollup();
+        rollup.metricName = "test_metric";
+        rollup.dimensionKey = "test_dimension";
+        rollup.dimensionValue = "test_value";
+        rollup.value = new BigDecimal("999.99");
+        rollup.periodStart = periodStart;
+        rollup.periodEnd = periodEnd;
+
+        // When - Persist and retrieve
+        rollup.persist();
+        entityManager.flush();
+        entityManager.clear();
+
+        AnalyticsRollup found = AnalyticsRollup.findById(rollup.id);
+
+        // Then - Verify ALL fields are correctly persisted and retrieved
+        assertNotNull(found);
+        assertEquals("test_metric", found.metricName);
+        assertEquals("test_dimension", found.dimensionKey);
+        assertEquals("test_value", found.dimensionValue);
+        assertEquals(0, new BigDecimal("999.99").compareTo(found.value));
+        assertEquals(periodStart, found.periodStart);
+        assertEquals(periodEnd, found.periodEnd);
+        assertNotNull(found.id);
+        assertNotNull(found.created);
+        assertNotNull(found.updated);
+        assertEquals(0L, found.version);
+    }
+
+    @Test
+    @Transactional
+    void testUpdate_ModifiesUpdatedTimestamp() {
+        // Given
+        AnalyticsRollup rollup = createValidRollup();
+        rollup.persist();
+        entityManager.flush();
+
+        Instant originalUpdated = rollup.updated;
+        Long originalVersion = rollup.version;
+
+        // Wait a tiny bit to ensure timestamp difference
+        try { Thread.sleep(10); } catch (InterruptedException e) {}
+
+        // When
+        rollup.value = new BigDecimal("200.00");
+        rollup.persist();
+        entityManager.flush();
+
+        // Then
+        assertTrue(rollup.updated.isAfter(originalUpdated));
+        assertEquals(originalVersion + 1, rollup.version);
+    }
+
+    @Test
+    @Transactional
+    void testDelete_Success() {
+        // Given
+        AnalyticsRollup rollup = createValidRollup();
+        rollup.persist();
+        entityManager.flush();
+
+        Object rollupId = rollup.id;
+        assertNotNull(AnalyticsRollup.findById(rollupId));
+
+        // When
+        rollup.delete();
+        entityManager.flush();
+
+        // Then
+        assertNull(AnalyticsRollup.findById(rollupId));
+    }
+
+    @Test
+    @Transactional
+    void testListAll_Success() {
+        // Given
+        createValidRollup().persist();
+        createValidRollup().persist();
+        createValidRollup().persist();
+        entityManager.flush();
+
+        // When
+        List<AnalyticsRollup> all = AnalyticsRollup.listAll();
+
+        // Then
+        assertTrue(all.size() >= 3);
+    }
+
+    @Test
+    @Transactional
+    void testCount_Success() {
+        // Given
+        createValidRollup().persist();
+        createValidRollup().persist();
+        entityManager.flush();
+
+        // When
+        long count = AnalyticsRollup.count();
+
+        // Then
+        assertTrue(count >= 2);
+    }
+
     private AnalyticsRollup createValidRollup() {
         // Use nanoTime to ensure unique timestamps for each call
         // This prevents unique constraint violations on (metricName, dimensionKey, dimensionValue, periodStart, periodEnd)
