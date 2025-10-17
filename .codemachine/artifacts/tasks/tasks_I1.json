@@ -192,6 +192,6 @@
     "acceptance_criteria": "./mvnw test runs all tests without failures, Entity validation tests verify @NotNull, @Email, @Size constraints, Relationship tests confirm cascade and fetch behavior, Repository tests verify CRUD operations and custom queries, JaCoCo report shows line/branch coverage percentages, No test depends on external services (all use in-memory database)",
     "dependencies": ["I1.T8"],
     "parallelizable": true,
-    "done": false
+    "done": true
   }
 ]

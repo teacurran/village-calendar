@@ -230,6 +230,11 @@
       <artifactId>quarkus-jdbc-h2</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jacoco</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -300,18 +305,12 @@
             </goals>
             <configuration>
               <excludes>
-                <!-- Exclude Panache entity classes - they use public fields and runtime enhancement which JaCoCo cannot measure accurately -->
-                <exclude>**/data/models/AnalyticsRollup.class</exclude>
-                <exclude>**/data/models/CalendarOrder.class</exclude>
-                <exclude>**/data/models/CalendarTemplate.class</exclude>
-                <exclude>**/data/models/CalendarUser.class</exclude>
-                <exclude>**/data/models/DelayedJob.class</exclude>
-                <exclude>**/data/models/PageView.class</exclude>
-                <exclude>**/data/models/UserCalendar.class</exclude>
+                <!-- Exclude only base classes that are not directly tested -->
                 <exclude>**/data/models/DefaultPanacheEntityWithTimestamps.class</exclude>
+                <exclude>**/data/models/enums/DelayedJobQueue.class</exclude>
               </excludes>
               <rules>
-                <!-- Check models package for remaining measurable classes (enums, etc.) -->
+                <!-- Check models package for 70% coverage -->
                 <rule>
                   <element>PACKAGE</element>
                   <includes>
@@ -325,7 +324,20 @@
                     </limit>
                   </limits>
                 </rule>
-                <!-- Repository package rule REMOVED - Panache repositories cannot show JaCoCo coverage -->
+                <!-- Check repositories package for 70% coverage -->
+                <rule>
+                  <element>PACKAGE</element>
+                  <includes>
+                    <include>villagecompute.calendar.data.repositories</include>
+                  </includes>
+                  <limits>
+                    <limit>
+                      <counter>LINE</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>0.70</minimum>
+                    </limit>
+                  </limits>
+                </rule>
               </rules>
             </configuration>
           </execution>
