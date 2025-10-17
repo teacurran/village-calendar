@@ -34,6 +34,9 @@ class UserCalendarRepositoryTest {
     @Inject
     ObjectMapper objectMapper;
 
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
+
     private CalendarUser testUser;
     private CalendarTemplate testTemplate;
 
@@ -68,6 +71,7 @@ class UserCalendarRepositoryTest {
         userCalendarRepository.persist(createUserCalendar(testUser, 2025, "Calendar 2025"));
         userCalendarRepository.persist(createUserCalendar(testUser, 2026, "Calendar 2026"));
         userCalendarRepository.persist(createUserCalendar(testUser, 2025, "Another 2025"));
+        entityManager.flush();
 
         // When
         List<UserCalendar> calendars = userCalendarRepository.findByUserAndYear(testUser.id, 2025);
@@ -84,6 +88,7 @@ class UserCalendarRepositoryTest {
         userCalendarRepository.persist(createUserCalendar(testUser, 2025, "Cal 1"));
         userCalendarRepository.persist(createUserCalendar(testUser, 2026, "Cal 2"));
         userCalendarRepository.persist(createUserCalendar(testUser, 2024, "Cal 3"));
+        entityManager.flush();
 
         // When
         List<UserCalendar> calendars = userCalendarRepository.findByUser(testUser.id);
@@ -107,6 +112,7 @@ class UserCalendarRepositoryTest {
         userCalendarRepository.persist(cal1);
         userCalendarRepository.persist(cal2);
         userCalendarRepository.persist(cal3);
+        entityManager.flush();
 
         // When
         List<UserCalendar> calendars = userCalendarRepository.findBySession("session-123");
@@ -127,6 +133,7 @@ class UserCalendarRepositoryTest {
         UserCalendar privateCal = createUserCalendar(testUser, 2025, "Private");
         privateCal.isPublic = false;
         userCalendarRepository.persist(privateCal);
+        entityManager.flush();
 
         // When
         Optional<UserCalendar> foundPublic = userCalendarRepository.findPublicById(publicCal.id);
@@ -152,6 +159,7 @@ class UserCalendarRepositoryTest {
         UserCalendar priv = createUserCalendar(testUser, 2025, "Private");
         priv.isPublic = false;
         userCalendarRepository.persist(priv);
+        entityManager.flush();
 
         // When
         List<UserCalendar> publicCalendars = userCalendarRepository.findPublicCalendars(10);
@@ -167,6 +175,7 @@ class UserCalendarRepositoryTest {
         // Given
         userCalendarRepository.persist(createUserCalendar(testUser, 2025, "Cal 1"));
         userCalendarRepository.persist(createUserCalendar(testUser, 2025, "Cal 2"));
+        entityManager.flush();
 
         // When
         List<UserCalendar> calendars = userCalendarRepository.findByTemplate(testTemplate.id);
@@ -183,6 +192,7 @@ class UserCalendarRepositoryTest {
         userCalendarRepository.persist(createUserCalendar(testUser, 2025, "2025 Cal 1"));
         userCalendarRepository.persist(createUserCalendar(testUser, 2025, "2025 Cal 2"));
         userCalendarRepository.persist(createUserCalendar(testUser, 2026, "2026 Cal"));
+        entityManager.flush();
 
         // When
         List<UserCalendar> calendars2025 = userCalendarRepository.findByYear(2025);

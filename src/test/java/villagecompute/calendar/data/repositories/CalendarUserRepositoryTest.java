@@ -24,6 +24,9 @@ class CalendarUserRepositoryTest {
     @Inject
     CalendarUserRepository repository;
 
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
+
     @BeforeEach
     @Transactional
     void setUp() {
@@ -36,6 +39,7 @@ class CalendarUserRepositoryTest {
         // Given
         CalendarUser user = createUser("GOOGLE", "google-123", "test@example.com");
         repository.persist(user);
+        entityManager.flush();
 
         // When
         Optional<CalendarUser> found = repository.findByOAuthSubject("GOOGLE", "google-123");
@@ -61,6 +65,7 @@ class CalendarUserRepositoryTest {
         // Given
         CalendarUser user = createUser("FACEBOOK", "fb-456", "user@test.com");
         repository.persist(user);
+        entityManager.flush();
 
         // When
         Optional<CalendarUser> found = repository.findByEmail("user@test.com");
@@ -86,6 +91,8 @@ class CalendarUserRepositoryTest {
         oldUser.lastLoginAt = weekAgo;
         repository.persist(oldUser);
 
+        entityManager.flush();
+
         // When
         List<CalendarUser> activeUsers = repository.findActiveUsersSince(yesterday);
 
@@ -101,6 +108,7 @@ class CalendarUserRepositoryTest {
         repository.persist(createUser("GOOGLE", "g1", "google1@test.com"));
         repository.persist(createUser("GOOGLE", "g2", "google2@test.com"));
         repository.persist(createUser("FACEBOOK", "f1", "facebook1@test.com"));
+        entityManager.flush();
 
         // When
         List<CalendarUser> googleUsers = repository.findByProvider("GOOGLE");

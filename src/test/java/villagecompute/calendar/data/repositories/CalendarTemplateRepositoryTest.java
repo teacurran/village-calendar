@@ -27,6 +27,9 @@ class CalendarTemplateRepositoryTest {
     @Inject
     ObjectMapper objectMapper;
 
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
+
     @BeforeEach
     @Transactional
     void setUp() {
@@ -40,6 +43,7 @@ class CalendarTemplateRepositoryTest {
         repository.persist(createTemplate("Template 1", true, false, 1));
         repository.persist(createTemplate("Template 2", true, false, 2));
         repository.persist(createTemplate("Inactive Template", false, false, 3));
+        entityManager.flush();
 
         // When
         List<CalendarTemplate> activeTemplates = repository.findActiveTemplates();
@@ -56,6 +60,7 @@ class CalendarTemplateRepositoryTest {
         // Given
         CalendarTemplate template = createTemplate("Unique Template", true, false, 1);
         repository.persist(template);
+        entityManager.flush();
 
         // When
         Optional<CalendarTemplate> found = repository.findByName("Unique Template");
@@ -73,6 +78,7 @@ class CalendarTemplateRepositoryTest {
         repository.persist(createTemplate("Featured 2", true, true, 2));
         repository.persist(createTemplate("Not Featured", true, false, 3));
         repository.persist(createTemplate("Inactive Featured", false, true, 4));
+        entityManager.flush();
 
         // When
         List<CalendarTemplate> featured = repository.findFeaturedTemplates();
@@ -89,6 +95,7 @@ class CalendarTemplateRepositoryTest {
         repository.persist(createTemplate("Active 1", true, false, 1));
         repository.persist(createTemplate("Active 2", true, false, 2));
         repository.persist(createTemplate("Inactive", false, false, 3));
+        entityManager.flush();
 
         // When
         List<CalendarTemplate> activeTemplates = repository.findByActiveStatus(true);
@@ -106,6 +113,7 @@ class CalendarTemplateRepositoryTest {
         repository.persist(createTemplate("Third", true, false, 3));
         repository.persist(createTemplate("First", true, false, 1));
         repository.persist(createTemplate("Second", true, false, 2));
+        entityManager.flush();
 
         // When
         List<CalendarTemplate> activeTemplates = repository.findActiveTemplates();

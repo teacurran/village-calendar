@@ -41,6 +41,9 @@ class CalendarOrderRepositoryTest {
     @Inject
     ObjectMapper objectMapper;
 
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
+
     private CalendarUser testUser;
     private UserCalendar testCalendar;
 
@@ -84,6 +87,7 @@ class CalendarOrderRepositoryTest {
         orderRepository.persist(createOrder(CalendarOrder.STATUS_PENDING, "pi_pending"));
         orderRepository.persist(createOrder(CalendarOrder.STATUS_PAID, "pi_paid"));
         orderRepository.persist(createOrder(CalendarOrder.STATUS_PENDING, "pi_pending2"));
+        entityManager.flush();
 
         // When
         List<CalendarOrder> pendingOrders = orderRepository.findByStatusOrderByCreatedDesc(CalendarOrder.STATUS_PENDING);
@@ -99,6 +103,7 @@ class CalendarOrderRepositoryTest {
         // Given
         orderRepository.persist(createOrder(CalendarOrder.STATUS_PENDING, "pi_1"));
         orderRepository.persist(createOrder(CalendarOrder.STATUS_PAID, "pi_2"));
+        entityManager.flush();
 
         // When
         List<CalendarOrder> orders = orderRepository.findByUser(testUser.id);
@@ -114,6 +119,7 @@ class CalendarOrderRepositoryTest {
         // Given
         orderRepository.persist(createOrder(CalendarOrder.STATUS_PENDING, "pi_1"));
         orderRepository.persist(createOrder(CalendarOrder.STATUS_PAID, "pi_2"));
+        entityManager.flush();
 
         // When
         List<CalendarOrder> orders = orderRepository.findByCalendar(testCalendar.id);
@@ -129,6 +135,7 @@ class CalendarOrderRepositoryTest {
         // Given
         CalendarOrder order = createOrder(CalendarOrder.STATUS_PAID, "pi_unique_123");
         orderRepository.persist(order);
+        entityManager.flush();
 
         // When
         Optional<CalendarOrder> found = orderRepository.findByStripePaymentIntent("pi_unique_123");
@@ -150,6 +157,7 @@ class CalendarOrderRepositoryTest {
 
         CalendarOrder order2 = createOrder(CalendarOrder.STATUS_PAID, "pi_also_recent");
         orderRepository.persist(order2);
+        entityManager.flush();
 
         // When - query for orders created after beforeCreation
         List<CalendarOrder> recentOrders = orderRepository.findRecentOrders(beforeCreation);
@@ -172,6 +180,7 @@ class CalendarOrderRepositoryTest {
         orderRepository.persist(createOrder(CalendarOrder.STATUS_PENDING, "pi_pending1"));
         orderRepository.persist(createOrder(CalendarOrder.STATUS_PENDING, "pi_pending2"));
         orderRepository.persist(createOrder(CalendarOrder.STATUS_PAID, "pi_paid"));
+        entityManager.flush();
 
         // When
         List<CalendarOrder> pendingOrders = orderRepository.findPendingOrders();
@@ -190,6 +199,7 @@ class CalendarOrderRepositoryTest {
 
         CalendarOrder shippedOrder = createOrder(CalendarOrder.STATUS_SHIPPED, "pi_shipped");
         orderRepository.persist(shippedOrder);
+        entityManager.flush();
 
         // When
         List<CalendarOrder> paidNotShipped = orderRepository.findPaidNotShipped();
@@ -206,6 +216,7 @@ class CalendarOrderRepositoryTest {
         orderRepository.persist(createOrder(CalendarOrder.STATUS_PENDING, "pi_1"));
         orderRepository.persist(createOrder(CalendarOrder.STATUS_PAID, "pi_2"));
         orderRepository.persist(createOrder(CalendarOrder.STATUS_PENDING, "pi_3"));
+        entityManager.flush();
 
         // When
         List<CalendarOrder> pendingOrders = orderRepository.findByUserAndStatus(testUser.id, CalendarOrder.STATUS_PENDING);
