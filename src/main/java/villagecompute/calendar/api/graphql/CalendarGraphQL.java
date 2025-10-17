@@ -7,7 +7,6 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import org.dataloader.DataLoader;
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.GraphQLApi;
 import org.eclipse.microprofile.graphql.Mutation;
@@ -17,24 +16,22 @@ import org.eclipse.microprofile.graphql.Query;
 import org.eclipse.microprofile.graphql.Source;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
-import villagecompute.calendar.api.graphql.dataloader.EventDataLoader;
-import villagecompute.calendar.api.graphql.dataloader.TemplateDataLoader;
-import villagecompute.calendar.api.graphql.dataloader.UserDataLoader;
 import villagecompute.calendar.api.graphql.inputs.CalendarInput;
 import villagecompute.calendar.api.graphql.inputs.CalendarUpdateInput;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
-import villagecompute.calendar.data.models.Event;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.CalendarService;
 import villagecompute.calendar.services.EventService;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
 
 /**
  * GraphQL resolver for calendar queries and mutations.
@@ -85,24 +82,6 @@ public class CalendarGraphQL {
      */
     @Inject
     private EventService eventService;
-
-    /**
-     * DataLoader for batch loading users.
-     */
-    @Inject
-    private UserDataLoader userDataLoader;
-
-    /**
-     * DataLoader for batch loading templates.
-     */
-    @Inject
-    private TemplateDataLoader templateDataLoader;
-
-    /**
-     * DataLoader for batch loading events.
-     */
-    @Inject
-    private EventDataLoader eventDataLoader;
 
     // ==================================================================
     // QUERIES
@@ -622,27 +601,106 @@ public class CalendarGraphQL {
     }
 
     // ==================================================================
-    // NOTE: N+1 Query Prevention Strategy
+    // BATCHED FIELD RESOLVERS (DataLoader Pattern)
     // ==================================================================
-    //
-    // To prevent N+1 queries when fetching calendars with related
-    // entities, this resolver uses Hibernate's @BatchSize annotation
-    // on collection relationships:
-    //
-    // - UserCalendar.events: @BatchSize(size = 10)
-    // - UserCalendar.orders: @BatchSize(size = 10)
-    // - CalendarUser.calendars: @BatchSize(size = 10)
-    //
-    // @BatchSize ensures that when fetching multiple parent entities,
-    // Hibernate batches the loading of collections using SQL IN clauses.
-    //
-    // For @ManyToOne relationships (UserCalendar.user, UserCalendar
-    // .template), JPA LAZY fetching is used. While this may still cause
-    // some additional queries, the impact is minimal since parent
-    // entities are typically shared across multiple calendars.
-    //
-    // DataLoader classes (UserDataLoader, TemplateDataLoader,
-    // EventDataLoader) are provided for future enhancement when
-    // integrating with graphql-java or SmallRye GraphQL's native
-    // DataLoader support.
+
+    /**
+     * Batched field resolver for UserCalendar.user relationship.
+     * Prevents N+1 queries by batch-loading users for multiple calendars.
+     * SmallRye GraphQL automatically batches field resolvers annotated
+     * with @Source when the parameter is a List.
+     *
+     * @param calendars List of calendars to resolve users for
+     * @return List of users in the same order as input calendars
+     */
+    @Name("user")
+    @Description("Get the user who owns this calendar")
+    public List<CalendarUser> batchLoadUsers(
+        @Source final List<UserCalendar> calendars
+    ) {
+        LOG.debugf("Batch loading users for %d calendars", calendars.size());
+
+        // Extract unique user IDs (handle nulls for guest calendars)
+        List<UUID> userIds = calendars.stream()
+            .map(c -> c.user != null ? c.user.id : null)
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList());
+
+        if (userIds.isEmpty()) {
+            // All calendars are guest sessions with no user
+            return calendars.stream()
+                .map(c -> (CalendarUser) null)
+                .collect(Collectors.toList());
+        }
+
+        // Batch load all users in a single query using IN clause
+        List<CalendarUser> users = CalendarUser.list("id IN ?1", userIds);
+
+        // Create lookup map for O(1) access
+        Map<UUID, CalendarUser> userMap = users.stream()
+            .collect(Collectors.toMap(u -> u.id, u -> u));
+
+        // Return users in same order as input calendars (DataLoader contract)
+        List<CalendarUser> result = calendars.stream()
+            .map(c -> c.user != null ? userMap.get(c.user.id) : null)
+            .collect(Collectors.toList());
+
+        LOG.debugf("Batch loaded %d unique users for %d calendars",
+            users.size(), calendars.size());
+
+        return result;
+    }
+
+    /**
+     * Batched field resolver for UserCalendar.template relationship.
+     * Prevents N+1 queries by batch-loading templates for multiple calendars.
+     * SmallRye GraphQL automatically batches field resolvers annotated
+     * with @Source when the parameter is a List.
+     *
+     * @param calendars List of calendars to resolve templates for
+     * @return List of templates in the same order as input calendars
+     */
+    @Name("template")
+    @Description("Get the template used by this calendar")
+    public List<CalendarTemplate> batchLoadTemplates(
+        @Source final List<UserCalendar> calendars
+    ) {
+        LOG.debugf("Batch loading templates for %d calendars",
+            calendars.size());
+
+        // Extract unique template IDs
+        List<UUID> templateIds = calendars.stream()
+            .map(c -> c.template != null ? c.template.id : null)
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList());
+
+        if (templateIds.isEmpty()) {
+            // No templates to load (should not happen in normal operation)
+            return calendars.stream()
+                .map(c -> (CalendarTemplate) null)
+                .collect(Collectors.toList());
+        }
+
+        // Batch load all templates in a single query using IN clause
+        List<CalendarTemplate> templates =
+            CalendarTemplate.list("id IN ?1", templateIds);
+
+        // Create lookup map for O(1) access
+        Map<UUID, CalendarTemplate> templateMap = templates.stream()
+            .collect(Collectors.toMap(t -> t.id, t -> t));
+
+        // Return templates in same order as input calendars
+        // (DataLoader contract)
+        List<CalendarTemplate> result = calendars.stream()
+            .map(c -> c.template != null
+                ? templateMap.get(c.template.id) : null)
+            .collect(Collectors.toList());
+
+        LOG.debugf("Batch loaded %d unique templates for %d calendars",
+            templates.size(), calendars.size());
+
+        return result;
+    }
 }

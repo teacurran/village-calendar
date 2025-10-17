@@ -87,7 +87,7 @@
     "acceptance_criteria": "GraphQL query { calendar(id: \"123\") { title events { eventText } } } returns calendar with events, Unauthorized access to other user's calendar returns GraphQL error, createCalendar mutation persists calendar and returns new ID, DataLoader batches queries (e.g., fetching 10 calendars with users requires 2 DB queries, not 11), Integration tests verify end-to-end GraphQL request/response flow",
     "dependencies": ["I2.T2", "I2.T3", "I1.T10"],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T7",
