@@ -42,7 +42,7 @@
     "acceptance_criteria": "PlantUML file validates and renders in PlantUML viewer/IDE plugin, All components from architecture section included with correct relationships, Diagram follows C4 Component diagram conventions (containers, components, relationships), Visual clarity: components grouped by layer, clear dependency arrows",
     "dependencies": ["I1.T1"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T4",

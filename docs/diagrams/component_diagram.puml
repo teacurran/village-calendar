@@ -1,0 +1,126 @@
+@startuml component_diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Village Calendar - Quarkus API Internal Component Architecture (C4 Level 3)
+
+LAYOUT_WITH_LEGEND()
+
+Container_Boundary(api_layer, "API Layer") {
+    Component(graphql_resolvers, "GraphQL Resolvers", "SmallRye GraphQL", "Query/mutation resolvers\n- CalendarGraphQL\n- OrderGraphQL\n- TemplateGraphQL\n- Schema definition\n- DataLoader pattern for N+1 prevention")
+
+    Component(rest_controllers, "REST Controllers", "JAX-RS", "REST endpoints for webhooks and OAuth\n- AuthResource (OAuth callbacks)\n- WebhookResource (Stripe webhooks)\n- BootstrapResource (health checks)")
+
+    Component(security_filter, "Security Filter", "Quarkus OIDC", "JWT validation and RBAC enforcement\n- SecurityConfig\n- OIDCConfig\n- CSRF protection\n- Role-based access control")
+}
+
+Container_Boundary(service_layer, "Service Layer") {
+    Component(calendar_service, "CalendarService", "Java Service", "CRUD operations, template application\n- CalendarService\n- CalendarGenerationService\n- Event management\n- Template configuration processing")
+
+    Component(user_service, "UserService", "Java Service", "User management and OAuth integration\n- AuthenticationService\n- Session conversion (guest → authenticated)\n- Profile management")
+
+    Component(order_service, "OrderService", "Java Service", "Order placement and management\n- OrderService\n- PaymentService\n- Checkout creation\n- Payment webhook handling\n- Status updates")
+
+    Component(pdf_service, "PdfService", "Java Service", "PDF generation and watermarking\n- PDFRenderingService\n- Apache Batik rendering\n- Watermark logic\n- R2 upload coordination")
+
+    Component(email_service, "EmailService", "Java Service", "Transactional email composition\n- Order confirmations\n- Shipping updates\n- SMTP delivery")
+
+    Component(template_service, "TemplateService", "Java Service", "Template management\n- CRUD operations for templates\n- Admin-curated templates\n- Preview image management\n- JSONB configuration validation")
+
+    Component(astronomical_service, "AstronomicalService", "Java Service", "Astronomical calculations\n- AstronomicalCalculationService\n- HebrewCalendarService\n- SunCalc integration\n- Moon phases and events")
+}
+
+Container_Boundary(job_management, "Job Management Layer") {
+    Component(job_manager, "Job Manager", "Vert.x EventBus", "DelayedJob queue management\n- DelayedJobHandler\n- EventBus publishing\n- Priority assignment\n- Retry logic\n- OrderEmailJobHandler")
+}
+
+Container_Boundary(repository_layer, "Repository Layer (Panache)") {
+    ComponentDb(user_repository, "CalendarUserRepository", "Panache Repository", "OAuth user profiles and sessions")
+    ComponentDb(calendar_repository, "UserCalendarRepository", "Panache Repository", "Generated calendar metadata")
+    ComponentDb(order_repository, "CalendarOrderRepository", "Panache Repository", "Order and payment records")
+    ComponentDb(template_repository, "CalendarTemplateRepository", "Panache Repository", "Template definitions and configurations")
+    ComponentDb(job_repository, "DelayedJobRepository", "Panache Repository", "Async job queue and status")
+}
+
+Container_Boundary(integration_layer, "Integration Components") {
+    Component(oauth_client, "OAuth Client", "Quarkus OIDC", "OAuth 2.0 / OpenID Connect\n- Google OAuth2\n- Facebook OAuth2\n- Token exchange")
+
+    Component(stripe_client, "Stripe Client", "Stripe Java SDK", "Payment processing\n- Checkout session creation\n- Webhook signature verification\n- Payment intent handling")
+
+    Component(email_sender, "Email Sender", "SMTP Client", "Email delivery\n- Transactional email sending\n- Retry logic\n- Template rendering")
+
+    Component(r2_client, "R2 Client", "S3 SDK", "Object storage client\n- StorageService\n- PDF upload\n- Presigned URL generation")
+}
+
+' External Systems
+ComponentDb_Ext(postgresql, "PostgreSQL Database", "Database", "Primary data store with PostGIS\n- Users, Calendars, Orders\n- Templates, Jobs")
+
+Component_Ext(eventbus, "Vert.x EventBus", "Message Bus", "Async job event publishing")
+
+Component_Ext(oauth_providers, "OAuth Providers", "External API", "Google, Facebook authentication")
+
+Component_Ext(stripe_api, "Stripe API", "Payment Gateway", "Payment processing and webhooks")
+
+Component_Ext(smtp_service, "Email Service", "External SMTP", "Email delivery service")
+
+Component_Ext(cloudflare_r2, "Cloudflare R2", "S3-Compatible Storage", "PDF storage and CDN delivery")
+
+' API Layer → Security
+Rel(graphql_resolvers, security_filter, "Validates requests", "JWT")
+Rel(rest_controllers, security_filter, "Validates requests", "JWT/OIDC")
+
+' API Layer → Service Layer
+Rel(graphql_resolvers, calendar_service, "Generate calendars")
+Rel(graphql_resolvers, user_service, "Manage users")
+Rel(graphql_resolvers, order_service, "Process orders")
+Rel(graphql_resolvers, template_service, "Manage templates")
+
+Rel(rest_controllers, user_service, "OAuth callbacks")
+Rel(rest_controllers, order_service, "Stripe webhooks")
+
+' Service Layer → Service Layer
+Rel(calendar_service, astronomical_service, "Calculate events")
+Rel(calendar_service, pdf_service, "Generate PDFs")
+Rel(order_service, email_service, "Send notifications")
+Rel(order_service, calendar_service, "Retrieve calendar data")
+
+' Service Layer → Repository Layer
+Rel(user_service, user_repository, "CRUD operations", "JPA")
+Rel(calendar_service, calendar_repository, "CRUD operations", "JPA")
+Rel(calendar_service, template_repository, "Read templates", "JPA")
+Rel(order_service, order_repository, "CRUD operations", "JPA")
+Rel(template_service, template_repository, "CRUD operations", "JPA")
+
+' Service Layer → Integration Components
+Rel(user_service, oauth_client, "OAuth flow")
+Rel(order_service, stripe_client, "Process payments")
+Rel(email_service, email_sender, "Send emails")
+Rel(pdf_service, r2_client, "Upload PDFs")
+
+' Service Layer → Job Manager
+Rel(pdf_service, job_manager, "Enqueue PDF jobs")
+Rel(email_service, job_manager, "Enqueue email jobs")
+Rel(order_service, job_manager, "Enqueue order jobs")
+
+' Job Manager → Repository
+Rel(job_manager, job_repository, "Persist job state", "JPA")
+
+' Job Manager → EventBus
+Rel(job_manager, eventbus, "Publish events", "Vert.x")
+
+' Repository → Database
+Rel(user_repository, postgresql, "SQL queries", "JDBC")
+Rel(calendar_repository, postgresql, "SQL queries", "JDBC")
+Rel(order_repository, postgresql, "SQL queries", "JDBC")
+Rel(template_repository, postgresql, "SQL queries", "JDBC")
+Rel(job_repository, postgresql, "SQL queries", "JDBC")
+
+' Integration Components → External Systems
+Rel(oauth_client, oauth_providers, "OAuth 2.0 flow", "HTTPS")
+Rel(stripe_client, stripe_api, "Payment API calls", "HTTPS")
+Rel(email_sender, smtp_service, "SMTP protocol", "TLS")
+Rel(r2_client, cloudflare_r2, "S3 API calls", "HTTPS")
+
+' Security → Integration
+Rel(security_filter, oauth_client, "Token validation")
+
+@enduml
