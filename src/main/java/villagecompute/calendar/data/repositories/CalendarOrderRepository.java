@@ -17,6 +17,16 @@ import java.util.UUID;
 public class CalendarOrderRepository implements PanacheRepository<CalendarOrder> {
 
     /**
+     * Find order by ID.
+     *
+     * @param id Order ID
+     * @return Optional containing the order if found
+     */
+    public Optional<CalendarOrder> findById(UUID id) {
+        return find("id", id).firstResultOptional();
+    }
+
+    /**
      * Find orders by status, ordered by creation date descending.
      * This is the required custom query method from the task specification.
      *

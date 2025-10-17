@@ -7,6 +7,7 @@ import villagecompute.calendar.data.models.CalendarUser;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Repository for CalendarUser entities.
@@ -14,6 +15,16 @@ import java.util.Optional;
  */
 @ApplicationScoped
 public class CalendarUserRepository implements PanacheRepository<CalendarUser> {
+
+    /**
+     * Find user by ID.
+     *
+     * @param id User ID
+     * @return Optional containing the user if found
+     */
+    public Optional<CalendarUser> findById(UUID id) {
+        return find("id", id).firstResultOptional();
+    }
 
     /**
      * Find a user by their OAuth provider and subject (unique identifier).

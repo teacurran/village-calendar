@@ -141,10 +141,11 @@ class CalendarUserRepositoryTest {
         entityManager.flush();
 
         // When
-        CalendarUser found = CalendarUser.findById(user.id); // Use entity static method
+        Optional<CalendarUser> foundOpt = repository.findById(user.id);
 
         // Then
-        assertNotNull(found);
+        assertTrue(foundOpt.isPresent());
+        CalendarUser found = foundOpt.get();
         assertEquals(user.id, found.id);
         assertEquals("github@test.com", found.email);
     }
@@ -194,7 +195,7 @@ class CalendarUserRepositoryTest {
         entityManager.flush();
 
         // Then
-        assertNull(CalendarUser.findById(userId));
+        assertTrue(repository.findById(userId).isEmpty());
         assertEquals(0, repository.count());
     }
 
@@ -208,12 +209,12 @@ class CalendarUserRepositoryTest {
         entityManager.flush();
 
         // When
-        boolean deleted = CalendarUser.deleteById(userId); // Use entity static method
+        boolean deleted = repository.delete("id", userId) > 0;
         entityManager.flush();
 
         // Then
         assertTrue(deleted);
-        assertNull(CalendarUser.findById(userId));
+        assertTrue(repository.findById(userId).isEmpty());
     }
 
     @Test
@@ -228,9 +229,9 @@ class CalendarUserRepositoryTest {
 
         // Then
         assertNotNull(user.id);
-        CalendarUser found = CalendarUser.findById(user.id);
-        assertNotNull(found);
-        assertEquals("persistflush@test.com", found.email);
+        Optional<CalendarUser> foundOpt = repository.findById(user.id);
+        assertTrue(foundOpt.isPresent());
+        assertEquals("persistflush@test.com", foundOpt.get().email);
     }
 
     @Test

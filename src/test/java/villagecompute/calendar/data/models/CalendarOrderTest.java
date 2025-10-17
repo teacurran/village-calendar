@@ -9,6 +9,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import villagecompute.calendar.data.repositories.CalendarOrderRepository;
 import villagecompute.calendar.data.repositories.CalendarTemplateRepository;
 import villagecompute.calendar.data.repositories.CalendarUserRepository;
 import villagecompute.calendar.data.repositories.TestDataCleaner;
@@ -35,6 +36,9 @@ class CalendarOrderTest {
 
     @Inject
     CalendarTemplateRepository templateRepository;
+
+    @Inject
+    CalendarOrderRepository orderRepository;
 
     @Inject
     ObjectMapper objectMapper;
@@ -89,7 +93,7 @@ class CalendarOrderTest {
         CalendarOrder order = createValidOrder();
 
         // When
-        order.persist();
+        orderRepository.persist(order);
         entityManager.flush(); // Flush to generate ID and timestamps
 
         // Then
@@ -215,10 +219,11 @@ class CalendarOrderTest {
         address.put("state", "CA");
         address.put("zip", "94102");
         order.shippingAddress = address;
-        order.persist();
+        orderRepository.persist(order);
+        entityManager.flush();
 
         // When
-        CalendarOrder found = CalendarOrder.findById(order.id);
+        CalendarOrder found = orderRepository.findById(order.id).orElseThrow();
 
         // Then
         assertNotNull(found.shippingAddress);
@@ -234,10 +239,11 @@ class CalendarOrderTest {
         // Given
         CalendarOrder order = createValidOrder();
         order.shippingAddress = null;
-        order.persist();
+        orderRepository.persist(order);
+        entityManager.flush();
 
         // When
-        CalendarOrder found = CalendarOrder.findById(order.id);
+        CalendarOrder found = orderRepository.findById(order.id).orElseThrow();
 
         // Then
         assertNull(found.shippingAddress);
@@ -248,12 +254,13 @@ class CalendarOrderTest {
     void testFindByUser() {
         // Given
         CalendarOrder order1 = createValidOrder();
-        order1.persist();
+        orderRepository.persist(order1);
         CalendarOrder order2 = createValidOrder();
-        order2.persist();
+        orderRepository.persist(order2);
+        entityManager.flush();
 
         // When
-        List<CalendarOrder> orders = CalendarOrder.findByUser(testUser.id).list();
+        List<CalendarOrder> orders = orderRepository.findByUser(testUser.id);
 
         // Then
         assertEquals(2, orders.size());
@@ -266,18 +273,19 @@ class CalendarOrderTest {
         // Given
         CalendarOrder pendingOrder1 = createValidOrder();
         pendingOrder1.status = "PENDING";
-        pendingOrder1.persist();
+        orderRepository.persist(pendingOrder1);
 
         CalendarOrder pendingOrder2 = createValidOrder();
         pendingOrder2.status = "PENDING";
-        pendingOrder2.persist();
+        orderRepository.persist(pendingOrder2);
 
         CalendarOrder paidOrder = createValidOrder();
         paidOrder.status = "PAID";
-        paidOrder.persist();
+        orderRepository.persist(paidOrder);
+        entityManager.flush();
 
         // When
-        List<CalendarOrder> pendingOrders = CalendarOrder.findByStatusOrderByCreatedDesc("PENDING");
+        List<CalendarOrder> pendingOrders = orderRepository.findByStatusOrderByCreatedDesc("PENDING");
 
         // Then
         assertEquals(2, pendingOrders.size());
@@ -289,12 +297,13 @@ class CalendarOrderTest {
     void testFindByCalendar() {
         // Given
         CalendarOrder order1 = createValidOrder();
-        order1.persist();
+        orderRepository.persist(order1);
         CalendarOrder order2 = createValidOrder();
-        order2.persist();
+        orderRepository.persist(order2);
+        entityManager.flush();
 
         // When
-        List<CalendarOrder> orders = CalendarOrder.findByCalendar(testCalendar.id).list();
+        List<CalendarOrder> orders = orderRepository.findByCalendar(testCalendar.id);
 
         // Then
         assertEquals(2, orders.size());
@@ -307,14 +316,15 @@ class CalendarOrderTest {
         // Given
         CalendarOrder order = createValidOrder();
         order.stripePaymentIntentId = "pi_123456";
-        order.persist();
+        orderRepository.persist(order);
+        entityManager.flush();
 
         // When
-        List<CalendarOrder> orders = CalendarOrder.findByStripePaymentIntent("pi_123456").list();
+        CalendarOrder found = orderRepository.findByStripePaymentIntent("pi_123456").orElse(null);
 
         // Then
-        assertEquals(1, orders.size());
-        assertEquals("pi_123456", orders.get(0).stripePaymentIntentId);
+        assertNotNull(found);
+        assertEquals("pi_123456", found.stripePaymentIntentId);
     }
 
     @Test
@@ -325,10 +335,10 @@ class CalendarOrderTest {
         Instant yesterday = now.minus(1, ChronoUnit.DAYS);
 
         CalendarOrder recentOrder = createValidOrder();
-        recentOrder.persist();
+        orderRepository.persist(recentOrder);
 
         CalendarOrder oldOrder = createValidOrder();
-        oldOrder.persist();
+        orderRepository.persist(oldOrder);
         entityManager.flush(); // Flush to persist first
 
         // Manually set old created date using native SQL
@@ -341,7 +351,7 @@ class CalendarOrderTest {
         entityManager.clear(); // Clear persistence context to force reload
 
         // When
-        List<CalendarOrder> recentOrders = CalendarOrder.findRecentOrders(yesterday).list();
+        List<CalendarOrder> recentOrders = orderRepository.findRecentOrders(yesterday);
 
         // Then
         assertEquals(1, recentOrders.size());
@@ -355,7 +365,8 @@ class CalendarOrderTest {
         CalendarOrder order = createValidOrder();
         order.status = "PENDING";
         order.paidAt = null;
-        order.persist();
+        orderRepository.persist(order);
+        entityManager.flush();
 
         // When
         order.markAsPaid();
@@ -373,7 +384,8 @@ class CalendarOrderTest {
         CalendarOrder order = createValidOrder();
         order.status = "PAID";
         order.shippedAt = null;
-        order.persist();
+        orderRepository.persist(order);
+        entityManager.flush();
 
         // When
         order.markAsShipped();
@@ -390,7 +402,8 @@ class CalendarOrderTest {
         // Given
         CalendarOrder order = createValidOrder();
         order.status = "PENDING";
-        order.persist();
+        orderRepository.persist(order);
+        entityManager.flush();
 
         // When
         order.cancel();
@@ -405,7 +418,8 @@ class CalendarOrderTest {
         // Given
         CalendarOrder order = createValidOrder();
         order.status = "DELIVERED";
-        order.persist();
+        orderRepository.persist(order);
+        entityManager.flush();
 
         // When
         boolean isTerminal = order.isTerminal();
@@ -420,7 +434,8 @@ class CalendarOrderTest {
         // Given
         CalendarOrder order = createValidOrder();
         order.status = "CANCELLED";
-        order.persist();
+        orderRepository.persist(order);
+        entityManager.flush();
 
         // When
         boolean isTerminal = order.isTerminal();
@@ -435,7 +450,8 @@ class CalendarOrderTest {
         // Given
         CalendarOrder order = createValidOrder();
         order.status = "PENDING";
-        order.persist();
+        orderRepository.persist(order);
+        entityManager.flush();
 
         // When
         boolean isTerminal = order.isTerminal();
@@ -449,10 +465,11 @@ class CalendarOrderTest {
     void testRelationships_ManyToOneUser() {
         // Given
         CalendarOrder order = createValidOrder();
-        order.persist();
+        orderRepository.persist(order);
+        entityManager.flush();
 
         // When
-        CalendarOrder found = CalendarOrder.findById(order.id);
+        CalendarOrder found = orderRepository.findById(order.id).orElseThrow();
 
         // Then
         assertNotNull(found.user);
@@ -464,10 +481,11 @@ class CalendarOrderTest {
     void testRelationships_ManyToOneCalendar() {
         // Given
         CalendarOrder order = createValidOrder();
-        order.persist();
+        orderRepository.persist(order);
+        entityManager.flush();
 
         // When
-        CalendarOrder found = CalendarOrder.findById(order.id);
+        CalendarOrder found = orderRepository.findById(order.id).orElseThrow();
 
         // Then
         assertNotNull(found.calendar);
@@ -502,12 +520,12 @@ class CalendarOrderTest {
         order.shippedAt = Instant.now().minus(1, ChronoUnit.HOURS);
 
         // When
-        order.persist();
+        orderRepository.persist(order);
         entityManager.flush();
         entityManager.clear();
 
         // Then - Verify ALL fields persisted and can be retrieved
-        CalendarOrder found = CalendarOrder.findById(order.id);
+        CalendarOrder found = orderRepository.findById(order.id).orElseThrow();
         assertNotNull(found);
         assertEquals(testUser.id, found.user.id);
         assertEquals(testCalendar.id, found.calendar.id);
@@ -543,7 +561,7 @@ class CalendarOrderTest {
         order.quantity = 3;
         order.totalPrice = BigDecimal.valueOf(59.97);
         order.notes = "Updated delivery instructions";
-        order.persist();
+        orderRepository.persist(order);
         entityManager.flush();
 
         // Then
@@ -559,28 +577,28 @@ class CalendarOrderTest {
     void testDelete_RemovesEntity() {
         // Given
         CalendarOrder order = createValidOrder();
-        order.persist();
+        orderRepository.persist(order);
         java.util.UUID orderId = order.id;
         entityManager.flush();
 
         // When
-        order.delete();
+        orderRepository.delete(order);
         entityManager.flush();
 
         // Then
-        assertNull(CalendarOrder.findById(orderId));
+        assertTrue(orderRepository.findById(orderId).isEmpty());
     }
 
     @Test
     @Transactional
     void testListAll() {
         // Given
-        createValidOrder().persist();
-        createValidOrder().persist();
+        orderRepository.persist(createValidOrder());
+        orderRepository.persist(createValidOrder());
         entityManager.flush();
 
         // When
-        List<CalendarOrder> allOrders = CalendarOrder.listAll();
+        List<CalendarOrder> allOrders = orderRepository.listAll();
 
         // Then
         assertEquals(2, allOrders.size());
@@ -590,13 +608,13 @@ class CalendarOrderTest {
     @Transactional
     void testCount() {
         // Given
-        createValidOrder().persist();
-        createValidOrder().persist();
-        createValidOrder().persist();
+        orderRepository.persist(createValidOrder());
+        orderRepository.persist(createValidOrder());
+        orderRepository.persist(createValidOrder());
         entityManager.flush();
 
         // When
-        long count = CalendarOrder.count();
+        long count = orderRepository.count();
 
         // Then
         assertEquals(3, count);
@@ -621,7 +639,7 @@ class CalendarOrderTest {
         CalendarOrder order = createValidOrder();
         order.status = CalendarOrder.STATUS_PENDING;
         order.paidAt = null;
-        order.persist();
+        orderRepository.persist(order);
         entityManager.flush();
 
         // When
@@ -640,7 +658,7 @@ class CalendarOrderTest {
         CalendarOrder order = createValidOrder();
         order.status = CalendarOrder.STATUS_PAID;
         order.shippedAt = null;
-        order.persist();
+        orderRepository.persist(order);
         entityManager.flush();
 
         // When
@@ -658,7 +676,7 @@ class CalendarOrderTest {
         // Given
         CalendarOrder order = createValidOrder();
         order.status = CalendarOrder.STATUS_PROCESSING;
-        order.persist();
+        orderRepository.persist(order);
         entityManager.flush();
 
         // When
@@ -758,11 +776,11 @@ class CalendarOrderTest {
         CalendarOrder order = createValidOrder();
         String longNotes = "Customer notes: " + "This is important delivery information. ".repeat(100);
         order.notes = longNotes;
-        order.persist();
+        orderRepository.persist(order);
         entityManager.flush();
 
         // When
-        CalendarOrder found = CalendarOrder.findById(order.id);
+        CalendarOrder found = orderRepository.findById(order.id).orElseThrow();
 
         // Then
         assertNotNull(found.notes);
@@ -787,11 +805,11 @@ class CalendarOrderTest {
         order.notes = null;
         order.paidAt = null;
         order.shippedAt = null;
-        order.persist();
+        orderRepository.persist(order);
         entityManager.flush();
 
         // When
-        CalendarOrder found = CalendarOrder.findById(order.id);
+        CalendarOrder found = orderRepository.findById(order.id).orElseThrow();
 
         // Then
         assertNotNull(found);
