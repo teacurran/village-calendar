@@ -23,6 +23,10 @@ import java.util.UUID;
 )
 public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
 
+    @Version
+    @Column(name = "version", nullable = false)
+    public Long version;
+
     @ManyToOne
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_user_calendars_user"))
     public CalendarUser user;

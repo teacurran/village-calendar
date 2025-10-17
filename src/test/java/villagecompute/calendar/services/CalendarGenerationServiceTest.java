@@ -32,7 +32,7 @@ public class CalendarGenerationServiceTest {
     CalendarGenerationService calendarGenerationService;
 
     @Mock
-    CalendarService calendarService;
+    CalendarRenderingService calendarRenderingService;
 
     @Mock
     PDFRenderingService pdfRenderingService;
@@ -115,7 +115,7 @@ public class CalendarGenerationServiceTest {
         byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
         String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
 
-        when(calendarService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
         when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
         when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
 
@@ -129,7 +129,7 @@ public class CalendarGenerationServiceTest {
         assertEquals(mockSvg, testUserCalendar.generatedSvg);
 
         // Verify interactions
-        verify(calendarService, times(1)).generateCalendarSVG(any());
+        verify(calendarRenderingService, times(1)).generateCalendarSVG(any());
         verify(pdfRenderingService, times(1)).renderSVGToPDF(mockSvg, 2025);
         verify(storageService, times(1)).uploadFile(anyString(), eq(mockPdf), eq("application/pdf"));
     }
@@ -156,7 +156,7 @@ public class CalendarGenerationServiceTest {
     @Test
     public void testGenerateCalendar_SVGGenerationFails() {
         // Arrange
-        when(calendarService.generateCalendarSVG(any()))
+        when(calendarRenderingService.generateCalendarSVG(any()))
                 .thenThrow(new RuntimeException("SVG generation failed"));
 
         // Act & Assert
@@ -173,7 +173,7 @@ public class CalendarGenerationServiceTest {
     public void testGenerateCalendar_PDFRenderingFails() {
         // Arrange
         String mockSvg = "<svg>test</svg>";
-        when(calendarService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
         when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt()))
                 .thenThrow(new RuntimeException("PDF rendering failed"));
 
@@ -192,7 +192,7 @@ public class CalendarGenerationServiceTest {
         String mockSvg = "<svg>test</svg>";
         byte[] emptyPdf = new byte[]{};
 
-        when(calendarService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
         when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(emptyPdf);
 
         // Act & Assert
@@ -207,7 +207,7 @@ public class CalendarGenerationServiceTest {
         String mockSvg = "<svg>test</svg>";
         byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
 
-        when(calendarService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
         when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
         when(storageService.uploadFile(anyString(), any(byte[].class), anyString()))
                 .thenThrow(new StorageException("Upload failed"));
@@ -225,7 +225,7 @@ public class CalendarGenerationServiceTest {
         byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
         String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
 
-        when(calendarService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
         when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
         when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
 
@@ -233,11 +233,11 @@ public class CalendarGenerationServiceTest {
         calendarGenerationService.generateCalendar(testUserCalendar);
 
         // Capture the CalendarConfig passed to generateCalendarSVG
-        ArgumentCaptor<CalendarService.CalendarConfig> configCaptor =
-                ArgumentCaptor.forClass(CalendarService.CalendarConfig.class);
-        verify(calendarService).generateCalendarSVG(configCaptor.capture());
+        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
+                ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
+        verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
 
         // Assert: Configuration should merge template + user settings
         assertEquals(2025, capturedConfig.year);
@@ -258,7 +258,7 @@ public class CalendarGenerationServiceTest {
         byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
         String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
 
-        when(calendarService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
         when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
         when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
 
@@ -299,7 +299,7 @@ public class CalendarGenerationServiceTest {
         byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
         String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
 
-        when(calendarService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
         when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
         when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
 
@@ -310,11 +310,11 @@ public class CalendarGenerationServiceTest {
         assertNotNull(result);
 
         // Verify moon configuration was applied
-        ArgumentCaptor<CalendarService.CalendarConfig> configCaptor =
-                ArgumentCaptor.forClass(CalendarService.CalendarConfig.class);
-        verify(calendarService).generateCalendarSVG(configCaptor.capture());
+        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
+                ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
+        verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
         assertTrue(capturedConfig.showMoonPhases);
         assertEquals(32, capturedConfig.moonSize);
         assertEquals(40, capturedConfig.moonOffsetX);

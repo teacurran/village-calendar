@@ -27,7 +27,7 @@ public class CalendarGenerationService {
     private static final Logger LOG = Logger.getLogger(CalendarGenerationService.class);
 
     @Inject
-    CalendarService calendarService;
+    CalendarRenderingService calendarRenderingService;
 
     @Inject
     AstronomicalCalculationService astronomicalService;
@@ -70,11 +70,11 @@ public class CalendarGenerationService {
 
         try {
             // Step 1: Build configuration by merging template + user configuration
-            CalendarService.CalendarConfig config = buildCalendarConfig(userCalendar);
+            CalendarRenderingService.CalendarConfig config = buildCalendarConfig(userCalendar);
 
             // Step 2: Generate SVG
             LOG.debug("Generating SVG...");
-            String svgContent = calendarService.generateCalendarSVG(config);
+            String svgContent = calendarRenderingService.generateCalendarSVG(config);
 
             // Optionally store the generated SVG in the UserCalendar entity
             userCalendar.generatedSvg = svgContent;
@@ -121,8 +121,8 @@ public class CalendarGenerationService {
      * @param userCalendar The UserCalendar entity
      * @return Merged CalendarConfig
      */
-    private CalendarService.CalendarConfig buildCalendarConfig(UserCalendar userCalendar) {
-        CalendarService.CalendarConfig config = new CalendarService.CalendarConfig();
+    private CalendarRenderingService.CalendarConfig buildCalendarConfig(UserCalendar userCalendar) {
+        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
 
         // Start with default config values
         config.year = userCalendar.year;
@@ -152,7 +152,7 @@ public class CalendarGenerationService {
      * @param config     The CalendarConfig to modify
      * @param jsonConfig The JSON configuration node
      */
-    private void applyJsonConfiguration(CalendarService.CalendarConfig config, JsonNode jsonConfig) {
+    private void applyJsonConfiguration(CalendarRenderingService.CalendarConfig config, JsonNode jsonConfig) {
         try {
             // Simple field mapping from JSON to CalendarConfig
             if (jsonConfig.has("theme")) config.theme = jsonConfig.get("theme").asText();

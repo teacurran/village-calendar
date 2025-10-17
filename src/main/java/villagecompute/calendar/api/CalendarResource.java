@@ -8,7 +8,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import villagecompute.calendar.services.CalendarService;
+import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.services.HebrewCalendarService;
 
 import java.time.DayOfWeek;
@@ -22,7 +22,7 @@ import java.util.Set;
 public class CalendarResource {
 
   @Inject
-  CalendarService calendarService;
+  CalendarRenderingService calendarRenderingService;
 
   @Inject
   HebrewCalendarService hebrewCalendarService;
@@ -88,10 +88,10 @@ public class CalendarResource {
   @Produces(MediaType.APPLICATION_XML)
   public Response generateCalendar(CalendarRequest request) {
     // Build configuration from request
-    CalendarService.CalendarConfig config = buildConfig(request);
+    CalendarRenderingService.CalendarConfig config = buildConfig(request);
 
     // Generate SVG
-    String svg = calendarService.generateCalendarSVG(config);
+    String svg = calendarRenderingService.generateCalendarSVG(config);
 
     return Response.ok(svg)
       .header("Content-Type", "image/svg+xml")
@@ -103,7 +103,7 @@ public class CalendarResource {
   @Produces(MediaType.APPLICATION_JSON)
   public CalendarResponse generateCalendarJson(CalendarRequest request) {
     // Build configuration from request
-    CalendarService.CalendarConfig config = buildConfig(request);
+    CalendarRenderingService.CalendarConfig config = buildConfig(request);
 
     // Generate SVG based on calendar type
     String svg;
@@ -133,7 +133,7 @@ public class CalendarResource {
       String holidaySet = request.holidaySet != null ? request.holidaySet : "HEBREW_RELIGIOUS";
       svg = hebrewCalendarService.generateHebrewCalendarSVG(hebrewConfig, holidaySet);
     } else {
-      svg = calendarService.generateCalendarSVG(config);
+      svg = calendarRenderingService.generateCalendarSVG(config);
     }
 
     CalendarResponse response = new CalendarResponse();
@@ -161,10 +161,10 @@ public class CalendarResource {
   @Produces("application/pdf")
   public Response generatePDF(CalendarRequest request) {
     // Build configuration
-    CalendarService.CalendarConfig config = buildConfig(request);
+    CalendarRenderingService.CalendarConfig config = buildConfig(request);
 
     // Generate PDF
-    byte[] pdf = calendarService.generateCalendarPDF(config);
+    byte[] pdf = calendarRenderingService.generateCalendarPDF(config);
 
     if (pdf.length == 0) {
       // PDF generation failed
@@ -179,8 +179,8 @@ public class CalendarResource {
       .build();
   }
 
-  private CalendarService.CalendarConfig buildConfig(CalendarRequest request) {
-    CalendarService.CalendarConfig config = new CalendarService.CalendarConfig();
+  private CalendarRenderingService.CalendarConfig buildConfig(CalendarRequest request) {
+    CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
 
     if (request.year != null) {
       config.year = request.year;

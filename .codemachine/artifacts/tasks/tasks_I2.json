@@ -27,7 +27,7 @@
     "acceptance_criteria": "CalendarService.createCalendar() persists new calendar to database, CalendarService.updateCalendar() throws exception if version mismatch, CalendarService.listCalendars(userId) returns only user's calendars, CalendarRepository.findByShareToken() returns public calendar or null, Authorization check throws UnauthorizedException if user accesses other user's calendar, All unit tests pass with ./mvnw test",
     "dependencies": ["I1.T8", "I1.T9"],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T3",

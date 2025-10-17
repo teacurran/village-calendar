@@ -12,7 +12,7 @@ import java.util.*;
 public class HebrewCalendarService {
 
     @Inject
-    CalendarService calendarService;
+    CalendarRenderingService calendarRenderingService;
 
     // Hebrew month names (transliterated)
     private static final String[] HEBREW_MONTHS = {
@@ -49,7 +49,7 @@ public class HebrewCalendarService {
     };
 
     // Hebrew calendar configuration
-    public static class HebrewCalendarConfig extends CalendarService.CalendarConfig {
+    public static class HebrewCalendarConfig extends CalendarRenderingService.CalendarConfig {
         public int hebrewYear = 5784; // Current Hebrew year (2023-2024)
         public boolean showHebrewDate = true;
         public boolean showGregorianDate = false;
@@ -358,7 +358,7 @@ public class HebrewCalendarService {
                     boolean isShabbat = (day % 7) == 0;
 
                     if (isShabbat && config.highlightWeekends) {
-                      String cellBackground = CalendarService.getCellBackgroundColor(config, date, month, day, true, weekendIndex - 1);
+                      String cellBackground = CalendarRenderingService.getCellBackgroundColor(config, date, month, day, true, weekendIndex - 1);
 
                         svg.append(String.format(
                             "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" class=\"shabbat-bg\"/>%n",
@@ -368,7 +368,7 @@ public class HebrewCalendarService {
 
                     // Draw grid lines if enabled
                     if (config.showGrid) {
-                      String pdfSafeColor = CalendarService.convertColorForPDF("rgba(255, 255, 255, 0)");
+                      String pdfSafeColor = CalendarRenderingService.convertColorForPDF("rgba(255, 255, 255, 0)");
                       svg.append(String.format(
                         "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" class=\"grid-line\" fill=\"%s\"/>%n",
                         cellX, cellY, cellWidth, cellHeight, pdfSafeColor
@@ -397,7 +397,7 @@ public class HebrewCalendarService {
                         int moonY = cellY + cellHeight / 2 + config.moonOffsetY;
 
                         // Generate moon illumination
-                        svg.append(calendarService.generateMoonIlluminationSVG(
+                        svg.append(calendarRenderingService.generateMoonIlluminationSVG(
                             approximateDate, moonX, moonY,
                             config.latitude, config.longitude, config
                         ));
