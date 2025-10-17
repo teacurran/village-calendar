@@ -385,6 +385,194 @@ class CalendarUserTest {
         assertEquals(0, UserCalendar.count());
     }
 
+    @Test
+    @Transactional
+    void testAllFields_SetAndRetrieve() {
+        // Given - Create user with ALL fields populated
+        CalendarUser user = new CalendarUser();
+        user.oauthProvider = "GITHUB";
+        user.oauthSubject = "github-subject-123";
+        user.email = "complete@test.com";
+        user.displayName = "Complete Test User";
+        user.profileImageUrl = "https://example.com/profile.jpg"; // Often missed!
+        user.lastLoginAt = Instant.now().minus(1, ChronoUnit.HOURS);
+        user.isAdmin = true;
+
+        // When
+        user.persist();
+        entityManager.flush();
+        entityManager.clear();
+
+        // Then - Verify ALL fields persisted and can be retrieved
+        CalendarUser found = CalendarUser.findById(user.id);
+        assertNotNull(found);
+        assertEquals("GITHUB", found.oauthProvider);
+        assertEquals("github-subject-123", found.oauthSubject);
+        assertEquals("complete@test.com", found.email);
+        assertEquals("Complete Test User", found.displayName);
+        assertEquals("https://example.com/profile.jpg", found.profileImageUrl);
+        assertNotNull(found.lastLoginAt);
+        assertTrue(found.isAdmin);
+        assertNotNull(found.created);
+        assertNotNull(found.updated);
+        assertEquals(0L, found.version);
+    }
+
+    @Test
+    @Transactional
+    void testUpdate_ModifiesUpdatedTimestamp() {
+        // Given
+        CalendarUser user = createValidUser("update@test.com");
+        user.persist();
+        entityManager.flush();
+        Instant originalUpdated = user.updated;
+
+        // Wait to ensure timestamp changes
+        try { Thread.sleep(10); } catch (InterruptedException e) {}
+
+        // When
+        user.displayName = "Modified Display Name";
+        user.profileImageUrl = "https://example.com/new-photo.jpg";
+        user.persist();
+        entityManager.flush();
+
+        // Then
+        assertTrue(user.updated.isAfter(originalUpdated));
+        assertEquals("Modified Display Name", user.displayName);
+        assertEquals("https://example.com/new-photo.jpg", user.profileImageUrl);
+        assertEquals(1L, user.version); // Optimistic locking version incremented
+    }
+
+    @Test
+    @Transactional
+    void testDelete_RemovesEntity() {
+        // Given
+        CalendarUser user = createValidUser("delete@test.com");
+        user.persist();
+        java.util.UUID userId = user.id;
+        entityManager.flush();
+
+        // When
+        user.delete();
+        entityManager.flush();
+
+        // Then
+        assertNull(CalendarUser.findById(userId));
+        assertEquals(0, CalendarUser.count());
+    }
+
+    @Test
+    @Transactional
+    void testListAll() {
+        // Given
+        createValidUser("user1@test.com").persist();
+        createValidUser("user2@test.com").persist();
+        createValidUser("user3@test.com").persist();
+        entityManager.flush();
+
+        // When
+        List<CalendarUser> allUsers = CalendarUser.listAll();
+
+        // Then
+        assertEquals(3, allUsers.size());
+    }
+
+    @Test
+    @Transactional
+    void testCount() {
+        // Given
+        createValidUser("user1@test.com").persist();
+        createValidUser("user2@test.com").persist();
+        entityManager.flush();
+
+        // When
+        long count = CalendarUser.count();
+
+        // Then
+        assertEquals(2, count);
+    }
+
+    @Test
+    @Transactional
+    void testFindById() {
+        // Given
+        CalendarUser user = createValidUser("findme@test.com");
+        user.persist();
+        entityManager.flush();
+
+        // When
+        CalendarUser found = CalendarUser.findById(user.id);
+
+        // Then
+        assertNotNull(found);
+        assertEquals(user.id, found.id);
+        assertEquals("findme@test.com", found.email);
+    }
+
+    @Test
+    @Transactional
+    void testProfileImageUrl_Optional() {
+        // Given - User without profile image URL
+        CalendarUser user = createValidUser("no-image@test.com");
+        user.profileImageUrl = null;
+        user.persist();
+        entityManager.flush();
+
+        // When
+        CalendarUser found = CalendarUser.findById(user.id);
+
+        // Then
+        assertNull(found.profileImageUrl);
+    }
+
+    @Test
+    void testValidation_ProfileImageUrlTooLong() {
+        // Given
+        CalendarUser user = createValidUser("user@test.com");
+        user.profileImageUrl = "https://example.com/" + "a".repeat(500); // Exceeds 500 char limit
+
+        // When
+        Set<ConstraintViolation<CalendarUser>> violations = validator.validate(user);
+
+        // Then
+        assertTrue(violations.size() >= 1);
+        boolean hasViolation = violations.stream()
+                .anyMatch(v -> "profileImageUrl".equals(v.getPropertyPath().toString()));
+        assertTrue(hasViolation);
+    }
+
+    @Test
+    void testValidation_DisplayNameTooLong() {
+        // Given
+        CalendarUser user = createValidUser("user@test.com");
+        user.displayName = "A".repeat(256); // Max is 255
+
+        // When
+        Set<ConstraintViolation<CalendarUser>> violations = validator.validate(user);
+
+        // Then
+        assertTrue(violations.size() >= 1);
+        boolean hasViolation = violations.stream()
+                .anyMatch(v -> "displayName".equals(v.getPropertyPath().toString()));
+        assertTrue(hasViolation);
+    }
+
+    @Test
+    void testValidation_OAuthSubjectTooLong() {
+        // Given
+        CalendarUser user = createValidUser("user@test.com");
+        user.oauthSubject = "A".repeat(256); // Max is 255
+
+        // When
+        Set<ConstraintViolation<CalendarUser>> violations = validator.validate(user);
+
+        // Then
+        assertTrue(violations.size() >= 1);
+        boolean hasViolation = violations.stream()
+                .anyMatch(v -> "oauthSubject".equals(v.getPropertyPath().toString()));
+        assertTrue(hasViolation);
+    }
+
     private CalendarUser createValidUser(String email) {
         CalendarUser user = new CalendarUser();
         user.oauthProvider = "GOOGLE";

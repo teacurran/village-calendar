@@ -17,11 +17,11 @@ This is the full specification of the task you must complete.
   "agent_type_hint": "BackendAgent",
   "inputs": "Entity models from Task I1.T8, Quarkus testing documentation",
   "target_files": [
-    "src/test/java/com/villagecompute/calendar/model/UserTest.java",
-    "src/test/java/com/villagecompute/calendar/model/CalendarTest.java",
-    "src/test/java/com/villagecompute/calendar/model/OrderTest.java",
-    "src/test/java/com/villagecompute/calendar/repository/UserRepositoryTest.java",
-    "src/test/java/com/villagecompute/calendar/repository/CalendarRepositoryTest.java",
+    "src/test/java/villagecompute/calendar/model/UserTest.java",
+    "src/test/java/villagecompute/calendar/model/CalendarTest.java",
+    "src/test/java/villagecompute/calendar/model/OrderTest.java",
+    "src/test/java/villagecompute/calendar/repository/UserRepositoryTest.java",
+    "src/test/java/villagecompute/calendar/repository/CalendarRepositoryTest.java",
     "pom.xml"
   ],
   "input_files": [
@@ -128,29 +128,57 @@ The data model is optimized for the calendar creation and e-commerce workflows, 
 
 ## 3. Codebase Analysis & Strategic Guidance
 
-The following analysis is based on my direct review of the current codebase. Use these notes and tips to guide your implementation.
+The following analysis is based on my direct review of the current codebase and test execution results.
+
+### Current Situation: CRITICAL GAP IDENTIFIED
+
+**Test Existence**: All entity and repository tests exist and are comprehensive (220 tests total, all passing).
+
+**Coverage Problem**: Despite passing tests, JaCoCo coverage is FAR below the required 70% threshold:
+
+```
+Build Result: FAILURE
+Coverage checks have not been met:
+
+villagecompute.calendar.data.models:    18% (required: 70%)
+villagecompute.calendar.data.repositories: 0% (required: 70%)
+```
+
+**Root Cause Analysis**: The tests are written to test behavior via validation and finder methods, but JaCoCo measures **instruction coverage**. Many model class instructions are not being executed by tests:
+
+1. **Model Classes**: Tests validate constraints and call finder methods, but don't exercise:
+   - Default constructors
+   - Field initialization logic
+   - Implicit getters/setters (if any)
+   - JPA lifecycle callbacks
+   - Relationship navigation code
+
+2. **Repository Classes**: 0% coverage indicates repository tests may be calling entity static methods directly instead of going through repository instances.
 
 ### Relevant Existing Code
 
 *   **File:** `src/main/java/villagecompute/calendar/data/models/DefaultPanacheEntityWithTimestamps.java`
     *   **Summary:** Base class for all entity models providing UUID primary key (`id`), automatic timestamp management (`created`, `updated`), and optimistic locking (`version` field).
-    *   **Recommendation:** All entity models extend this base class. Tests should verify that `created`, `updated`, and `version` fields are automatically populated on persist and update operations.
+    *   **Recommendation:** Tests should verify that `created`, `updated`, and `version` fields are automatically populated on persist and update operations. Current tests may not be exercising the @PrePersist and @PreUpdate callbacks.
 
 *   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarUser.java`
     *   **Summary:** Entity representing an OAuth authenticated user. Uses Panache active record pattern with static finder methods like `findByOAuthSubject()`, `findByEmail()`, `findActiveUsersSince()`.
-    *   **Recommendation:** Tests already exist at `src/test/java/villagecompute/calendar/data/models/CalendarUserTest.java` with comprehensive coverage of validation, finder methods, and relationships. Use this as a reference pattern for other entity tests.
+    *   **Recommendation:** Tests exist at `CalendarUserTest.java` but achieve only 11% coverage. Need to add tests that:
+        - Exercise all fields (profileImageUrl is likely untested)
+        - Test relationship loading (calendars, orders collections)
+        - Test all code paths in finder methods
 
 *   **File:** `src/main/java/villagecompute/calendar/data/models/UserCalendar.java`
     *   **Summary:** Entity representing user calendars with JSONB configuration field. Includes custom queries like `findByUserAndYear()`, `findBySession()`.
-    *   **Recommendation:** Tests already exist at `src/test/java/villagecompute/calendar/data/models/UserCalendarTest.java`. Note the pattern for testing JSONB fields using Jackson ObjectMapper.
+    *   **Recommendation:** Tests exist at `UserCalendarTest.java` but achieve only 6% coverage. Key gap: JSONB configuration field manipulation is likely not fully tested.
 
 *   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarOrder.java`
     *   **Summary:** E-commerce order entity with BigDecimal price fields, status management, and Stripe integration fields. Includes helper methods like `markAsPaid()`, `markAsShipped()`.
-    *   **Recommendation:** Tests already exist at `src/test/java/villagecompute/calendar/data/models/CalendarOrderTest.java`.
+    *   **Recommendation:** Tests exist at `CalendarOrderTest.java` but achieve 0% coverage. This is suspicious - the test may not be properly exercising the order lifecycle methods.
 
 *   **File:** `src/main/java/villagecompute/calendar/data/repositories/CalendarUserRepository.java`
     *   **Summary:** Repository implementing PanacheRepository pattern with custom query methods. Methods delegate to Panache's fluent query API.
-    *   **Recommendation:** Tests already exist at `src/test/java/villagecompute/calendar/data/repositories/CalendarUserRepositoryTest.java`. This pattern should be followed for other repositories.
+    *   **Recommendation:** Repository tests show 0% coverage. **CRITICAL ISSUE**: Tests are likely calling `CalendarUser.findByOAuthSubject()` directly (static method on entity) instead of calling `calendarUserRepository.findByOAuthSubject()`. Repository methods are never being invoked!
 
 *   **File:** `src/test/java/villagecompute/calendar/data/repositories/TestDataCleaner.java`
     *   **Summary:** Utility for cleaning test data in correct order to avoid foreign key violations. Injected as `@ApplicationScoped` bean and used in `@BeforeEach` setup.
@@ -162,46 +190,188 @@ The following analysis is based on my direct review of the current codebase. Use
 
 ### Implementation Tips & Notes
 
-*   **Tip:** **TESTS ALREADY EXIST!** My analysis shows that all 7 entity model tests AND all 4 repository tests are already implemented:
-    - Entity Tests: `AnalyticsRollupTest`, `CalendarOrderTest`, `CalendarTemplateTest`, `CalendarUserTest`, `DelayedJobTest`, `PageViewTest`, `UserCalendarTest`
-    - Repository Tests: `CalendarOrderRepositoryTest`, `CalendarTemplateRepositoryTest`, `CalendarUserRepositoryTest`, `UserCalendarRepositoryTest`
+*   **Critical Finding #1**: Repository tests are NOT actually testing repository classes. Example from `CalendarUserRepositoryTest.java`:
+    ```java
+    // WRONG: Calls static method on entity, bypassing repository
+    Optional<CalendarUser> found = CalendarUser.findByOAuthSubject("GOOGLE", "test-subject");
 
-*   **Tip:** I ran `./mvnw clean test jacoco:report` and confirmed **all 220 tests pass successfully**. The JaCoCo report is generated at `target/site/jacoco/index.html`.
+    // CORRECT: Should call instance method on injected repository
+    Optional<CalendarUser> found = calendarUserRepository.findByOAuthSubject("GOOGLE", "test-subject");
+    ```
+    **Action Required**: ALL repository tests must be refactored to call repository instance methods, not entity static methods.
 
-*   **Tip:** The test patterns established in the codebase follow Quarkus best practices:
-    - Use `@QuarkusTest` annotation for integration with Quarkus runtime
-    - Use `@Inject` for dependency injection (Validator, EntityManager, ObjectMapper, Repositories)
-    - Use `@Transactional` on test methods that modify database state
-    - Use `@BeforeEach` with `TestDataCleaner.deleteAll()` for clean state
-    - Use Jakarta Bean Validation annotations for constraint testing
-    - Use Panache's fluent query API in both entities (ActiveRecord) and repositories
+*   **Critical Finding #2**: Model tests focus on validation and finder methods but don't exercise all code paths. Need to add tests for:
+    - All field combinations (set every field, not just required ones)
+    - Relationship lazy loading (access collections and verify they load)
+    - Relationship cascade operations (persist parent, verify child persisted)
+    - Optimistic locking conflicts (concurrent updates, version mismatch)
+    - JSONB field manipulation (set, retrieve, query JSONB data)
+    - JPA lifecycle callbacks (verify @PrePersist, @PreUpdate called)
 
-*   **Note:** The actual package structure is `villagecompute.calendar` (not `com.villagecompute.calendar` as specified in the task's target_files). The tests use the correct package structure.
+*   **Critical Finding #3**: Coverage measurement issue - JaCoCo counts bytecode instructions, not test assertions. A test can pass without exercising all instructions in a method. Need to:
+    - Add more granular tests that exercise specific code branches
+    - Test error paths and edge cases
+    - Verify field-level coverage (set and get each field explicitly)
 
-*   **Note:** JaCoCo Maven plugin is already configured in `pom.xml` with:
-    - `jacoco:prepare-agent` execution in test phase
-    - `jacoco:report` execution after test
-    - `jacoco:check` execution for coverage enforcement
-    - HTML report generation at `target/site/jacoco/`
+*   **Tip:** Use JaCoCo HTML reports to identify uncovered lines:
+    ```bash
+    open target/site/jacoco/villagecompute.calendar.data.models/CalendarUser.html
+    ```
+    Red/yellow highlighting shows which lines are not covered.
 
-*   **Warning:** The task specification asks for tests to be created, but they already exist and are passing. The task's acceptance criteria state "Coverage >70% for model and repository packages" - you SHOULD verify the current coverage level by examining the JaCoCo HTML report.
+*   **Note:** The task specification mentions 11 entity classes, but only 9 are implemented:
+    1. AnalyticsRollup
+    2. CalendarOrder
+    3. CalendarTemplate
+    4. CalendarUser
+    5. DefaultPanacheEntityWithTimestamps
+    6. DelayedJob
+    7. DelayedJobQueue
+    8. PageView
+    9. UserCalendar
 
-*   **Warning:** One entity mentioned in the architecture (Event) does not have a corresponding Java class in the current implementation. The project uses `UserCalendar` with JSONB configuration instead of separate Event entities. This is a valid design choice that simplifies the data model.
+    Missing from architecture: Event, Payment, OrderItem (these may have been consolidated into UserCalendar's JSONB config and CalendarOrder's fields).
 
-*   **Note:** The task mentions 11 entity classes, but only 8 are implemented (AnalyticsRollup, CalendarOrder, CalendarTemplate, CalendarUser, DelayedJob, DelayedJobQueue, PageView, UserCalendar). The separate Event, Payment, OrderItem entities mentioned in the architecture may have been consolidated or deferred to later iterations.
+*   **Note:** The task specification references package `com.villagecompute.calendar` but actual package is `villagecompute.calendar`. Use the actual package structure in all code.
 
-### Recommended Next Steps
+### Recommended Approach to Achieve >70% Coverage
 
-1. **VERIFY COVERAGE**: Check the JaCoCo report at `target/site/jacoco/villagecompute.calendar.data.models/index.html` and `target/site/jacoco/villagecompute.calendar.data.repositories/index.html` to confirm >70% coverage.
+#### Phase 1: Fix Repository Tests (0% → 70% coverage)
 
-2. **IF COVERAGE IS INSUFFICIENT**: Identify specific classes or methods with low coverage and add targeted tests to increase coverage above the 70% threshold.
+1. **Refactor ALL repository tests** to inject and use repository instances instead of calling entity static methods:
+   ```java
+   @Inject
+   CalendarUserRepository calendarUserRepository;
 
-3. **IF COVERAGE IS SUFFICIENT**: Mark task I1.T13 as DONE and document the coverage results in the task completion notes.
+   @Test
+   @Transactional
+   void testFindByOAuthSubject() {
+       // Use repository, not entity static method
+       Optional<CalendarUser> found = calendarUserRepository.findByOAuthSubject("GOOGLE", "subject");
+       // assertions...
+   }
+   ```
 
-4. **OPTIONAL IMPROVEMENTS**: Consider adding tests for edge cases not currently covered:
-   - Concurrent updates with optimistic locking (version conflicts)
-   - JSONB query performance with GIN indexes
-   - Cascade delete behavior with complex relationship graphs
-   - Unique constraint violations
+2. **Add tests for ALL repository methods** listed in each repository class.
 
-5. **DOCUMENTATION**: Update any test documentation to reflect the comprehensive test suite that exists.
+3. **Add tests for base repository operations** inherited from PanacheRepository:
+   - findById
+   - listAll
+   - persist
+   - delete
+   - count
+
+#### Phase 2: Enhance Model Tests (18% → 70% coverage)
+
+1. **For each entity, add field coverage tests**:
+   ```java
+   @Test
+   @Transactional
+   void testAllFieldsSet() {
+       CalendarUser user = new CalendarUser();
+       // Set EVERY field
+       user.oauthProvider = "GOOGLE";
+       user.oauthSubject = "subject";
+       user.email = "test@example.com";
+       user.displayName = "Test User";
+       user.profileImageUrl = "https://example.com/photo.jpg"; // Often missed!
+       user.lastLoginAt = Instant.now();
+       user.isAdmin = false;
+
+       user.persist();
+       entityManager.flush();
+
+       // Verify ALL fields persisted correctly
+       CalendarUser found = CalendarUser.findById(user.id);
+       assertEquals("https://example.com/photo.jpg", found.profileImageUrl);
+       // ... assert all other fields
+   }
+   ```
+
+2. **Add relationship loading tests**:
+   ```java
+   @Test
+   @Transactional
+   void testLazyLoadCalendars() {
+       CalendarUser user = createAndPersistUser();
+       UserCalendar calendar = createAndPersistCalendar(user);
+
+       entityManager.clear(); // Detach all entities
+
+       CalendarUser found = CalendarUser.findById(user.id);
+       int size = found.calendars.size(); // Triggers lazy load
+
+       assertEquals(1, size);
+       assertEquals(calendar.id, found.calendars.get(0).id);
+   }
+   ```
+
+3. **Add optimistic locking tests**:
+   ```java
+   @Test
+   @Transactional
+   void testOptimisticLockingConflict() {
+       CalendarUser user = createAndPersistUser();
+       UUID userId = user.id;
+
+       // Simulate concurrent modification
+       CalendarUser user1 = CalendarUser.findById(userId);
+       CalendarUser user2 = CalendarUser.findById(userId);
+
+       user1.displayName = "Updated 1";
+       user1.persist();
+       entityManager.flush();
+
+       user2.displayName = "Updated 2";
+       assertThrows(OptimisticLockException.class, () -> {
+           user2.persist();
+           entityManager.flush();
+       });
+   }
+   ```
+
+4. **Add JSONB tests** (for UserCalendar, CalendarTemplate):
+   ```java
+   @Test
+   @Transactional
+   void testJsonbConfigurationPersistence() {
+       UserCalendar calendar = new UserCalendar();
+       // ... set required fields
+
+       ObjectNode config = objectMapper.createObjectNode();
+       config.put("showMoonPhases", true);
+       config.put("showHebrewDates", false);
+       calendar.configuration = config;
+
+       calendar.persist();
+       entityManager.flush();
+       entityManager.clear();
+
+       UserCalendar found = UserCalendar.findById(calendar.id);
+       assertTrue(found.configuration.get("showMoonPhases").asBoolean());
+   }
+   ```
+
+#### Phase 3: Verify Coverage
+
+1. Run full test suite with coverage:
+   ```bash
+   ./mvnw clean verify
+   ```
+
+2. Check JaCoCo report:
+   ```bash
+   open target/site/jacoco/index.html
+   ```
+
+3. Verify both packages meet 70% threshold:
+   - villagecompute.calendar.data.models: >=70%
+   - villagecompute.calendar.data.repositories: >=70%
+
+4. If still below 70%, examine HTML reports to identify remaining uncovered lines and add targeted tests.
+
+### Warning: Build Will Fail Until Coverage Fixed
+
+The `./mvnw verify` command includes the `jacoco:check` goal which enforces 70% coverage. The build will continue to fail until both model and repository packages achieve the required coverage threshold. This is INTENTIONAL and part of the quality gates defined in the architecture.
+
+**Current Status**: ❌ TASK I1.T13 IS NOT COMPLETE until `./mvnw verify` succeeds without coverage violations.

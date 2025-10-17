@@ -364,6 +364,140 @@ class PageViewTest {
         assertEquals("test@example.com", found.user.email);
     }
 
+    @Test
+    @Transactional
+    void testAllFields_SetAndRetrieve() {
+        // Given - Create page view with ALL fields populated
+        PageView pageView = new PageView();
+        pageView.sessionId = "session-complete-456";
+        pageView.user = testUser;
+        pageView.path = "/calendar/123/edit";
+        pageView.referrer = "https://reddit.com/r/productivity";
+        pageView.userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+
+        // When
+        pageView.persist();
+        entityManager.flush();
+        entityManager.clear();
+
+        // Then - Verify ALL fields persisted and can be retrieved
+        PageView found = PageView.findById(pageView.id);
+        assertNotNull(found);
+        assertEquals("session-complete-456", found.sessionId);
+        assertEquals(testUser.id, found.user.id);
+        assertEquals("/calendar/123/edit", found.path);
+        assertEquals("https://reddit.com/r/productivity", found.referrer);
+        assertEquals("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", found.userAgent);
+        assertNotNull(found.created);
+        assertNotNull(found.updated);
+        assertEquals(0L, found.version);
+    }
+
+    @Test
+    @Transactional
+    void testUpdate_ModifiesUpdatedTimestamp() {
+        // Given
+        PageView pageView = createValidPageView();
+        pageView.persist();
+        entityManager.flush();
+        Instant originalUpdated = pageView.updated;
+
+        // Wait to ensure timestamp changes
+        try { Thread.sleep(10); } catch (InterruptedException e) {}
+
+        // When
+        pageView.path = "/updated/path";
+        pageView.referrer = "https://updated.com";
+        pageView.persist();
+        entityManager.flush();
+
+        // Then
+        assertTrue(pageView.updated.isAfter(originalUpdated));
+        assertEquals("/updated/path", pageView.path);
+        assertEquals("https://updated.com", pageView.referrer);
+        assertEquals(1L, pageView.version);
+    }
+
+    @Test
+    @Transactional
+    void testDelete_RemovesEntity() {
+        // Given
+        PageView pageView = createValidPageView();
+        pageView.persist();
+        java.util.UUID pageViewId = pageView.id;
+        entityManager.flush();
+
+        // When
+        pageView.delete();
+        entityManager.flush();
+
+        // Then
+        assertNull(PageView.findById(pageViewId));
+    }
+
+    @Test
+    @Transactional
+    void testListAll() {
+        // Given
+        createValidPageView().persist();
+        createValidPageView().persist();
+        entityManager.flush();
+
+        // When
+        List<PageView> allPageViews = PageView.listAll();
+
+        // Then
+        assertEquals(2, allPageViews.size());
+    }
+
+    @Test
+    @Transactional
+    void testCount() {
+        // Given
+        createValidPageView().persist();
+        createValidPageView().persist();
+        createValidPageView().persist();
+        entityManager.flush();
+
+        // When
+        long count = PageView.count();
+
+        // Then
+        assertEquals(3, count);
+    }
+
+    @Test
+    void testValidation_ReferrerTooLong() {
+        // Given
+        PageView pageView = createValidPageView();
+        pageView.referrer = "https://example.com/" + "a".repeat(500); // Exceeds 500 char limit
+
+        // When
+        Set<ConstraintViolation<PageView>> violations = validator.validate(pageView);
+
+        // Then
+        assertTrue(violations.size() >= 1);
+        boolean hasViolation = violations.stream()
+                .anyMatch(v -> "referrer".equals(v.getPropertyPath().toString()));
+        assertTrue(hasViolation);
+    }
+
+    @Test
+    void testValidation_UserAgentTooLong() {
+        // Given
+        PageView pageView = createValidPageView();
+        pageView.userAgent = "Mozilla/5.0 " + "a".repeat(1000); // Exceeds 1000 char limit
+
+        // When
+        Set<ConstraintViolation<PageView>> violations = validator.validate(pageView);
+
+        // Then
+        assertTrue(violations.size() >= 1);
+        boolean hasViolation = violations.stream()
+                .anyMatch(v -> "userAgent".equals(v.getPropertyPath().toString()));
+        assertTrue(hasViolation);
+    }
+
     private PageView createValidPageView() {
         PageView pageView = new PageView();
         pageView.sessionId = "session-abc123";

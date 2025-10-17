@@ -474,6 +474,335 @@ class CalendarOrderTest {
         assertEquals(testCalendar.id, found.calendar.id);
     }
 
+    @Test
+    @Transactional
+    void testAllFields_SetAndRetrieve() {
+        // Given - Create order with ALL fields populated
+        CalendarOrder order = new CalendarOrder();
+        order.user = testUser;
+        order.calendar = testCalendar;
+        order.quantity = 5;
+        order.unitPrice = BigDecimal.valueOf(29.99);
+        order.totalPrice = BigDecimal.valueOf(149.95);
+        order.status = CalendarOrder.STATUS_PAID;
+
+        ObjectNode address = objectMapper.createObjectNode();
+        address.put("name", "John Doe");
+        address.put("street", "456 Oak Ave");
+        address.put("city", "Portland");
+        address.put("state", "OR");
+        address.put("zip", "97201");
+        address.put("country", "USA");
+        order.shippingAddress = address;
+
+        order.stripePaymentIntentId = "pi_complete_123";
+        order.stripeChargeId = "ch_complete_456";
+        order.notes = "Please ship to side door";
+        order.paidAt = Instant.now().minus(2, ChronoUnit.HOURS);
+        order.shippedAt = Instant.now().minus(1, ChronoUnit.HOURS);
+
+        // When
+        order.persist();
+        entityManager.flush();
+        entityManager.clear();
+
+        // Then - Verify ALL fields persisted and can be retrieved
+        CalendarOrder found = CalendarOrder.findById(order.id);
+        assertNotNull(found);
+        assertEquals(testUser.id, found.user.id);
+        assertEquals(testCalendar.id, found.calendar.id);
+        assertEquals(5, found.quantity);
+        assertEquals(0, BigDecimal.valueOf(29.99).compareTo(found.unitPrice));
+        assertEquals(0, BigDecimal.valueOf(149.95).compareTo(found.totalPrice));
+        assertEquals(CalendarOrder.STATUS_PAID, found.status);
+        assertNotNull(found.shippingAddress);
+        assertEquals("John Doe", found.shippingAddress.get("name").asText());
+        assertEquals("pi_complete_123", found.stripePaymentIntentId);
+        assertEquals("ch_complete_456", found.stripeChargeId);
+        assertEquals("Please ship to side door", found.notes);
+        assertNotNull(found.paidAt);
+        assertNotNull(found.shippedAt);
+        assertNotNull(found.created);
+        assertNotNull(found.updated);
+        assertEquals(0L, found.version);
+    }
+
+    @Test
+    @Transactional
+    void testUpdate_ModifiesUpdatedTimestamp() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        order.persist();
+        entityManager.flush();
+        Instant originalUpdated = order.updated;
+
+        // Wait to ensure timestamp changes
+        try { Thread.sleep(10); } catch (InterruptedException e) {}
+
+        // When
+        order.quantity = 3;
+        order.totalPrice = BigDecimal.valueOf(59.97);
+        order.notes = "Updated delivery instructions";
+        order.persist();
+        entityManager.flush();
+
+        // Then
+        assertTrue(order.updated.isAfter(originalUpdated));
+        assertEquals(3, order.quantity);
+        assertEquals(0, BigDecimal.valueOf(59.97).compareTo(order.totalPrice));
+        assertEquals("Updated delivery instructions", order.notes);
+        assertEquals(1L, order.version);
+    }
+
+    @Test
+    @Transactional
+    void testDelete_RemovesEntity() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        order.persist();
+        java.util.UUID orderId = order.id;
+        entityManager.flush();
+
+        // When
+        order.delete();
+        entityManager.flush();
+
+        // Then
+        assertNull(CalendarOrder.findById(orderId));
+    }
+
+    @Test
+    @Transactional
+    void testListAll() {
+        // Given
+        createValidOrder().persist();
+        createValidOrder().persist();
+        entityManager.flush();
+
+        // When
+        List<CalendarOrder> allOrders = CalendarOrder.listAll();
+
+        // Then
+        assertEquals(2, allOrders.size());
+    }
+
+    @Test
+    @Transactional
+    void testCount() {
+        // Given
+        createValidOrder().persist();
+        createValidOrder().persist();
+        createValidOrder().persist();
+        entityManager.flush();
+
+        // When
+        long count = CalendarOrder.count();
+
+        // Then
+        assertEquals(3, count);
+    }
+
+    @Test
+    @Transactional
+    void testStatusConstants() {
+        // Verify all status constants are accessible
+        assertEquals("PENDING", CalendarOrder.STATUS_PENDING);
+        assertEquals("PAID", CalendarOrder.STATUS_PAID);
+        assertEquals("PROCESSING", CalendarOrder.STATUS_PROCESSING);
+        assertEquals("SHIPPED", CalendarOrder.STATUS_SHIPPED);
+        assertEquals("DELIVERED", CalendarOrder.STATUS_DELIVERED);
+        assertEquals("CANCELLED", CalendarOrder.STATUS_CANCELLED);
+    }
+
+    @Test
+    @Transactional
+    void testMarkAsPaid_FromPending() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        order.status = CalendarOrder.STATUS_PENDING;
+        order.paidAt = null;
+        order.persist();
+        entityManager.flush();
+
+        // When
+        order.markAsPaid();
+        entityManager.flush();
+
+        // Then
+        assertEquals(CalendarOrder.STATUS_PAID, order.status);
+        assertNotNull(order.paidAt);
+    }
+
+    @Test
+    @Transactional
+    void testMarkAsShipped_FromPaid() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        order.status = CalendarOrder.STATUS_PAID;
+        order.shippedAt = null;
+        order.persist();
+        entityManager.flush();
+
+        // When
+        order.markAsShipped();
+        entityManager.flush();
+
+        // Then
+        assertEquals(CalendarOrder.STATUS_SHIPPED, order.status);
+        assertNotNull(order.shippedAt);
+    }
+
+    @Test
+    @Transactional
+    void testCancel_FromAnyStatus() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        order.status = CalendarOrder.STATUS_PROCESSING;
+        order.persist();
+        entityManager.flush();
+
+        // When
+        order.cancel();
+        entityManager.flush();
+
+        // Then
+        assertEquals(CalendarOrder.STATUS_CANCELLED, order.status);
+    }
+
+    @Test
+    @Transactional
+    void testIsTerminal_AllStatuses() {
+        // Test DELIVERED is terminal
+        CalendarOrder deliveredOrder = createValidOrder();
+        deliveredOrder.status = CalendarOrder.STATUS_DELIVERED;
+        assertTrue(deliveredOrder.isTerminal());
+
+        // Test CANCELLED is terminal
+        CalendarOrder cancelledOrder = createValidOrder();
+        cancelledOrder.status = CalendarOrder.STATUS_CANCELLED;
+        assertTrue(cancelledOrder.isTerminal());
+
+        // Test PENDING is not terminal
+        CalendarOrder pendingOrder = createValidOrder();
+        pendingOrder.status = CalendarOrder.STATUS_PENDING;
+        assertFalse(pendingOrder.isTerminal());
+
+        // Test PAID is not terminal
+        CalendarOrder paidOrder = createValidOrder();
+        paidOrder.status = CalendarOrder.STATUS_PAID;
+        assertFalse(paidOrder.isTerminal());
+
+        // Test PROCESSING is not terminal
+        CalendarOrder processingOrder = createValidOrder();
+        processingOrder.status = CalendarOrder.STATUS_PROCESSING;
+        assertFalse(processingOrder.isTerminal());
+
+        // Test SHIPPED is not terminal
+        CalendarOrder shippedOrder = createValidOrder();
+        shippedOrder.status = CalendarOrder.STATUS_SHIPPED;
+        assertFalse(shippedOrder.isTerminal());
+    }
+
+    @Test
+    void testValidation_StatusTooLong() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        order.status = "A".repeat(51); // Max is 50
+
+        // When
+        Set<ConstraintViolation<CalendarOrder>> violations = validator.validate(order);
+
+        // Then
+        assertTrue(violations.size() >= 1);
+        boolean hasViolation = violations.stream()
+                .anyMatch(v -> "status".equals(v.getPropertyPath().toString()));
+        assertTrue(hasViolation);
+    }
+
+    @Test
+    void testValidation_StripePaymentIntentIdTooLong() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        order.stripePaymentIntentId = "pi_" + "a".repeat(253); // Exceeds 255 char limit
+
+        // When
+        Set<ConstraintViolation<CalendarOrder>> violations = validator.validate(order);
+
+        // Then
+        assertTrue(violations.size() >= 1);
+        boolean hasViolation = violations.stream()
+                .anyMatch(v -> "stripePaymentIntentId".equals(v.getPropertyPath().toString()));
+        assertTrue(hasViolation);
+    }
+
+    @Test
+    void testValidation_StripeChargeIdTooLong() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        order.stripeChargeId = "ch_" + "a".repeat(254); // Exceeds 255 char limit
+
+        // When
+        Set<ConstraintViolation<CalendarOrder>> violations = validator.validate(order);
+
+        // Then
+        assertTrue(violations.size() >= 1);
+        boolean hasViolation = violations.stream()
+                .anyMatch(v -> "stripeChargeId".equals(v.getPropertyPath().toString()));
+        assertTrue(hasViolation);
+    }
+
+    @Test
+    @Transactional
+    void testNotes_LongText() {
+        // Given - TEXT column should support long text
+        CalendarOrder order = createValidOrder();
+        String longNotes = "Customer notes: " + "This is important delivery information. ".repeat(100);
+        order.notes = longNotes;
+        order.persist();
+        entityManager.flush();
+
+        // When
+        CalendarOrder found = CalendarOrder.findById(order.id);
+
+        // Then
+        assertNotNull(found.notes);
+        assertEquals(longNotes, found.notes);
+    }
+
+    @Test
+    @Transactional
+    void testOptionalFields_NullValues() {
+        // Given - Order with only required fields
+        CalendarOrder order = new CalendarOrder();
+        order.user = testUser;
+        order.calendar = testCalendar;
+        order.quantity = 1;
+        order.unitPrice = BigDecimal.valueOf(19.99);
+        order.totalPrice = BigDecimal.valueOf(19.99);
+        order.status = CalendarOrder.STATUS_PENDING;
+        // Leave optional fields null
+        order.shippingAddress = null;
+        order.stripePaymentIntentId = null;
+        order.stripeChargeId = null;
+        order.notes = null;
+        order.paidAt = null;
+        order.shippedAt = null;
+        order.persist();
+        entityManager.flush();
+
+        // When
+        CalendarOrder found = CalendarOrder.findById(order.id);
+
+        // Then
+        assertNotNull(found);
+        assertNull(found.shippingAddress);
+        assertNull(found.stripePaymentIntentId);
+        assertNull(found.stripeChargeId);
+        assertNull(found.notes);
+        assertNull(found.paidAt);
+        assertNull(found.shippedAt);
+    }
+
     private CalendarOrder createValidOrder() {
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
