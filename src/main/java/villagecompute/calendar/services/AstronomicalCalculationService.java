@@ -2,16 +2,23 @@ package villagecompute.calendar.services;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.shredzone.commons.suncalc.SunTimes;
+import villagecompute.calendar.util.astronomical.HebrewCalendarConverter;
+import villagecompute.calendar.util.astronomical.MoonPhaseCalculator;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Service for astronomical calculations including moon phases, illumination, and Hebrew calendar dates.
+ * Service for astronomical calculations including moon phases, illumination, Hebrew calendar dates, and seasonal events.
  * <p>
- * This service extracts astronomical calculation logic from the main CalendarService
- * to provide reusable moon phase and position calculations.
+ * This service provides accurate astronomical calculations using the SunCalc library,
+ * delegating to utility classes for specific calculation types.
  */
 @ApplicationScoped
 public class AstronomicalCalculationService {
@@ -20,66 +27,51 @@ public class AstronomicalCalculationService {
     HebrewCalendarService hebrewCalendarService;
 
     /**
-     * Calculate moon phases for a given year.
+     * Calculate moon phases for a given year using SunCalc library.
      * Returns a list of dates with their corresponding moon phase.
+     * This is optimized to calculate major phase transitions directly rather than iterating all days.
      *
      * @param year The year to calculate moon phases for
      * @return List of MoonPhaseData for each major phase transition day
      */
     public List<MoonPhaseData> getMoonPhases(int year) {
+        List<MoonPhaseCalculator.MoonPhaseData> utilPhases = MoonPhaseCalculator.calculateMoonPhasesForYear(year);
+
+        // Convert utility class data to service data class
         List<MoonPhaseData> phases = new ArrayList<>();
-
-        LocalDate startDate = LocalDate.of(year, 1, 1);
-        LocalDate endDate = LocalDate.of(year, 12, 31);
-
-        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
-            if (isMoonPhaseDay(date)) {
-                MoonPhase phase = calculateMoonPhase(date);
-                double phaseValue = calculateMoonPhaseValue(date);
-                phases.add(new MoonPhaseData(date, phase, phaseValue));
-            }
+        for (MoonPhaseCalculator.MoonPhaseData utilPhase : utilPhases) {
+            MoonPhase phase = convertPhaseType(utilPhase.phase);
+            phases.add(new MoonPhaseData(utilPhase.date, phase, utilPhase.phaseValue));
         }
 
         return phases;
     }
 
     /**
-     * Calculate the moon phase for a specific date.
+     * Convert utility class MoonPhaseType to service MoonPhase enum.
+     */
+    private MoonPhase convertPhaseType(MoonPhaseCalculator.MoonPhaseType type) {
+        return switch (type) {
+            case NEW_MOON -> MoonPhase.NEW_MOON;
+            case WAXING_CRESCENT -> MoonPhase.WAXING_CRESCENT;
+            case FIRST_QUARTER -> MoonPhase.FIRST_QUARTER;
+            case WAXING_GIBBOUS -> MoonPhase.WAXING_GIBBOUS;
+            case FULL_MOON -> MoonPhase.FULL_MOON;
+            case WANING_GIBBOUS -> MoonPhase.WANING_GIBBOUS;
+            case LAST_QUARTER -> MoonPhase.LAST_QUARTER;
+            case WANING_CRESCENT -> MoonPhase.WANING_CRESCENT;
+        };
+    }
+
+    /**
+     * Calculate the moon phase for a specific date using SunCalc.
      *
      * @param date The date to calculate the moon phase for
      * @return The moon phase enum value
      */
     public MoonPhase calculateMoonPhase(LocalDate date) {
-        // Known new moon date (January 6, 2000 at 18:14 UTC)
-        LocalDate knownNewMoon = LocalDate.of(2000, 1, 6);
-
-        // Calculate days since known new moon
-        long daysSince = java.time.temporal.ChronoUnit.DAYS.between(knownNewMoon, date);
-
-        // Synodic month is approximately 29.53059 days
-        double synodicMonth = 29.53059;
-
-        // Calculate phase as a fraction (0 = new moon, 0.5 = full moon)
-        double phase = (daysSince % synodicMonth) / synodicMonth;
-
-        // Determine moon phase based on the fraction
-        if (phase < 0.0625 || phase >= 0.9375) {
-            return MoonPhase.NEW_MOON;
-        } else if (phase < 0.1875) {
-            return MoonPhase.WAXING_CRESCENT;
-        } else if (phase < 0.3125) {
-            return MoonPhase.FIRST_QUARTER;
-        } else if (phase < 0.4375) {
-            return MoonPhase.WAXING_GIBBOUS;
-        } else if (phase < 0.5625) {
-            return MoonPhase.FULL_MOON;
-        } else if (phase < 0.6875) {
-            return MoonPhase.WANING_GIBBOUS;
-        } else if (phase < 0.8125) {
-            return MoonPhase.LAST_QUARTER;
-        } else {
-            return MoonPhase.WANING_CRESCENT;
-        }
+        MoonPhaseCalculator.MoonPhaseType type = MoonPhaseCalculator.calculateMoonPhase(date);
+        return convertPhaseType(type);
     }
 
     /**
@@ -90,44 +82,22 @@ public class AstronomicalCalculationService {
      * @return Moon phase value (0.0 to 1.0)
      */
     public double calculateMoonPhaseValue(LocalDate date) {
-        // Known new moon date (January 6, 2000 at 18:14 UTC)
-        LocalDate knownNewMoon = LocalDate.of(2000, 1, 6);
-
-        // Calculate days since known new moon
-        long daysSince = java.time.temporal.ChronoUnit.DAYS.between(knownNewMoon, date);
-
-        // Synodic month is approximately 29.53059 days
-        double synodicMonth = 29.53059;
-
-        // Calculate phase as a fraction (0 = new moon, 0.5 = full moon)
-        double phase = (daysSince % synodicMonth) / synodicMonth;
-        if (phase < 0) phase += 1.0;
-
-        return phase;
+        return MoonPhaseCalculator.calculateMoonPhaseValue(date);
     }
 
     /**
-     * Calculate moon illumination for a given date.
+     * Calculate moon illumination for a given date using SunCalc.
      *
      * @param date The date to calculate illumination for
      * @return MoonIllumination data with fraction, phase, and angle
      */
     public MoonIllumination calculateMoonIllumination(LocalDate date) {
-        // Use the same phase calculation for consistency
-        double phase = calculateMoonPhaseValue(date);
-
-        // Calculate illumination fraction using the phase
-        // This is a simplified calculation
-        double illumination = (1 - Math.cos(phase * 2 * Math.PI)) / 2;
-
-        // Angle (simplified - actual calculation would need sun position)
-        double angle = phase * 2 * Math.PI;
-
-        return new MoonIllumination(illumination, phase, angle);
+        MoonPhaseCalculator.MoonIlluminationData data = MoonPhaseCalculator.calculateIlluminationData(date);
+        return new MoonIllumination(data.fraction, data.phase, data.angle);
     }
 
     /**
-     * Calculate moon position for an observer's location.
+     * Calculate moon position for an observer's location using SunCalc.
      * This affects how the moon appears (rotation) based on hemisphere.
      *
      * @param date      The date to calculate
@@ -136,156 +106,179 @@ public class AstronomicalCalculationService {
      * @return MoonPosition with azimuth, altitude, and parallactic angle
      */
     public MoonPosition calculateMoonPosition(LocalDate date, double latitude, double longitude) {
-        // Improved moon position calculation with better hemisphere awareness
-        // The moon appears differently based on observer's location
-
-        // Convert to radians
-        double lat = Math.toRadians(latitude);
-        double lng = Math.toRadians(longitude);
-
-        // Calculate moon's approximate position in its orbit
-        // Using synodic month for phase calculation
-        LocalDate j2000 = LocalDate.of(2000, 1, 1);
-        long daysSinceJ2000 = java.time.temporal.ChronoUnit.DAYS.between(j2000, date);
-        double synodicMonth = 29.53058867;
-        double moonAge = (daysSinceJ2000 - 5.5) % synodicMonth;
-        if (moonAge < 0) moonAge += synodicMonth;
-
-        // Calculate approximate moon declination
-        // Moon's orbit is inclined about 5.14° to ecliptic, ecliptic is inclined 23.44° to equator
-        // This gives moon declination range of approximately ±28.6°
-        double moonOrbitPhase = (moonAge / synodicMonth) * 2 * Math.PI;
-        double moonDeclination = Math.toRadians(28.6 * Math.sin(moonOrbitPhase + date.getDayOfYear() * Math.PI / 182.625));
-
-        // Calculate hour angle based on time and longitude
-        // This is simplified - actual calculation would need precise time
-        double hourAngle = (date.getDayOfMonth() / 30.0) * 2 * Math.PI + lng;
-
-        // Calculate altitude
-        double altitude = Math.asin(
-                Math.sin(lat) * Math.sin(moonDeclination) +
-                        Math.cos(lat) * Math.cos(moonDeclination) * Math.cos(hourAngle)
-        );
-
-        // Calculate azimuth
-        double azimuth = Math.atan2(
-                -Math.sin(hourAngle),
-                Math.tan(moonDeclination) * Math.cos(lat) - Math.sin(lat) * Math.cos(hourAngle)
-        );
-
-        // Calculate parallactic angle - the rotation of the moon from observer's viewpoint
-        // This is the key to showing different moon orientations by hemisphere
-        double parallacticAngle;
-
-        if (Math.abs(latitude) < 1.0) {
-            // Near equator: moon appears to rotate throughout the night
-            // East-West orientation changes
-            parallacticAngle = hourAngle;
-        } else {
-            // Calculate standard parallactic angle
-            double sinPA = Math.sin(hourAngle) * Math.cos(moonDeclination) / Math.cos(altitude);
-            double cosPA = (Math.sin(moonDeclination) * Math.cos(lat) -
-                    Math.cos(moonDeclination) * Math.sin(lat) * Math.cos(hourAngle)) / Math.cos(altitude);
-            parallacticAngle = Math.atan2(sinPA, cosPA);
-
-            // Hemisphere adjustments
-            if (latitude < 0) {
-                // Southern hemisphere: moon appears "upside down" relative to northern view
-                parallacticAngle += Math.PI;
-            }
-
-            // Additional adjustment based on latitude magnitude
-            // This creates a gradual transition from equator to poles
-            double latitudeFactor = Math.abs(latitude) / 90.0;
-            parallacticAngle += (1 - latitudeFactor) * hourAngle * 0.3;
-        }
-
-        return new MoonPosition(azimuth, altitude, parallacticAngle);
+        MoonPhaseCalculator.MoonPositionData data = MoonPhaseCalculator.calculatePosition(date, latitude, longitude);
+        return new MoonPosition(data.azimuth, data.altitude, data.parallacticAngle);
     }
 
     /**
-     * Check if a date is a moon phase transition day (new/full/quarter).
+     * Check if a date is a moon phase transition day (new/full/quarter) using SunCalc.
      *
      * @param date The date to check
      * @return true if the date is closest to a major moon phase
      */
     public boolean isMoonPhaseDay(LocalDate date) {
-        // Calculate the exact phase for today, yesterday, and tomorrow
-        double phaseToday = calculateMoonPhaseValue(date);
-        double phaseYesterday = calculateMoonPhaseValue(date.minusDays(1));
-        double phaseTomorrow = calculateMoonPhaseValue(date.plusDays(1));
-
-        // Find the closest approach to each major phase point
-        // We want to show the icon on the day that's closest to the exact phase
-
-        // Check for New Moon (0.0 or 1.0)
-        double distToday = Math.min(phaseToday, 1.0 - phaseToday);
-        double distYesterday = Math.min(phaseYesterday, 1.0 - phaseYesterday);
-        double distTomorrow = Math.min(phaseTomorrow, 1.0 - phaseTomorrow);
-        if (distToday < distYesterday && distToday < distTomorrow && distToday < 0.017) {
-            return true;
-        }
-
-        // Check for First Quarter (0.25)
-        distToday = Math.abs(phaseToday - 0.25);
-        distYesterday = Math.abs(phaseYesterday - 0.25);
-        distTomorrow = Math.abs(phaseTomorrow - 0.25);
-        if (distToday < distYesterday && distToday < distTomorrow && distToday < 0.017) {
-            return true;
-        }
-
-        // Check for Full Moon (0.5)
-        distToday = Math.abs(phaseToday - 0.5);
-        distYesterday = Math.abs(phaseYesterday - 0.5);
-        distTomorrow = Math.abs(phaseTomorrow - 0.5);
-        if (distToday < distYesterday && distToday < distTomorrow && distToday < 0.017) {
-            return true;
-        }
-
-        // Check for Last Quarter (0.75)
-        distToday = Math.abs(phaseToday - 0.75);
-        distYesterday = Math.abs(phaseYesterday - 0.75);
-        distTomorrow = Math.abs(phaseTomorrow - 0.75);
-        if (distToday < distYesterday && distToday < distTomorrow && distToday < 0.017) {
-            return true;
-        }
-
-        return false;
+        return MoonPhaseCalculator.isMoonPhaseDay(date);
     }
 
     /**
      * Get Hebrew dates for a Gregorian year.
-     * Delegates to HebrewCalendarService.
+     * Converts all days in the year to their Hebrew calendar equivalents.
      *
      * @param year The Gregorian year
      * @return List of Hebrew date mappings
      */
     public List<HebrewDateMapping> getHebrewDates(int year) {
-        // Delegate to HebrewCalendarService if needed
-        // For now, return an empty list - this can be expanded later
         List<HebrewDateMapping> dates = new ArrayList<>();
 
-        LocalDate startDate = LocalDate.of(year, 1, 1);
-        LocalDate endDate = LocalDate.of(year, 12, 31);
+        // Get Hebrew holidays for the relevant Hebrew years
+        // A Gregorian year spans approximately two Hebrew years
+        int hebrewYearStart = year + 3760;
+        int hebrewYearEnd = year + 3761;
 
-        // This would ideally use HebrewCalendarService to convert each date
-        // Simplified implementation for now
+        // Get holidays from HebrewCalendarService
+        Map<String, String> holidays1 = hebrewCalendarService.getHebrewHolidays(hebrewYearStart, "HEBREW_ALL");
+        Map<String, String> holidays2 = hebrewCalendarService.getHebrewHolidays(hebrewYearEnd, "HEBREW_ALL");
+
+        // Merge holiday maps
+        Map<String, String> allHolidays = new java.util.HashMap<>(holidays1);
+        allHolidays.putAll(holidays2);
+
+        // Generate mappings using HebrewCalendarConverter
+        List<HebrewCalendarConverter.HebrewDateMapping> converterMappings =
+                HebrewCalendarConverter.generateYearMappings(year, allHolidays);
+
+        // Convert to service data class
+        for (HebrewCalendarConverter.HebrewDateMapping mapping : converterMappings) {
+            dates.add(new HebrewDateMapping(
+                    mapping.gregorianDate,
+                    mapping.hebrewDate,
+                    mapping.holidayName
+            ));
+        }
+
         return dates;
     }
 
     /**
-     * Calculate sunrise and sunset times for a location and date.
-     * This is a placeholder - actual implementation would use SunCalc library.
+     * Calculate sunrise and sunset times for a location and date using SunCalc.
      *
      * @param date      The date
-     * @param latitude  Latitude
-     * @param longitude Longitude
-     * @return SunriseSunset data
+     * @param latitude  Latitude in degrees
+     * @param longitude Longitude in degrees
+     * @return SunriseSunset data with formatted times
      */
     public SunriseSunset getSunriseSunset(LocalDate date, double latitude, double longitude) {
-        // Placeholder - would use org.shredzone.commons.suncalc library for accurate calculations
-        // For now, return default values
-        return new SunriseSunset(date, null, null);
+        ZonedDateTime zdt = date.atStartOfDay(ZoneId.of("UTC"));
+
+        SunTimes times = SunTimes.compute()
+                .on(zdt)
+                .at(latitude, longitude)
+                .execute();
+
+        // Format times as HH:mm
+        String sunrise = times.getRise() != null ?
+                String.format("%02d:%02d", times.getRise().getHour(), times.getRise().getMinute()) : null;
+        String sunset = times.getSet() != null ?
+                String.format("%02d:%02d", times.getSet().getHour(), times.getSet().getMinute()) : null;
+
+        return new SunriseSunset(date, sunrise, sunset);
+    }
+
+    /**
+     * Calculate seasonal events (equinoxes and solstices) for a given year using SunCalc.
+     * Returns dates for spring equinox, summer solstice, autumn equinox, and winter solstice.
+     *
+     * @param year The year to calculate seasonal events for
+     * @return List of SeasonalEvent objects
+     */
+    public List<SeasonalEvent> calculateSeasonalEvents(int year) {
+        List<SeasonalEvent> events = new ArrayList<>();
+
+        // For latitude/longitude, use a reference point (e.g., GMT 0,0)
+        // Seasonal events are astronomical and occur at specific moments globally
+        double refLatitude = 51.5; // London
+        double refLongitude = 0.0;
+
+        // Calculate Spring Equinox (around March 20)
+        LocalDate springEquinoxDate = findEquinoxOrSolstice(year, 3, 19, 22, refLatitude, refLongitude, true);
+        events.add(new SeasonalEvent(springEquinoxDate, "Spring Equinox", SeasonalEventType.SPRING_EQUINOX));
+
+        // Calculate Summer Solstice (around June 21)
+        LocalDate summerSolsticeDate = findSolstice(year, 6, 20, 22, refLatitude, refLongitude, true);
+        events.add(new SeasonalEvent(summerSolsticeDate, "Summer Solstice", SeasonalEventType.SUMMER_SOLSTICE));
+
+        // Calculate Autumn Equinox (around September 22)
+        LocalDate autumnEquinoxDate = findEquinoxOrSolstice(year, 9, 21, 24, refLatitude, refLongitude, false);
+        events.add(new SeasonalEvent(autumnEquinoxDate, "Autumn Equinox", SeasonalEventType.AUTUMN_EQUINOX));
+
+        // Calculate Winter Solstice (around December 21)
+        LocalDate winterSolsticeDate = findSolstice(year, 12, 20, 23, refLatitude, refLongitude, false);
+        events.add(new SeasonalEvent(winterSolsticeDate, "Winter Solstice", SeasonalEventType.WINTER_SOLSTICE));
+
+        return events;
+    }
+
+    /**
+     * Find the exact date of an equinox by searching for equal day/night.
+     */
+    private LocalDate findEquinoxOrSolstice(int year, int month, int startDay, int endDay,
+                                             double latitude, double longitude, boolean isSpring) {
+        // Simple search: find the day with closest to 12 hours of daylight
+        LocalDate closestDate = LocalDate.of(year, month, startDay);
+        long closestDiff = Long.MAX_VALUE;
+
+        for (int day = startDay; day <= endDay; day++) {
+            LocalDate date = LocalDate.of(year, month, day);
+            ZonedDateTime zdt = date.atStartOfDay(ZoneId.of("UTC"));
+
+            SunTimes times = SunTimes.compute()
+                    .on(zdt)
+                    .at(latitude, longitude)
+                    .execute();
+
+            if (times.getRise() != null && times.getSet() != null) {
+                long daylightMinutes = java.time.Duration.between(times.getRise(), times.getSet()).toMinutes();
+                long diff = Math.abs(daylightMinutes - 720); // 720 minutes = 12 hours
+
+                if (diff < closestDiff) {
+                    closestDiff = diff;
+                    closestDate = date;
+                }
+            }
+        }
+
+        return closestDate;
+    }
+
+    /**
+     * Find the exact date of a solstice by searching for maximum/minimum daylight.
+     */
+    private LocalDate findSolstice(int year, int month, int startDay, int endDay,
+                                    double latitude, double longitude, boolean isSummer) {
+        LocalDate extremeDate = LocalDate.of(year, month, startDay);
+        long extremeDaylight = isSummer ? Long.MIN_VALUE : Long.MAX_VALUE;
+
+        for (int day = startDay; day <= endDay; day++) {
+            LocalDate date = LocalDate.of(year, month, day);
+            ZonedDateTime zdt = date.atStartOfDay(ZoneId.of("UTC"));
+
+            SunTimes times = SunTimes.compute()
+                    .on(zdt)
+                    .at(latitude, longitude)
+                    .execute();
+
+            if (times.getRise() != null && times.getSet() != null) {
+                long daylightMinutes = java.time.Duration.between(times.getRise(), times.getSet()).toMinutes();
+
+                if ((isSummer && daylightMinutes > extremeDaylight) ||
+                        (!isSummer && daylightMinutes < extremeDaylight)) {
+                    extremeDaylight = daylightMinutes;
+                    extremeDate = date;
+                }
+            }
+        }
+
+        return extremeDate;
     }
 
     // Data classes
@@ -353,5 +346,21 @@ public class AstronomicalCalculationService {
             this.sunrise = sunrise;
             this.sunset = sunset;
         }
+    }
+
+    public static class SeasonalEvent {
+        public LocalDate date;
+        public String name;
+        public SeasonalEventType type;
+
+        public SeasonalEvent(LocalDate date, String name, SeasonalEventType type) {
+            this.date = date;
+            this.name = name;
+            this.type = type;
+        }
+    }
+
+    public enum SeasonalEventType {
+        SPRING_EQUINOX, SUMMER_SOLSTICE, AUTUMN_EQUINOX, WINTER_SOLSTICE
     }
 }

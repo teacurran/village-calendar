@@ -72,7 +72,7 @@
     "acceptance_criteria": "AstronomicalService.calculateMoonPhases(2025) returns correct full moon dates for 2025, AstronomicalService.calculateHebrewCalendarDates() converts Gregorian to Hebrew dates accurately, Unit tests compare calculations against NASA moon phase data or Hebrew calendar tables, Service methods handle edge cases (leap years, timezone conversions), Calculation performance: <100ms for full year of moon phases",
     "dependencies": ["I2.T2"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T6",
