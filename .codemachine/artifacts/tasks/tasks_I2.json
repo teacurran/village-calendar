@@ -147,6 +147,6 @@
     "acceptance_criteria": "Template workflow test creates calendar from template, verifies config cloned, Event workflow test adds 5 events, queries calendar, verifies all 5 returned, Update workflow test modifies calendar config, verifies changes in database, Guest session workflow test creates calendar as guest, converts on login, verifies ownership, Tests run in isolation (each test creates own test data, cleans up after), Integration tests complete in <60 seconds",
     "dependencies": ["I2.T2", "I2.T3", "I2.T4", "I2.T5", "I2.T6", "I2.T7", "I2.T8", "I2.T9"],
     "parallelizable": false,
-    "done": false
+    "done": true
   }
 ]
