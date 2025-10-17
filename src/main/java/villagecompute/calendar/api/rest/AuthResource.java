@@ -36,7 +36,7 @@ import java.util.UUID;
  * Provides endpoints for initiating OAuth login and handling callbacks.
  */
 @Path("/auth")
-@Tag(name = "Authentication", description = "OAuth2 authentication endpoints for Google and Facebook login")
+@Tag(name = "Authentication", description = "OAuth2 authentication endpoints for Google, Facebook, and Apple login")
 @SecurityScheme(
     securitySchemeName = "BearerAuth",
     type = SecuritySchemeType.HTTP,
@@ -259,6 +259,111 @@ public class AuthResource {
 
         } catch (Exception e) {
             LOG.errorf(e, "Error handling Facebook OAuth callback");
+            // Redirect to home with error
+            String errorUrl = "/?error=" + java.net.URLEncoder.encode(
+                "Authentication failed: " + e.getMessage(),
+                java.nio.charset.StandardCharsets.UTF_8
+            );
+            return Response.seeOther(URI.create(errorUrl)).build();
+        }
+    }
+
+    /**
+     * Initiates OAuth login with Apple.
+     * This endpoint is protected by OIDC, so accessing it will trigger the OAuth flow.
+     * After successful authentication, the user is redirected to the callback endpoint.
+     */
+    @GET
+    @Path("/login/apple")
+    @Authenticated
+    @Operation(
+        summary = "Initiate Apple OAuth login",
+        description = "Redirects user to Apple Sign In page. This endpoint triggers the OAuth2 " +
+            "authorization code flow. After user grants permissions on Apple's consent page, " +
+            "they will be redirected back to /auth/apple/callback with an authorization code."
+    )
+    @APIResponses({
+        @APIResponse(
+            responseCode = "303",
+            description = "Redirect to Apple Sign In page or callback endpoint"
+        ),
+        @APIResponse(
+            responseCode = "401",
+            description = "Authentication required or OAuth flow failed"
+        )
+    })
+    public Response loginWithApple() {
+        LOG.info("Initiating Apple OAuth login");
+        // Quarkus OIDC will handle the redirect to Apple
+        // After authentication, user will be redirected to /auth/apple/callback
+        return Response.seeOther(URI.create("/auth/apple/callback")).build();
+    }
+
+    /**
+     * Handles the OAuth callback from Apple after successful authentication.
+     * Creates or updates the user record and issues a JWT token for API access.
+     *
+     * @return AuthResponse with JWT token and user information
+     */
+    @GET
+    @Path("/apple/callback")
+    @Authenticated
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(
+        summary = "Handle Apple OAuth callback",
+        description = "OAuth2 callback endpoint invoked by Apple after user grants permissions. " +
+            "Exchanges the authorization code for an access token, creates/updates the user record, " +
+            "and issues a JWT token for subsequent API requests. This endpoint is NOT directly callable " +
+            "by clients - it's part of the OAuth2 authorization code flow."
+    )
+    @APIResponses({
+        @APIResponse(
+            responseCode = "200",
+            description = "Authentication successful, JWT token issued",
+            content = @Content(
+                mediaType = MediaType.APPLICATION_JSON,
+                schema = @Schema(implementation = AuthResponse.class),
+                examples = @ExampleObject(value = """
+                    {
+                      "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+                      "user": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "email": "user@example.com",
+                        "displayName": "Alice Johnson",
+                        "profileImageUrl": null
+                      }
+                    }
+                    """)
+            )
+        ),
+        @APIResponse(
+            responseCode = "500",
+            description = "Authentication failed",
+            content = @Content(
+                mediaType = MediaType.APPLICATION_JSON,
+                schema = @Schema(implementation = ErrorResponse.class),
+                examples = @ExampleObject(value = "{\"error\": \"Authentication failed: ...\"}")
+            )
+        )
+    })
+    public Response handleAppleCallback() {
+        LOG.info("Handling Apple OAuth callback");
+
+        try {
+            // Handle the OAuth callback and create/update user
+            CalendarUser user = authenticationService.handleOAuthCallback("apple", securityIdentity);
+
+            // Issue JWT token for the user
+            String jwtToken = authenticationService.issueJWT(user);
+
+            LOG.infof("Successfully authenticated user: %s", user.email);
+
+            // Redirect to frontend OAuth callback page with token
+            String redirectUrl = "/auth/callback?token=" + jwtToken;
+            return Response.seeOther(URI.create(redirectUrl)).build();
+
+        } catch (Exception e) {
+            LOG.errorf(e, "Error handling Apple OAuth callback");
             // Redirect to home with error
             String errorUrl = "/?error=" + java.net.URLEncoder.encode(
                 "Authentication failed: " + e.getMessage(),

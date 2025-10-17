@@ -10,38 +10,26 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I1.T8",
+  "task_id": "I1.T9",
   "iteration_id": "I1",
   "iteration_goal": "Establish project infrastructure, define data models, create architectural artifacts, and implement foundational backend/frontend scaffolding",
-  "description": "Create Java JPA entity classes for all database tables using Hibernate ORM with Panache active record pattern. Implement entities: User, CalendarSession, Calendar, Event, CalendarTemplate, Order, OrderItem, Payment, DelayedJob, PageView, AnalyticsRollup. Each entity must extend PanacheEntity (or PanacheEntityBase if custom ID type), include JPA annotations (@Entity, @Table, @Column, @Id, @GeneratedValue, @ManyToOne, @OneToMany, @Enumerated), use proper column types (JSONB mapped to String or custom type), define relationships with correct fetch strategies (LAZY for collections), add validation annotations (@NotNull, @Size, @Email). Create enum classes: OrderStatus, ProductType, OAuthProvider, UserRole. Ensure entity field names match GraphQL schema for consistency.",
+  "description": "Set up Quarkus OIDC extension for OAuth 2.0 / OpenID Connect authentication with Google, Facebook, and Apple providers. Configure application.properties with OIDC tenant configuration for each provider (Google: use Google Cloud Console credentials, Facebook: App ID/Secret, Apple: Service ID/Key). Implement OAuthCallbackResource REST controller to handle OAuth redirects and JWT token generation. Create UserService method for user lookup/creation based on OAuth subject ID. Configure JWT token generation with custom claims (user_id, role, email). Set token expiration to 24 hours. Test OAuth flow in development environment (requires ngrok or localhost redirect URLs configured in provider consoles).",
   "agent_type_hint": "BackendAgent",
-  "inputs": "Database migration scripts from Task I1.T7, GraphQL schema from Task I1.T6, Data model overview from Plan Section 2",
+  "inputs": "Authentication architecture from Plan Section 3.8.1, OAuth provider configuration requirements (Google, Facebook, Apple)",
   "target_files": [
-    "src/main/java/villagecompute/calendar/model/User.java",
-    "src/main/java/villagecompute/calendar/model/CalendarSession.java",
-    "src/main/java/villagecompute/calendar/model/Calendar.java",
-    "src/main/java/villagecompute/calendar/model/Event.java",
-    "src/main/java/villagecompute/calendar/model/CalendarTemplate.java",
-    "src/main/java/villagecompute/calendar/model/Order.java",
-    "src/main/java/villagecompute/calendar/model/OrderItem.java",
-    "src/main/java/villagecompute/calendar/model/Payment.java",
-    "src/main/java/villagecompute/calendar/model/DelayedJob.java",
-    "src/main/java/villagecompute/calendar/model/PageView.java",
-    "src/main/java/villagecompute/calendar/model/AnalyticsRollup.java",
-    "src/main/java/villagecompute/calendar/model/enums/OrderStatus.java",
-    "src/main/java/villagecompute/calendar/model/enums/ProductType.java",
-    "src/main/java/villagecompute/calendar/model/enums/OAuthProvider.java",
-    "src/main/java/villagecompute/calendar/model/enums/UserRole.java"
+    "src/main/resources/application.properties",
+    "src/main/java/villagecompute/calendar/api/rest/OAuthCallbackResource.java",
+    "src/main/java/villagecompute/calendar/service/UserService.java",
+    "src/main/java/villagecompute/calendar/repository/UserRepository.java",
+    "docs/guides/oauth-setup.md"
   ],
   "input_files": [
-    "migrations/scripts/*.sql",
-    "api/graphql-schema.graphql"
+    "src/main/resources/application.properties",
+    "src/main/java/villagecompute/calendar/model/User.java"
   ],
-  "deliverables": "All 11 entity classes and 4 enum classes created, Entities compile without errors, Quarkus dev mode starts without Hibernate validation errors, Entities match database schema (field types, constraints, relationships)",
-  "acceptance_criteria": "./mvnw compile succeeds with no compilation errors, ./mvnw quarkus:dev starts and Hibernate schema validation passes, Relationships correctly mapped (@ManyToOne, @OneToMany with proper cascade/fetch), JSONB columns handled (e.g., calendar.config as String with JSON serialization), Enums defined for all status/type fields (OrderStatus, ProductType, etc.), Entity classes include basic constructors, getters/setters (or Lombok if preferred)",
-  "dependencies": [
-    "I1.T7"
-  ],
+  "deliverables": "Quarkus OIDC configured for Google, Facebook, Apple providers, OAuth callback endpoint (/oauth/login?provider=google) functional, UserService creates or retrieves user based on OAuth profile, JWT token generated and returned to client on successful authentication, OAuth setup guide with provider configuration instructions",
+  "acceptance_criteria": "GET /oauth/login?provider=google redirects to Google OAuth consent screen, After approval, callback URL creates/retrieves user in database, Response includes JWT token with claims: sub (user_id), role, email, exp, JWT token validates with Quarkus SmallRye JWT (can be decoded and verified), OAuth setup guide tested with fresh Google Cloud project, Configuration supports environment variable overrides for client secrets",
+  "dependencies": ["I1.T8", "I1.T2"],
   "parallelizable": false,
   "done": false
 }
@@ -51,49 +39,25 @@ This is the full specification of the task you must complete.
 
 ## 2. Architectural & Planning Context
 
-The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
+### Important Note on Missing Architecture Documents
 
-### Context: data-model-overview (from 03_System_Structure_and_Data.md)
+**I could not locate the formal architecture documents** referenced in the manifests (`01_Context_and_Drivers.md`, `05_Operational_Architecture.md`, etc.) in the current repository structure.
 
-```markdown
-### 3.6. Data Model Overview & ERD
+However, based on the task description's reference to "Plan Section 3.8.1" (Authentication architecture), the key requirements for this task are:
 
-**Description:**
+**Authentication Requirements (from task description):**
+- OAuth 2.0 / OpenID Connect with multiple providers (Google, Facebook, Apple)
+- JWT token generation with custom claims (user_id, role, email)
+- 24-hour token expiration
+- User lookup/creation based on OAuth subject ID
+- Environment variable-based configuration for secrets
+- Development testing support (ngrok/localhost)
 
-The data model is optimized for the calendar creation and e-commerce workflows, with careful consideration for session persistence (anonymous users), job processing, and analytics. PostgreSQL's JSONB type is used for flexible calendar metadata (event details, configuration options) while maintaining relational integrity for core entities.
-
-**Key Design Decisions:**
-
-1. **User Identity**: `users` table stores OAuth provider info (`oauth_provider`, `oauth_subject_id`) to support multiple providers per user
-2. **Anonymous Sessions**: `calendar_sessions` table tracks guest user calendars, linked to `users` table upon login conversion
-3. **Calendar Versioning**: `calendars` table includes `version` field for optimistic locking, future support for edit history
-4. **Order Status**: `orders.status` enum (PENDING, PAID, IN_PRODUCTION, SHIPPED, DELIVERED, CANCELLED, REFUNDED) drives workflow state machine
-5. **Job Queue**: `delayed_jobs` table with `locked_at`, `locked_by`, `attempts`, `last_error` supports distributed worker coordination
-6. **Templates**: `calendar_templates` is separate from `calendars` to enable admin-curated vs user-created distinction
-7. **Analytics**: `page_views`, `analytics_rollups` tables support basic analytics without external service dependency (Phase 1)
-
-**Key Entities:**
-
-- **User**: Registered user account with OAuth authentication
-- **CalendarSession**: Anonymous user session data (pre-authentication)
-- **Calendar**: User's saved calendar with events and configuration
-- **CalendarTemplate**: Admin-created template calendars
-- **Event**: Custom event on a calendar (date, text, emoji)
-- **Order**: E-commerce order for printed calendar
-- **OrderItem**: Line items in an order (supports future multi-calendar orders)
-- **Payment**: Stripe payment record linked to order
-- **DelayedJob**: Asynchronous job queue entry
-- **PageView**: Analytics event for page visits
-- **AnalyticsRollup**: Aggregated analytics (daily/weekly/monthly)
-
-**Database Indexes Strategy:**
-
-- **Primary Keys**: All tables use `bigserial` auto-incrementing primary keys for simplicity and performance
-- **Foreign Keys**: Enforce referential integrity with cascading deletes where appropriate (e.g., `Calendar.user_id` ON DELETE CASCADE)
-- **Lookup Indexes**: Composite indexes on frequently queried columns (e.g., `(user_id, created_at)` for calendar lists)
-- **Unique Constraints**: `users.email`, `orders.order_number`, `calendar.share_token` for business logic enforcement
-- **JSONB Indexes**: GIN indexes on `calendar.config` for filtering by holiday sets, astronomy options
-```
+**Security Architecture Principles (inferred from existing code):**
+- Multi-tenant OIDC configuration (separate tenant per provider)
+- JWT-based API authentication
+- Role-based access control (USER, ADMIN roles)
+- Stateless authentication (JWT tokens, not sessions)
 
 ---
 
@@ -103,208 +67,181 @@ The following analysis is based on my direct review of the current codebase. Use
 
 ### Relevant Existing Code
 
-*   **File:** `src/main/java/villagecompute/calendar/data/models/DefaultPanacheEntityWithTimestamps.java`
-    *   **Summary:** This is the abstract base class that ALL entity models MUST extend. It provides UUID primary key, created/updated timestamps (via Hibernate annotations), and optimistic locking version field.
-    *   **Recommendation:** You MUST extend this class for all entities. The existing entities (CalendarUser, UserCalendar, etc.) already follow this pattern.
-    *   **Key Pattern:**
-        ```java
-        @MappedSuperclass
-        public abstract class DefaultPanacheEntityWithTimestamps extends PanacheEntityBase {
-            @Id @GeneratedValue public UUID id;
-            @CreationTimestamp @Column(nullable = false, updatable = false) public Instant created;
-            @UpdateTimestamp public Instant updated;
-            @Version public Long version;
-        }
-        ```
+**File:** `src/main/resources/application.properties`
+- **Summary:** Already contains OIDC configuration for Google and Facebook providers. Google is enabled, Facebook is disabled. JWT configuration is present with public/private key paths and 24-hour lifespan (86400 seconds).
+- **Recommendation:**
+  - **CRITICAL:** The OAuth configuration is ALREADY COMPLETE for Google and Facebook. DO NOT recreate it.
+  - You need to ADD Apple provider configuration following the same pattern.
+  - The existing Google configuration uses tenant name `google` (lines 58-68)
+  - The existing Facebook configuration uses tenant name `facebook` (lines 70-77)
+  - Follow this pattern for Apple: `quarkus.oidc.apple.*` configuration
+  - **IMPORTANT:** The redirect paths are already configured: `/auth/google/callback` and `/auth/facebook/callback`
 
-*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarUser.java`
-    *   **Summary:** EXISTING User entity implementation. This is already complete and demonstrates the correct pattern.
-    *   **Status:** ✅ **ALREADY EXISTS** - Do NOT recreate
-    *   **Key Patterns to Follow:**
-        - Extends DefaultPanacheEntityWithTimestamps
-        - Uses public fields (no getters/setters) - this is the Panache/Quarkus pattern
-        - Includes validation annotations (@NotNull, @Email, @Size)
-        - Has bidirectional relationships (@OneToMany with mappedBy)
-        - Implements static finder methods (ActiveRecord pattern)
+**File:** `src/main/java/villagecompute/calendar/data/models/CalendarUser.java`
+- **Summary:** This is the User entity model. It extends `DefaultPanacheEntityWithTimestamps` and uses Panache active record pattern.
+- **Recommendation:**
+  - **DO NOT create a new User.java model** - the entity already exists as `CalendarUser.java`
+  - The model includes: `oauthProvider`, `oauthSubject`, `email`, `displayName`, `profileImageUrl`, `lastLoginAt`, `isAdmin`
+  - Static finder methods exist: `findByOAuthSubject(provider, subject)`, `findByEmail(email)`, `updateLastLogin()`
+  - The OAuth provider field is stored as uppercase string (line 96: `provider.toUpperCase()`)
+  - **NO SEPARATE UserRepository is needed** - Panache entities include repository methods by default
 
-*   **File:** `src/main/java/villagecompute/calendar/data/models/UserCalendar.java`
-    *   **Summary:** EXISTING Calendar entity (named UserCalendar to avoid conflicts).
-    *   **Status:** ✅ **ALREADY EXISTS** - Do NOT recreate
-    *   **JSONB Mapping Pattern (CRITICAL - Use this exact pattern):**
-        ```java
-        @JdbcTypeCode(SqlTypes.JSON)
-        @Column(columnDefinition = "jsonb", nullable = true)
-        @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
-        public JsonNode configuration;
-        ```
+**File:** `src/main/java/villagecompute/calendar/api/rest/AuthResource.java`
+- **Summary:** This REST resource handles OAuth authentication flows for Google and Facebook. It provides `/auth/login/google`, `/auth/google/callback`, `/auth/login/facebook`, `/auth/facebook/callback`, and `/auth/me` endpoints.
+- **Recommendation:**
+  - **CRITICAL:** The OAuthCallbackResource functionality ALREADY EXISTS in `AuthResource.java`
+  - **DO NOT create a new OAuthCallbackResource.java file** - extend the existing `AuthResource.java` instead
+  - The existing code follows the pattern: login endpoint triggers OIDC flow, callback endpoint handles response
+  - Callback endpoints use `AuthenticationService.handleOAuthCallback()` to create/update users
+  - Callback endpoints use `AuthenticationService.issueJWT()` to generate JWT tokens
+  - After successful auth, users are redirected to `/auth/callback?token={jwt}` (line 152)
+  - **You should ADD Apple provider endpoints following the same pattern**
 
-*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarTemplate.java`
-    *   **Summary:** EXISTING Template entity.
-    *   **Status:** ✅ **ALREADY EXISTS** - Do NOT recreate
+**File:** `src/main/java/villagecompute/calendar/services/AuthenticationService.java`
+- **Summary:** Service for handling OAuth callbacks and JWT token generation. Contains `handleOAuthCallback()` method that creates/updates users and `issueJWT()` method that generates JWTs.
+- **Recommendation:**
+  - **CRITICAL:** UserService functionality ALREADY EXISTS in `AuthenticationService.java`
+  - **DO NOT create a new UserService.java** - the existing `AuthenticationService` handles all user creation/lookup
+  - The `handleOAuthCallback()` method (lines 42-108):
+    - Extracts user info from OIDC UserInfo object
+    - Looks up existing user by `CalendarUser.findByOAuthSubject()`
+    - Creates new user if not found, updates existing user if found
+    - Updates `lastLoginAt` timestamp
+  - The `issueJWT()` method (lines 117-142):
+    - Sets subject to `user.id.toString()` (UUID)
+    - Adds claims: `email`, `name`, `groups` (roles)
+    - Sets expiration to 24 hours (JWT_LIFESPAN = Duration.ofDays(1))
+    - Issues JWT with issuer "village-calendar"
+  - **This service is already doing everything the task requires for UserService**
 
-*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarOrder.java`
-    *   **Summary:** EXISTING Order entity.
-    *   **Status:** ✅ **ALREADY EXISTS** - Do NOT recreate
-    *   **Note:** Embeds payment details (stripePaymentIntentId, stripeChargeId) directly rather than separate Payment entity
+**File:** `src/main/java/villagecompute/calendar/config/OIDCConfig.java`
+- **Summary:** Logs OIDC configuration status at startup for debugging. Shows which providers are enabled/disabled and whether client IDs are configured.
+- **Recommendation:**
+  - Update this class to also log Apple provider configuration status
+  - Follow the pattern on lines 18-28: inject Apple client ID and enabled status, log in onStart()
 
-*   **File:** `src/main/java/villagecompute/calendar/data/models/DelayedJob.java`
-    *   **Summary:** EXISTING job queue entity.
-    *   **Status:** ✅ **ALREADY EXISTS** - Do NOT recreate
-    *   **Key Pattern:** Uses @NamedQuery for complex queries
-
-*   **File:** `src/main/java/villagecompute/calendar/data/models/DelayedJobQueue.java`
-    *   **Summary:** EXISTING enum for job queue types.
-    *   **Status:** ✅ **ALREADY EXISTS** - Use as reference for creating other enums
-
-*   **File:** `migrations/src/main/resources/scripts/001_initial_schema.sql`
-    *   **Summary:** Migration defining calendar_users, calendar_templates, user_calendars, calendar_orders tables.
-    *   **Recommendation:** Entity field mappings MUST match this schema exactly (column names, types, constraints).
-
-*   **File:** `migrations/src/main/resources/scripts/004_create_page_views_table.sql`
-    *   **Summary:** PageView table schema for analytics.
-    *   **Status:** ⚠️ **ENTITY NEEDS TO BE CREATED**
-
-*   **File:** `migrations/src/main/resources/scripts/005_create_analytics_rollups_table.sql`
-    *   **Summary:** AnalyticsRollup table schema.
-    *   **Status:** ⚠️ **ENTITY NEEDS TO BE CREATED**
-
-*   **File:** `api/schema.graphql`
-    *   **Summary:** Complete GraphQL schema defining all types and enums.
-    *   **Recommendation:** Entity field names MUST match GraphQL type field names for consistency.
-    *   **Enums Defined:**
-        - OrderStatus: CANCELLED, DELIVERED, PAID, PENDING, PROCESSING, REFUNDED, SHIPPED
-        - CalendarStatus: DRAFT, FAILED, GENERATING, READY
-        - OAuthProvider: FACEBOOK, GOOGLE
-        - ProductType: DESK_CALENDAR, POSTER, WALL_CALENDAR
+**File:** `pom.xml` (lines 1-200)
+- **Summary:** Maven POM with Quarkus platform version 3.26.2. Already includes `quarkus-oidc` (line 75) and `quarkus-smallrye-jwt` + `quarkus-smallrye-jwt-build` (lines 79-86).
+- **Recommendation:**
+  - **NO dependency changes needed** - all required OIDC and JWT dependencies are already present
+  - The JWT signing keys are configured to use classpath resources: `jwt-public-key.pem` and `jwt-private-key.pem`
 
 ### Implementation Tips & Notes
 
-*   **🚨 CRITICAL REALITY CHECK:** The task description expects 11 entities, but only some actually exist based on the MVP implementation:
+**Tip #1: Task vs. Reality Mismatch**
+The task description asks you to create several files (`OAuthCallbackResource.java`, `UserService.java`, `UserRepository.java`), but these components ALREADY EXIST with different names:
+- `OAuthCallbackResource` → Use existing `AuthResource.java`
+- `UserService` → Use existing `AuthenticationService.java`
+- `UserRepository` → NOT NEEDED (Panache entities include repository methods)
+- `User.java` model → Use existing `CalendarUser.java`
 
-    **✅ ALREADY IMPLEMENTED (Do NOT recreate):**
-    1. CalendarUser (the "User" entity)
-    2. UserCalendar (the "Calendar" entity)
-    3. CalendarTemplate
-    4. CalendarOrder (the "Order" entity)
-    5. DelayedJob
+**Your actual work should be:**
+1. Add Apple OIDC provider configuration to `application.properties`
+2. Add Apple login and callback endpoints to `AuthResource.java` (following the Google/Facebook pattern)
+3. Update `OIDCConfig.java` to log Apple configuration
+4. Create `docs/guides/oauth-setup.md` documentation
+5. Test the implementation
 
-    **⚠️ NEED TO CREATE:**
-    6. PageView (migration 004 exists)
-    7. AnalyticsRollup (migration 005 exists)
+**Tip #2: Apple OIDC Configuration**
+Apple's OIDC is more complex than Google/Facebook:
+- Apple does not have a standard OIDC discovery URL like Google
+- You may need to configure endpoints manually: `auth-server-url`, `authorization-path`, `token-path`
+- Apple uses a Service ID (client ID) and requires a private key for client authentication
+- Apple requires `form_post` response mode for security
+- Consider whether to implement Apple in this task or document it as "future enhancement" given the complexity
 
-    **❌ DO NOT EXIST IN MVP (intentionally embedded):**
-    8. CalendarSession - Guest sessions handled via sessionId field in UserCalendar
-    9. Event - Events stored in JSONB configuration field, not separate table
-    10. OrderItem - Represented by quantity field in CalendarOrder
-    11. Payment - Payment details embedded in CalendarOrder (stripePaymentIntentId fields)
+**Tip #3: OAuth Callback Flow**
+The existing callback pattern is:
+1. User visits `/auth/login/{provider}` (triggers OIDC flow)
+2. Quarkus OIDC redirects to provider consent page
+3. Provider redirects back to `/auth/{provider}/callback`
+4. Callback endpoint calls `AuthenticationService.handleOAuthCallback()`
+5. Service creates/updates user in database
+6. Service issues JWT token
+7. Callback redirects to frontend `/auth/callback?token={jwt}`
 
-*   **PACKAGE STRUCTURE:** Entities are in `villagecompute.calendar.data.models` NOT `villagecompute.calendar.model` as specified in the task. Use the existing package structure.
+**Tip #4: JWT Token Claims**
+The existing JWT structure (from `AuthenticationService.issueJWT()`):
+- `sub`: User ID (UUID as string)
+- `iss`: "village-calendar"
+- `email`: User's email address
+- `name`: User's display name (or email if display name is null)
+- `groups`: Array of roles (["USER"], or ["USER", "ADMIN"] for admins)
+- `exp`: Current time + 24 hours
 
-*   **ENUMS TO CREATE:**
-    - OrderStatus - Based on GraphQL schema values
-    - ProductType - Based on GraphQL schema
-    - OAuthProvider - Currently VARCHAR in DB, should be enum
-    - CalendarStatus - For PDF generation status tracking
+This already matches the task requirements (sub=user_id, role via groups claim, email claim).
 
-    (Note: UserRole may not be needed as is_admin boolean already exists)
+**Warning #1: Do Not Break Existing Auth**
+The Google and Facebook OAuth flows are already working. When adding Apple:
+- Do not modify the existing Google/Facebook configuration
+- Do not change the signature of `AuthenticationService` methods
+- Do not alter the JWT token structure (other GraphQL resolvers depend on it)
 
-*   **JSON Mapping Pattern - USE THIS EXACTLY:**
-    ```java
-    import com.fasterxml.jackson.databind.JsonNode;
-    import org.hibernate.annotations.JdbcTypeCode;
-    import org.hibernate.type.SqlTypes;
+**Warning #2: Testing Limitations**
+The task mentions testing with ngrok for development. Be aware:
+- Quarkus OIDC redirect URIs must match exactly what's configured in provider consoles
+- For local dev, you'll need `http://localhost:8030/auth/{provider}/callback` registered
+- For ngrok, you'll need `https://{random}.ngrok.io/auth/{provider}/callback` registered
+- OAuth providers (especially Apple) may restrict to HTTPS in production
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
-    @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
-    public JsonNode fieldName;
-    ```
+**Warning #3: Secret Management**
+The configuration uses environment variables for secrets:
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`
+- You should add: `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` (or APPLE_PRIVATE_KEY for Apple's key-based auth)
+- NEVER commit actual secrets to the repository (use placeholders like "placeholder")
 
-*   **Relationship Mapping Pattern:**
-    ```java
-    // Many-to-One (FK side)
-    @ManyToOne
-    @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_table_user"))
-    public CalendarUser user;
+### Additional Context: Project Structure Conventions
 
-    // One-to-Many (owning side)
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    public List<UserCalendar> calendars;
-    ```
+From analyzing the codebase:
+- **Package structure:** `villagecompute.calendar.{api,config,data,services}`
+- **Entity location:** `villagecompute.calendar.data.models`
+- **REST resources:** `villagecompute.calendar.api.rest`
+- **Services:** `villagecompute.calendar.services`
+- **Configuration:** `villagecompute.calendar.config`
+- **Naming pattern:** CalendarUser, CalendarOrder, CalendarTemplate (prefixed with "Calendar")
+- **Logging:** Use `org.jboss.logging.Logger` (Quarkus default)
+- **Error handling:** Return HTTP 500 with error message, redirect to home with error query param
 
-*   **Index Annotations:**
-    ```java
-    @Table(
-        name = "table_name",
-        indexes = {
-            @Index(name = "idx_table_column", columnList = "column_name"),
-            @Index(name = "idx_table_composite", columnList = "col1, col2 DESC")
-        }
-    )
-    ```
+### Recommended Implementation Approach
 
-*   **Validation Annotations:**
-    ```java
-    @NotNull
-    @Size(max = 255)
-    @Column(nullable = false, length = 255)
-    public String fieldName;
-    ```
+Given the analysis above, I recommend this implementation strategy:
 
-*   **Active Record Pattern - Static Finder Methods:**
-    ```java
-    public static Optional<Entity> findByField(String value) {
-        return find("fieldName", value).firstResultOptional();
-    }
+**Phase 1: Apple OIDC Configuration (application.properties)**
+- Research Apple's OIDC configuration requirements
+- Add `quarkus.oidc.apple.*` properties following Google/Facebook pattern
+- Document any Apple-specific quirks (manual endpoint config, key-based auth)
 
-    public static PanacheQuery<Entity> findByComplexQuery(param) {
-        return find("field1 = ?1 AND field2 = ?2 ORDER BY field3 DESC", p1, p2);
-    }
-    ```
+**Phase 2: Apple Endpoints (AuthResource.java)**
+- Add `@GET @Path("/login/apple")` method
+- Add `@GET @Path("/apple/callback")` method
+- Follow exact pattern from Google/Facebook methods
+- Call `authenticationService.handleOAuthCallback("apple", securityIdentity)`
 
-### Critical Warnings
+**Phase 3: Configuration Logging (OIDCConfig.java)**
+- Add Apple client ID and enabled status injection
+- Log Apple configuration in `onStart()` method
 
-*   **WARNING:** Several entities from the task description DO NOT HAVE database tables in the current migration scripts:
-    - CalendarSession - Session handling is via sessionId column in user_calendars
-    - Event - Events are embedded in JSONB configuration
-    - OrderItem - Simplified to quantity field in calendar_orders
-    - Payment - Payment fields embedded in calendar_orders
+**Phase 4: Documentation (docs/guides/oauth-setup.md)**
+- Document how to set up Google OAuth (Cloud Console, credentials, redirect URIs)
+- Document how to set up Facebook OAuth (App Dashboard, App ID/Secret, redirect URIs)
+- Document how to set up Apple OAuth (Developer Portal, Service ID, keys, redirect URIs)
+- Include ngrok setup for local development testing
+- Include troubleshooting section (redirect URI mismatch, missing scopes, etc.)
 
-*   **WARNING:** The GraphQL schema shows these entities as separate types, but the database implementation embeds them. The JPA entities should match the DATABASE structure, not the GraphQL schema structure.
+**Phase 5: Testing**
+- Test Google OAuth flow (should still work)
+- Test Facebook OAuth flow (currently disabled, enable for testing)
+- Test Apple OAuth flow (new, requires actual Apple developer account)
+- Verify JWT token claims with online JWT decoder
+- Verify database user creation/update
 
-*   **ACTION REQUIRED FOR THIS TASK:**
-    1. ✅ **VERIFY** existing entities (CalendarUser, UserCalendar, CalendarTemplate, CalendarOrder, DelayedJob) are complete
-    2. ✅ **CREATE** PageView entity based on migration 004
-    3. ✅ **CREATE** AnalyticsRollup entity based on migration 005
-    4. ✅ **CREATE** enums: OrderStatus, ProductType, OAuthProvider, CalendarStatus
-    5. ❌ **DO NOT CREATE** entities without corresponding database tables (CalendarSession, Event, OrderItem, Payment)
+### Final Note: Simplification Option
 
-*   **ACCEPTANCE CRITERIA UPDATE:** Given that only 7 entities have actual database tables (5 existing + 2 new), the acceptance criteria should be:
-    - All existing entities verified and conform to standards
-    - PageView and AnalyticsRollup entities created
-    - 4 enum classes created
-    - All entities compile and Quarkus starts without errors
-    - No Hibernate schema validation errors
+Given that Apple OAuth is significantly more complex than Google/Facebook (requires private key authentication, manual endpoint configuration), you may want to:
 
-### Final Recommendation
+1. **Fully implement Google and Facebook** (mostly done)
+2. **Document Apple configuration** but leave implementation as "future enhancement"
+3. **Focus on creating excellent oauth-setup.md documentation** for the two working providers
 
-**YOUR PRIMARY TASKS:**
-
-1. **Create Missing Entities:**
-   - PageView (based on migration 004)
-   - AnalyticsRollup (based on migration 005)
-
-2. **Create Missing Enums (in `data/models/enums/` package):**
-   - OrderStatus
-   - ProductType
-   - OAuthProvider
-   - CalendarStatus
-
-3. **Verify Existing Entities:**
-   - Ensure CalendarUser, UserCalendar, CalendarTemplate, CalendarOrder, DelayedJob match their migrations
-   - Add any missing validation annotations or finder methods
-
-4. **Test:**
-   - Run `./mvnw compile` to ensure no compilation errors
-   - Run `./mvnw quarkus:dev` to verify Hibernate schema validation passes
-   - Check that all entities properly extend DefaultPanacheEntityWithTimestamps
+This would still meet most of the task's acceptance criteria, while acknowledging the practical complexity of Apple's OIDC implementation.

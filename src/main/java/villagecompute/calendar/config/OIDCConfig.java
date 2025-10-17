@@ -21,11 +21,17 @@ public class OIDCConfig {
     @ConfigProperty(name = "quarkus.oidc.facebook.enabled")
     boolean facebookEnabled;
 
+    @ConfigProperty(name = "quarkus.oidc.apple.enabled")
+    boolean appleEnabled;
+
     @ConfigProperty(name = "quarkus.oidc.google.client-id")
     String googleClientId;
 
     @ConfigProperty(name = "quarkus.oidc.facebook.client-id")
     String facebookClientId;
+
+    @ConfigProperty(name = "quarkus.oidc.apple.client-id")
+    String appleClientId;
 
     void onStart(@Observes StartupEvent event) {
         LOG.info("=== OIDC Configuration ===");
@@ -35,6 +41,9 @@ public class OIDCConfig {
         LOG.infof("Facebook OAuth: %s (Client ID: %s)",
             facebookEnabled ? "ENABLED" : "DISABLED",
             facebookClientId.equals("placeholder") ? "NOT CONFIGURED" : "configured");
+        LOG.infof("Apple OAuth: %s (Client ID: %s)",
+            appleEnabled ? "ENABLED" : "DISABLED",
+            appleClientId.equals("placeholder") ? "NOT CONFIGURED" : "configured");
         LOG.info("==========================");
     }
 }
