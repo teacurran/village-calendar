@@ -14,6 +14,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
 import villagecompute.calendar.api.graphql.inputs.OrderInput;
 import villagecompute.calendar.api.graphql.inputs.OrderStatusUpdateInput;
+import villagecompute.calendar.api.graphql.inputs.PlaceOrderInput;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
@@ -61,14 +62,20 @@ public class OrderGraphQL {
 
     /**
      * Get orders for the authenticated user.
+     * Optionally filter by order status.
      *
+     * @param status Optional order status filter
      * @return List of user's orders
      */
     @Query("myOrders")
     @Description("Get orders for the authenticated user. Requires authentication.")
     @RolesAllowed("USER")
-    public List<CalendarOrder> myOrders() {
-        LOG.debug("Query: myOrders()");
+    public List<CalendarOrder> myOrders(
+        @Name("status")
+        @Description("Filter by order status (optional)")
+        String status
+    ) {
+        LOG.debugf("Query: myOrders(status=%s)", status);
 
         // Get current user from JWT
         Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
@@ -80,7 +87,90 @@ public class OrderGraphQL {
         CalendarUser user = currentUser.get();
         List<CalendarOrder> orders = orderService.getUserOrders(user.id);
 
-        LOG.infof("Found %d orders for user %s", orders.size(), user.email);
+        // Apply status filter if provided
+        if (status != null && !status.isEmpty()) {
+            orders = orders.stream()
+                .filter(order -> status.equals(order.status))
+                .toList();
+            LOG.infof("Found %d orders for user %s with status %s", orders.size(), user.email, status);
+        } else {
+            LOG.infof("Found %d orders for user %s (all statuses)", orders.size(), user.email);
+        }
+
+        return orders;
+    }
+
+    /**
+     * Get orders for a specific user (admin only) with optional status filter.
+     * If userId is provided, requires ADMIN role.
+     * If userId is NOT provided, returns orders for authenticated user.
+     *
+     * @param userId User ID to fetch orders for (admin only)
+     * @param status Order status filter (optional)
+     * @return List of orders
+     */
+    @Query("orders")
+    @Description("Get orders for a specific user (admin only) with optional status filter. If userId is not provided, returns orders for authenticated user.")
+    @RolesAllowed("USER")
+    public List<CalendarOrder> orders(
+        @Name("userId")
+        @Description("User ID to fetch orders for (admin only)")
+        String userId,
+
+        @Name("status")
+        @Description("Filter by order status (optional)")
+        String status
+    ) {
+        LOG.infof("Query: orders(userId=%s, status=%s)", userId, status);
+
+        // Get current user from JWT
+        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
+        if (currentUser.isEmpty()) {
+            LOG.error("User not found despite passing @RolesAllowed check");
+            throw new IllegalStateException("Unauthorized: User not found");
+        }
+
+        CalendarUser user = currentUser.get();
+
+        // Determine target user ID
+        UUID targetUserId;
+        if (userId != null && !userId.isEmpty()) {
+            // Admin access requested - verify admin role
+            boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains("ADMIN");
+            if (!isAdmin) {
+                LOG.errorf("Non-admin user %s attempted to access orders for userId=%s",
+                    user.email, userId);
+                throw new SecurityException("Unauthorized: ADMIN role required to access other users' orders");
+            }
+
+            // Parse the provided user ID
+            try {
+                targetUserId = UUID.fromString(userId);
+            } catch (IllegalArgumentException e) {
+                LOG.errorf("Invalid user ID format: %s", userId);
+                throw new IllegalArgumentException("Invalid user ID format");
+            }
+
+            LOG.infof("Admin %s accessing orders for user %s", user.email, userId);
+        } else {
+            // No userId provided - return current user's orders
+            targetUserId = user.id;
+            LOG.infof("Returning orders for current user %s", user.email);
+        }
+
+        // Get orders for target user
+        List<CalendarOrder> orders = orderService.getUserOrders(targetUserId);
+
+        // Apply status filter if provided
+        if (status != null && !status.isEmpty()) {
+            orders = orders.stream()
+                .filter(order -> status.equals(order.status))
+                .toList();
+            LOG.infof("Found %d orders for user %s with status %s", orders.size(), targetUserId, status);
+        } else {
+            LOG.infof("Found %d orders for user %s (all statuses)", orders.size(), targetUserId);
+        }
+
         return orders;
     }
 
@@ -142,22 +232,47 @@ public class OrderGraphQL {
     }
 
     /**
-     * Get orders by status (admin only).
+     * Get all orders across all users (admin only).
+     * Supports optional status filter and result limit.
      *
-     * @param status Order status
-     * @return List of orders with the specified status
+     * @param status Order status filter (optional)
+     * @param limit Maximum number of orders to return
+     * @return List of orders
      */
-    @Query("ordersByStatus")
-    @Description("Get orders by status (admin only).")
+    @Query("allOrders")
+    @Description("Get all orders across all users (admin only). Requires ADMIN role in JWT claims.")
     @RolesAllowed("ADMIN")
-    public List<CalendarOrder> ordersByStatus(
+    public List<CalendarOrder> allOrders(
         @Name("status")
-        @Description("Order status (PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED)")
-        @NonNull
-        String status
+        @Description("Filter by order status (optional)")
+        String status,
+
+        @Name("limit")
+        @Description("Maximum number of orders to return (default: 50)")
+        Integer limit
     ) {
-        LOG.infof("Query: ordersByStatus(status=%s)", status);
-        return orderService.getOrdersByStatus(status);
+        LOG.infof("Query: allOrders(status=%s, limit=%s)", status, limit);
+
+        // Apply limit with default of 50
+        int maxResults = (limit != null && limit > 0) ? limit : 50;
+
+        // Get orders filtered by status (if provided)
+        List<CalendarOrder> orders;
+        if (status != null && !status.isEmpty()) {
+            orders = orderService.getOrdersByStatus(status);
+            // Apply limit to filtered results
+            if (orders.size() > maxResults) {
+                orders = orders.subList(0, maxResults);
+            }
+        } else {
+            // Get all orders with limit
+            orders = CalendarOrder.<CalendarOrder>findAll()
+                .page(0, maxResults)
+                .list();
+        }
+
+        LOG.infof("Returning %d orders (status=%s, limit=%d)", orders.size(), status, maxResults);
+        return orders;
     }
 
     // ============================================================================
@@ -255,6 +370,59 @@ public class OrderGraphQL {
             LOG.errorf(e, "Failed to create PaymentIntent for order %s", order.id);
             throw new RuntimeException("Failed to create payment intent: " + e.getMessage());
         }
+    }
+
+    /**
+     * Place an order for printed calendars.
+     * Alternative to createOrder mutation with more explicit input structure.
+     * Returns Stripe PaymentIntent for checkout processing.
+     *
+     * TODO: Implement placeOrder with ProductType support and pricing logic
+     *
+     * @param input Order placement data (includes productType)
+     * @return Created order with payment details
+     */
+    @Mutation("placeOrder")
+    @Description("Place an order for printed calendars. Alternative to createOrder with structured input type. Returns PaymentIntent for checkout.")
+    @RolesAllowed("USER")
+    @Transactional
+    public CreateOrderResponse placeOrder(
+        @Name("input")
+        @Description("Order placement data")
+        @NotNull
+        @Valid
+        PlaceOrderInput input
+    ) {
+        LOG.infof("Mutation: placeOrder(calendarId=%s, productType=%s, quantity=%d) (STUB IMPLEMENTATION)",
+            input.calendarId, input.productType, input.quantity);
+
+        // Get current user
+        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
+        if (currentUser.isEmpty()) {
+            LOG.error("User not found despite passing @RolesAllowed check");
+            throw new IllegalStateException("Unauthorized: User not found");
+        }
+
+        CalendarUser user = currentUser.get();
+
+        // TODO: Implement the actual placeOrder logic:
+        // 1. Validate calendar ID and verify ownership (similar to createOrder)
+        // 2. Use productType to determine pricing (different prices for WALL_CALENDAR, DESK_CALENDAR, POSTER)
+        // 3. Create order with product-specific pricing via orderService
+        // 4. Create Stripe PaymentIntent via paymentService
+        // 5. Return CreateOrderResponse with order and clientSecret
+        //
+        // Note: This differs from createOrder by accepting PlaceOrderInput which includes productType field.
+        // The productType allows different product formats with different pricing.
+
+        LOG.warnf("placeOrder mutation not yet implemented. Would create order for calendar %s with product type %s",
+            input.calendarId, input.productType);
+
+        throw new UnsupportedOperationException(
+            "placeOrder mutation not yet implemented. " +
+            "TODO: Implement product-type-specific pricing and order creation. " +
+            "Use createOrder mutation as a temporary alternative."
+        );
     }
 
     /**

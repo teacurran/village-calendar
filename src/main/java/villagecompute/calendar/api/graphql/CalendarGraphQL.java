@@ -75,6 +75,20 @@ public class CalendarGraphQL {
     }
 
     /**
+     * Get the currently authenticated user (alias for 'me' query).
+     * Returns null if not authenticated.
+     *
+     * @return CalendarUser or null
+     */
+    @Query("currentUser")
+    @Description("Get the currently authenticated user. Alias for 'me' query. Requires valid JWT token in Authorization header. Returns null if not authenticated.")
+    @PermitAll
+    public CalendarUser currentUser() {
+        LOG.debug("Query: currentUser() - delegating to me()");
+        return me();
+    }
+
+    /**
      * Get calendars for the authenticated user.
      * Requires authentication.
      *
@@ -108,6 +122,77 @@ public class CalendarGraphQL {
         } else {
             calendars = UserCalendar.findByUser(userId).list();
             LOG.infof("Found %d calendars for user %s (all years)", calendars.size(), user.email);
+        }
+
+        return calendars;
+    }
+
+    /**
+     * Get calendars for a specific user (admin only) or filter by year.
+     * If userId is provided, requires ADMIN role.
+     * If userId is NOT provided, returns calendars for authenticated user.
+     *
+     * @param userId User ID to fetch calendars for (admin only)
+     * @param year Optional year filter
+     * @return List of user calendars
+     */
+    @Query("calendars")
+    @Description("Get calendars for a specific user (admin only) or filter by year. If userId is not provided, returns calendars for authenticated user.")
+    @RolesAllowed("USER")
+    public List<UserCalendar> calendars(
+        @Name("userId")
+        @Description("User ID to fetch calendars for (admin only)")
+        String userId,
+
+        @Name("year")
+        @Description("Filter by calendar year (optional)")
+        Integer year
+    ) {
+        LOG.infof("Query: calendars(userId=%s, year=%s)", userId, year);
+
+        // Get current user from JWT
+        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
+        if (currentUser.isEmpty()) {
+            LOG.error("User not found despite passing @RolesAllowed check");
+            throw new IllegalStateException("Unauthorized: User not found");
+        }
+
+        CalendarUser user = currentUser.get();
+
+        // Determine target user ID
+        UUID targetUserId;
+        if (userId != null && !userId.isEmpty()) {
+            // Admin access requested - verify admin role
+            boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains("ADMIN");
+            if (!isAdmin) {
+                LOG.errorf("Non-admin user %s attempted to access calendars for userId=%s",
+                    user.email, userId);
+                throw new SecurityException("Unauthorized: ADMIN role required to access other users' calendars");
+            }
+
+            // Parse the provided user ID
+            try {
+                targetUserId = UUID.fromString(userId);
+            } catch (IllegalArgumentException e) {
+                LOG.errorf("Invalid user ID format: %s", userId);
+                throw new IllegalArgumentException("Invalid user ID format");
+            }
+
+            LOG.infof("Admin %s accessing calendars for user %s", user.email, userId);
+        } else {
+            // No userId provided - return current user's calendars
+            targetUserId = user.id;
+            LOG.infof("Returning calendars for current user %s", user.email);
+        }
+
+        // Query calendars with optional year filter
+        List<UserCalendar> calendars;
+        if (year != null) {
+            calendars = UserCalendar.findByUserAndYear(targetUserId, year);
+            LOG.infof("Found %d calendars for user %s in year %d", calendars.size(), targetUserId, year);
+        } else {
+            calendars = UserCalendar.findByUser(targetUserId).list();
+            LOG.infof("Found %d calendars for user %s (all years)", calendars.size(), targetUserId);
         }
 
         return calendars;
@@ -166,6 +251,35 @@ public class CalendarGraphQL {
             LOG.errorf("Invalid UUID format for calendar ID: %s", id);
             throw new IllegalArgumentException("Invalid calendar ID format", e);
         }
+    }
+
+    /**
+     * Get all users (admin only).
+     * Requires ADMIN role.
+     *
+     * @param limit Maximum number of users to return
+     * @return List of users
+     */
+    @Query("allUsers")
+    @Description("Get all users (admin only). Requires ADMIN role in JWT claims.")
+    @RolesAllowed("ADMIN")
+    public List<CalendarUser> allUsers(
+        @Name("limit")
+        @Description("Maximum number of users to return (default: 50)")
+        Integer limit
+    ) {
+        LOG.infof("Query: allUsers(limit=%s)", limit);
+
+        // Apply limit with default of 50
+        int maxResults = (limit != null && limit > 0) ? limit : 50;
+
+        // Query users with limit
+        List<CalendarUser> users = CalendarUser.<CalendarUser>findAll()
+            .page(0, maxResults)
+            .list();
+
+        LOG.infof("Returning %d users (limit=%d)", users.size(), maxResults);
+        return users;
     }
 
     // ============================================================================

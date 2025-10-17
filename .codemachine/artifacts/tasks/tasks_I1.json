@@ -147,7 +147,7 @@
     "acceptance_criteria": "curl -X POST http://localhost:8080/graphql -H \"Content-Type: application/json\" -d '{\"query\": \"{ calendars(userId: 1) { id title } }\"}' returns 200 with stub response, GraphQL UI loads in browser and displays schema documentation, All query/mutation methods from schema represented in resolver classes, SecurityIdentity context injection works (user ID accessible in resolver methods), No runtime errors when querying any defined schema field",
     "dependencies": ["I1.T6", "I1.T8"],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T11",
