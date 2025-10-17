@@ -23,5 +23,5 @@ public class PlaceOrderInput {
     public Integer quantity;
 
     @NotNull(message = "Shipping address is required")
-    public ShippingAddressInput shippingAddress;
+    public AddressInput shippingAddress;
 }

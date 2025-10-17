@@ -24,7 +24,7 @@ public class PaymentIntentResponse {
     public String clientSecret;
 
     @Description("Amount in cents (USD) - multiply dollar amount by 100")
-    public Long amount;
+    public Integer amount;
 
     @Description("Associated calendar ID (before order is created)")
     public UUID calendarId;
@@ -48,7 +48,7 @@ public class PaymentIntentResponse {
     public static PaymentIntentResponse fromCheckoutSession(
         String sessionId,
         String checkoutUrl,
-        Long amountInCents,
+        Integer amountInCents,
         UUID calendarId,
         Integer quantity
     ) {

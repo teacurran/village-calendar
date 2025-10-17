@@ -25,9 +25,24 @@ import static org.junit.jupiter.api.Assertions.*;
  * Integration tests for OrderResolver GraphQL API.
  * Tests order queries and mutations with various authorization scenarios.
  *
- * NOTE: These tests focus on unauthenticated access scenarios and GraphQL schema validation.
- * Full authentication testing with JWT tokens requires additional Quarkus test configuration
- * for the OIDC/JWT provider.
+ * NOTE: Full authentication testing with JWT tokens requires additional Quarkus
+ * test configuration for the OIDC provider (Keycloak/Auth0). The current tests
+ * focus on:
+ * - Schema validation (GraphQL types and fields are correctly exposed)
+ * - Unauthenticated access rejection (security annotations work)
+ * - Service layer integration (business logic works correctly)
+ * - Input validation (malformed requests are rejected)
+ *
+ * For production deployments, authenticated integration tests should be added
+ * using @TestSecurity annotation or by configuring a test OIDC server.
+ *
+ * Required authenticated test scenarios:
+ * - User querying their own order (should succeed)
+ * - User querying another user's order (should fail with SecurityException)
+ * - Admin querying any user's order (should succeed)
+ * - placeOrder mutation with valid JWT token (should create order and return checkout URL)
+ * - cancelOrder mutation for PAID order (should cancel and trigger refund)
+ * - cancelOrder mutation for SHIPPED order (should fail with IllegalStateException)
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -83,8 +98,7 @@ class OrderResolverTest {
 
         // Create test order
         JsonNode shippingAddress = objectMapper.createObjectNode()
-            .put("name", "Test User")
-            .put("line1", "123 Test St")
+            .put("street", "123 Test St")
             .put("city", "Nashville")
             .put("state", "TN")
             .put("postalCode", "37201")
@@ -321,8 +335,7 @@ class OrderResolverTest {
                     productType: WALL_CALENDAR
                     quantity: 1
                     shippingAddress: {
-                        name: "Test User"
-                        line1: "123 Test St"
+                        street: "123 Test St"
                         city: "Nashville"
                         state: "TN"
                         postalCode: "37201"
@@ -415,8 +428,7 @@ class OrderResolverTest {
                     productType: WALL_CALENDAR
                     quantity: 0
                     shippingAddress: {
-                        name: "Test User"
-                        line1: "123 Test St"
+                        street: "123 Test St"
                         city: "Nashville"
                         state: "TN"
                         postalCode: "37201"
@@ -473,8 +485,7 @@ class OrderResolverTest {
     @Transactional
     void testOrderService_CreateOrder() throws Exception {
         JsonNode shippingAddress = objectMapper.createObjectNode()
-            .put("name", "Test User 2")
-            .put("line1", "456 Oak Ave")
+            .put("street", "456 Oak Ave")
             .put("city", "Memphis")
             .put("state", "TN")
             .put("postalCode", "38101")
@@ -524,8 +535,7 @@ class OrderResolverTest {
     void testOrderService_CannotCancelShippedOrder() throws Exception {
         // Create a new order for this test
         JsonNode shippingAddress = objectMapper.createObjectNode()
-            .put("name", "Test User 3")
-            .put("line1", "789 Pine St")
+            .put("street", "789 Pine St")
             .put("city", "Knoxville")
             .put("state", "TN")
             .put("postalCode", "37902")

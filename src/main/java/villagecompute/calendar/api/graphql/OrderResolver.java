@@ -26,9 +26,12 @@ import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.integration.stripe.StripeService;
 import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.OrderService;
+import org.eclipse.microprofile.graphql.Source;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -332,10 +335,9 @@ public class OrderResolver {
         JsonNode shippingAddressJson;
         try {
             ObjectNode addressNode = objectMapper.createObjectNode();
-            addressNode.put("name", input.shippingAddress.name);
-            addressNode.put("line1", input.shippingAddress.line1);
-            if (input.shippingAddress.line2 != null) {
-                addressNode.put("line2", input.shippingAddress.line2);
+            addressNode.put("street", input.shippingAddress.street);
+            if (input.shippingAddress.street2 != null) {
+                addressNode.put("street2", input.shippingAddress.street2);
             }
             addressNode.put("city", input.shippingAddress.city);
             addressNode.put("state", input.shippingAddress.state);
@@ -385,7 +387,7 @@ public class OrderResolver {
             checkoutSession.getId(), order.id, checkoutSession.getUrl());
 
         // Build PaymentIntent response
-        Long amountInCents = order.totalPrice.multiply(BigDecimal.valueOf(100)).longValue();
+        Integer amountInCents = order.totalPrice.multiply(BigDecimal.valueOf(100)).intValue();
         PaymentIntentResponse response = PaymentIntentResponse.fromCheckoutSession(
             checkoutSession.getId(),
             checkoutSession.getUrl(),
@@ -445,5 +447,103 @@ public class OrderResolver {
         LOG.infof("Cancelled order %s. Status: %s", cancelledOrder.id, cancelledOrder.status);
 
         return cancelledOrder;
+    }
+
+    // ==================================================================
+    // BATCHED FIELD RESOLVERS (DataLoader Pattern)
+    // ==================================================================
+
+    /**
+     * Batched field resolver for CalendarOrder.calendar relationship.
+     * Prevents N+1 queries by batch-loading calendars for multiple orders.
+     * SmallRye GraphQL automatically batches field resolvers annotated
+     * with @Source when the parameter is a List.
+     *
+     * @param orders List of orders to resolve calendars for
+     * @return List of calendars in the same order as input orders
+     */
+    @Name("calendar")
+    @Description("Get the calendar associated with this order")
+    public List<UserCalendar> batchLoadCalendars(
+        @Source final List<CalendarOrder> orders
+    ) {
+        LOG.debugf("Batch loading calendars for %d orders", orders.size());
+
+        // Extract unique calendar IDs from orders
+        List<UUID> calendarIds = orders.stream()
+            .map(o -> o.calendar != null ? o.calendar.id : null)
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList());
+
+        if (calendarIds.isEmpty()) {
+            LOG.debug("No calendar IDs to load");
+            return orders.stream()
+                .map(o -> (UserCalendar) null)
+                .collect(Collectors.toList());
+        }
+
+        // Batch load calendars in a single query
+        List<UserCalendar> calendars = UserCalendar.list("id in ?1", calendarIds);
+        LOG.debugf("Loaded %d calendars in batch", calendars.size());
+
+        // Create lookup map for O(1) access
+        Map<UUID, UserCalendar> calendarMap = calendars.stream()
+            .collect(Collectors.toMap(c -> c.id, c -> c));
+
+        // Return calendars in same order as input orders (DataLoader contract)
+        List<UserCalendar> result = orders.stream()
+            .map(o -> o.calendar != null ? calendarMap.get(o.calendar.id) : null)
+            .collect(Collectors.toList());
+
+        LOG.debugf("Returning %d calendars for %d orders", result.size(), orders.size());
+        return result;
+    }
+
+    /**
+     * Batched field resolver for CalendarOrder.user relationship.
+     * Prevents N+1 queries by batch-loading users for multiple orders.
+     * SmallRye GraphQL automatically batches field resolvers annotated
+     * with @Source when the parameter is a List.
+     *
+     * @param orders List of orders to resolve users for
+     * @return List of users in the same order as input orders
+     */
+    @Name("user")
+    @Description("Get the user who placed this order")
+    public List<CalendarUser> batchLoadUsers(
+        @Source final List<CalendarOrder> orders
+    ) {
+        LOG.debugf("Batch loading users for %d orders", orders.size());
+
+        // Extract unique user IDs from orders
+        List<UUID> userIds = orders.stream()
+            .map(o -> o.user != null ? o.user.id : null)
+            .filter(Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList());
+
+        if (userIds.isEmpty()) {
+            LOG.debug("No user IDs to load");
+            return orders.stream()
+                .map(o -> (CalendarUser) null)
+                .collect(Collectors.toList());
+        }
+
+        // Batch load users in a single query
+        List<CalendarUser> users = CalendarUser.list("id in ?1", userIds);
+        LOG.debugf("Loaded %d users in batch", users.size());
+
+        // Create lookup map for O(1) access
+        Map<UUID, CalendarUser> userMap = users.stream()
+            .collect(Collectors.toMap(u -> u.id, u -> u));
+
+        // Return users in same order as input orders (DataLoader contract)
+        List<CalendarUser> result = orders.stream()
+            .map(o -> o.user != null ? userMap.get(o.user.id) : null)
+            .collect(Collectors.toList());
+
+        LOG.debugf("Returning %d users for %d orders", result.size(), orders.size());
+        return result;
     }
 }

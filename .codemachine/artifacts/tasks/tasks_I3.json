@@ -57,7 +57,7 @@
     "acceptance_criteria": "GraphQL query { order(orderId: \"123\") { orderNumber status items { calendar { title } } } } returns order with nested data, placeOrder mutation creates order, returns Stripe Checkout URL, Unauthorized access to other user's order returns GraphQL error, Admin role can query any user's orders, cancelOrder mutation validates order status (cannot cancel shipped order), returns updated order, Integration tests verify end-to-end GraphQL order workflows",
     "dependencies": ["I3.T2", "I3.T3"],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I3.T5",

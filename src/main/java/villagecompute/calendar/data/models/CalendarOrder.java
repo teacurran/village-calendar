@@ -7,6 +7,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.eclipse.microprofile.graphql.Ignore;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -35,11 +36,13 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
     @NotNull
     @ManyToOne(optional = false)
     @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_calendar_orders_user"))
+    @Ignore  // GraphQL field resolver provided by OrderResolver.batchLoadUsers()
     public CalendarUser user;
 
     @NotNull
     @ManyToOne(optional = false)
     @JoinColumn(name = "calendar_id", nullable = false, foreignKey = @ForeignKey(name = "fk_calendar_orders_calendar"))
+    @Ignore  // GraphQL field resolver provided by OrderResolver.batchLoadCalendars()
     public UserCalendar calendar;
 
     @NotNull
