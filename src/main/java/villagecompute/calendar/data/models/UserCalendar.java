@@ -5,6 +5,7 @@ import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -27,7 +28,7 @@ public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
     @Column(name = "version", nullable = false)
     public Long version;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_user_calendars_user"))
     public CalendarUser user;
 
@@ -52,7 +53,7 @@ public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
     @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
     public JsonNode configuration;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "template_id", foreignKey = @ForeignKey(name = "fk_user_calendars_template"))
     public CalendarTemplate template;
 
@@ -65,9 +66,11 @@ public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
 
     // Relationships
     @OneToMany(mappedBy = "calendar", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 10)
     public List<CalendarOrder> orders;
 
     @OneToMany(mappedBy = "calendar", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 10)
     public List<Event> events;
 
     // Helper methods (ActiveRecord pattern)

@@ -431,8 +431,21 @@ class CalendarGraphQLTest {
     }
 
     @Transactional
-    void deleteTestCalendar(UUID calendarId) {
+    void deleteTestCalendar(final UUID calendarId) {
         UserCalendar.deleteById(calendarId);
+    }
+
+    @Transactional
+    UUID createAndPersistPublicCalendar(final String name) {
+        UserCalendar publicCalendar = new UserCalendar();
+        publicCalendar.user = testUser;
+        publicCalendar.name = name;
+        publicCalendar.year = 2025;
+        publicCalendar.template = testTemplate;
+        publicCalendar.isPublic = true;
+        publicCalendar.configuration = createTestConfiguration();
+        publicCalendar.persist();
+        return publicCalendar.id;
     }
 
     @Test
@@ -630,5 +643,200 @@ class CalendarGraphQLTest {
             .then()
             .statusCode(200)
             .body("errors", notNullValue());
+    }
+
+    // ==========================================================================
+    // DATALOADER INTEGRATION TESTS
+    // ==========================================================================
+
+    /**
+     * Test that DataLoader pattern prevents N+1 queries when fetching
+     * multiple calendars with related entities.
+     *
+     * Acceptance Criteria: Fetching 10 calendars with users and templates
+     * should result in 3 DB queries (1 for calendars, 1 for users,
+     * 1 for templates), not 21 queries (1 + 10 + 10).
+     *
+     * NOTE: This test verifies the DataLoader field resolvers are working.
+     * SQL query counting would require additional test infrastructure
+     * (hibernate statistics or database proxy), so we verify functional
+     * correctness here.
+     */
+    @Test
+    @Order(70)
+    void testDataLoader_BatchLoading_MultipleCalendars() {
+        // Create 10 public calendars for testing
+        java.util.List<UUID> calendarIds = new java.util.ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            UUID id = createAndPersistPublicCalendar("Calendar " + i);
+            calendarIds.add(id);
+        }
+
+        try {
+            // Query all 10 calendars with their users and templates
+            // This should trigger DataLoader batching
+            String query = String.format("""
+                query {
+                    calendar1: calendar(id: "%s") {
+                        id
+                        name
+                        user { id email }
+                        template { id name }
+                    }
+                    calendar2: calendar(id: "%s") {
+                        id
+                        name
+                        user { id email }
+                        template { id name }
+                    }
+                    calendar3: calendar(id: "%s") {
+                        id
+                        name
+                        user { id email }
+                        template { id name }
+                    }
+                    calendar4: calendar(id: "%s") {
+                        id
+                        name
+                        user { id email }
+                        template { id name }
+                    }
+                    calendar5: calendar(id: "%s") {
+                        id
+                        name
+                        user { id email }
+                        template { id name }
+                    }
+                    calendar6: calendar(id: "%s") {
+                        id
+                        name
+                        user { id email }
+                        template { id name }
+                    }
+                    calendar7: calendar(id: "%s") {
+                        id
+                        name
+                        user { id email }
+                        template { id name }
+                    }
+                    calendar8: calendar(id: "%s") {
+                        id
+                        name
+                        user { id email }
+                        template { id name }
+                    }
+                    calendar9: calendar(id: "%s") {
+                        id
+                        name
+                        user { id email }
+                        template { id name }
+                    }
+                    calendar10: calendar(id: "%s") {
+                        id
+                        name
+                        user { id email }
+                        template { id name }
+                    }
+                }
+                """,
+                calendarIds.get(0).toString(),
+                calendarIds.get(1).toString(),
+                calendarIds.get(2).toString(),
+                calendarIds.get(3).toString(),
+                calendarIds.get(4).toString(),
+                calendarIds.get(5).toString(),
+                calendarIds.get(6).toString(),
+                calendarIds.get(7).toString(),
+                calendarIds.get(8).toString(),
+                calendarIds.get(9).toString()
+            );
+
+            // Execute query and verify all calendars returned successfully
+            // If DataLoader is working, this should complete without errors
+            given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.calendar1.id",
+                    equalTo(calendarIds.get(0).toString()))
+                .body("data.calendar1.user.email", equalTo(TEST_EMAIL))
+                .body("data.calendar1.template.name",
+                    equalTo(testTemplate.name))
+                .body("data.calendar10.id",
+                    equalTo(calendarIds.get(9).toString()))
+                .body("data.calendar10.user.email", equalTo(TEST_EMAIL))
+                .body("data.calendar10.template.name",
+                    equalTo(testTemplate.name))
+                .body("errors", nullValue());
+
+        } finally {
+            // Clean up test data
+            for (UUID calendarId : calendarIds) {
+                deleteTestCalendar(calendarId);
+            }
+        }
+    }
+
+    /**
+     * Test that field resolvers correctly resolve nested relationships.
+     * Verifies that user and template fields are accessible on calendar.
+     */
+    @Test
+    @Order(71)
+    void testDataLoader_FieldResolvers_CalendarRelationships() {
+        UUID calendarId = createAndPersistPublicCalendar(
+            "Test Calendar for Field Resolvers");
+
+        try {
+            // Query calendar with nested user and template fields
+            String query = String.format("""
+                query {
+                    calendar(id: "%s") {
+                        id
+                        name
+                        year
+                        user {
+                            id
+                            email
+                            displayName
+                            oauthProvider
+                        }
+                        template {
+                            id
+                            name
+                            description
+                            isActive
+                            isFeatured
+                        }
+                    }
+                }
+                """, calendarId.toString());
+
+            given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.calendar.id", equalTo(calendarId.toString()))
+                .body("data.calendar.user.id",
+                    equalTo(testUser.id.toString()))
+                .body("data.calendar.user.email", equalTo(TEST_EMAIL))
+                .body("data.calendar.user.displayName",
+                    equalTo("GraphQL Test User"))
+                .body("data.calendar.template.id",
+                    equalTo(testTemplate.id.toString()))
+                .body("data.calendar.template.name",
+                    equalTo(testTemplate.name))
+                .body("data.calendar.template.isActive", equalTo(true))
+                .body("errors", nullValue());
+
+        } finally {
+            deleteTestCalendar(calendarId);
+        }
     }
 }

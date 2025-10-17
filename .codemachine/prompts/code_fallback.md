@@ -6,159 +6,252 @@ The previous code submission did not pass verification. You must fix the followi
 
 ## Original Task Description
 
-Replace stub implementations in CalendarResolver with real service calls. Implement queries: calendar(id) (fetch calendar with events, authorize user), calendars(userId, year) (list user's calendars with pagination). Implement mutations: createCalendar(input) (validate input, call CalendarService), updateCalendar(id, input) (authorize, update), deleteCalendar(id) (authorize, soft/hard delete). Inject SecurityIdentity for user context. Implement DataLoader pattern to prevent N+1 queries when fetching related entities (e.g., calendar with user and events). Add error handling (map service exceptions to GraphQL errors). Write integration tests for all resolver methods.
+Replace stub implementations in CalendarResolver with real service calls. Implement queries: calendar(id) (fetch calendar with events, authorize user), calendars(userId, year) (list user's calendars with pagination). Implement mutations: createCalendar(input) (validate input, call CalendarService), updateCalendar(id, input) (authorize, update), deleteCalendar(id) (authorize, soft/hard delete). Inject SecurityIdentity for user context. **Implement DataLoader pattern to prevent N+1 queries when fetching related entities (e.g., calendar with user and events).** Add error handling (map service exceptions to GraphQL errors). Write integration tests for all resolver methods.
 
 ---
 
 ## Issues Detected
 
-### **CRITICAL ISSUE #1: DataLoaders are not integrated into CalendarGraphQL**
+### **CRITICAL ISSUE #1: DataLoaders are injected but NEVER USED**
 
-You created three DataLoader classes (`UserDataLoader`, `EventDataLoader`, `TemplateDataLoader`) in the `src/main/java/villagecompute/calendar/api/graphql/dataloader/` directory, but they are **NOT INJECTED OR USED** in `CalendarGraphQL.java`.
+You created three DataLoader classes (`UserDataLoader`, `TemplateDataLoader`, `EventDataLoader`) and injected them into `CalendarGraphQL.java` (lines 92-105), but they are **COMPLETELY UNUSED**.
 
 **Evidence:**
-- Searched for "UserDataLoader", "EventDataLoader", "TemplateDataLoader" in CalendarGraphQL.java - **NO MATCHES FOUND**
-- The DataLoader classes exist but serve no purpose without integration
-- This means N+1 query problem is NOT resolved
+- Lines 92-105 inject the DataLoaders
+- NO methods in CalendarGraphQL.java call these DataLoaders
+- NO field resolvers exist that use `@Source` annotation to leverage DataLoaders
+- The comment at lines 625-647 explicitly states DataLoaders are "provided for future enhancement"
 
 **What's missing:**
-1. No `@Inject` fields for the DataLoaders in CalendarGraphQL
-2. No field resolvers using `@Source` annotation to leverage DataLoaders
-3. No DataLoader usage when fetching related entities (user, template, events)
+The task requires **DataLoader pattern implementation**, which means:
+1. Field resolvers using `@Source` annotation for UserCalendar type
+2. Field resolvers must use injected DataLoader instances to batch-load related entities
+3. Resolvers should return `CompletionStage<T>` for async batch loading
 
-### **CRITICAL ISSUE #2: No field resolvers for UserCalendar type**
+**Current implementation uses Hibernate @BatchSize instead of DataLoader pattern:**
+- UserCalendar.java line 69: `@BatchSize(size = 10)` on orders
+- UserCalendar.java line 73: `@BatchSize(size = 10)` on events
+- UserCalendar.java lines 31, 56: `FetchType.EAGER` on user and template
 
-The acceptance criteria states: "GraphQL query { calendar(id: \"123\") { title events { eventText } } } returns calendar with events"
+This is NOT the same as the DataLoader pattern required by the task.
 
-However:
-- There is **NO FIELD RESOLVER** for `events` on the UserCalendar type
-- There are no `@Source` annotated methods in CalendarGraphQL that expose related entities through DataLoaders
-- The schema doesn't define an `events` field on UserCalendar (events are embedded in configuration JSON)
-- Without field resolvers, fetching related entities will cause N+1 queries via JPA lazy loading
+### **ISSUE #2: Unused imports in CalendarGraphQL.java**
 
-**What's missing:**
-1. Field resolver for `user` on UserCalendar using UserDataLoader
-2. Field resolver for `template` on UserCalendar using TemplateDataLoader
-3. Field resolver for `events` on UserCalendar using EventDataLoader (if events should be exposed as a separate field per acceptance criteria)
-4. OR clarification on whether events should remain embedded in configuration vs exposed as a GraphQL field
+The following imports are declared but never used:
+- Line 10: `org.dataloader.DataLoader` - imported but DataLoader is never used
+- Line 17: `org.eclipse.microprofile.graphql.Source` - imported but no field resolvers exist
+- Line 26: `villagecompute.calendar.data.models.CalendarTemplate` - unused
+- Line 28: `villagecompute.calendar.data.models.Event` - unused
+- Line 37: `java.util.concurrent.CompletionStage` - unused
 
-### **CRITICAL ISSUE #3: Linting errors in CalendarGraphQL.java**
+These must be removed OR properly used (if you implement DataLoader field resolvers, Source and CompletionStage will be used).
 
-Multiple checkstyle violations detected:
+### **ISSUE #3: SmallRye GraphQL DataLoader Integration**
 
-**Import issues:**
-*   Line 10: Wildcard import (`org.eclipse.microprofile.graphql.*`) should be avoided
-*   Line 16: Unused import - `villagecompute.calendar.data.models.CalendarTemplate`
+**CRITICAL UNDERSTANDING:** SmallRye GraphQL (Quarkus's GraphQL implementation) does NOT have built-in DataLoader support like graphql-java. The DataLoader classes you created follow the graphql-java pattern, but they need to be integrated differently.
 
-**Missing Javadoc:**
-*   Lines 34, 36, 39, 42, 45, 48: Missing Javadoc comments for injected fields
+**Two possible approaches:**
 
-**Visibility modifiers:**
-*   Lines 37, 40, 43, 46, 49: Injected fields should be private (currently package-private)
+#### **Approach A: Use SmallRye GraphQL Batching (Recommended for Quarkus)**
+SmallRye GraphQL provides `@Batched` annotation for batch loading:
 
-**Final parameters:**
-*   Multiple methods have non-final parameters (lines 108, 145, 149, 210, 260, 294, 351)
+```java
+// Field resolver for user on UserCalendar
+@Query
+@Batched
+public List<CalendarUser> user(@Source List<UserCalendar> calendars) {
+    // Extract unique user IDs
+    List<UUID> userIds = calendars.stream()
+        .map(c -> c.user != null ? c.user.id : null)
+        .filter(Objects::nonNull)
+        .distinct()
+        .collect(Collectors.toList());
 
-**Magic numbers:**
-*   Lines 124, 191: Magic number `1000` used for pagination limit
-*   Line 267: Magic number `50` used for limit
+    // Batch load users
+    List<CalendarUser> users = userRepository.findByIds(userIds);
+    Map<UUID, CalendarUser> userMap = users.stream()
+        .collect(Collectors.toMap(u -> u.id, u -> u));
 
-**Line length:**
-*   Multiple lines exceed 80 character limit (lines 51, 53, 62, 79, 90, 105, 123-124, 127, 142, 168, 170, 172, 183, 190-191, 194, 207, 223, 229, 231, 239, 257, 278, 280, 290, 347)
+    // Return users in same order as input calendars
+    return calendars.stream()
+        .map(c -> c.user != null ? userMap.get(c.user.id) : null)
+        .collect(Collectors.toList());
+}
+```
 
-### **Issue #4: Test coverage incomplete**
+#### **Approach B: Manual DataLoader Integration**
+If you want to use the DataLoader classes you created, you need to:
+1. Create a `DataLoaderRegistry` producer
+2. Register DataLoaders in the registry
+3. Access DataLoaders via GraphQL context in field resolvers
 
-While 18 tests pass, the tests don't verify the key acceptance criteria:
+**However, Approach A is simpler and is the standard Quarkus/SmallRye GraphQL pattern.**
 
-**Missing test verification:**
-1. **No test verifies DataLoader batching works** - Acceptance criteria: "fetching 10 calendars with users requires 2 DB queries, not 11"
-   - Need a test that creates 10 calendars, queries them with related entities, and counts SQL queries to verify batching
-2. **No test for events field** - Acceptance criteria: "GraphQL query { calendar(id: \"123\") { title events { eventText } } }"
-   - Test at line 166 tries to query events but likely relies on JPA relationship, not DataLoader
-3. **No integration test demonstrating end-to-end GraphQL request/response flow with all related entities**
+### **ISSUE #4: Missing CalendarUserRepository.findByIds() method**
 
-### **Issue #5: Acceptance criteria field name mismatch**
+The `UserDataLoader.java` line 61 calls:
+```java
+List<CalendarUser> users = userRepository.findByIds(userIds);
+```
 
-The acceptance criteria references `{ title events { eventText } }` but:
-- UserCalendar schema has `name` field, NOT `title`
-- This suggests the acceptance criteria may be outdated or refer to a different schema version
-- Need clarification on correct field names
+But I cannot verify if `CalendarUserRepository` has a `findByIds(List<UUID>)` method. If this method doesn't exist, the DataLoader will fail at runtime.
+
+You MUST ensure:
+1. `CalendarUserRepository` has `findByIds(List<UUID> ids)` method
+2. Similar methods exist for `CalendarTemplateRepository` and any other repositories used by DataLoaders
 
 ---
 
 ## Best Approach to Fix
 
-### **Step 1: Integrate DataLoaders into CalendarGraphQL**
+### **Step 1: Decide on DataLoader Implementation Strategy**
 
-You MUST add field resolvers to CalendarGraphQL that use the DataLoaders. Follow this pattern:
+**RECOMMENDED: Use SmallRye GraphQL's `@Batched` annotation**
+
+This is the native Quarkus approach and doesn't require external DataLoader libraries. You should:
+
+1. **Remove the graphql-java DataLoader classes** (UserDataLoader.java, TemplateDataLoader.java, EventDataLoader.java) since they're not compatible with SmallRye GraphQL's architecture
+2. **Remove the DataLoader injections** from CalendarGraphQL.java (lines 92-105)
+3. **Implement batched field resolvers** using `@Batched` annotation
+
+### **Step 2: Implement Batched Field Resolvers**
+
+Add these field resolvers to `CalendarGraphQL.java`:
 
 ```java
-@Inject
-UserDataLoader userDataLoader;
-
-@Inject
-TemplateDataLoader templateDataLoader;
-
-@Inject
-EventDataLoader eventDataLoader;
-
-// Field resolver for UserCalendar.user
+/**
+ * Batched field resolver for UserCalendar.user relationship.
+ * Prevents N+1 queries by batch-loading users for multiple calendars.
+ */
 @Query
-public CompletionStage<CalendarUser> user(@Source UserCalendar calendar, @Context DataLoaderRegistry registry) {
-    if (calendar.user == null) {
-        return CompletableFuture.completedFuture(null);
+@Name("user")
+@Description("Get the user who owns this calendar")
+@Batched
+public List<CalendarUser> batchLoadUsers(
+    @Source final List<UserCalendar> calendars
+) {
+    LOG.debugf("Batch loading users for %d calendars", calendars.size());
+
+    // Extract unique user IDs (handle nulls for guest calendars)
+    List<UUID> userIds = calendars.stream()
+        .map(c -> c.user != null ? c.user.id : null)
+        .filter(Objects::nonNull)
+        .distinct()
+        .collect(Collectors.toList());
+
+    if (userIds.isEmpty()) {
+        return calendars.stream()
+            .map(c -> null)
+            .collect(Collectors.toList());
     }
-    DataLoader<UUID, CalendarUser> loader = registry.getDataLoader(UserDataLoader.class);
-    return loader.load(calendar.user.id);
+
+    // Batch load all users in a single query
+    List<CalendarUser> users = CalendarUser
+        .<CalendarUser>find("id IN ?1", userIds)
+        .list();
+
+    // Create lookup map
+    Map<UUID, CalendarUser> userMap = users.stream()
+        .collect(Collectors.toMap(u -> u.id, u -> u));
+
+    // Return users in same order as input calendars
+    return calendars.stream()
+        .map(c -> c.user != null ? userMap.get(c.user.id) : null)
+        .collect(Collectors.toList());
 }
 
-// Field resolver for UserCalendar.template
+/**
+ * Batched field resolver for UserCalendar.template relationship.
+ * Prevents N+1 queries by batch-loading templates for multiple calendars.
+ */
 @Query
-public CompletionStage<CalendarTemplate> template(@Source UserCalendar calendar, @Context DataLoaderRegistry registry) {
-    DataLoader<UUID, CalendarTemplate> loader = registry.getDataLoader(TemplateDataLoader.class);
-    return loader.load(calendar.template.id);
-}
+@Name("template")
+@Description("Get the template used by this calendar")
+@Batched
+public List<CalendarTemplate> batchLoadTemplates(
+    @Source final List<UserCalendar> calendars
+) {
+    LOG.debugf("Batch loading templates for %d calendars", calendars.size());
 
-// Field resolver for UserCalendar.events (if required by acceptance criteria)
-@Query
-public CompletionStage<List<Event>> events(@Source UserCalendar calendar, @Context DataLoaderRegistry registry) {
-    DataLoader<UUID, List<Event>> loader = registry.getDataLoader(EventDataLoader.class);
-    return loader.load(calendar.id);
+    // Extract unique template IDs
+    List<UUID> templateIds = calendars.stream()
+        .map(c -> c.template != null ? c.template.id : null)
+        .filter(Objects::nonNull)
+        .distinct()
+        .collect(Collectors.toList());
+
+    if (templateIds.isEmpty()) {
+        return calendars.stream()
+            .map(c -> null)
+            .collect(Collectors.toList());
+    }
+
+    // Batch load all templates in a single query
+    List<CalendarTemplate> templates = CalendarTemplate
+        .<CalendarTemplate>find("id IN ?1", templateIds)
+        .list();
+
+    // Create lookup map
+    Map<UUID, CalendarTemplate> templateMap = templates.stream()
+        .collect(Collectors.toMap(t -> t.id, t -> t));
+
+    // Return templates in same order as input calendars
+    return calendars.stream()
+        .map(c -> c.template != null ? templateMap.get(c.template.id) : null)
+        .collect(Collectors.toList());
 }
 ```
 
-**IMPORTANT:** You need to:
-1. Inject the DataLoader classes in CalendarGraphQL
-2. Create field resolvers using `@Source` annotation for each related entity
-3. Use `DataLoaderRegistry` from GraphQL context to get the appropriate DataLoader
-4. Return `CompletionStage` for async batch loading
-5. Register the DataLoaders with the GraphQL engine (may require configuration in application.properties or a DataLoaderRegistryProducer)
+**Key points:**
+- `@Batched` tells SmallRye GraphQL to batch calls to this method
+- `@Source` indicates this is a field resolver for the source type
+- Input is `List<UserCalendar>` instead of single calendar
+- Must return `List<T>` in the SAME ORDER as input calendars
+- Use `IN` query to fetch all related entities in one database query
 
-### **Step 2: Fix linting errors**
+### **Step 3: Remove unused DataLoader classes and fix imports**
 
-Before submitting, you MUST fix ALL checkstyle violations in CalendarGraphQL.java:
+1. **Delete these files:**
+   - `src/main/java/villagecompute/calendar/api/graphql/dataloader/UserDataLoader.java`
+   - `src/main/java/villagecompute/calendar/api/graphql/dataloader/TemplateDataLoader.java`
+   - `src/main/java/villagecompute/calendar/api/graphql/dataloader/EventDataLoader.java`
 
-1. **Replace wildcard import** on line 10 with explicit imports
-2. **Remove unused import** CalendarTemplate on line 16
-3. **Add Javadoc comments** for all injected fields (lines 34, 36, 39, 42, 45, 48)
-4. **Make injected fields private** (lines 37, 40, 43, 46, 49)
-5. **Add final modifier** to all method parameters
-6. **Extract magic numbers** to named constants:
-   ```java
-   private static final int DEFAULT_PAGE_SIZE = 1000;
-   private static final int MAX_USER_LIMIT = 50;
-   ```
-7. **Break long lines** to stay under 80 characters (use multi-line formatting for method signatures and chained calls)
+2. **Update CalendarGraphQL.java imports:**
+   - Remove: `import org.dataloader.DataLoader;` (line 10)
+   - Keep: `import org.eclipse.microprofile.graphql.Source;` (needed for field resolvers)
+   - Remove: `import villagecompute.calendar.data.models.CalendarTemplate;` (line 26) - unless you use it in field resolver
+   - Remove: `import villagecompute.calendar.data.models.Event;` (line 28)
+   - Remove: `import java.util.concurrent.CompletionStage;` (line 37)
+   - Add: `import java.util.Objects;` (needed for null filtering)
+   - Add: `import java.util.stream.Collectors;` (if not already present)
+   - Add: `import java.util.Map;` (if not already present)
 
-### **Step 3: Add DataLoader integration tests**
+3. **Remove DataLoader injections from CalendarGraphQL.java:**
+   - Remove lines 90-105 (DataLoader field injections)
 
-You MUST create a test that verifies DataLoader batching prevents N+1 queries:
+4. **Update the comment at the end of CalendarGraphQL.java:**
+   - Remove lines 625-647 (the note about @BatchSize and future DataLoader enhancement)
+   - Replace with: "Field resolvers use SmallRye GraphQL's @Batched annotation to prevent N+1 queries"
+
+### **Step 4: Remove Hibernate batch fetching (optional but recommended)**
+
+Since you're implementing proper DataLoader pattern, you should remove the Hibernate workarounds:
+
+In `UserCalendar.java`:
+- Line 31: Change `FetchType.EAGER` to `FetchType.LAZY` on user relationship
+- Line 56: Change `FetchType.EAGER` to `FetchType.LAZY` on template relationship
+- Line 69-70: Remove `@BatchSize(size = 10)` from orders (or keep if you want extra optimization)
+- Line 73-74: Remove `@BatchSize(size = 10)` from events (or keep if you want extra optimization)
+
+### **Step 5: Add integration test for DataLoader batching**
+
+Update the test at line 665 (`testDataLoader_BatchLoading_MultipleCalendars`) to verify batching works:
 
 ```java
 @Test
 @Order(70)
-void testDataLoader_BatchesUserQueries() {
-    // Create 10 calendars for the test user
+void testDataLoader_BatchLoading_MultipleCalendars() {
+    // Create 10 public calendars for testing
     List<UUID> calendarIds = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
         UUID id = createAndPersistPublicCalendar("Calendar " + i);
@@ -166,23 +259,30 @@ void testDataLoader_BatchesUserQueries() {
     }
 
     try {
-        // Enable SQL logging to count queries
-        // Query all 10 calendars with their users
+        // Enable Hibernate SQL logging to count queries
+        // This query should fetch 10 calendars with user and template
+        // Expected: 3 queries (1 for calendars, 1 batch for users, 1 batch for templates)
         String query = String.format("""
             query {
-                calendars(userId: "%s") {
-                    id
-                    name
-                    user {
-                        email
-                    }
-                    template {
-                        name
-                    }
-                }
+                calendar1: calendar(id: "%s") { id name user { id email } template { id name } }
+                calendar2: calendar(id: "%s") { id name user { id email } template { id name } }
+                calendar3: calendar(id: "%s") { id name user { id email } template { id name } }
+                calendar4: calendar(id: "%s") { id name user { id email } template { id name } }
+                calendar5: calendar(id: "%s") { id name user { id email } template { id name } }
+                calendar6: calendar(id: "%s") { id name user { id email } template { id name } }
+                calendar7: calendar(id: "%s") { id name user { id email } template { id name } }
+                calendar8: calendar(id: "%s") { id name user { id email } template { id name } }
+                calendar9: calendar(id: "%s") { id name user { id email } template { id name } }
+                calendar10: calendar(id: "%s") { id name user { id email } template { id name } }
             }
-            """, testUser.id.toString());
+            """,
+            calendarIds.get(0), calendarIds.get(1), calendarIds.get(2),
+            calendarIds.get(3), calendarIds.get(4), calendarIds.get(5),
+            calendarIds.get(6), calendarIds.get(7), calendarIds.get(8),
+            calendarIds.get(9)
+        );
 
+        // Execute query - if batching works, this should succeed without N+1 queries
         given()
             .contentType(ContentType.JSON)
             .body(Map.of("query", query))
@@ -190,46 +290,33 @@ void testDataLoader_BatchesUserQueries() {
             .post("/graphql")
             .then()
             .statusCode(200)
-            .body("data.calendars", hasSize(10))
+            .body("data.calendar1.user.email", equalTo(TEST_EMAIL))
+            .body("data.calendar10.template.name", equalTo(testTemplate.name))
             .body("errors", nullValue());
 
-        // TODO: Add assertion to verify query count
-        // Expected: 3 queries (1 for calendars, 1 batch for users, 1 batch for templates)
-        // Without DataLoader: 21 queries (1 for calendars + 10 for users + 10 for templates)
+        // TODO: Add Hibernate statistics to verify query count
+        // Expected: 3 DB queries (1 for calendars + 1 batch for users + 1 batch for templates)
+        // Without DataLoader: 21 queries (1 + 10 + 10)
     } finally {
-        calendarIds.forEach(this::deleteTestCalendar);
+        for (UUID calendarId : calendarIds) {
+            deleteTestCalendar(calendarId);
+        }
     }
 }
 ```
 
-### **Step 4: Clarify and test events field**
+### **Step 6: Run full verification**
 
-You need to determine:
-1. Should events be a separate GraphQL field on UserCalendar? (acceptance criteria suggests yes)
-2. Or should events remain embedded in configuration JSON? (current schema suggests yes)
-
-**If events should be a separate field:**
-- Add field resolver for events using EventDataLoader
-- Update tests to verify events can be queried
-- Add Event type to GraphQL schema if not present
-
-**If events remain in configuration:**
-- Update acceptance criteria interpretation
-- Document that events are accessed via configuration.events
-- Ensure tests reflect this
-
-### **Step 5: Run full verification before resubmission**
-
-Before resubmitting, you MUST verify:
+Before resubmitting:
 
 ```bash
-# 1. All linting passes
+# 1. Check for linting errors
 mvn checkstyle:check
 
-# 2. All tests pass
+# 2. Run all tests
 mvn test -Dtest=CalendarGraphQLTest
 
-# 3. No compilation errors
+# 3. Verify compilation
 mvn compile
 ```
 
@@ -237,13 +324,21 @@ mvn compile
 
 ## Summary
 
-The core issue is that DataLoaders were created but **NEVER INTEGRATED**. The code refactored CalendarGraphQL to use services (good!), but failed to implement the DataLoader pattern to prevent N+1 queries (critical requirement). You must add field resolvers that use DataLoaders, fix all linting errors, and add tests that verify batching works.
+The core issue is that **DataLoader classes were created but never integrated**. The task explicitly requires "Implement DataLoader pattern to prevent N+1 queries", but the current implementation:
+- Injects DataLoaders that are never used
+- Relies on Hibernate @BatchSize instead of GraphQL DataLoader pattern
+- Has no field resolvers using `@Source` annotation
 
-**Priority order:**
-1. **CRITICAL:** Integrate DataLoaders with field resolvers (Step 1)
-2. **CRITICAL:** Fix all linting errors (Step 2)
-3. **HIGH:** Add DataLoader integration test (Step 3)
-4. **MEDIUM:** Clarify/fix events field handling (Step 4)
-5. **MANDATORY:** Run full verification (Step 5)
+**You must:**
+1. **CRITICAL:** Implement batched field resolvers using SmallRye GraphQL's `@Batched` annotation
+2. **CRITICAL:** Remove unused DataLoader classes (they follow graphql-java pattern, not SmallRye)
+3. **CRITICAL:** Fix all linting errors (unused imports)
+4. **HIGH:** Add field resolvers for `user` and `template` relationships on UserCalendar
+5. **MEDIUM:** Update tests to verify batching works
+6. **OPTIONAL:** Remove Hibernate @BatchSize and EAGER fetching since you're implementing proper DataLoader pattern
 
-Do not resubmit until ALL issues are resolved and ALL tests pass with zero linting errors.
+**Do not resubmit until:**
+- Field resolvers with `@Batched` annotation are implemented
+- All linting errors are fixed (zero unused imports)
+- All tests pass (20/20)
+- DataLoader pattern is properly implemented per SmallRye GraphQL standards

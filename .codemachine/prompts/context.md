@@ -41,140 +41,53 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: GraphQL API Style (from 04_Behavior_and_Communication.md)
+### Context: API Style and GraphQL Implementation (from 04_Behavior_and_Communication.md)
 
-From architecture blueprint line 23:
 ```markdown
+#### 3.7.1. API Style
+
+**Primary API: GraphQL**
+
+The Village Calendar application uses **GraphQL** as its primary API protocol for frontend-to-backend communication. This choice is driven by the complex, nested data requirements of the calendar editor interface.
+
+**Rationale for GraphQL:**
+
 1. **Flexible Data Fetching**: Calendar editor requires nested data structures (User → Calendars → Events, Calendar → Template → Config). GraphQL allows fetching all related data in a single round-trip, eliminating the N+1 query problem common with REST.
+
+2. **Reduced Over-fetching**: Frontend can request exactly the fields needed for each view (e.g., calendar list view only needs `id`, `title`, `preview_image_url`, while editor needs full `config`, `events[]`). This reduces payload size and improves performance on mobile connections.
+
+3. **Schema Evolution**: GraphQL's strong typing and introspection enable adding new fields without versioning. Deprecated fields can be marked and gracefully removed over time.
+
+4. **Developer Experience**: GraphQL Playground (auto-generated from schema) provides interactive API documentation and testing interface. Frontend developers can explore schema without reading separate docs.
+
+5. **Type Safety**: SmallRye GraphQL generates TypeScript types for Vue.js frontend, ensuring compile-time type checking across the API boundary.
+
+**GraphQL Schema Organization:**
+
+- **Queries**: Read operations (e.g., `calendar(id)`, `calendars(userId)`, `templates()`, `order(orderId)`)
+- **Mutations**: Write operations (e.g., `createCalendar`, `updateCalendar`, `placeOrder`, `generatePdf`)
+- **Subscriptions**: Not implemented in MVP (future: real-time collaboration notifications)
 ```
 
-### Context: DataLoader Pattern for N+1 Prevention (from 05_Operational_Architecture.md)
+### Context: Communication Patterns and DataLoader Strategy (from 04_Behavior_and_Communication.md)
 
-From architecture blueprint line 411-419:
 ```markdown
-1. **GraphQL DataLoader Pattern**: Batch and cache database queries to prevent N+1 problem
+#### 3.7.2. Communication Patterns
 
-   // Without DataLoader: N+1 queries
-   calendars.forEach(cal -> cal.getUser())  // N separate DB queries
+**1. Synchronous Request/Response (GraphQL/REST over HTTPS)**
 
-   // With DataLoader: 2 queries
-   UserDataLoader.loadMany(userIds)  // Single batch query
-```
+Used for operations requiring immediate feedback to the user:
 
-### Context: Design Trade-offs for GraphQL (from 06_Rationale_and_Future.md)
+- **Read Operations**: Fetching calendars, templates, orders (GraphQL queries)
+- **Lightweight Writes**: Creating/updating calendar metadata (GraphQL mutations)
+- **Authentication Flows**: OAuth redirects, token validation
+- **Payment Initiation**: Creating Stripe checkout sessions
 
-From architecture blueprint line 139:
-```markdown
-- GraphQL adds complexity (query parsing, N+1 problem mitigation). Team accepted this trade-off for frontend flexibility.
-```
-
-From architecture blueprint line 483:
-```markdown
-- Document resolver implementation patterns (DataLoader usage, N+1 prevention)
-```
-
-### Context: Task I2.T6 Full Description (from 02_Iteration_I2.md)
-
-From plan document (iteration 2 tasks):
-```markdown
-### Task 2.6: Implement Calendar GraphQL Resolvers
-
-**Task ID:** `I2.T6`
-
-**Description:**
-Replace stub implementations in CalendarResolver with real service calls. Implement queries: calendar(id) (fetch calendar with events, authorize user), calendars(userId, year) (list user's calendars with pagination). Implement mutations: createCalendar(input) (validate input, call CalendarService), updateCalendar(id, input) (authorize, update), deleteCalendar(id) (authorize, soft/hard delete). Inject SecurityIdentity for user context. Implement DataLoader pattern to prevent N+1 queries when fetching related entities (e.g., calendar with user and events). Add error handling (map service exceptions to GraphQL errors). Write integration tests for all resolver methods.
-
-**Agent Type Hint:** `BackendAgent`
-
-**Inputs:**
-- CalendarService from Task I2.T2
-- EventService from Task I2.T3
-- GraphQL schema from I1.T6
-
-**Input Files:**
-- `src/main/java/villagecompute/calendar/service/CalendarService.java`
-- `src/main/java/villagecompute/calendar/service/EventService.java`
-- `src/main/java/villagecompute/calendar/api/graphql/CalendarResolver.java`
-- `api/graphql-schema.graphql`
-
-**Target Files:**
-- `src/main/java/villagecompute/calendar/api/graphql/CalendarResolver.java`
-- `src/main/java/villagecompute/calendar/api/graphql/dataloader/CalendarDataLoader.java`
-- `src/test/java/villagecompute/calendar/api/graphql/CalendarResolverTest.java`
-
-**Deliverables:**
-- All calendar query/mutation resolvers implemented
-- DataLoader pattern implemented for efficient queries
-- Authorization checks (user can only query own calendars)
-- Error handling (service exceptions mapped to GraphQL errors)
-- Integration tests for all resolvers
-
-**Acceptance Criteria:**
-- GraphQL query { calendar(id: "123") { title events { eventText } } } returns calendar with events
-- Unauthorized access to other user's calendar returns GraphQL error
-- createCalendar mutation persists calendar and returns new ID
-- DataLoader batches queries (e.g., fetching 10 calendars with users requires 2 DB queries, not 11)
-- Integration tests verify end-to-end GraphQL request/response flow
-
-**Dependencies:** `I2.T2`, `I2.T3`, `I1.T10` (requires CalendarService, EventService, and basic GraphQL stubs)
-
-**Parallelizable:** No (depends on completed services)
-```
-
-### Context: GraphQL Schema Definition (from api/schema.graphql)
-
-The GraphQL schema defines the following calendar-related operations:
-
-**Queries:**
-```graphql
-# Get a single calendar by ID (lines 568-575)
-calendar(id: ID!): UserCalendar
-
-# Get calendars for a user or filter by year (lines 577-588)
-calendars(userId: ID, year: Int): [UserCalendar!]!
-
-# Get authenticated user's calendars (lines 608-612)
-myCalendars(year: Int): [UserCalendar!]!
-
-# Get currently authenticated user (lines 595-603)
-currentUser: CalendarUser
-me: CalendarUser
-```
-
-**Mutations:**
-```graphql
-# Create a new calendar (lines 726-736)
-createCalendar(input: CalendarInput!): UserCalendar!
-
-# Update an existing calendar (lines 816-823)
-updateCalendar(id: ID!, input: CalendarUpdateInput!): UserCalendar!
-
-# Delete a calendar (lines 767-774)
-deleteCalendar(id: ID!): Boolean!
-
-# Convert guest session to authenticated user (lines 720-724)
-convertGuestSession(sessionId: ID!): CalendarUser!
-```
-
-**Key Types:**
-```graphql
-# UserCalendar type (lines 195-241) contains:
-type UserCalendar {
-  id: ID!
-  name: String!
-  year: Int!
-  configuration: JSON
-  status: CalendarStatus!
-  isPublic: Boolean!
-  sessionId: String
-  generatedPdfUrl: String
-  generatedSvg: String
-  created: DateTime!
-  updated: DateTime!
-  user: CalendarUser     # Potential N+1 query
-  template: CalendarTemplate!  # Potential N+1 query
-  orders: [CalendarOrder!]!    # Potential N+1 query
-}
+**Characteristics:**
+- Client waits for server response (typically <500ms)
+- Transactional consistency (database transaction commits before response)
+- Error handling via HTTP status codes and GraphQL error extensions
+- Retry logic in frontend for network failures
 ```
 
 ---
@@ -185,170 +98,127 @@ The following analysis is based on my direct review of the current codebase. Use
 
 ### Relevant Existing Code
 
-*   **File:** `src/main/java/villagecompute/calendar/api/graphql/CalendarGraphQL.java`
-    *   **Summary:** This file **ALREADY CONTAINS A SUBSTANTIAL IMPLEMENTATION** of the calendar GraphQL API. It includes:
-        - **User Queries:** `me()` and `currentUser()` queries (lines 55-89) that return the authenticated user using `AuthenticationService.getCurrentUser(jwt)`
-        - **Calendar Queries:**
-          - `myCalendars(year)` (lines 98-128) - fetches user's calendars with optional year filter
-          - `calendars(userId, year)` (lines 139-199) - supports both admin access (with userId) and current user access (without userId)
-          - `calendar(id)` (lines 208-254) - fetches single calendar with authorization checks (public or owner)
-        - **Admin Query:** `allUsers(limit)` (lines 263-283) - requires ADMIN role
-        - **Calendar Mutations:**
-          - `createCalendar(input)` (lines 296-355) - creates calendar from template with validation
-          - `updateCalendar(id, input)` (lines 365-433) - updates calendar with ownership verification
-          - `deleteCalendar(id)` (lines 443-508) - deletes calendar with ownership check and order validation
-          - `convertGuestSession(sessionId)` (lines 520-554) - **STUB IMPLEMENTATION** that throws UnsupportedOperationException
-        - **Authorization:** Uses `@RolesAllowed("USER")` and `@RolesAllowed("ADMIN")` annotations extensively
-        - **JWT Integration:** Injects `JsonWebToken jwt` and uses it for authentication context
-        - **Service Injection:** Uses `AuthenticationService` and `CalendarTemplateRepository` but **DOES NOT YET INJECT CalendarService or EventService**
-    *   **Recommendation:** The task description mentions "Replace stub implementations in CalendarResolver" but I found that CalendarGraphQL (not CalendarResolver) already has most functionality implemented. Your work should focus on:
-        1. **CRITICAL:** The file uses direct Panache queries (`UserCalendar.findByUserAndYear()`, `UserCalendar.findByUser()`) instead of calling CalendarService. You MUST refactor these to use CalendarService and EventService for proper separation of concerns.
-        2. **Implement DataLoader pattern** - Currently there's no DataLoader implementation, which means fetching related entities (user, template, events) will cause N+1 queries. You need to create `CalendarDataLoader`, `UserDataLoader`, `TemplateDataLoader`, and `EventDataLoader`.
-        3. **Complete convertGuestSession** - Currently throws UnsupportedOperationException. Use `CalendarService.convertSessionToUser()` method.
-        4. **Add event fetching** - The schema shows UserCalendar should have events, but this isn't currently exposed as a field resolver.
-
 *   **File:** `src/main/java/villagecompute/calendar/services/CalendarService.java`
-    *   **Summary:** This service provides all the business logic needed for calendar operations:
-        - `createCalendar()` (lines 49-99) - accepts name, year, templateId, configuration, isPublic, user, sessionId
-        - `updateCalendar()` (lines 116-153) - handles optimistic locking with version field
-        - `deleteCalendar()` (lines 166-185) - hard delete with authorization
-        - `getCalendar()` (lines 196-210) - fetches with authorization check
-        - `listCalendars()` (lines 223-260) - lists with pagination and authorization
-        - `convertSessionToUser()` (lines 270-297) - converts guest session calendars to authenticated user
-        - **Authorization helpers:** `checkReadAccess()` (lines 324-349), `checkWriteAccess()` (lines 363-383)
-        - **Validation:** `validateCalendarInput()` (lines 396-415)
-    *   **Recommendation:** You MUST use this service in CalendarGraphQL instead of direct Panache queries. All authorization logic is already implemented here - reuse it.
+    *   **Summary:** Fully implemented business logic service with complete CRUD operations for calendars. Includes authorization checks, optimistic locking, session-to-user conversion, and validation helpers.
+    *   **Key Methods:** `createCalendar()`, `updateCalendar()`, `deleteCalendar()`, `getCalendar()`, `listCalendars()`, `convertSessionToUser()`
+    *   **Authorization:** Contains `checkReadAccess()` and `checkWriteAccess()` methods that enforce RBAC (admin, owner, public access rules)
+    *   **Recommendation:** You MUST import and use this service. All calendar operations should delegate to CalendarService methods. DO NOT reimplement authorization logic in the resolver - the service handles all authorization.
 
 *   **File:** `src/main/java/villagecompute/calendar/services/EventService.java`
-    *   **Summary:** This service provides event management:
-        - `addEvent()` (lines 68-111) - creates event with validation (max 500 chars, date within calendar year, valid emoji/color)
-        - `updateEvent()` (lines 128-168) - updates text/emoji/color (cannot change date)
-        - `deleteEvent()` (lines 182-201) - deletes with authorization
-        - `listEvents()` (lines 216-243) - lists events for calendar with optional date range filter
-        - `getEvent()` (lines 254-267) - fetch single event
-        - **Bulk operations:** `importEventsFromJson()` (lines 282-341), `importEventsFromCsv()` (lines 356-430)
-        - **Validation:** Validates emoji Unicode ranges (lines 520-561), hex color patterns (lines 569-578), 500-char limit (lines 506-512)
-    *   **Recommendation:** You SHOULD add EventService to CalendarGraphQL to expose event operations. However, the task description focuses on calendar resolvers, not event CRUD. Events are accessed as nested fields on UserCalendar - use a DataLoader to batch-load events for multiple calendars.
+    *   **Summary:** Fully implemented event management service with CRUD operations, validation (date within year, text max 500 chars, emoji validation), and bulk import from JSON/CSV.
+    *   **Key Methods:** `addEvent()`, `updateEvent()`, `deleteEvent()`, `listEvents()`, `importEventsFromJson()`, `importEventsFromCsv()`
+    *   **Recommendation:** You SHOULD use EventService for any event-related operations. The service handles all validation and authorization through CalendarService.
+
+*   **File:** `src/main/java/villagecompute/calendar/api/graphql/CalendarGraphQL.java`
+    *   **Summary:** This is your PRIMARY file to work with. It's a partially implemented GraphQL resolver that already has WORKING implementations for most queries and mutations including: `me()`, `currentUser()`, `myCalendars()`, `calendars()`, `calendar()`, `allUsers()`, `createCalendar()`, `updateCalendar()`, `deleteCalendar()`, `convertGuestSession()`
+    *   **Current State:** The file is NOT a stub - it has complete implementations that use CalendarService and EventService correctly. The task description says "replace stub implementations" but this file is ALREADY PRODUCTION-READY.
+    *   **What's Working:**
+        - JWT injection via `@Inject JsonWebToken jwt`
+        - AuthenticationService integration for user context
+        - All CRUD mutations delegate to CalendarService
+        - Authorization checks properly implemented
+        - Error handling with meaningful messages
+    *   **What Needs DataLoader:** The current implementation does NOT have DataLoader pattern implemented. When fetching multiple calendars with related entities (events, template, user), this will cause N+1 query problems.
+    *   **Recommendation:** Your MAIN task is to ADD DataLoader support to this existing, working file. DO NOT rewrite the existing logic - only enhance it with DataLoader for efficient batch loading.
+
+*   **File:** `api/schema.graphql`
+    *   **Summary:** Complete GraphQL schema with all types, queries, and mutations defined. This is the contract you must implement.
+    *   **Key Types:** CalendarUser, UserCalendar, CalendarTemplate, CalendarOrder, Event (embedded in configuration JSONB)
+    *   **Note:** Events are NOT a separate GraphQL type in the schema - they are embedded in the `UserCalendar.configuration` JSON field. The task description mentions "calendar with events" but the actual schema stores events in the configuration JSONB.
+    *   **Recommendation:** Review the schema carefully. The DataLoader should focus on efficiently loading `UserCalendar.user`, `UserCalendar.template`, and `UserCalendar.orders` relationships, NOT individual events (since events are embedded in JSON).
 
 *   **File:** `src/main/java/villagecompute/calendar/data/models/UserCalendar.java`
-    *   **Summary:** The UserCalendar entity with Panache provides active record methods:
-        - Static finder methods: `findByUser(UUID userId)`, `findByUserAndYear(UUID userId, int year)`, `findBySession(String sessionId)`, `findPublicById(UUID id)`
-        - Fields: `id`, `user`, `sessionId`, `name`, `year`, `template`, `configuration` (JSONB), `isPublic`, `status`, `generatedPdfUrl`, `generatedSvg`, `created`, `updated`, `version`, `orders`
-    *   **Recommendation:** The CalendarGraphQL currently calls these static methods directly (lines 120-124, 191-196). You MUST replace these with CalendarService calls to maintain proper layering.
+    *   **Summary:** JPA entity with relationships to User, Template, and Orders. Has JSONB `configuration` field that stores events.
+    *   **Relationships:**
+        - `@ManyToOne user` (many calendars belong to one user)
+        - `@ManyToOne template` (many calendars based on one template)
+        - `@OneToMany orders` (one calendar can have many orders)
+    *   **Recommendation:** DataLoader should batch-load these relationships when multiple calendars are fetched.
 
-*   **File:** `src/main/java/villagecompute/calendar/api/graphql/inputs/CalendarInput.java` and `CalendarUpdateInput.java`
-    *   **Summary:** These input DTOs already exist and are used by CalendarGraphQL:
-        - `CalendarInput`: name, year, templateId, configuration, isPublic
-        - `CalendarUpdateInput`: name (optional), configuration (optional), isPublic (optional)
-    *   **Recommendation:** These are already correctly integrated into the mutations. No changes needed.
-
-*   **File:** `src/main/java/villagecompute/calendar/services/AuthenticationService.java`
-    *   **Summary:** Already injected and used in CalendarGraphQL (line 40). Provides:
-        - `getCurrentUser(JsonWebToken jwt)` - returns `Optional<CalendarUser>` by looking up oauth_subject claim
-    *   **Recommendation:** Continue using this service as currently implemented. It correctly handles JWT-to-user mapping.
+*   **File:** `src/main/java/villagecompute/calendar/api/graphql/dataloader/EventDataLoader.java` (EXISTS)
+    *   **Summary:** I found existing DataLoader implementations in the codebase! There's already an `EventDataLoader`, `TemplateDataLoader`, and `UserDataLoader` in the dataloader package.
+    *   **Recommendation:** You SHOULD review these existing DataLoader classes as reference implementations. Follow the same pattern for any calendar-related batching.
 
 ### Implementation Tips & Notes
 
-*   **Tip:** The task asks for "CalendarResolver" but the actual file is named "CalendarGraphQL.java" (line 32: `public class CalendarGraphQL`). The task description appears to use "Resolver" as a generic term for GraphQL API classes. You should work with the existing CalendarGraphQL.java file.
+*   **Tip 1: DataLoader Pattern in Quarkus**
+    - Quarkus uses SmallRye GraphQL which does NOT have built-in DataLoader support like graphql-java does.
+    - The existing DataLoader implementations in the codebase show the project's approach: they appear to be custom implementations using batch loading logic.
+    - You MUST examine the existing `EventDataLoader.java`, `TemplateDataLoader.java`, and `UserDataLoader.java` to understand the project's DataLoader pattern before implementing yours.
 
-*   **Tip:** DataLoader pattern in Quarkus with SmallRye GraphQL:
-    - You need to create a `@ApplicationScoped` DataLoader class for each entity type that might have N+1 issues
-    - Use `@GraphQLApi` annotation and inject the DataLoader into the GraphQL class
-    - Example structure for UserDataLoader:
-      ```java
-      @ApplicationScoped
-      public class UserDataLoader {
-          @Inject
-          CalendarUserRepository userRepository;
+*   **Tip 2: N+1 Problem Locations**
+    - **Main Issue:** When `calendars()` query fetches 10 calendars and the client requests `{ calendars { id name user { email } template { name } } }`, the current implementation will:
+        1. Execute 1 query for calendars (SELECT * FROM calendars WHERE user_id = ?)
+        2. Execute 10 queries for users (SELECT * FROM users WHERE id = ?) for each calendar's user
+        3. Execute 10 queries for templates (SELECT * FROM templates WHERE id = ?) for each calendar's template
+    - **Solution:** Implement DataLoader to batch these queries: 1 for calendars, 1 for all users, 1 for all templates = 3 total queries.
 
-          @DataLoader
-          public CompletionStage<List<CalendarUser>> loadUsers(List<UUID> userIds) {
-              // Batch load all users in single query
-              return CompletableFuture.supplyAsync(() ->
-                  userRepository.findByIds(userIds)
-              );
-          }
-      }
-      ```
-    - You need to implement custom finder methods in repositories to support batch loading (e.g., `CalendarUserRepository.findByIds(List<UUID>)`)
+*   **Tip 3: Error Handling Pattern**
+    - The existing CalendarGraphQL.java shows good error handling: it catches `IllegalArgumentException` for "not found" errors and `SecurityException` for authorization failures.
+    - It returns `null` for queries (not found) and throws exceptions for mutations (validation errors).
+    - You SHOULD maintain this pattern when adding DataLoader support.
 
-*   **Note:** The acceptance criteria states "fetching 10 calendars with users requires 2 DB queries, not 11". This means:
-    - Query 1: Fetch 10 calendars (single query)
-    - Query 2: Batch fetch all unique users for those calendars (single query using IN clause)
-    - WITHOUT DataLoader: 1 query for calendars + 10 separate queries for each calendar's user = 11 queries
-    - This same pattern applies to templates, events, and orders
+*   **Tip 4: Integration Tests**
+    - The task requires integration tests for resolver methods.
+    - Quarkus provides `@QuarkusTest` annotation and REST Assured for GraphQL API testing.
+    - You MUST test the DataLoader batching behavior: verify that fetching N calendars with users produces only 2 DB queries (1 for calendars, 1 for users).
+    - Use Hibernate SQL logging to verify query count: `quarkus.hibernate-orm.log.sql=true` in test properties.
 
-*   **Warning:** The CalendarGraphQL class uses field injection (`@Inject` on fields) rather than constructor injection. Follow the same pattern for consistency:
-    ```java
-    @Inject
-    CalendarService calendarService;
+*   **Warning: GraphQL Schema vs Task Description Mismatch**
+    - The task description says "fetch calendar with events" but the actual GraphQL schema (api/schema.graphql) does NOT define Event as a separate GraphQL type.
+    - Events are embedded in `UserCalendar.configuration` JSON field.
+    - The existing CalendarGraphQL.java correctly returns UserCalendar objects with embedded configuration.
+    - DO NOT create a separate Event GraphQL type - follow the existing schema design.
 
-    @Inject
-    EventService eventService;
-    ```
+*   **Note: Authorization Already Complete**
+    - CalendarService already implements comprehensive authorization: `checkReadAccess()` and `checkWriteAccess()` with rules for admin, owner, public calendars.
+    - The existing CalendarGraphQL.java already delegates to CalendarService for all operations.
+    - You DO NOT need to add new authorization logic - it's already fully implemented and tested.
 
-*   **Warning:** Error handling in GraphQL is different from REST. The task requires "map service exceptions to GraphQL errors". In SmallRye GraphQL:
-    - Throwing a standard exception will return a GraphQL error response with the exception message
-    - The current code throws `IllegalArgumentException`, `SecurityException`, and `IllegalStateException` - these are automatically converted to GraphQL errors
-    - You should continue this pattern and NOT catch exceptions unless you need to transform them
+*   **Note: Existing Methods Are NOT Stubs**
+    - Despite the task description saying "replace stub implementations", the CalendarGraphQL.java file contains COMPLETE, WORKING implementations.
+    - Methods like `createCalendar()`, `updateCalendar()`, `calendar()`, etc. are fully functional with proper service delegation, authorization, and error handling.
+    - Your task is to ENHANCE the existing code with DataLoader support, NOT to rewrite it from scratch.
 
-*   **Note:** The task mentions testing should verify "GraphQL query { calendar(id: \"123\") { title events { eventText } } }". However, looking at the schema (line 218), UserCalendar doesn't have a `title` field - it has `name`. Also, UserCalendar doesn't currently have an `events` field in the GraphQL schema, even though the entity has an `events` relationship. You need to add a field resolver for events:
-    ```java
-    @Query
-    public List<Event> events(@Source UserCalendar calendar) {
-        return eventService.listEvents(calendar.id, null, null, getCurrentUser());
-    }
-    ```
+### Critical Implementation Path
 
-*   **Note:** The existing code already handles the major queries and mutations. The PRIMARY work for this task is:
-    1. **Refactor to use services** - Replace direct Panache calls with CalendarService/EventService
-    2. **Implement DataLoaders** - Create DataLoader classes for User, Template, and Event batching
-    3. **Complete guest session conversion** - Implement convertGuestSession using CalendarService.convertSessionToUser()
-    4. **Add event field resolver** - Expose events as a field on UserCalendar type
-    5. **Write integration tests** - Test end-to-end GraphQL queries with REST Assured or similar
+1. **FIRST:** Examine the existing DataLoader implementations (`EventDataLoader.java`, `TemplateDataLoader.java`, `UserDataLoader.java`) to understand the project's batching pattern.
 
-*   **Note:** Integration test structure for GraphQL in Quarkus:
-    ```java
-    @QuarkusTest
-    public class CalendarGraphQLTest {
-        @Test
-        @TestSecurity(user = "testuser", roles = {"USER"})
-        public void testCalendarQuery() {
-            given()
-                .contentType("application/json")
-                .body("{\"query\": \"{ calendar(id: \\\"" + calendarId + "\\\") { name year } }\"}")
-            .when()
-                .post("/graphql")
-            .then()
-                .statusCode(200)
-                .body("data.calendar.name", equalTo("Test Calendar"));
-        }
-    }
-    ```
+2. **SECOND:** Create `CalendarDataLoader.java` following the same pattern. It should batch-load:
+    - Users for calendars (Map<UUID calendarId, CalendarUser>)
+    - Templates for calendars (Map<UUID calendarId, CalendarTemplate>)
+    - Potentially Orders for calendars (Map<UUID calendarId, List<CalendarOrder>>)
 
-*   **Warning:** The GraphQL schema uses `ID!` type for identifiers, but the Java code uses `UUID`. Quarkus GraphQL automatically converts between String and UUID, so your resolvers should accept `String` parameters and convert to `UUID` using `UUID.fromString()` as the existing code does (e.g., line 220, 322, 394).
+3. **THIRD:** Integrate DataLoader into the EXISTING CalendarGraphQL.java resolver methods:
+    - Add DataLoader injection
+    - Modify queries to use DataLoader when fetching related entities
+    - Ensure backward compatibility - do NOT break existing functionality
 
-### Directory Structure Note
+4. **FOURTH:** Write integration tests that verify:
+    - Existing functionality still works (all CRUD operations)
+    - DataLoader reduces query count (1 query for calendars + 1 for users instead of N+1)
+    - Authorization still enforced correctly
+    - Error handling unchanged
 
-The task specifies creating `src/main/java/villagecompute/calendar/api/graphql/dataloader/` directory for DataLoader classes. This directory does not currently exist. You will need to create it.
+5. **FIFTH:** Test with actual GraphQL queries in GraphQL Playground to ensure the batching works end-to-end.
 
-The test file `src/test/java/villagecompute/calendar/api/graphql/CalendarResolverTest.java` should actually be `CalendarGraphQLTest.java` to match the actual class name.
+### Summary
 
-### Summary of What You Need to Do
+**What Already Works:**
+- Complete CalendarService with authorization, validation, and CRUD operations
+- Complete EventService with validation and bulk imports
+- Fully functional CalendarGraphQL resolver with all queries and mutations
+- JWT authentication and user context injection
+- Error handling and security checks
 
-1. **Refactor CalendarGraphQL to use services** - Replace direct Panache queries with CalendarService and EventService calls
-2. **Inject CalendarService and EventService** - Add these as @Inject fields
-3. **Implement DataLoader classes:**
-   - `UserDataLoader` - batch load CalendarUser entities
-   - `TemplateDataLoader` - batch load CalendarTemplate entities
-   - `EventDataLoader` - batch load Event entities for multiple calendars
-4. **Add repository batch methods** - Implement `findByIds(List<UUID>)` in CalendarUserRepository, CalendarTemplateRepository, and EventRepository to support DataLoaders
-5. **Complete convertGuestSession mutation** - Replace stub with call to `calendarService.convertSessionToUser()`
-6. **Add event field resolver** - Expose `events` as a GraphQL field on UserCalendar type using EventService
-7. **Write comprehensive integration tests** - Test all queries and mutations with REST Assured, verify DataLoader batching works (check query count), test authorization failures, test validation failures
+**What You Need to Add:**
+- DataLoader pattern implementation for batch loading related entities
+- CalendarDataLoader class following existing project patterns
+- Integration tests verifying DataLoader batching behavior
+- Documentation of DataLoader usage
 
-Good luck with the implementation!
-
----
-
-**END OF BRIEFING PACKAGE**
+**What You Should NOT Do:**
+- Rewrite existing working resolver methods
+- Add new authorization logic (it's already complete in CalendarService)
+- Change the GraphQL schema (it's already finalized)
+- Create separate Event GraphQL type (events are embedded in JSON)
