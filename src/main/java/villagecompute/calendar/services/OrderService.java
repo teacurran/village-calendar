@@ -7,9 +7,11 @@ import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
+import villagecompute.calendar.util.OrderNumberGenerator;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.Year;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -54,23 +56,39 @@ public class OrderService {
             throw new IllegalArgumentException("Unit price must be positive");
         }
 
-        // Calculate total price
-        BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
+        // Calculate subtotal
+        BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
 
-        // Create the order
+        // Create the order (needed for tax/shipping calculation)
         CalendarOrder order = new CalendarOrder();
         order.user = user;
         order.calendar = calendar;
         order.quantity = quantity;
         order.unitPrice = unitPrice;
-        order.totalPrice = totalPrice;
-        order.status = CalendarOrder.STATUS_PENDING;
         order.shippingAddress = shippingAddress;
+
+        // Calculate tax and shipping
+        BigDecimal tax = calculateTax(order);
+        BigDecimal shipping = calculateShipping(order);
+
+        // Calculate total price: subtotal + tax + shipping
+        BigDecimal totalPrice = subtotal.add(tax).add(shipping);
+        order.totalPrice = totalPrice;
+
+        // Set initial status
+        order.status = CalendarOrder.STATUS_PENDING;
+
+        // Generate unique order number
+        int currentYear = Year.now().getValue();
+        long orderCountThisYear = CalendarOrder.countOrdersByYear(currentYear);
+        String orderNumber = OrderNumberGenerator.generateOrderNumber(currentYear, orderCountThisYear);
+        order.orderNumber = orderNumber;
 
         // Persist the order
         order.persist();
 
-        LOG.infof("Created order %s with total price $%.2f", order.id, totalPrice);
+        LOG.infof("Created order %s (number: %s) with total price $%.2f (subtotal: $%.2f, tax: $%.2f, shipping: $%.2f)",
+            order.id, orderNumber, totalPrice, subtotal, tax, shipping);
 
         return order;
     }
@@ -172,6 +190,108 @@ public class OrderService {
      */
     public Optional<CalendarOrder> findByStripePaymentIntent(String paymentIntentId) {
         return CalendarOrder.findByStripePaymentIntent(paymentIntentId).firstResultOptional();
+    }
+
+    /**
+     * Cancel an order.
+     * Only allows cancellation of orders that are not yet in terminal states.
+     * For paid orders, a refund may need to be processed separately via PaymentService (I3.T3).
+     *
+     * @param orderId Order ID to cancel
+     * @param userId User requesting cancellation (for authorization)
+     * @param isAdmin Whether the requesting user is an admin
+     * @param cancellationReason Reason for cancellation
+     * @return Cancelled order
+     * @throws IllegalArgumentException if order not found
+     * @throws SecurityException if user is not authorized to cancel the order
+     * @throws IllegalStateException if order cannot be cancelled (already terminal)
+     */
+    @Transactional
+    public CalendarOrder cancelOrder(UUID orderId, UUID userId, boolean isAdmin, String cancellationReason) {
+        LOG.infof("Cancelling order %s, requested by user %s (admin: %b)", orderId, userId, isAdmin);
+
+        // Find the order
+        Optional<CalendarOrder> orderOpt = CalendarOrder.<CalendarOrder>findByIdOptional(orderId);
+        if (orderOpt.isEmpty()) {
+            LOG.errorf("Order not found: %s", orderId);
+            throw new IllegalArgumentException("Order not found");
+        }
+
+        CalendarOrder order = orderOpt.get();
+
+        // Authorization check: user must own the order or be an admin
+        if (!isAdmin && !order.user.id.equals(userId)) {
+            LOG.errorf("User %s attempted to cancel order %s owned by user %s", userId, orderId, order.user.id);
+            throw new SecurityException("You are not authorized to cancel this order");
+        }
+
+        // Validate that the order can be cancelled
+        if (order.isTerminal()) {
+            LOG.errorf("Cannot cancel terminal order %s (status: %s)", orderId, order.status);
+            throw new IllegalStateException(
+                String.format("Cannot cancel order in %s status", order.status)
+            );
+        }
+
+        // Validate status transition to CANCELLED
+        validateStatusTransition(order.status, CalendarOrder.STATUS_CANCELLED);
+
+        // Use the entity helper method to cancel
+        String oldStatus = order.status;
+        order.cancel();
+
+        // Add cancellation note
+        String timestamp = Instant.now().toString();
+        String noteEntry = String.format("[%s] Order cancelled from status %s. Reason: %s\n",
+            timestamp, oldStatus, cancellationReason != null ? cancellationReason : "No reason provided");
+        order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
+
+        // Note: Actual Stripe refund processing will be handled by PaymentService in I3.T3
+        if (CalendarOrder.STATUS_PAID.equals(oldStatus) && order.stripePaymentIntentId != null) {
+            String refundNote = String.format("[%s] TODO: Process refund via PaymentService for payment intent %s\n",
+                timestamp, order.stripePaymentIntentId);
+            order.notes += refundNote;
+        }
+
+        order.persist();
+
+        LOG.infof("Cancelled order %s from status %s", orderId, oldStatus);
+
+        return order;
+    }
+
+    /**
+     * Calculate tax for an order.
+     * TODO: Implement actual tax calculation in task I3.T8.
+     * For now, returns zero as a placeholder.
+     *
+     * @param order Order to calculate tax for
+     * @return Tax amount (currently always zero)
+     */
+    private BigDecimal calculateTax(CalendarOrder order) {
+        // TODO: Implement tax calculation based on shipping address in I3.T8
+        // Tax calculation will depend on:
+        // - Shipping address (state/country)
+        // - Tax rates configuration
+        // - Taxable amount (subtotal)
+        return BigDecimal.ZERO;
+    }
+
+    /**
+     * Calculate shipping cost for an order.
+     * TODO: Implement actual shipping calculation in task I3.T8.
+     * For now, returns zero as a placeholder.
+     *
+     * @param order Order to calculate shipping for
+     * @return Shipping cost (currently always zero)
+     */
+    private BigDecimal calculateShipping(CalendarOrder order) {
+        // TODO: Implement shipping calculation based on order details in I3.T8
+        // Shipping calculation will depend on:
+        // - Shipping address (domestic vs international)
+        // - Quantity and weight
+        // - Shipping method (standard, express, etc.)
+        return BigDecimal.ZERO;
     }
 
     /**

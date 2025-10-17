@@ -26,7 +26,8 @@ import java.util.UUID;
         @Index(name = "idx_calendar_orders_user", columnList = "user_id, created DESC"),
         @Index(name = "idx_calendar_orders_status", columnList = "status, created DESC"),
         @Index(name = "idx_calendar_orders_calendar", columnList = "calendar_id"),
-        @Index(name = "idx_calendar_orders_stripe_payment", columnList = "stripe_payment_intent_id")
+        @Index(name = "idx_calendar_orders_stripe_payment", columnList = "stripe_payment_intent_id"),
+        @Index(name = "idx_calendar_orders_order_number", columnList = "order_number", unique = true)
     }
 )
 public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
@@ -82,6 +83,10 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
 
     @Column(name = "shipped_at")
     public Instant shippedAt;
+
+    @Size(max = 50)
+    @Column(name = "order_number", unique = true, length = 50)
+    public String orderNumber;
 
     // Order status constants
     public static final String STATUS_PENDING = "PENDING";
@@ -142,6 +147,26 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
      */
     public static PanacheQuery<CalendarOrder> findRecentOrders(Instant since) {
         return find("created >= ?1 ORDER BY created DESC", since);
+    }
+
+    /**
+     * Find order by order number (unique display number).
+     *
+     * @param orderNumber Order number (e.g., "VC-2025-00001")
+     * @return Query of orders
+     */
+    public static PanacheQuery<CalendarOrder> findByOrderNumber(String orderNumber) {
+        return find("orderNumber", orderNumber);
+    }
+
+    /**
+     * Count orders created in a specific year.
+     *
+     * @param year Year to count orders for
+     * @return Count of orders created in the specified year
+     */
+    public static long countOrdersByYear(int year) {
+        return count("EXTRACT(YEAR FROM created) = ?1", year);
     }
 
     // Helper methods

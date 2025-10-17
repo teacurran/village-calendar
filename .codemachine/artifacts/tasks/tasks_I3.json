@@ -27,7 +27,7 @@
     "acceptance_criteria": "OrderService.createOrder() calculates tax and shipping, persists order, Order number format: \"VC-YYYY-NNNNN\" (e.g., VC-2025-00001), OrderService.updateOrderStatus() enforces valid transitions (PENDING can go to PAID or CANCELLED, but SHIPPED cannot go to PENDING), OrderRepository.findByOrderNumber() retrieves order by display number, Unit tests verify order creation, status transitions, cancellation logic",
     "dependencies": ["I1.T8"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I3.T3",

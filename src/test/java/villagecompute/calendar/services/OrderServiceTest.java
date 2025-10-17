@@ -107,6 +107,8 @@ class OrderServiceTest {
         assertEquals(CalendarOrder.STATUS_PENDING, order.status);
         assertNotNull(order.shippingAddress);
         assertNull(order.paidAt);
+        assertNotNull(order.orderNumber, "Order number should be generated");
+        assertTrue(order.orderNumber.matches("VC-\\d{4}-\\d{5}"), "Order number should match format VC-YYYY-NNNNN");
     }
 
     @Test
@@ -332,6 +334,253 @@ class OrderServiceTest {
         order = CalendarOrder.findById(order.id);
         assertEquals(CalendarOrder.STATUS_CANCELLED, order.status);
         assertTrue(order.isTerminal());
+    }
+
+    @Test
+    @Transactional
+    void testOrderNumberGeneration() {
+        // Given - Create multiple orders
+        CalendarOrder order1 = createTestOrder();
+        CalendarOrder order2 = createTestOrder();
+        CalendarOrder order3 = createTestOrder();
+
+        // Then - Order numbers should be sequential
+        assertNotNull(order1.orderNumber);
+        assertNotNull(order2.orderNumber);
+        assertNotNull(order3.orderNumber);
+
+        // Verify format
+        assertTrue(order1.orderNumber.matches("VC-\\d{4}-\\d{5}"));
+        assertTrue(order2.orderNumber.matches("VC-\\d{4}-\\d{5}"));
+        assertTrue(order3.orderNumber.matches("VC-\\d{4}-\\d{5}"));
+
+        // Verify uniqueness
+        assertNotEquals(order1.orderNumber, order2.orderNumber);
+        assertNotEquals(order2.orderNumber, order3.orderNumber);
+        assertNotEquals(order1.orderNumber, order3.orderNumber);
+    }
+
+    @Test
+    @Transactional
+    void testOrderNumberIsUnique() {
+        // Given
+        CalendarOrder order1 = createTestOrder();
+        String orderNumber = order1.orderNumber;
+
+        // When - Try to find by order number
+        Optional<CalendarOrder> foundOrder = CalendarOrder.findByOrderNumber(orderNumber).firstResultOptional();
+
+        // Then
+        assertTrue(foundOrder.isPresent());
+        assertEquals(order1.id, foundOrder.get().id);
+        assertEquals(orderNumber, foundOrder.get().orderNumber);
+    }
+
+    @Test
+    @Transactional
+    void testCancelOrderFromPending() {
+        // Given
+        CalendarOrder order = createTestOrder();
+        String cancellationReason = "Customer changed mind";
+
+        // When
+        CalendarOrder cancelledOrder = orderService.cancelOrder(
+            order.id,
+            testUser.id,
+            false,
+            cancellationReason
+        );
+
+        // Then
+        assertNotNull(cancelledOrder);
+        assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status);
+        assertNotNull(cancelledOrder.notes);
+        assertTrue(cancelledOrder.notes.contains(cancellationReason));
+        assertTrue(cancelledOrder.notes.contains("Order cancelled from status PENDING"));
+        assertTrue(cancelledOrder.isTerminal());
+    }
+
+    @Test
+    @Transactional
+    void testCancelOrderFromPaid() {
+        // Given
+        CalendarOrder order = createTestOrder();
+        order.stripePaymentIntentId = "pi_test_12345";
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PAID, "Payment confirmed");
+        order = CalendarOrder.findById(order.id);
+
+        // When
+        CalendarOrder cancelledOrder = orderService.cancelOrder(
+            order.id,
+            testUser.id,
+            false,
+            "Customer requested refund"
+        );
+
+        // Then
+        assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status);
+        assertNotNull(cancelledOrder.notes);
+        assertTrue(cancelledOrder.notes.contains("Customer requested refund"));
+        assertTrue(cancelledOrder.notes.contains("TODO: Process refund via PaymentService"));
+        assertTrue(cancelledOrder.notes.contains("pi_test_12345"));
+    }
+
+    @Test
+    @Transactional
+    void testCancelOrderUnauthorizedUser() {
+        // Given
+        CalendarOrder order = createTestOrder();
+        UUID unauthorizedUserId = UUID.randomUUID();
+
+        // When & Then
+        assertThrows(SecurityException.class, () ->
+            orderService.cancelOrder(
+                order.id,
+                unauthorizedUserId,
+                false, // Not admin
+                "Unauthorized attempt"
+            )
+        );
+    }
+
+    @Test
+    @Transactional
+    void testCancelOrderAsAdmin() {
+        // Given
+        CalendarOrder order = createTestOrder();
+        UUID adminUserId = UUID.randomUUID(); // Different user
+
+        // When - Admin can cancel any order
+        CalendarOrder cancelledOrder = orderService.cancelOrder(
+            order.id,
+            adminUserId,
+            true, // Is admin
+            "Admin cancellation"
+        );
+
+        // Then
+        assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status);
+    }
+
+    @Test
+    @Transactional
+    void testCancelTerminalOrderThrowsException() {
+        // Given
+        CalendarOrder order = createTestOrder();
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PAID, "Paid");
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_SHIPPED, "Shipped");
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_DELIVERED, "Delivered");
+
+        // When & Then - Cannot cancel delivered order
+        assertThrows(IllegalStateException.class, () ->
+            orderService.cancelOrder(
+                order.id,
+                testUser.id,
+                false,
+                "Cannot cancel delivered order"
+            )
+        );
+    }
+
+    @Test
+    @Transactional
+    void testCancelAlreadyCancelledOrder() {
+        // Given
+        CalendarOrder order = createTestOrder();
+        orderService.cancelOrder(order.id, testUser.id, false, "First cancellation");
+
+        // When & Then - Cannot cancel already cancelled order
+        assertThrows(IllegalStateException.class, () ->
+            orderService.cancelOrder(
+                order.id,
+                testUser.id,
+                false,
+                "Second cancellation"
+            )
+        );
+    }
+
+    @Test
+    @Transactional
+    void testCancelNonExistentOrder() {
+        // Given
+        UUID nonExistentId = UUID.randomUUID();
+
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () ->
+            orderService.cancelOrder(
+                nonExistentId,
+                testUser.id,
+                false,
+                "Cancel non-existent"
+            )
+        );
+    }
+
+    @Test
+    @Transactional
+    void testCancelOrderFromProcessing() {
+        // Given
+        CalendarOrder order = createTestOrder();
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PAID, "Payment confirmed");
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PROCESSING, "Order processing");
+
+        // When
+        CalendarOrder cancelledOrder = orderService.cancelOrder(
+            order.id,
+            testUser.id,
+            false,
+            "Cancel during processing"
+        );
+
+        // Then
+        assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status);
+        assertTrue(cancelledOrder.notes.contains("Order cancelled from status PROCESSING"));
+    }
+
+    @Test
+    @Transactional
+    void testOrderTotalCalculation() {
+        // Given - Tax and shipping are currently zero (placeholders)
+        Integer quantity = 3;
+        BigDecimal unitPrice = new BigDecimal("25.00");
+
+        // When
+        CalendarOrder order = orderService.createOrder(
+            testUser,
+            testCalendar,
+            quantity,
+            unitPrice,
+            testShippingAddress
+        );
+
+        // Then - Total should be subtotal + tax (0) + shipping (0)
+        BigDecimal expectedTotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
+        assertEquals(expectedTotal, order.totalPrice);
+        assertEquals(new BigDecimal("75.00"), order.totalPrice);
+    }
+
+    @Test
+    @Transactional
+    void testMultipleOrdersHaveUniqueOrderNumbers() {
+        // Given - Create 10 orders
+        List<CalendarOrder> orders = new java.util.ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            orders.add(createTestOrder());
+        }
+
+        // Then - All order numbers should be unique
+        java.util.Set<String> orderNumbers = orders.stream()
+            .map(o -> o.orderNumber)
+            .collect(java.util.stream.Collectors.toSet());
+
+        assertEquals(10, orderNumbers.size(), "All 10 order numbers should be unique");
+
+        // Verify all match the format
+        orders.forEach(order -> {
+            assertNotNull(order.orderNumber);
+            assertTrue(order.orderNumber.matches("VC-\\d{4}-\\d{5}"));
+        });
     }
 
     // Helper method to create a test order
