@@ -189,7 +189,7 @@ const viewOrders = () => {
 };
 
 const browseTemplates = () => {
-  router.push("/");
+  router.push("/templates");
 };
 
 // Load data on mount
