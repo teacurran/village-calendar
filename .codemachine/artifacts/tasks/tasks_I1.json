@@ -177,7 +177,7 @@
     "acceptance_criteria": "Push to main branch triggers CI workflow, all jobs pass, Docker image pushed to Docker Hub with correct tags, Beta deployment workflow successfully updates k3s deployment, Production workflow shows approval gate in GitHub Actions UI, Smoke tests pass after deployment (health check returns 200), CICD guide tested with fresh GitHub repository setup",
     "dependencies": ["I1.T1", "I1.T10"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T13",

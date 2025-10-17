@@ -129,10 +129,10 @@
                   - name: docker-registry-secret
                 containers:
                   - name: {{ app_name }}
-                    image: {{ registry_user }}/village-calendar:{{ image_tag }}
+                    image: villagecompute/calendar-api:{{ image_tag }}
                     imagePullPolicy: Always
                     ports:
-                      - containerPort: 8080
+                      - containerPort: 8030
                         name: http
                         protocol: TCP
                     env:
@@ -207,8 +207,7 @@
                       # Application settings
                       - name: QUARKUS_PROFILE
                         value: "production"
-                      - name: QUARKUS_HTTP_PORT
-                        value: "8080"
+                      # Port 8030 is configured in application.properties, no override needed
 
                     resources:
                       requests:
@@ -221,7 +220,7 @@
                     livenessProbe:
                       httpGet:
                         path: /q/health/live
-                        port: 8080
+                        port: 8030
                       initialDelaySeconds: 30
                       periodSeconds: 10
                       timeoutSeconds: 3
@@ -230,7 +229,7 @@
                     readinessProbe:
                       httpGet:
                         path: /q/health/ready
-                        port: 8080
+                        port: 8030
                       initialDelaySeconds: 10
                       periodSeconds: 5
                       timeoutSeconds: 3
@@ -254,7 +253,7 @@
               app: {{ app_name }}
             ports:
               - port: 80
-                targetPort: 8080
+                targetPort: 8030
                 protocol: TCP
                 name: http
 

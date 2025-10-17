@@ -560,8 +560,10 @@ kubectl get svc -n calendar-prod
 
 **Issue**: Application port mismatch
 ```bash
-# Verify application is listening on port 8080 (default Quarkus port)
-# If changed, update Ansible manifest containerPort and health check port
+# Verify application is listening on port 8030 (configured in application.properties)
+# Note: The Village Calendar application uses port 8030 internally.
+# The Kubernetes Service exposes this as port 80 externally.
+# If port is changed, update Ansible manifest containerPort and health check port
 ```
 
 #### 5. Namespace Does Not Exist
