@@ -42,7 +42,7 @@
     "acceptance_criteria": "Webhook endpoint validates Stripe signature, rejects invalid requests, checkout.session.completed event creates Payment record, updates Order status to PAID, Duplicate webhook delivery (same event ID) does not create duplicate payments, Payment success triggers email job enqueue (order confirmation), Integration test simulates Stripe webhook POST, verifies order status change, charge.refunded webhook updates Payment record with refund amount",
     "dependencies": ["I3.T1", "I3.T2"],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I3.T4",

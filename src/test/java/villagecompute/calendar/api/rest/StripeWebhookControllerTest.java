@@ -6,6 +6,7 @@ import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.*;
@@ -51,6 +52,9 @@ public class StripeWebhookControllerTest {
 
     @Inject
     OrderService orderService;
+
+    @Inject
+    EntityManager entityManager;
 
     @ConfigProperty(name = "stripe.webhook.secret")
     String webhookSecret;
@@ -263,6 +267,9 @@ public class StripeWebhookControllerTest {
             .then()
             .statusCode(200);
 
+        // Clear persistence context to ensure fresh read from database
+        entityManager.clear();
+
         // Verify order updated to PAID (fetch fresh from DB)
         order = CalendarOrder.findById(testOrder.id);
         assertEquals(CalendarOrder.STATUS_PAID, order.status);
@@ -308,6 +315,9 @@ public class StripeWebhookControllerTest {
             .post("/api/webhooks/stripe")
             .then()
             .statusCode(200);
+
+        // Clear persistence context to ensure fresh read from database
+        entityManager.clear();
 
         // Verify email job enqueued
         List<DelayedJob> jobs = DelayedJob.find("actorId", testOrder.id.toString()).list();
@@ -362,6 +372,9 @@ public class StripeWebhookControllerTest {
             .then()
             .statusCode(200);
 
+        // Clear persistence context to ensure fresh read from database
+        entityManager.clear();
+
         // Verify order is PAID
         CalendarOrder order = CalendarOrder.findById(testOrder.id);
         assertEquals(CalendarOrder.STATUS_PAID, order.status);
@@ -379,6 +392,9 @@ public class StripeWebhookControllerTest {
             .post("/api/webhooks/stripe")
             .then()
             .statusCode(200);
+
+        // Clear persistence context to ensure fresh read from database
+        entityManager.clear();
 
         // Verify order still PAID (no change)
         order = CalendarOrder.findById(testOrder.id);
@@ -444,6 +460,9 @@ public class StripeWebhookControllerTest {
             .post("/api/webhooks/stripe")
             .then()
             .statusCode(200);
+
+        // Clear persistence context to ensure fresh read from database
+        entityManager.clear();
 
         // Verify order updated
         CalendarOrder order = CalendarOrder.findById(orderId);
@@ -512,6 +531,9 @@ public class StripeWebhookControllerTest {
             .then()
             .statusCode(200);
 
+        // Clear persistence context to ensure fresh read from database
+        entityManager.clear();
+
         // Verify refund recorded in order notes
         CalendarOrder updatedOrder = CalendarOrder.findById(testOrder.id);
         assertNotNull(updatedOrder.notes);
@@ -570,6 +592,9 @@ public class StripeWebhookControllerTest {
             .then()
             .statusCode(200);
 
+        // Clear persistence context to ensure fresh read from database
+        entityManager.clear();
+
         CalendarOrder orderAfterFirst = CalendarOrder.findById(testOrder.id);
         String notesAfterFirst = orderAfterFirst.notes;
         int refundCount1 = countOccurrences(notesAfterFirst, "re_test_idempotent");
@@ -584,6 +609,9 @@ public class StripeWebhookControllerTest {
             .post("/api/webhooks/stripe")
             .then()
             .statusCode(200);
+
+        // Clear persistence context to ensure fresh read from database
+        entityManager.clear();
 
         // Verify refund NOT duplicated in notes
         CalendarOrder orderAfterSecond = CalendarOrder.findById(testOrder.id);
