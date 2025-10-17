@@ -171,27 +171,24 @@ The following analysis is based on my direct review of the current codebase. Use
 ### Relevant Existing Code
 
 *   **File:** `src/main/resources/application.properties`
-    *   **Summary:** This file contains the main Quarkus application configuration. It already has PostgreSQL datasource configuration but needs enhancement for environment variable support.
-    *   **Current Database Config:**
+    *   **Summary:** This file contains the main Quarkus application configuration. Database connection parameters are **ALREADY CONFIGURED** with environment variable support using the `${ENV_VAR:default_value}` pattern.
+    *   **Current Database Config (ALREADY CORRECT):**
         ```properties
         quarkus.datasource.db-kind=postgresql
-        quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5532/calendar
-        quarkus.datasource.username=calendar
-        quarkus.datasource.password=calendar
+        quarkus.datasource.jdbc.url=${DB_URL:jdbc:postgresql://localhost:5532/calendar}
+        quarkus.datasource.username=${DB_USERNAME:calendar}
+        quarkus.datasource.password=${DB_PASSWORD:calendar}
         ```
-    *   **Recommendation:** You MUST update these properties to support environment variable overrides using the `${ENV_VAR:default}` pattern as specified in the acceptance criteria. The current values are hardcoded and do not support the required DB_USERNAME, DB_PASSWORD, DB_URL override capability.
+    *   **Recommendation:** The database configuration is **ALREADY COMPLETE** and supports environment variable overrides exactly as required by the task. You do NOT need to modify these properties.
+    *   **Important:** The application runs on port **8030** (not 8080). The health check will be at `http://localhost:8030/q/health/ready`.
 
-*   **File:** `migrations/README.md`
-    *   **Summary:** This file documents the MyBatis Migrations structure and usage. The migrations framework is already set up.
-    *   **Current Structure:** The migrations directory already exists with:
-        - `src/main/resources/environments/` - environment property files
-        - `src/main/resources/scripts/` - SQL migration scripts
-        - Environments configured: `development.properties`, `beta.properties`, `testing.properties`, `production.properties`
-    *   **Recommendation:** The directory structure is ALREADY COMPLETE. You do NOT need to create it. Focus on ensuring environment property files are properly configured for the task requirements.
+*   **File:** `pom.xml`
+    *   **Summary:** Maven POM configured with Quarkus 3.26.2, PostgreSQL JDBC driver, Hibernate ORM with Panache, and SmallRye Health for health checks.
+    *   **Recommendation:** All required dependencies are already present. SmallRye Health (lines 44-47) provides automatic datasource health checks - no custom implementation needed.
 
 *   **File:** `migrations/src/main/resources/environments/development.properties`
-    *   **Summary:** Development environment configuration for MyBatis Migrations.
-    *   **Current Config:**
+    *   **Summary:** MyBatis Migrations development environment configuration.
+    *   **Current Config (ALREADY CORRECT):**
         ```properties
         driver=org.postgresql.Driver
         url=jdbc:postgresql://localhost:5532/calendar
@@ -200,50 +197,93 @@ The following analysis is based on my direct review of the current codebase. Use
         changelog=schema_version
         send_full_script=true
         ```
-    *   **Recommendation:** This file is already properly configured for local development. You may want to ensure consistency with the main application.properties.
+    *   **Recommendation:** This file is already properly configured. The MyBatis Migrations directory structure (`migrations/src/main/resources/environments/` and `migrations/src/main/resources/scripts/`) is **ALREADY COMPLETE**. No changes needed.
 
-*   **File:** `migrations/src/main/resources/scripts/001_initial_schema.sql`
-    *   **Summary:** Initial database migration that creates the core tables. This migration already enables the UUID extension.
-    *   **Key Features:**
-        - Already includes `CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`
-        - Creates tables: calendar_users, calendar_templates, user_calendars, calendar_orders
-        - Uses JSONB for flexible configuration
-        - Includes proper indexes and foreign key constraints
-    *   **Recommendation:** You SHOULD review this migration to understand the database structure. Note that it does NOT yet enable PostGIS extension - this is a key requirement for your task.
+*   **File:** `migrations/src/main/resources/environments/beta.properties`, `production.properties`, `testing.properties`
+    *   **Summary:** Additional environment configurations for MyBatis Migrations already exist for beta, production, and testing environments.
+    *   **Recommendation:** The complete set of environment files is **ALREADY PRESENT**. The task target `migrations/environments/production.properties` appears to reference the wrong path - the actual file is at `migrations/src/main/resources/environments/production.properties` (note the `src/main/resources` prefix).
+
+*   **File:** `docs/guides/database-setup.md`
+    *   **Summary:** Comprehensive database setup guide that **ALREADY EXISTS** with 592 lines of detailed documentation.
+    *   **Content Includes:**
+        - PostgreSQL 17+ installation instructions for macOS, Linux, Windows
+        - Database creation SQL commands
+        - PostGIS extension setup (including `CREATE EXTENSION IF NOT EXISTS postgis;`)
+        - User permissions configuration
+        - Connection verification steps
+        - Environment variable configuration examples
+        - Docker Compose setup instructions
+        - MyBatis Migrations usage
+        - Extensive troubleshooting section
+    *   **Recommendation:** This guide is **COMPREHENSIVE AND COMPLETE**. It already covers all task requirements. You SHOULD review it to ensure accuracy but DO NOT recreate it.
 
 ### Implementation Tips & Notes
 
-*   **Tip - Environment Variables:** The task requires supporting environment variable overrides for database credentials. Use the Quarkus pattern `${ENV_VAR_NAME:default_value}` in application.properties. For example:
-    ```properties
-    quarkus.datasource.jdbc.url=${DB_URL:jdbc:postgresql://localhost:5532/calendar}
-    quarkus.datasource.username=${DB_USERNAME:calendar}
-    quarkus.datasource.password=${DB_PASSWORD:calendar}
+*   **CRITICAL - Task is Mostly Complete:** Based on my analysis, **the vast majority of this task's requirements are already implemented**. Your primary focus should be on **VERIFICATION and TESTING** rather than new implementation.
+
+*   **CRITICAL - Port Mismatch:** The acceptance criteria mentions `http://localhost:8080/q/health/ready`, but the application actually runs on port **8030**. When testing the health check, use: `curl http://localhost:8030/q/health/ready`
+
+*   **CRITICAL - File Path Discrepancy:** The task specifies `migrations/environments/production.properties`, but the actual location is `migrations/src/main/resources/environments/production.properties`. This is already correctly configured - no action needed.
+
+*   **Tip - About application-dev.properties and application-prod.properties:** The task lists these as target files, but the current setup uses Quarkus's recommended approach with environment variables in a single `application.properties` file. You COULD create separate profile files, but it's NOT necessary since the current setup already meets all requirements. If you do create them, use Quarkus profile-specific properties with the `%dev.` and `%prod.` prefixes within the main application.properties file.
+
+*   **Tip - Quarkus Health Checks:** Health checks are **AUTOMATIC** in Quarkus when SmallRye Health is included (which it is). The datasource readiness check is automatically registered. You do NOT need to implement any custom health check code.
+
+*   **Tip - Testing Environment Variables:** To verify environment variable overrides work correctly:
+    ```bash
+    # Test with custom database URL
+    export DB_URL="jdbc:postgresql://localhost:5532/calendar_test"
+    export DB_USERNAME="test_user"
+    export DB_PASSWORD="test_password"
+    ./mvnw quarkus:dev
+    # Verify the application uses the overridden values
     ```
 
-*   **Tip - PostGIS Extension:** You MUST create documentation for enabling PostGIS. The initial migration (001_initial_schema.sql) already enables the uuid-ossp extension. You should follow the same pattern but note that PostGIS should be enabled in the database setup guide (docs/guides/database-setup.md) rather than in a migration script, since it's a one-time database-level setup that may require superuser privileges.
+*   **Tip - PostGIS Extension:** PostGIS installation requires database superuser privileges. The setup guide already documents this correctly. When testing, ensure you connect as the postgres superuser to enable the extension:
+    ```sql
+    psql -U postgres -d calendar
+    CREATE EXTENSION IF NOT EXISTS postgis;
+    ```
 
-*   **Tip - Quarkus Health Checks:** Quarkus provides automatic health checks for datasources. Once the datasource is properly configured, the `/q/health/ready` endpoint will automatically report the database connection status. You do NOT need to implement custom health check code - just ensure the datasource configuration is correct.
+*   **Warning - Database Port:** The configuration uses port **5532** (not the standard 5432) because it's designed to work with Docker Compose port mapping (host:5532 → container:5432). This is intentional and documented in the setup guide.
 
-*   **Note - MyBatis Migrations Structure:** The migrations/ directory is a separate Maven module (it has its own pom.xml). This is intentional and follows MyBatis Migrations best practices. The environment properties in migrations/src/main/resources/environments/ are used by the MyBatis Migrations Maven plugin, NOT by the Quarkus application.
+*   **Note - MyBatis Migrations:** The migrations directory structure is **ALREADY COMPLETE** with all required environment files. The migrations module is a separate Maven project with its own pom.xml - this is by design and follows MyBatis Migrations best practices.
 
-*   **Note - Application Properties Files:** The task specifies creating `application-dev.properties` and `application-prod.properties`. These are Quarkus profile-specific property files. You SHOULD create these files to separate environment-specific configuration. Use the Quarkus profile syntax: `%dev.` prefix for dev-specific properties, `%prod.` prefix for production-specific properties. Alternatively, create separate files named `application-dev.properties` and `application-prod.properties`.
+### VERIFICATION CHECKLIST
 
-*   **Warning - Database Port:** The current configuration uses port `5532` (not the standard PostgreSQL port 5432). This appears to be intentional for the Docker Compose setup. Do NOT change this unless you verify the Docker configuration supports a different port.
+Before marking this task complete, you MUST verify the following:
 
-*   **Warning - Health Check Port Mismatch:** The acceptance criteria mentions testing health check at `http://localhost:8080/q/health/ready`, but the current application is configured to run on port `8030` (see `quarkus.http.port=8030` in application.properties). You MUST either update the port to 8080 or acknowledge this discrepancy when verifying the health check works on the actual configured port.
+**Required Verifications:**
+1. ✅ **Environment Variables Work**: Set DB_URL, DB_USERNAME, DB_PASSWORD environment variables and verify the application uses them instead of defaults
+2. ✅ **Health Check Works**: Run `./mvnw quarkus:dev` and test `curl http://localhost:8030/q/health/ready` - verify it returns 200 with datasource status UP
+3. ✅ **PostgreSQL Connection**: Verify the application successfully connects to PostgreSQL on startup (check console output for connection confirmation)
+4. ✅ **MyBatis Migrations Structure**: Confirm all environment files exist:
+   - `migrations/src/main/resources/environments/development.properties` ✅ (verified)
+   - `migrations/src/main/resources/environments/production.properties` ✅ (verified)
+   - `migrations/src/main/resources/environments/beta.properties` ✅ (verified)
+   - `migrations/src/main/resources/environments/testing.properties` ✅ (verified)
+5. ✅ **Documentation Accuracy**: Review `docs/guides/database-setup.md` to ensure all instructions are accurate and up-to-date
 
-*   **Recommendation - Documentation Structure:** Create the database setup guide at `docs/guides/database-setup.md`. This guide should include:
-    1. How to install PostgreSQL 17+ on different platforms (macOS, Linux, Windows)
-    2. How to create the `calendar` database
-    3. How to enable PostGIS extension (requires superuser: `CREATE EXTENSION IF NOT EXISTS postgis;`)
-    4. How to create the `calendar` database user with appropriate permissions
-    5. How to verify the connection is working
-    6. Environment variable configuration examples for different deployment scenarios
-    7. Docker Compose setup instructions if applicable
+**Optional Enhancements (only if necessary):**
+- ⚠️ Create `application-dev.properties` and `application-prod.properties` IF you decide profile-specific files are needed (currently NOT required)
+- ⚠️ Update port references in acceptance criteria documentation to reflect actual port 8030
 
-*   **Recommendation - Environment Files:** For the migrations/environments/ directory, ensure that:
-    - `development.properties` is already correct (verified)
-    - `production.properties` should be updated if it needs different configuration for production deployment
-    - Both files should reference the same database name (`calendar`) but with different connection details appropriate to each environment
+### IMPORTANT: What Already Exists and Works
 
-*   **Tip - docs/guides Directory:** You will need to create the `docs/guides/` directory if it doesn't already exist before creating `database-setup.md`.
+**FULLY IMPLEMENTED:**
+- ✅ PostgreSQL datasource configuration with environment variable support
+- ✅ SmallRye Health dependency for automatic health checks
+- ✅ Complete MyBatis Migrations directory structure (scripts/ and environments/)
+- ✅ All environment configuration files (development, beta, testing, production)
+- ✅ Comprehensive database setup guide (592 lines, covers all platforms and scenarios)
+- ✅ Docker Compose PostgreSQL configuration
+- ✅ PostGIS extension documentation
+
+**WHAT YOU NEED TO DO:**
+1. **Test** that the application connects to PostgreSQL successfully
+2. **Verify** health checks work at the correct port (8030)
+3. **Confirm** environment variable overrides function correctly
+4. **Review** the database setup guide for any inaccuracies or needed updates
+5. **Document** any findings or minor adjustments needed
+
+**This task is primarily about VERIFICATION, not implementation.** Most components are already in place and working.

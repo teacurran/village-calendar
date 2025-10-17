@@ -23,9 +23,9 @@ x-CalendarAppBase: &calendar-app-base
       condition: service_started
   environment:
     # Database configuration
-    QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://calendar-db:5432/village_calendar
-    QUARKUS_DATASOURCE_USERNAME: calendar_user
-    QUARKUS_DATASOURCE_PASSWORD: calendar_pass
+    QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://calendar-db:5432/calendar
+    QUARKUS_DATASOURCE_USERNAME: calendar
+    QUARKUS_DATASOURCE_PASSWORD: calendar
     QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: update
     QUARKUS_HIBERNATE_ORM_MAPPING_FORMAT_GLOBAL: ignore
     QUARKUS_HTTP_HOST: 0.0.0.0
@@ -60,20 +60,20 @@ services:
       - calendar-network
 
   calendar-db:
-    image: postgis/postgis:15-3.4
+    image: postgis/postgis:17-3.4
     user: postgres
     restart: always
     environment:
-      POSTGRES_USER: calendar_user
-      POSTGRES_PASSWORD: calendar_pass
-      POSTGRES_DB: village_calendar
+      POSTGRES_USER: calendar
+      POSTGRES_PASSWORD: calendar
+      POSTGRES_DB: calendar
     volumes:
       - calendar-db-data:/var/lib/postgresql/data
-      - ../villagecompute/infra/postgres-db/calendar-db-init.sql:/docker-entrypoint-initdb.d/01-init-calendar-db.sql:ro
+      - ./docker/postgresql/init:/docker-entrypoint-initdb.d:ro
     ports:
-      - "5430:5432"
+      - "5532:5432"
     healthcheck:
-      test: 'pg_isready -U calendar_user --dbname=village_calendar'
+      test: 'pg_isready -U calendar --dbname=calendar'
       interval: 10s
       timeout: 5s
       retries: 5

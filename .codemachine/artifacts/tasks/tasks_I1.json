@@ -27,7 +27,7 @@
     "acceptance_criteria": "./mvnw quarkus:dev connects to PostgreSQL without errors, curl http://localhost:8080/q/health/ready returns 200 with datasource check passing, Database setup guide tested on fresh PostgreSQL 17 installation, Environment variables DB_USERNAME, DB_PASSWORD, DB_URL override defaults",
     "dependencies": ["I1.T1"],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T3",
