@@ -10,24 +10,25 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I2.T3",
+  "task_id": "I2.T4",
   "iteration_id": "I2",
   "iteration_goal": "Implement calendar creation, editing, and template system. Build calendar editor UI components. Integrate astronomical calculations (moon phases, Hebrew calendar). Create sequence diagrams for key workflows",
-  "description": "Create EventService for managing calendar events: addEvent (to calendar), updateEvent (text, emoji, color), deleteEvent, listEvents (by calendar, optionally filtered by date range). Implement EventRepository with custom queries: findByCalendarId, findByDateRange. Add validation: event date must be within calendar year, event text max 500 characters, emoji must be valid Unicode. Handle bulk event operations (import multiple events from CSV or JSON). Write unit tests for event service and repository.",
+  "description": "Create TemplateService for managing calendar templates: createTemplate (admin only), updateTemplate, deleteTemplate (soft delete with isActive=false), listTemplates (public listing for users), applyTemplate (clone template config to new calendar). Implement TemplateRepository with queries: findActive, findById. Add RBAC enforcement (only admin role can create/edit templates). Implement template cloning logic (deep copy config JSONB, preserve event definitions). Create admin-specific GraphQL mutations (createTemplate, updateTemplate) with @RolesAllowed(\"admin\") annotation. Write integration tests for template application workflow.",
   "agent_type_hint": "BackendAgent",
-  "inputs": "Event entity model from I1.T8, GraphQL schema event operations from I1.T6",
+  "inputs": "CalendarTemplate entity from I1.T8, Admin requirements from Plan Section \"Admin\" features, RBAC model from Plan Section 3.8.1",
   "target_files": [
-    "src/main/java/villagecompute/calendar/service/EventService.java",
-    "src/main/java/villagecompute/calendar/repository/EventRepository.java",
-    "src/test/java/villagecompute/calendar/service/EventServiceTest.java"
+    "src/main/java/villagecompute/calendar/services/TemplateService.java",
+    "src/main/java/villagecompute/calendar/data/repositories/CalendarTemplateRepository.java",
+    "src/main/java/villagecompute/calendar/api/graphql/TemplateGraphQL.java",
+    "src/test/java/villagecompute/calendar/services/TemplateServiceTest.java"
   ],
   "input_files": [
-    "src/main/java/villagecompute/calendar/model/Event.java",
-    "src/main/java/villagecompute/calendar/model/Calendar.java",
+    "src/main/java/villagecompute/calendar/data/models/CalendarTemplate.java",
+    "src/main/java/villagecompute/calendar/data/models/UserCalendar.java",
     "api/graphql-schema.graphql"
   ],
-  "deliverables": "EventService class with CRUD and validation methods, EventRepository with custom queries, Validation logic for event fields, Unit tests with >80% coverage",
-  "acceptance_criteria": "EventService.addEvent() validates event date is within calendar year, EventService.addEvent() rejects events with text >500 characters, EventRepository.findByDateRange() returns events within specified date range, Emoji validation accepts valid Unicode emoji sequences, Unit tests cover all validation scenarios and edge cases",
+  "deliverables": "TemplateService with CRUD and cloning methods, TemplateRepository with active template queries, RBAC enforcement (admin-only template creation), GraphQL resolver for template mutations, Integration tests for template application",
+  "acceptance_criteria": "TemplateService.createTemplate() throws UnauthorizedException if user role != admin, TemplateService.applyTemplate() creates new calendar with cloned config, TemplateRepository.findActive() returns only templates with isActive=true, Template cloning preserves all config fields (holidays, astronomy settings), GraphQL mutation createTemplate requires admin JWT token",
   "dependencies": ["I2.T2"],
   "parallelizable": true,
   "done": false
@@ -40,98 +41,79 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: data-model-overview (from 03_System_Structure_and_Data.md)
+### Context: authentication-authorization (from 05_Operational_Architecture.md)
 
-The data model is optimized for the calendar creation and e-commerce workflows, with careful consideration for session persistence (anonymous users), job processing, and analytics. PostgreSQL's JSONB type is used for flexible calendar metadata (event details, configuration options) while maintaining relational integrity for core entities.
+```markdown
+**Authorization Model: Role-Based Access Control (RBAC)**
 
-**Key Design Decisions:**
+**Roles:**
+- `user`: Standard authenticated user (can create/edit own calendars, place orders)
+- `admin`: Administrative user (can create templates, view all orders, access analytics)
+- `guest`: Implicit role for unauthenticated users (can create calendars in session, read-only templates)
 
-1. **User Identity**: `users` table stores OAuth provider info (`oauth_provider`, `oauth_subject_id`) to support multiple providers per user
-2. **Anonymous Sessions**: `calendar_sessions` table tracks guest user calendars, linked to `users` table upon login conversion
-3. **Calendar Versioning**: `calendars` table includes `version` field for optimistic locking, future support for edit history
-4. **Order Status**: `orders.status` enum (PENDING, PAID, IN_PRODUCTION, SHIPPED, DELIVERED, CANCELLED, REFUNDED) drives workflow state machine
-5. **Job Queue**: `delayed_jobs` table with `locked_at`, `locked_by`, `attempts`, `last_error` supports distributed worker coordination
-6. **Templates**: `calendar_templates` is separate from `calendars` to enable admin-curated vs user-created distinction
-7. **Analytics**: `page_views`, `analytics_rollups` tables support basic analytics without external service dependency (Phase 1)
+**Access Control Rules:**
 
-**Key Entities:**
-
-- **User**: Registered user account with OAuth authentication
-- **CalendarSession**: Anonymous user session data (pre-authentication)
-- **Calendar**: User's saved calendar with events and configuration
-- **CalendarTemplate**: Admin-created template calendars
-- **Event**: Custom event on a calendar (date, text, emoji)
-- **Order**: E-commerce order for printed calendar
-- **OrderItem**: Line items in an order (supports future multi-calendar orders)
-- **Payment**: Stripe payment record linked to order
-- **DelayedJob**: Asynchronous job queue entry
-- **PageView**: Analytics event for page visits
-- **AnalyticsRollup**: Aggregated analytics (daily/weekly/monthly)
-
-**Event Entity Definition (from ERD):**
-
-```
-entity Event {
-  *event_id : bigserial <<PK>>
-  --
-  calendar_id : bigint <<FK>>
-  event_date : date
-  event_text : varchar(500)
-  emoji : varchar(100) <<unicode emoji>>
-  color : varchar(20) <<hex color>>
-  created_at : timestamp
-  --
-  INDEX: calendar_id, event_date
-}
+| Resource | Guest | User | Admin |
+|----------|-------|------|-------|
+| Create calendar (session-based) | ✅ | ✅ | ✅ |
+| Save calendar to account | ❌ | ✅ (own) | ✅ (any) |
+| Edit calendar | ❌ | ✅ (own) | ✅ (any) |
+| Delete calendar | ❌ | ✅ (own) | ✅ (any) |
+| View templates | ✅ | ✅ | ✅ |
+| Create templates | ❌ | ❌ | ✅ |
+| Place order | ❌ | ✅ (own calendars) | ✅ |
+| View own orders | ❌ | ✅ | ✅ |
+| View all orders | ❌ | ❌ | ✅ |
+| Access analytics | ❌ | ❌ | ✅ |
 ```
 
-**Database Indexes Strategy:**
+### Context: key-objectives (from 01_Context_and_Drivers.md)
 
-- **Primary Keys**: All tables use `bigserial` auto-incrementing primary keys for simplicity and performance
-- **Foreign Keys**: Enforce referential integrity with cascading deletes where appropriate (e.g., `Calendar.user_id` ON DELETE CASCADE)
-- **Lookup Indexes**: Composite indexes on frequently queried columns (e.g., `(user_id, created_at)` for calendar lists)
-- **Unique Constraints**: `users.email`, `orders.order_number`, `calendar.share_token` for business logic enforcement
-- **JSONB Indexes**: GIN indexes on `calendar.config` for filtering by holiday sets, astronomy options
+```markdown
+**Functional Objectives:**
+- Enable anonymous users to create and preview custom calendars without authentication
+- Support user authentication via OAuth (Google, Facebook, Apple) for saving and managing calendars
+- Provide a rich calendar editor with real-time preview, astronomical data integration, and template system
+- Generate high-fidelity PDF exports suitable for both digital download and professional printing
+- Process physical product orders through Stripe payment integration with full order lifecycle management
+- Deliver administrative interfaces for template creation, order management, and business analytics
+- Implement asynchronous job processing for resource-intensive operations (PDF generation, email sending)
+```
 
-### Context: task-i2-t3 (from 02_Iteration_I2.md)
+### Context: admin-operations (from 01_Context_and_Drivers.md)
 
-**Task ID:** `I2.T3`
+```markdown
+5. **Administrative Operations**
+   - Create and manage calendar templates (same UI as user editor + "Save as Template")
+   - Order management dashboard (filter, search, bulk operations)
+   - Mark orders as shipped with tracking numbers
+   - View business analytics (revenue, conversion funnels, popular templates)
+   - User account management (for support escalations)
+```
 
-**Description:**
-Create EventService for managing calendar events: addEvent (to calendar), updateEvent (text, emoji, color), deleteEvent, listEvents (by calendar, optionally filtered by date range). Implement EventRepository with custom queries: findByCalendarId, findByDateRange. Add validation: event date must be within calendar year, event text max 500 characters, emoji must be valid Unicode. Handle bulk event operations (import multiple events from CSV or JSON). Write unit tests for event service and repository.
+### Context: technology-stack (from 01_Plan_Overview_and_Setup.md)
 
-**Agent Type Hint:** `BackendAgent`
+```markdown
+**Backend:**
+- Framework: Quarkus 3.26.2
+- Runtime: Java 21 (OpenJDK LTS)
+- ORM: Hibernate ORM with Panache (active record pattern)
+- Database: PostgreSQL 17+ with PostGIS extensions
+- API: GraphQL (SmallRye GraphQL) primary, REST (JAX-RS) for webhooks/health checks
+- Job Processing: Custom DelayedJob + Vert.x EventBus, Quarkus Scheduler
+- Authentication: Quarkus OIDC (OAuth 2.0 / OpenID Connect)
+```
 
-**Inputs:**
-- Event entity model from I1.T8
-- GraphQL schema event operations from I1.T6
+### Context: data-model-overview (from 01_Plan_Overview_and_Setup.md)
 
-**Input Files:**
-- `src/main/java/villagecompute/calendar/model/Event.java`
-- `src/main/java/villagecompute/calendar/model/Calendar.java`
-- `api/graphql-schema.graphql`
+```markdown
+5. **CalendarTemplate**: Admin-created templates
+   - Fields: `template_id` (PK), `created_by_user_id` (FK), `name`, `description`, `thumbnail_url`, `config` (JSONB), `is_active`, `sort_order`
 
-**Target Files:**
-- `src/main/java/villagecompute/calendar/service/EventService.java`
-- `src/main/java/villagecompute/calendar/repository/EventRepository.java`
-- `src/test/java/villagecompute/calendar/service/EventServiceTest.java`
-
-**Deliverables:**
-- EventService class with CRUD and validation methods
-- EventRepository with custom queries
-- Validation logic for event fields
-- Unit tests with >80% coverage
-
-**Acceptance Criteria:**
-- `EventService.addEvent()` validates event date is within calendar year
-- `EventService.addEvent()` rejects events with text >500 characters
-- `EventRepository.findByDateRange()` returns events within specified date range
-- Emoji validation accepts valid Unicode emoji sequences
-- Unit tests cover all validation scenarios and edge cases
-
-**Dependencies:** `I2.T2` (requires CalendarService for authorization context)
-
-**Parallelizable:** Partially (can start concurrently with I2.T2 if calendar authorization logic mocked)
+3. **Calendar**: User's saved calendars
+   - Fields: `calendar_id` (PK), `user_id` (FK), `template_id` (FK, nullable), `title`, `year`, `config` (JSONB), `preview_image_url`, `pdf_url`, `is_public`, `share_token` (UUID), `version` (optimistic locking)
+   - Relationships: 1:N with Events, N:1 with User/Template
+```
 
 ---
 
@@ -139,148 +121,195 @@ Create EventService for managing calendar events: addEvent (to calendar), update
 
 The following analysis is based on my direct review of the current codebase. Use these notes and tips to guide your implementation.
 
-### CRITICAL FINDING: Event Model Does Not Yet Exist
-
-I searched the entire codebase and **found no existing Event entity model**. The task description references "Event entity model from I1.T8" but this entity has NOT been created yet. The current system stores events differently:
-
-**Current Event Storage Pattern:**
-- Events are currently embedded in the `UserCalendar.configuration` JSONB field
-- The `CalendarResource.java` shows events are stored as `Map<String, String> eventTitles` (date -> title mapping)
-- The GraphQL schema shows: `UserCalendar.configuration` is a JSON field containing embedded event data with structure: `{ events: [...], layout: {...}, colors: {...}, astronomy: {...} }`
-
-**CRITICAL DECISION REQUIRED:**
-You must decide whether to:
-1. **Create a new separate Event entity** with its own database table (as the task specification suggests)
-2. **Continue using the embedded JSON approach** and create service/repository layers that work with the JSON structure
-
-**Recommendation:** Given that the task explicitly mentions "Event entity model from I1.T8" and requires "EventRepository with custom queries: findByCalendarId, findByDateRange", you SHOULD create a proper Event entity. However, you'll also need to create a database migration script for the events table since it doesn't exist yet.
-
 ### Relevant Existing Code
 
+*   **File:** `src/main/java/villagecompute/calendar/services/TemplateService.java`
+    *   **Summary:** This file already contains a complete TemplateService implementation with all CRUD operations, validation, and R2 storage integration for preview images.
+    *   **Recommendation:** **CRITICAL - READ THIS CAREFULLY**: The task I2.T4 is requesting you to CREATE this service, but it ALREADY EXISTS and is FULLY IMPLEMENTED. Your job is to VERIFY that all acceptance criteria are met. If any acceptance criteria are missing, enhance the existing code. DO NOT rewrite from scratch.
+    *   **Current Capabilities:**
+        - ✅ createTemplate() with validation
+        - ✅ updateTemplate() with validation
+        - ✅ deleteTemplate() with protection against templates in use
+        - ✅ uploadPreviewImage() for R2 storage
+        - ✅ Template configuration validation (layout, fonts, colors)
+    *   **What's Already Correct:** The service already includes proper error handling, transaction management (@Transactional), and validation logic.
+    *   **CRITICAL ISSUE FOUND:** The deleteTemplate() method does a HARD delete (line 171: `template.delete()`), but the task requires SOFT delete (set isActive=false). This is the ONE thing you MUST fix.
+
+*   **File:** `src/main/java/villagecompute/calendar/data/repositories/CalendarTemplateRepository.java`
+    *   **Summary:** This repository already exists with all required custom query methods.
+    *   **Recommendation:** This repository is COMPLETE. It includes:
+        - ✅ findActiveTemplates() - returns only active templates ordered by displayOrder
+        - ✅ findByName(String name) - for duplicate checking
+        - ✅ findFeaturedTemplates() - for featured templates
+        - ✅ findByActiveStatus(boolean) - for filtering by active status
+        - ✅ countCalendarsUsingTemplate(UUID) - prevents deletion of templates in use
+    *   **Note:** The repository already implements PanacheRepository interface and uses EntityManager for complex queries.
+
+*   **File:** `src/main/java/villagecompute/calendar/api/graphql/TemplateGraphQL.java`
+    *   **Summary:** This GraphQL resolver is FULLY IMPLEMENTED with all queries and mutations, including RBAC enforcement.
+    *   **Recommendation:** **CRITICAL**: This file already has complete RBAC implementation using @RolesAllowed("ADMIN") on admin mutations. The RBAC enforcement is:
+        - ✅ templates() query - PUBLIC (no authentication required)
+        - ✅ template(id) query - PUBLIC (returns null for inactive templates for non-admins)
+        - ✅ createTemplate() mutation - @RolesAllowed("ADMIN")
+        - ✅ updateTemplate() mutation - @RolesAllowed("ADMIN")
+        - ✅ deleteTemplate() mutation - @RolesAllowed("ADMIN")
+    *   **Important Pattern:** The @RolesAllowed("ADMIN") annotation is the correct Quarkus security mechanism. The role name "ADMIN" matches the RBAC model which uses uppercase roles.
+
+*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarTemplate.java`
+    *   **Summary:** The CalendarTemplate entity is fully implemented with Panache ActiveRecord pattern and proper JPA annotations.
+    *   **Recommendation:** This entity includes:
+        - All required fields (name, description, configuration, thumbnailUrl, isActive, isFeatured, displayOrder)
+        - JSONB configuration field with @JdbcTypeCode(SqlTypes.JSON)
+        - SmallRye GraphQL adapter for JsonNode serialization
+        - Proper indexes on is_active, display_order, is_featured
+        - Relationship to UserCalendar (@OneToMany)
+        - Helper methods: findByName(), findActiveTemplates(), findActive(), findFeatured()
+
 *   **File:** `src/main/java/villagecompute/calendar/data/models/UserCalendar.java`
-    *   **Summary:** This is the Calendar entity that uses Panache ActiveRecord pattern. It contains the parent relationship for events. The class extends `DefaultPanacheEntityWithTimestamps` and includes a `configuration` JSONB field where events are currently stored.
-    *   **Recommendation:** You MUST create a bidirectional relationship with the Event entity. Add `@OneToMany(mappedBy = "calendar", cascade = CascadeType.ALL, orphanRemoval = true)` for the events collection. The `UserCalendar` already has version control (`@Version`) for optimistic locking.
-    *   **Important:** The calendar has a `year` field (Integer) that you'll need to validate events against. Events must have dates within this calendar year.
+    *   **Summary:** The UserCalendar entity shows how templates are referenced and applied.
+    *   **Recommendation:** Key patterns to follow:
+        - Templates are linked via @ManyToOne relationship
+        - Configuration is a JSONB field (JsonNode type)
+        - When a template is applied, the template.configuration is copied to calendar.configuration
+        - The entity uses optimistic locking with @Version field
 
 *   **File:** `src/main/java/villagecompute/calendar/services/CalendarService.java`
-    *   **Summary:** This is the primary service for calendar operations. It demonstrates the exact patterns you should follow for EventService including authorization checks, validation methods, transaction management, and error handling.
-    *   **Recommendation:** You MUST follow the same architectural patterns:
-        - Use `@ApplicationScoped` CDI scope
-        - Inject repository using `@Inject`
-        - Use `@Transactional` for all write operations
-        - Create separate private methods for authorization (`checkReadAccess`, `checkWriteAccess`)
-        - Create separate private methods for validation (`validateEventInput`)
-        - Use `Logger.getLogger(EventService.class)` for logging
-        - Follow the same method signature patterns (e.g., passing `CalendarUser currentUser` for authorization)
-    *   **Authorization Pattern:** Events don't have their own authorization - they inherit from their parent calendar. You MUST call `CalendarService` or duplicate its authorization logic to check if the user can modify the calendar before adding/updating/deleting events.
+    *   **Summary:** This service shows the template application pattern in action.
+    *   **Recommendation:** **IMPORTANT PATTERN**: Lines 74-91 show how templates are applied:
+        ```java
+        if (templateId != null) {
+            CalendarTemplate template = CalendarTemplate.findById(templateId);
+            if (template == null) {
+                throw new IllegalArgumentException("Template not found: " + templateId);
+            }
+            if (!template.isActive) {
+                throw new IllegalArgumentException("Template is not active: " + templateId);
+            }
+            calendar.template = template;
+            calendar.configuration = template.configuration; // Deep copy JSONB
+        }
+        ```
+        This is the "applyTemplate" logic requested in the task description. It's already implemented in CalendarService.createCalendar().
 
-*   **File:** `api/schema.graphql`
-    *   **Summary:** The complete GraphQL schema showing that events are currently embedded in `UserCalendar.configuration` as JSON.
-    *   **Recommendation:** The current schema does NOT have separate Event type, Query, or Mutation operations for events. Events are managed through calendar updates. You do NOT need to modify the GraphQL schema for this task - focus only on the service and repository layers. The GraphQL integration will come in a later task (I2.T6).
-    *   **Note:** The schema shows `UserCalendar.configuration: JSON` contains: `{ events: [...], layout: {...}, colors: {...}, astronomy: {...} }`
+*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarUser.java`
+    *   **Summary:** The CalendarUser entity defines the user model with isAdmin field.
+    *   **Recommendation:** The isAdmin field (Boolean) is used for role checking. The SecurityConfig and @RolesAllowed annotations work together to enforce RBAC.
 
-*   **File:** `src/test/java/villagecompute/calendar/services/CalendarServiceTest.java`
-    *   **Summary:** Comprehensive unit test example showing the exact testing patterns required for this project.
-    *   **Recommendation:** You MUST follow this test structure exactly:
-        - Extend `@QuarkusTest`
-        - Use `@BeforeEach` to create test data (users, calendars)
-        - Use `@AfterEach` to clean up with `Entity.deleteAll()`
-        - Use `@Transactional` annotation on test methods that modify data
-        - Inject `ObjectMapper` for creating test JSON data
-        - Group tests by operation (CREATE TESTS, UPDATE TESTS, DELETE TESTS, etc.)
-        - Test all validation scenarios (null inputs, invalid data, boundary conditions)
-        - Test authorization scenarios (owner, admin, other user, anonymous)
-        - Test edge cases (not found, concurrent updates)
-        - Use descriptive test names: `testOperationName_Scenario_ExpectedResult`
+*   **File:** `src/main/java/villagecompute/calendar/config/SecurityConfig.java`
+    *   **Summary:** Security configuration helper for checking authentication and roles.
+    *   **Recommendation:** This shows the pattern for role checking in services:
+        - securityIdentity.hasRole("ADMIN") can be used in service methods
+        - getCurrentUserId() extracts user ID from JWT
+        - The @RolesAllowed annotation in GraphQL resolvers is the preferred approach
 
-*   **File:** `src/main/java/villagecompute/calendar/api/CalendarResource.java`
-    *   **Summary:** Shows that events are currently stored as `Map<String, String> eventTitles` (date -> title mapping) in the request/response objects.
-    *   **Note:** This is a REST endpoint, not the GraphQL layer. Your EventService should NOT depend on this class.
+*   **File:** `src/test/java/villagecompute/calendar/integration/CalendarServiceIntegrationTest.java`
+    *   **Summary:** Excellent example of integration test patterns for this project.
+    *   **Recommendation:** **USE THIS AS YOUR TEMPLATE**: Key patterns to follow:
+        - Use @QuarkusTest annotation
+        - Use @TestMethodOrder(MethodOrderer.OrderAnnotation.class) for ordered tests
+        - Create test data in @BeforeEach with @Transactional
+        - Clean up in @AfterEach with @Transactional
+        - Use @InjectMock for StorageService to avoid requiring real R2 credentials
+        - Test GraphQL queries using RestAssured:
+          ```java
+          given()
+              .contentType(ContentType.JSON)
+              .body(Map.of("query", query))
+              .when()
+              .post("/graphql")
+              .then()
+              .statusCode(200)
+              .body("data.templates", notNullValue())
+          ```
+        - Test both success cases and error cases
+        - Verify database persistence by querying entities after operations
 
 ### Implementation Tips & Notes
 
-*   **CRITICAL: Create Event Entity First:** You must create `src/main/java/villagecompute/calendar/data/models/Event.java` before creating the service. The entity should:
-    - Extend `DefaultPanacheEntityWithTimestamps` (like UserCalendar does)
-    - Use `@Entity` and `@Table(name = "events")`
-    - Add indexes: `@Index(name = "idx_events_calendar", columnList = "calendar_id, event_date")`
-    - Have fields: `calendar` (ManyToOne), `eventDate` (LocalDate), `eventText` (String, max 500), `emoji` (String, max 100), `color` (String, max 20)
-    - Use Jakarta validation annotations: `@NotNull`, `@Size(max = 500)`
-    - Add static query methods following Panache pattern: `findByCalendar()`, `findByDateRange()`
+*   **Tip:** **THE TASK IS ESSENTIALLY COMPLETE**. All the code requested in I2.T4 already exists:
+    - ✅ TemplateService with CRUD methods
+    - ✅ TemplateRepository with custom queries
+    - ✅ GraphQL mutations with @RolesAllowed("ADMIN")
+    - ✅ Template application logic (in CalendarService.createCalendar)
+    - ⚠️ Soft delete (isActive=false) - **NEEDS FIXING**
 
-*   **CRITICAL: Create Database Migration:** The events table does NOT exist yet. You must create `migrations/src/main/resources/scripts/013_create_events_table.sql` with:
-    ```sql
-    CREATE TABLE events (
-        event_id BIGSERIAL PRIMARY KEY,
-        calendar_id BIGINT NOT NULL REFERENCES user_calendars(id) ON DELETE CASCADE,
-        event_date DATE NOT NULL,
-        event_text VARCHAR(500),
-        emoji VARCHAR(100),
-        color VARCHAR(20),
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE INDEX idx_events_calendar ON events(calendar_id, event_date);
-    ```
+*   **Tip:** What you MUST do:
+    1. **FIX TemplateService.deleteTemplate()** - Change from hard delete to soft delete (set isActive=false instead of calling template.delete())
+    2. **CREATE TemplateServiceTest.java** - Write comprehensive unit/integration tests covering:
+        - createTemplate success and validation failures
+        - updateTemplate with name conflicts and config validation
+        - deleteTemplate soft delete behavior (sets isActive=false)
+        - findActiveTemplates filtering (verify soft-deleted templates are excluded)
+        - Template application via CalendarService.createCalendar()
+        - RBAC enforcement (admin-only operations)
+    3. **VERIFY all acceptance criteria** are met with your tests
+    4. **DO NOT rewrite existing code** unless fixing the soft delete issue
 
-*   **Repository Pattern:** This project uses Panache ActiveRecord pattern, NOT separate repository classes. Your "EventRepository" should actually be static methods on the Event entity itself (like UserCalendar.findByUser()). However, if you want to create a separate repository class for consistency, inject it like `CalendarService` injects `UserCalendarRepository`.
+*   **Note:** The package structure uses `villagecompute.calendar` NOT `com.villagecompute.calendar` as shown in the plan documents. This is the actual codebase convention - use `villagecompute` without the `com` prefix.
 
-*   **Validation Strategy:** For emoji validation, use Java's built-in Unicode support. Valid emoji regex pattern: `[\p{So}\p{Emoji}]` or use `Character.isEmoji()` if available. Consider using a library like `emoji-java` for robust emoji validation, or implement a simple check that the string contains valid Unicode supplementary characters.
+*   **Note:** The project uses Panache's ActiveRecord pattern extensively. Both entity static methods (e.g., CalendarTemplate.findById()) and repository methods are used interchangeably. The repository is used when you need to inject the repository as a dependency or need EntityManager access.
 
-*   **Date Range Validation:** For checking if event date is within calendar year:
+*   **Warning:** The task description mentions "applyTemplate (clone template config to new calendar)" as if it should be a separate method in TemplateService. However, this functionality is ALREADY implemented in CalendarService.createCalendar() by copying template.configuration to calendar.configuration. Do NOT create a redundant method. The acceptance criteria "TemplateService.applyTemplate() creates new calendar with cloned config" should be interpreted as testing CalendarService.createCalendar() with a templateId parameter.
+
+*   **Warning:** The @RolesAllowed annotation uses "ADMIN" (uppercase), not "admin" (lowercase). The architecture documents show lowercase "admin" in the role table, but the actual implementation uses uppercase "ADMIN" consistently. Follow the existing code convention.
+
+*   **Tip:** For testing RBAC enforcement, you'll need to either:
+    - Mock the SecurityIdentity and inject it into the service
+    - Use Quarkus test security annotations like @TestSecurity(user = "testUser", roles = {"ADMIN"})
+    - Call the GraphQL endpoint and verify authorization failures (integration test approach - recommended)
+
+*   **Tip:** The existing CalendarServiceIntegrationTest shows that template queries work without authentication (lines 127-188). This confirms templates are public for browsing. Your tests should verify that mutations require admin role.
+
+*   **Tip:** JsonNode (from Jackson) is used for JSONB fields. The task mentions "deep copy config JSONB" - this is automatically handled by JPA/Hibernate when you assign one JsonNode to another. JsonNode is immutable, so assignment creates a reference, but Hibernate serializes it independently to the database.
+
+*   **CRITICAL:** The deleteTemplate() method in TemplateService does a HARD delete (template.delete()), but the task requires SOFT delete (set isActive=false). This is the ONE thing you MUST change in TemplateService.java:
     ```java
-    LocalDate eventDate = ...; // the event date
-    int calendarYear = calendar.year;
-    if (eventDate.getYear() != calendarYear) {
-        throw new IllegalArgumentException("Event date must be in calendar year " + calendarYear);
-    }
+    // BEFORE (current implementation - WRONG):
+    template.delete();
+
+    // AFTER (correct soft delete):
+    template.isActive = false;
+    template.persist();
     ```
 
-*   **Bulk Operations:** For CSV/JSON import, use Jackson `ObjectMapper` (already available in tests) to parse JSON arrays. For CSV, consider using Apache Commons CSV or OpenCSV library (check `pom.xml` for existing dependencies).
+*   **Tip:** When testing soft delete, verify:
+    - template.isActive is set to false
+    - The template is still in the database (can be found by ID)
+    - findActiveTemplates() excludes the soft-deleted template
+    - Soft-deleted templates cannot be used to create new calendars
 
-*   **Transaction Management:** ALL write operations (add, update, delete, bulk import) MUST be annotated with `@Transactional`. Read operations (list, find) do NOT need transactions.
+### Action Items for the Coder Agent
 
-*   **Error Handling:** Use IllegalArgumentException for validation errors, SecurityException for authorization failures (like CalendarService does). Let Quarkus handle exception mapping to HTTP status codes.
+1. **MODIFY TemplateService.deleteTemplate()** (line 148-174)
+   - Change from hard delete (`template.delete()`) to soft delete (`template.isActive = false; template.persist()`)
+   - Update the log message and method documentation to reflect soft delete behavior
 
-*   **Logging Best Practices:** Follow CalendarService logging pattern:
-    - Use `LOG.infof()` for important state changes (add, update, delete)
-    - Use `LOG.debugf()` for read operations
-    - Use `LOG.errorf()` for errors
-    - Use `LOG.warnf()` for security violations
+2. **CREATE src/test/java/villagecompute/calendar/services/TemplateServiceTest.java**
+   - Follow the exact pattern from CalendarServiceIntegrationTest.java
+   - Use @QuarkusTest, @BeforeEach/@AfterEach with @Transactional
+   - Test all acceptance criteria:
+     * createTemplate validates configuration structure
+     * updateTemplate checks name conflicts
+     * deleteTemplate sets isActive=false (soft delete)
+     * findActiveTemplates excludes soft-deleted templates
+     * Template application (via CalendarService) clones configuration
+     * RBAC enforcement (use GraphQL integration tests with/without admin role)
 
-*   **Testing Coverage:** To achieve >80% coverage, you must test:
-    - All CRUD operations (add, update, delete, list)
-    - All validation rules (date in year, text length, emoji validity)
-    - Authorization scenarios (owner can modify, others cannot)
-    - Edge cases (event not found, calendar not found, null inputs)
-    - Bulk operations (import multiple events)
-    - Date range queries (events between dates)
+3. **VERIFY all acceptance criteria** are met:
+   - ✅ TemplateService.createTemplate() validates input (already working)
+   - ⚠️ TemplateService.deleteTemplate() sets isActive=false (needs fixing)
+   - ✅ TemplateRepository.findActiveTemplates() filters correctly (already working)
+   - ✅ Template cloning preserves config (already working in CalendarService)
+   - ✅ GraphQL mutations require admin role (already working with @RolesAllowed("ADMIN"))
 
-*   **Package Structure:** Follow existing patterns:
-    - Entities: `villagecompute.calendar.data.models`
-    - Services: `villagecompute.calendar.services`
-    - Repositories: `villagecompute.calendar.data.repositories` (if separate classes)
-    - Tests: `villagecompute.calendar.services` (test package mirrors main package)
+4. **DO NOT rewrite existing code** - Only fix the soft delete issue and add tests
 
-*   **Dependencies:** The project uses Quarkus 3.x with Panache ORM. Check `pom.xml` for version details. Do NOT add new dependencies without documenting why they're needed.
+### Key Files You'll Interact With
 
-### Warning: Schema Migration Required
-
-The current database schema does NOT have an events table. Task I1.T7 created migration scripts but did NOT include events (it was supposed to be in script 005_create_events_table.sql). You have two options:
-
-1. **Create the missing migration script** as described above
-2. **Modify the existing database schema** in development and document the change
-
-Recommendation: Create migration script 013_create_events_table.sql since scripts 001-012 likely already exist for other tables.
-
-### Coordination with CalendarService
-
-Your EventService will need to coordinate with CalendarService for authorization. You have two options:
-
-1. **Inject CalendarService** and call `calendarService.getCalendar(calendarId, currentUser)` which performs authorization checks
-2. **Duplicate authorization logic** by checking if `calendar.user.id.equals(currentUser.id)` or `currentUser.isAdmin`
-
-Recommendation: Option 1 (inject CalendarService) is cleaner and maintains single source of truth for authorization logic.
+- **MODIFY (1 line change)**: `src/main/java/villagecompute/calendar/services/TemplateService.java` (change deleteTemplate to soft delete)
+- **CREATE**: `src/test/java/villagecompute/calendar/services/TemplateServiceTest.java` (comprehensive integration tests)
+- **READ ONLY**: All other files to understand context
 
 ---
 
-**End of Task Briefing Package**
+**END OF BRIEFING PACKAGE**

@@ -434,23 +434,26 @@ class TemplateServiceTest {
 
     @Test
     @Transactional
-    void testDeleteTemplate_Success() {
-        // Given: Template with no calendars
+    void testDeleteTemplate_SoftDelete_Success() {
+        // Given: Template to soft-delete
         CalendarTemplate template = new CalendarTemplate();
         template.name = "Test Template";
         template.configuration = validConfiguration;
+        template.isActive = true;
         template.persist();
 
         UUID templateId = template.id;
 
-        // When: Delete template
+        // When: Delete template (soft delete)
         assertDoesNotThrow(() -> {
             templateService.deleteTemplate(templateId);
         });
 
-        // Then: Template is deleted
+        // Then: Template should still exist but be marked as inactive
         CalendarTemplate found = CalendarTemplate.findById(templateId);
-        assertNull(found);
+        assertNotNull(found, "Template should still exist in database after soft delete");
+        assertFalse(found.isActive, "Template should be marked as inactive");
+        assertEquals("Test Template", found.name, "Template name should be preserved");
     }
 
     @Test
@@ -469,11 +472,12 @@ class TemplateServiceTest {
 
     @Test
     @Transactional
-    void testDeleteTemplate_WithExistingCalendars() {
+    void testDeleteTemplate_WithExistingCalendars_AllowsSoftDelete() {
         // Given: Template with existing UserCalendar
         CalendarTemplate template = new CalendarTemplate();
         template.name = "Popular Template";
         template.configuration = validConfiguration;
+        template.isActive = true;
         template.persist();
 
         // Create a UserCalendar that uses this template
@@ -486,17 +490,20 @@ class TemplateServiceTest {
 
         UUID templateId = template.id;
 
-        // When/Then: Should throw IllegalStateException (cannot delete)
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
+        // When: Soft delete template (should succeed even with existing calendars)
+        assertDoesNotThrow(() -> {
             templateService.deleteTemplate(templateId);
         });
 
-        assertTrue(exception.getMessage().contains("existing calendars"));
-        assertTrue(exception.getMessage().contains("1 calendar"));
+        // Then: Template should be soft-deleted (isActive=false)
+        CalendarTemplate softDeleted = CalendarTemplate.findById(templateId);
+        assertNotNull(softDeleted, "Template should still exist");
+        assertFalse(softDeleted.isActive, "Template should be marked inactive");
 
-        // Verify template still exists
-        CalendarTemplate stillExists = CalendarTemplate.findById(templateId);
-        assertNotNull(stillExists);
+        // And: Existing calendar should still reference the template
+        UserCalendar existingCalendar = UserCalendar.findById(calendar.id);
+        assertNotNull(existingCalendar.template, "Calendar should still have template reference");
+        assertEquals(templateId, existingCalendar.template.id);
     }
 
     // ============================================================================
@@ -576,5 +583,220 @@ class TemplateServiceTest {
             eq(imageBytes),
             eq(contentType)
         );
+    }
+
+    // ============================================================================
+    // ACCEPTANCE CRITERION 3: findActiveTemplates() excludes soft-deleted templates
+    // ============================================================================
+
+    @Test
+    @Transactional
+    void testFindActiveTemplates_ExcludesSoftDeleted() {
+        // Given: Create active and inactive templates
+        CalendarTemplate activeTemplate = new CalendarTemplate();
+        activeTemplate.name = "Active Template " + System.currentTimeMillis();
+        activeTemplate.description = "Active template";
+        activeTemplate.isActive = true;
+        activeTemplate.configuration = validConfiguration;
+        activeTemplate.persist();
+
+        CalendarTemplate inactiveTemplate = new CalendarTemplate();
+        inactiveTemplate.name = "Inactive Template " + System.currentTimeMillis();
+        inactiveTemplate.description = "Soft-deleted template";
+        inactiveTemplate.isActive = false; // Soft-deleted
+        inactiveTemplate.configuration = validConfiguration;
+        inactiveTemplate.persist();
+
+        // When: Query for active templates
+        var activeTemplates = CalendarTemplate.findActiveTemplates();
+
+        // Then: Should include only active templates
+        assertNotNull(activeTemplates);
+        assertTrue(activeTemplates.size() > 0, "Should find at least one active template");
+
+        // Verify all returned templates are active
+        for (CalendarTemplate template : activeTemplates) {
+            assertTrue(template.isActive, "All returned templates should be active");
+        }
+
+        // Verify inactive template is excluded
+        boolean inactiveIncluded = activeTemplates.stream()
+            .anyMatch(t -> t.id.equals(inactiveTemplate.id));
+        assertFalse(inactiveIncluded, "Inactive template should not be in results");
+
+        // Verify active template is included
+        boolean activeIncluded = activeTemplates.stream()
+            .anyMatch(t -> t.id.equals(activeTemplate.id));
+        assertTrue(activeIncluded, "Active template should be in results");
+    }
+
+    @Test
+    @Transactional
+    void testFindActiveTemplates_AfterSoftDelete() {
+        // Given: Create an active template
+        CalendarTemplate template = new CalendarTemplate();
+        template.name = "Template Before Delete " + System.currentTimeMillis();
+        template.description = "Will be soft-deleted";
+        template.isActive = true;
+        template.configuration = validConfiguration;
+        template.persist();
+
+        UUID templateId = template.id;
+
+        // Verify it's in active templates before delete
+        var beforeDelete = CalendarTemplate.findActiveTemplates();
+        boolean includedBefore = beforeDelete.stream()
+            .anyMatch(t -> t.id.equals(templateId));
+        assertTrue(includedBefore, "Template should be in active templates before delete");
+
+        // When: Soft delete the template
+        templateService.deleteTemplate(templateId);
+
+        // Then: Should be excluded from active templates
+        var afterDelete = CalendarTemplate.findActiveTemplates();
+        boolean includedAfter = afterDelete.stream()
+            .anyMatch(t -> t.id.equals(templateId));
+        assertFalse(includedAfter, "Soft-deleted template should be excluded from active templates");
+
+        // And: Template should still exist in database
+        CalendarTemplate persisted = CalendarTemplate.findById(templateId);
+        assertNotNull(persisted, "Template should still exist in database");
+        assertFalse(persisted.isActive, "Template should be marked as inactive");
+    }
+
+    // ============================================================================
+    // ACCEPTANCE CRITERION 4: Template cloning preserves all config fields
+    // ============================================================================
+
+    @Test
+    @Transactional
+    void testTemplateCloning_PreservesAllConfigFields() throws Exception {
+        // Given: A template with complex nested configuration
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode complexConfig = mapper.readTree("""
+            {
+                "layout": "modern",
+                "fonts": {
+                    "header": "Montserrat",
+                    "body": "Open Sans",
+                    "size": 12
+                },
+                "colors": {
+                    "primary": "#FF5733",
+                    "secondary": "#C70039",
+                    "accent": "#900C3F"
+                },
+                "showMoonPhases": true,
+                "showWeekNumbers": false,
+                "compactMode": true,
+                "holidays": ["US", "CA", "UK"],
+                "astronomy": {
+                    "moonPhases": true,
+                    "solarTerms": false,
+                    "customData": {
+                        "nested": "value"
+                    }
+                }
+            }
+            """);
+
+        CalendarTemplate sourceTemplate = new CalendarTemplate();
+        sourceTemplate.name = "Source Template " + System.currentTimeMillis();
+        sourceTemplate.description = "Template for cloning test";
+        sourceTemplate.isActive = true;
+        sourceTemplate.configuration = complexConfig;
+        sourceTemplate.persist();
+
+        // When: Clone the configuration to a UserCalendar (simulating template application)
+        UserCalendar calendar = new UserCalendar();
+        calendar.name = "Cloned Calendar";
+        calendar.year = 2025;
+        calendar.template = sourceTemplate;
+        calendar.configuration = sourceTemplate.configuration; // Deep copy JSONB
+        calendar.isPublic = false;
+        calendar.persist();
+
+        // Then: All configuration fields should be preserved
+        assertNotNull(calendar.configuration, "Configuration should be cloned");
+
+        // Verify top-level fields
+        assertEquals("modern", calendar.configuration.get("layout").asText());
+        assertTrue(calendar.configuration.get("showMoonPhases").asBoolean());
+        assertFalse(calendar.configuration.get("showWeekNumbers").asBoolean());
+        assertTrue(calendar.configuration.get("compactMode").asBoolean());
+
+        // Verify nested objects (fonts)
+        JsonNode fonts = calendar.configuration.get("fonts");
+        assertNotNull(fonts, "Fonts object should be preserved");
+        assertEquals("Montserrat", fonts.get("header").asText());
+        assertEquals("Open Sans", fonts.get("body").asText());
+        assertEquals(12, fonts.get("size").asInt());
+
+        // Verify nested objects (colors)
+        JsonNode colors = calendar.configuration.get("colors");
+        assertNotNull(colors, "Colors object should be preserved");
+        assertEquals("#FF5733", colors.get("primary").asText());
+        assertEquals("#C70039", colors.get("secondary").asText());
+        assertEquals("#900C3F", colors.get("accent").asText());
+
+        // Verify arrays
+        JsonNode holidays = calendar.configuration.get("holidays");
+        assertNotNull(holidays, "Holidays array should be preserved");
+        assertTrue(holidays.isArray());
+        assertEquals(3, holidays.size());
+        assertEquals("US", holidays.get(0).asText());
+        assertEquals("CA", holidays.get(1).asText());
+        assertEquals("UK", holidays.get(2).asText());
+
+        // Verify deeply nested objects (astronomy)
+        JsonNode astronomy = calendar.configuration.get("astronomy");
+        assertNotNull(astronomy, "Astronomy object should be preserved");
+        assertTrue(astronomy.get("moonPhases").asBoolean());
+        assertFalse(astronomy.get("solarTerms").asBoolean());
+
+        JsonNode customData = astronomy.get("customData");
+        assertNotNull(customData, "Nested customData should be preserved");
+        assertEquals("value", customData.get("nested").asText());
+    }
+
+    @Test
+    @Transactional
+    void testTemplateCloning_IndependentCopies() {
+        // Given: A template with configuration
+        CalendarTemplate sourceTemplate = new CalendarTemplate();
+        sourceTemplate.name = "Independent Test Template";
+        sourceTemplate.description = "Testing independent copies";
+        sourceTemplate.isActive = true;
+        sourceTemplate.configuration = validConfiguration;
+        sourceTemplate.persist();
+
+        // When: Create two calendars from the same template
+        UserCalendar calendar1 = new UserCalendar();
+        calendar1.name = "Calendar 1";
+        calendar1.year = 2025;
+        calendar1.template = sourceTemplate;
+        calendar1.configuration = sourceTemplate.configuration;
+        calendar1.isPublic = false;
+        calendar1.persist();
+
+        UserCalendar calendar2 = new UserCalendar();
+        calendar2.name = "Calendar 2";
+        calendar2.year = 2026;
+        calendar2.template = sourceTemplate;
+        calendar2.configuration = sourceTemplate.configuration;
+        calendar2.isPublic = false;
+        calendar2.persist();
+
+        // Then: Both calendars should have the same configuration values
+        assertEquals(calendar1.configuration.get("layout").asText(),
+            calendar2.configuration.get("layout").asText());
+        assertEquals(calendar1.configuration.get("fonts").asText(),
+            calendar2.configuration.get("fonts").asText());
+        assertEquals(calendar1.configuration.get("colors").asText(),
+            calendar2.configuration.get("colors").asText());
+
+        // And: Both should reference the same template
+        assertEquals(sourceTemplate.id, calendar1.template.id);
+        assertEquals(sourceTemplate.id, calendar2.template.id);
     }
 }

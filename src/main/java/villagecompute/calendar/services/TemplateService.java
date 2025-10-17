@@ -138,16 +138,16 @@ public class TemplateService {
     }
 
     /**
-     * Delete a calendar template.
-     * Cannot delete templates that are referenced by existing calendars.
+     * Delete a calendar template using soft delete.
+     * Sets isActive=false instead of permanently removing the record.
+     * Templates with existing calendars can be soft-deleted to preserve data integrity.
      *
      * @param id Template ID
      * @throws IllegalArgumentException if template not found
-     * @throws IllegalStateException if template has existing calendars
      */
     @Transactional
     public void deleteTemplate(UUID id) {
-        LOG.infof("Deleting template: ID=%s", id);
+        LOG.infof("Soft-deleting template: ID=%s", id);
 
         // Find existing template
         CalendarTemplate template = CalendarTemplate.<CalendarTemplate>findByIdOptional(id).orElse(null);
@@ -156,21 +156,11 @@ public class TemplateService {
             throw new IllegalArgumentException("Template not found");
         }
 
-        // Check for existing calendars using this template (use query to avoid lazy loading issues)
-        long calendarCount = templateRepository.countCalendarsUsingTemplate(id);
-        if (calendarCount > 0) {
-            LOG.errorf("Cannot delete template %s: has %d existing calendars",
-                id, calendarCount);
-            throw new IllegalStateException(
-                "Cannot delete template with existing calendars. " +
-                "This template is used by " + calendarCount + " calendar(s)."
-            );
-        }
+        // Soft delete by setting isActive=false
+        template.isActive = false;
+        template.persist();
 
-        // Delete the template
-        template.delete();
-
-        LOG.infof("Deleted template: ID=%s, name=%s", id, template.name);
+        LOG.infof("Soft-deleted template: ID=%s, name=%s, isActive=false", id, template.name);
     }
 
     /**

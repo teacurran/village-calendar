@@ -57,7 +57,7 @@
     "acceptance_criteria": "TemplateService.createTemplate() throws UnauthorizedException if user role != admin, TemplateService.applyTemplate() creates new calendar with cloned config, TemplateRepository.findActive() returns only templates with isActive=true, Template cloning preserves all config fields (holidays, astronomy settings), GraphQL mutation createTemplate requires admin JWT token",
     "dependencies": ["I2.T2"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T5",

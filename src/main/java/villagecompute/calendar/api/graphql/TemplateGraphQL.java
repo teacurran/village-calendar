@@ -200,32 +200,33 @@ public class TemplateGraphQL {
     }
 
     /**
-     * Delete a calendar template (admin only).
+     * Delete a calendar template using soft delete (admin only).
      * Requires ADMIN role in JWT claims.
-     * Cannot delete templates with existing calendars.
+     * Sets isActive=false instead of permanently removing the template.
+     * Allows soft-deleting templates with existing calendars to preserve data integrity.
      *
      * @param id Template ID
-     * @return true if deleted successfully
+     * @return true if soft-deleted successfully
      */
     @Mutation("deleteTemplate")
-    @Description("Delete a calendar template (admin only). Requires ADMIN role in JWT claims. Cannot delete templates with existing calendars.")
+    @Description("Soft-delete a calendar template (admin only). Requires ADMIN role in JWT claims. Sets isActive=false instead of permanently removing the template.")
     @RolesAllowed("ADMIN")
     @Transactional
     public Boolean deleteTemplate(
         @Name("id")
-        @Description("Template ID to delete")
+        @Description("Template ID to soft-delete")
         @NotNull
         String id
     ) {
-        LOG.infof("Mutation: deleteTemplate(id=%s)", id);
+        LOG.infof("Mutation: deleteTemplate(id=%s) - soft delete", id);
 
         try {
             UUID templateId = UUID.fromString(id);
             templateService.deleteTemplate(templateId);
-            LOG.infof("Successfully deleted template: %s", id);
+            LOG.infof("Successfully soft-deleted template: %s", id);
             return true;
 
-        } catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             LOG.errorf(e, "Failed to delete template: %s", e.getMessage());
             throw e;
         } catch (Exception e) {
