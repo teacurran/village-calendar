@@ -1,0 +1,574 @@
+{
+  "locations": [
+    {
+      "key": "project-overview",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: project-overview -->",
+      "description": "High-level project overview including goals, requirements summary, and key assumptions"
+    },
+    {
+      "key": "goal",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: goal -->",
+      "description": "Concise project goal statement"
+    },
+    {
+      "key": "high-level-requirements",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: high-level-requirements -->",
+      "description": "Summary of key features and system requirements"
+    },
+    {
+      "key": "key-assumptions",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: key-assumptions -->",
+      "description": "Technical, business, and environmental assumptions"
+    },
+    {
+      "key": "core-architecture",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: core-architecture -->",
+      "description": "Core architectural style, technology stack, and component descriptions"
+    },
+    {
+      "key": "architectural-style",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: architectural-style -->",
+      "description": "Modular monolith architectural pattern and rationale"
+    },
+    {
+      "key": "technology-stack",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: technology-stack -->",
+      "description": "Complete technology stack for backend, frontend, and infrastructure"
+    },
+    {
+      "key": "key-components-services",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: key-components-services -->",
+      "description": "List of major backend/frontend components and async job workers"
+    },
+    {
+      "key": "data-model-overview",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: data-model-overview -->",
+      "description": "Overview of core entities, relationships, and database design"
+    },
+    {
+      "key": "api-contract-style",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: api-contract-style -->",
+      "description": "GraphQL and REST API styles with example queries/mutations"
+    },
+    {
+      "key": "communication-patterns",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: communication-patterns -->",
+      "description": "Synchronous and asynchronous communication patterns"
+    },
+    {
+      "key": "key-architectural-artifacts",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: key-architectural-artifacts -->",
+      "description": "List of all architectural diagrams and specifications to be generated"
+    },
+    {
+      "key": "artifact-component-diagram",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: artifact-component-diagram -->",
+      "description": "Component diagram artifact details (PlantUML)"
+    },
+    {
+      "key": "artifact-database-erd",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: artifact-database-erd -->",
+      "description": "Database ERD artifact details (PlantUML)"
+    },
+    {
+      "key": "artifact-deployment-diagram",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: artifact-deployment-diagram -->",
+      "description": "Deployment diagram artifact details (PlantUML)"
+    },
+    {
+      "key": "artifact-sequence-diagrams",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: artifact-sequence-diagrams -->",
+      "description": "Sequence diagrams artifact details (OAuth, Order, PDF flows)"
+    },
+    {
+      "key": "artifact-graphql-schema",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: artifact-graphql-schema -->",
+      "description": "GraphQL schema specification artifact details"
+    },
+    {
+      "key": "directory-structure",
+      "file": "01_Plan_Overview_and_Setup.md",
+      "start_anchor": "<!-- anchor: directory-structure -->",
+      "description": "Complete directory structure with rationale for organization"
+    },
+    {
+      "key": "iteration-1-plan",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: iteration-1-plan -->",
+      "description": "Iteration 1: Project foundation, setup, and core architecture"
+    },
+    {
+      "key": "task-i1-t1",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: task-i1-t1 -->",
+      "description": "I1.T1: Initialize project structure and build configuration"
+    },
+    {
+      "key": "task-i1-t2",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: task-i1-t2 -->",
+      "description": "I1.T2: Configure PostgreSQL connection and MyBatis migrations"
+    },
+    {
+      "key": "task-i1-t3",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: task-i1-t3 -->",
+      "description": "I1.T3: Generate component diagram (PlantUML)"
+    },
+    {
+      "key": "task-i1-t4",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: task-i1-t4 -->",
+      "description": "I1.T4: Create database ERD (PlantUML)"
+    },
+    {
+      "key": "task-i1-t5",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: task-i1-t5 -->",
+      "description": "I1.T5: Create deployment diagram (PlantUML)"
+    },
+    {
+      "key": "task-i1-t6",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: task-i1-t6 -->",
+      "description": "I1.T6: Define GraphQL schema specification"
+    },
+    {
+      "key": "task-i1-t7",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: task-i1-t7 -->",
+      "description": "I1.T7: Create initial database migration scripts"
+    },
+    {
+      "key": "task-i1-t8",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: task-i1-t8 -->",
+      "description": "I1.T8: Implement JPA entity models with Panache"
+    },
+    {
+      "key": "task-i1-t9",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: task-i1-t9 -->",
+      "description": "I1.T9: Configure Quarkus OIDC for OAuth authentication"
+    },
+    {
+      "key": "task-i1-t10",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: task-i1-t10 -->",
+      "description": "I1.T10: Create basic GraphQL resolver stubs"
+    },
+    {
+      "key": "task-i1-t11",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: task-i1-t11 -->",
+      "description": "I1.T11: Set up frontend routing and layout components"
+    },
+    {
+      "key": "task-i1-t12",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: task-i1-t12 -->",
+      "description": "I1.T12: Configure CI/CD pipeline (GitHub Actions)"
+    },
+    {
+      "key": "task-i1-t13",
+      "file": "02_Iteration_I1.md",
+      "start_anchor": "<!-- anchor: task-i1-t13 -->",
+      "description": "I1.T13: Write unit tests for entity models and repositories"
+    },
+    {
+      "key": "iteration-2-plan",
+      "file": "02_Iteration_I2.md",
+      "start_anchor": "<!-- anchor: iteration-2-plan -->",
+      "description": "Iteration 2: Core calendar functionality and user features"
+    },
+    {
+      "key": "task-i2-t1",
+      "file": "02_Iteration_I2.md",
+      "start_anchor": "<!-- anchor: task-i2-t1 -->",
+      "description": "I2.T1: Generate sequence diagrams for key workflows"
+    },
+    {
+      "key": "task-i2-t2",
+      "file": "02_Iteration_I2.md",
+      "start_anchor": "<!-- anchor: task-i2-t2 -->",
+      "description": "I2.T2: Implement calendar service and repository"
+    },
+    {
+      "key": "task-i2-t3",
+      "file": "02_Iteration_I2.md",
+      "start_anchor": "<!-- anchor: task-i2-t3 -->",
+      "description": "I2.T3: Implement event service and repository"
+    },
+    {
+      "key": "task-i2-t4",
+      "file": "02_Iteration_I2.md",
+      "start_anchor": "<!-- anchor: task-i2-t4 -->",
+      "description": "I2.T4: Implement template service and admin operations"
+    },
+    {
+      "key": "task-i2-t5",
+      "file": "02_Iteration_I2.md",
+      "start_anchor": "<!-- anchor: task-i2-t5 -->",
+      "description": "I2.T5: Integrate astronomical calculation libraries"
+    },
+    {
+      "key": "task-i2-t6",
+      "file": "02_Iteration_I2.md",
+      "start_anchor": "<!-- anchor: task-i2-t6 -->",
+      "description": "I2.T6: Implement calendar GraphQL resolvers"
+    },
+    {
+      "key": "task-i2-t7",
+      "file": "02_Iteration_I2.md",
+      "start_anchor": "<!-- anchor: task-i2-t7 -->",
+      "description": "I2.T7: Build calendar editor UI components (Vue)"
+    },
+    {
+      "key": "task-i2-t8",
+      "file": "02_Iteration_I2.md",
+      "start_anchor": "<!-- anchor: task-i2-t8 -->",
+      "description": "I2.T8: Implement template gallery UI (Vue)"
+    },
+    {
+      "key": "task-i2-t9",
+      "file": "02_Iteration_I2.md",
+      "start_anchor": "<!-- anchor: task-i2-t9 -->",
+      "description": "I2.T9: Implement guest session persistence"
+    },
+    {
+      "key": "task-i2-t10",
+      "file": "02_Iteration_I2.md",
+      "start_anchor": "<!-- anchor: task-i2-t10 -->",
+      "description": "I2.T10: Write integration tests for calendar workflows"
+    },
+    {
+      "key": "iteration-3-plan",
+      "file": "02_Iteration_I3.md",
+      "start_anchor": "<!-- anchor: iteration-3-plan -->",
+      "description": "Iteration 3: E-commerce and order management"
+    },
+    {
+      "key": "task-i3-t1",
+      "file": "02_Iteration_I3.md",
+      "start_anchor": "<!-- anchor: task-i3-t1 -->",
+      "description": "I3.T1: Integrate Stripe SDK and configure checkout"
+    },
+    {
+      "key": "task-i3-t2",
+      "file": "02_Iteration_I3.md",
+      "start_anchor": "<!-- anchor: task-i3-t2 -->",
+      "description": "I3.T2: Implement order service and repository"
+    },
+    {
+      "key": "task-i3-t3",
+      "file": "02_Iteration_I3.md",
+      "start_anchor": "<!-- anchor: task-i3-t3 -->",
+      "description": "I3.T3: Implement payment service and webhook handler"
+    },
+    {
+      "key": "task-i3-t4",
+      "file": "02_Iteration_I3.md",
+      "start_anchor": "<!-- anchor: task-i3-t4 -->",
+      "description": "I3.T4: Implement order GraphQL resolvers"
+    },
+    {
+      "key": "task-i3-t5",
+      "file": "02_Iteration_I3.md",
+      "start_anchor": "<!-- anchor: task-i3-t5 -->",
+      "description": "I3.T5: Build checkout flow UI (Vue components)"
+    },
+    {
+      "key": "task-i3-t6",
+      "file": "02_Iteration_I3.md",
+      "start_anchor": "<!-- anchor: task-i3-t6 -->",
+      "description": "I3.T6: Build admin order management dashboard (Vue)"
+    },
+    {
+      "key": "task-i3-t7",
+      "file": "02_Iteration_I3.md",
+      "start_anchor": "<!-- anchor: task-i3-t7 -->",
+      "description": "I3.T7: Implement email notification system"
+    },
+    {
+      "key": "task-i3-t8",
+      "file": "02_Iteration_I3.md",
+      "start_anchor": "<!-- anchor: task-i3-t8 -->",
+      "description": "I3.T8: Implement shipping cost calculation"
+    },
+    {
+      "key": "task-i3-t9",
+      "file": "02_Iteration_I3.md",
+      "start_anchor": "<!-- anchor: task-i3-t9 -->",
+      "description": "I3.T9: Write integration tests for e-commerce workflows"
+    },
+    {
+      "key": "task-i3-t10",
+      "file": "02_Iteration_I3.md",
+      "start_anchor": "<!-- anchor: task-i3-t10 -->",
+      "description": "I3.T10: Document e-commerce setup and testing"
+    },
+    {
+      "key": "iteration-4-plan",
+      "file": "02_Iteration_I4.md",
+      "start_anchor": "<!-- anchor: iteration-4-plan -->",
+      "description": "Iteration 4: PDF generation and asynchronous job system"
+    },
+    {
+      "key": "task-i4-t1",
+      "file": "02_Iteration_I4.md",
+      "start_anchor": "<!-- anchor: task-i4-t1 -->",
+      "description": "I4.T1: Implement DelayedJob executor framework"
+    },
+    {
+      "key": "task-i4-t2",
+      "file": "02_Iteration_I4.md",
+      "start_anchor": "<!-- anchor: task-i4-t2 -->",
+      "description": "I4.T2: Integrate Apache Batik for SVG to PDF rendering"
+    },
+    {
+      "key": "task-i4-t3",
+      "file": "02_Iteration_I4.md",
+      "start_anchor": "<!-- anchor: task-i4-t3 -->",
+      "description": "I4.T3: Implement watermarking logic"
+    },
+    {
+      "key": "task-i4-t4",
+      "file": "02_Iteration_I4.md",
+      "start_anchor": "<!-- anchor: task-i4-t4 -->",
+      "description": "I4.T4: Integrate Cloudflare R2 for PDF storage"
+    },
+    {
+      "key": "task-i4-t5",
+      "file": "02_Iteration_I4.md",
+      "start_anchor": "<!-- anchor: task-i4-t5 -->",
+      "description": "I4.T5: Implement PDF generation job handler"
+    },
+    {
+      "key": "task-i4-t6",
+      "file": "02_Iteration_I4.md",
+      "start_anchor": "<!-- anchor: task-i4-t6 -->",
+      "description": "I4.T6: Implement PDF GraphQL resolver and service"
+    },
+    {
+      "key": "task-i4-t7",
+      "file": "02_Iteration_I4.md",
+      "start_anchor": "<!-- anchor: task-i4-t7 -->",
+      "description": "I4.T7: Build PDF status tracking UI (Vue)"
+    },
+    {
+      "key": "task-i4-t8",
+      "file": "02_Iteration_I4.md",
+      "start_anchor": "<!-- anchor: task-i4-t8 -->",
+      "description": "I4.T8: Implement job monitoring dashboard (admin)"
+    },
+    {
+      "key": "task-i4-t9",
+      "file": "02_Iteration_I4.md",
+      "start_anchor": "<!-- anchor: task-i4-t9 -->",
+      "description": "I4.T9: Optimize PDF rendering performance"
+    },
+    {
+      "key": "task-i4-t10",
+      "file": "02_Iteration_I4.md",
+      "start_anchor": "<!-- anchor: task-i4-t10 -->",
+      "description": "I4.T10: Write integration tests for PDF generation pipeline"
+    },
+    {
+      "key": "iteration-5-plan",
+      "file": "02_Iteration_I5.md",
+      "start_anchor": "<!-- anchor: iteration-5-plan -->",
+      "description": "Iteration 5: Analytics, observability, and admin features"
+    },
+    {
+      "key": "task-i5-t1",
+      "file": "02_Iteration_I5.md",
+      "start_anchor": "<!-- anchor: task-i5-t1 -->",
+      "description": "I5.T1: Implement page view tracking"
+    },
+    {
+      "key": "task-i5-t2",
+      "file": "02_Iteration_I5.md",
+      "start_anchor": "<!-- anchor: task-i5-t2 -->",
+      "description": "I5.T2: Implement analytics rollup job"
+    },
+    {
+      "key": "task-i5-t3",
+      "file": "02_Iteration_I5.md",
+      "start_anchor": "<!-- anchor: task-i5-t3 -->",
+      "description": "I5.T3: Integrate Jaeger for distributed tracing"
+    },
+    {
+      "key": "task-i5-t4",
+      "file": "02_Iteration_I5.md",
+      "start_anchor": "<!-- anchor: task-i5-t4 -->",
+      "description": "I5.T4: Configure Prometheus metrics export"
+    },
+    {
+      "key": "task-i5-t5",
+      "file": "02_Iteration_I5.md",
+      "start_anchor": "<!-- anchor: task-i5-t5 -->",
+      "description": "I5.T5: Build admin analytics dashboard (Vue)"
+    },
+    {
+      "key": "task-i5-t6",
+      "file": "02_Iteration_I5.md",
+      "start_anchor": "<!-- anchor: task-i5-t6 -->",
+      "description": "I5.T6: Implement admin user management interface"
+    },
+    {
+      "key": "task-i5-t7",
+      "file": "02_Iteration_I5.md",
+      "start_anchor": "<!-- anchor: task-i5-t7 -->",
+      "description": "I5.T7: Implement health check custom probes"
+    },
+    {
+      "key": "task-i5-t8",
+      "file": "02_Iteration_I5.md",
+      "start_anchor": "<!-- anchor: task-i5-t8 -->",
+      "description": "I5.T8: Configure logging with structured JSON format"
+    },
+    {
+      "key": "task-i5-t9",
+      "file": "02_Iteration_I5.md",
+      "start_anchor": "<!-- anchor: task-i5-t9 -->",
+      "description": "I5.T9: Create observability documentation and runbooks"
+    },
+    {
+      "key": "task-i5-t10",
+      "file": "02_Iteration_I5.md",
+      "start_anchor": "<!-- anchor: task-i5-t10 -->",
+      "description": "I5.T10: Write integration tests for analytics and observability"
+    },
+    {
+      "key": "iteration-6-plan",
+      "file": "02_Iteration_I6.md",
+      "start_anchor": "<!-- anchor: iteration-6-plan -->",
+      "description": "Iteration 6: Deployment, security hardening, and launch preparation"
+    },
+    {
+      "key": "task-i6-t1",
+      "file": "02_Iteration_I6.md",
+      "start_anchor": "<!-- anchor: task-i6-t1 -->",
+      "description": "I6.T1: Create production Kubernetes manifests"
+    },
+    {
+      "key": "task-i6-t2",
+      "file": "02_Iteration_I6.md",
+      "start_anchor": "<!-- anchor: task-i6-t2 -->",
+      "description": "I6.T2: Create Terraform configurations for Cloudflare"
+    },
+    {
+      "key": "task-i6-t3",
+      "file": "02_Iteration_I6.md",
+      "start_anchor": "<!-- anchor: task-i6-t3 -->",
+      "description": "I6.T3: Conduct security audit and hardening"
+    },
+    {
+      "key": "task-i6-t4",
+      "file": "02_Iteration_I6.md",
+      "start_anchor": "<!-- anchor: task-i6-t4 -->",
+      "description": "I6.T4: Perform load testing and performance validation"
+    },
+    {
+      "key": "task-i6-t5",
+      "file": "02_Iteration_I6.md",
+      "start_anchor": "<!-- anchor: task-i6-t5 -->",
+      "description": "I6.T5: Create end-to-end testing suite"
+    },
+    {
+      "key": "task-i6-t6",
+      "file": "02_Iteration_I6.md",
+      "start_anchor": "<!-- anchor: task-i6-t6 -->",
+      "description": "I6.T6: Create user documentation and help center"
+    },
+    {
+      "key": "task-i6-t7",
+      "file": "02_Iteration_I6.md",
+      "start_anchor": "<!-- anchor: task-i6-t7 -->",
+      "description": "I6.T7: Configure production monitoring and alerting"
+    },
+    {
+      "key": "task-i6-t8",
+      "file": "02_Iteration_I6.md",
+      "start_anchor": "<!-- anchor: task-i6-t8 -->",
+      "description": "I6.T8: Create deployment and rollback procedures"
+    },
+    {
+      "key": "task-i6-t9",
+      "file": "02_Iteration_I6.md",
+      "start_anchor": "<!-- anchor: task-i6-t9 -->",
+      "description": "I6.T9: Finalize CI/CD pipeline and automation"
+    },
+    {
+      "key": "task-i6-t10",
+      "file": "02_Iteration_I6.md",
+      "start_anchor": "<!-- anchor: task-i6-t10 -->",
+      "description": "I6.T10: Create launch checklist and go-live plan"
+    },
+    {
+      "key": "verification-and-integration-strategy",
+      "file": "03_Verification_and_Glossary.md",
+      "start_anchor": "<!-- anchor: verification-and-integration-strategy -->",
+      "description": "Complete verification and integration strategy"
+    },
+    {
+      "key": "testing-levels",
+      "file": "03_Verification_and_Glossary.md",
+      "start_anchor": "<!-- anchor: testing-levels -->",
+      "description": "Unit, integration, E2E, load, security, and acceptance testing levels"
+    },
+    {
+      "key": "ci-cd-pipeline",
+      "file": "03_Verification_and_Glossary.md",
+      "start_anchor": "<!-- anchor: ci-cd-pipeline -->",
+      "description": "Continuous integration and deployment pipeline details"
+    },
+    {
+      "key": "code-quality-gates",
+      "file": "03_Verification_and_Glossary.md",
+      "start_anchor": "<!-- anchor: code-quality-gates -->",
+      "description": "Mandatory and advisory code quality gates"
+    },
+    {
+      "key": "artifact-validation",
+      "file": "03_Verification_and_Glossary.md",
+      "start_anchor": "<!-- anchor: artifact-validation -->",
+      "description": "Validation procedures for architectural diagrams and specifications"
+    },
+    {
+      "key": "integration-strategy",
+      "file": "03_Verification_and_Glossary.md",
+      "start_anchor": "<!-- anchor: integration-strategy -->",
+      "description": "Incremental integration approach and environment promotion"
+    },
+    {
+      "key": "glossary",
+      "file": "03_Verification_and_Glossary.md",
+      "start_anchor": "<!-- anchor: glossary -->",
+      "description": "Comprehensive glossary of technical terms and acronyms"
+    },
+    {
+      "key": "iteration-dependencies",
+      "file": "03_Verification_and_Glossary.md",
+      "start_anchor": "<!-- anchor: iteration-dependencies -->",
+      "description": "Iteration dependency graph, table, and timeline estimates"
+    }
+  ]
+}

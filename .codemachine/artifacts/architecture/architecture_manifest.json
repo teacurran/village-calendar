@@ -1,0 +1,451 @@
+{
+  "version": "1.0",
+  "generated": "2025-10-16",
+  "description": "System Architecture Blueprint manifest for Village Calendar - indexes all architectural knowledge locations",
+  "locations": [
+    {
+      "key": "introduction-and-goals",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: introduction-and-goals -->",
+      "description": "Overall project vision, objectives, scope, and foundational assumptions"
+    },
+    {
+      "key": "project-vision",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: project-vision -->",
+      "description": "High-level description of what Village Calendar aims to achieve"
+    },
+    {
+      "key": "key-objectives",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: key-objectives -->",
+      "description": "List of functional and non-functional objectives the architecture must support"
+    },
+    {
+      "key": "scope",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: scope -->",
+      "description": "Definition of what is included and excluded from the system boundaries"
+    },
+    {
+      "key": "key-assumptions",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: key-assumptions -->",
+      "description": "Technical, business, environmental, and behavioral assumptions underlying the architecture"
+    },
+    {
+      "key": "architectural-drivers",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: architectural-drivers -->",
+      "description": "Requirements and constraints that shape architectural decisions"
+    },
+    {
+      "key": "functional-requirements-summary",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: functional-requirements-summary -->",
+      "description": "Summary of core user workflows and system capabilities"
+    },
+    {
+      "key": "non-functional-requirements",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: non-functional-requirements -->",
+      "description": "Quality attributes including performance, scalability, availability, security"
+    },
+    {
+      "key": "nfr-performance",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: nfr-performance -->",
+      "description": "Performance targets and architectural decisions to achieve them"
+    },
+    {
+      "key": "nfr-scalability",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: nfr-scalability -->",
+      "description": "Scalability requirements and horizontal scaling strategy"
+    },
+    {
+      "key": "nfr-availability",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: nfr-availability -->",
+      "description": "Availability and reliability requirements with uptime targets"
+    },
+    {
+      "key": "nfr-security",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: nfr-security -->",
+      "description": "Security requirements and compliance standards (PCI DSS, GDPR)"
+    },
+    {
+      "key": "nfr-maintainability",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: nfr-maintainability -->",
+      "description": "Code quality, testing, and extensibility requirements"
+    },
+    {
+      "key": "nfr-usability",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: nfr-usability -->",
+      "description": "User experience requirements including guest-to-authenticated conversion"
+    },
+    {
+      "key": "nfr-observability",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: nfr-observability -->",
+      "description": "Monitoring, tracing, and metrics collection requirements"
+    },
+    {
+      "key": "constraints-and-preferences",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: constraints-and-preferences -->",
+      "description": "Technological, organizational, business, and design constraints"
+    },
+    {
+      "key": "technological-constraints",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: technological-constraints -->",
+      "description": "Mandated and preferred technologies from existing stack"
+    },
+    {
+      "key": "organizational-constraints",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: organizational-constraints -->",
+      "description": "Team size, infrastructure, and budget limitations"
+    },
+    {
+      "key": "business-constraints",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: business-constraints -->",
+      "description": "Time to market, compliance, and integration requirements"
+    },
+    {
+      "key": "design-preferences",
+      "file": "01_Context_and_Drivers.md",
+      "start_anchor": "<!-- anchor: design-preferences -->",
+      "description": "Preferred architectural patterns and API design approaches"
+    },
+    {
+      "key": "proposed-architecture",
+      "file": "02_Architecture_Overview.md",
+      "start_anchor": "<!-- anchor: proposed-architecture -->",
+      "description": "High-level architectural decisions and technology choices"
+    },
+    {
+      "key": "architectural-style",
+      "file": "02_Architecture_Overview.md",
+      "start_anchor": "<!-- anchor: architectural-style -->",
+      "description": "Modular monolith architectural style with detailed rationale"
+    },
+    {
+      "key": "technology-stack-summary",
+      "file": "02_Architecture_Overview.md",
+      "start_anchor": "<!-- anchor: technology-stack-summary -->",
+      "description": "Comprehensive table of all technology choices with justifications"
+    },
+    {
+      "key": "system-structure-and-data",
+      "file": "03_System_Structure_and_Data.md",
+      "start_anchor": "<!-- anchor: system-structure-and-data -->",
+      "description": "Static structural views including diagrams and data model"
+    },
+    {
+      "key": "system-context-diagram",
+      "file": "03_System_Structure_and_Data.md",
+      "start_anchor": "<!-- anchor: system-context-diagram -->",
+      "description": "C4 Level 1 diagram showing system boundary and external actors"
+    },
+    {
+      "key": "container-diagram",
+      "file": "03_System_Structure_and_Data.md",
+      "start_anchor": "<!-- anchor: container-diagram -->",
+      "description": "C4 Level 2 diagram showing deployable units and data stores"
+    },
+    {
+      "key": "component-diagram",
+      "file": "03_System_Structure_and_Data.md",
+      "start_anchor": "<!-- anchor: component-diagram -->",
+      "description": "C4 Level 3 diagram detailing Quarkus API Application internal components"
+    },
+    {
+      "key": "data-model-overview",
+      "file": "03_System_Structure_and_Data.md",
+      "start_anchor": "<!-- anchor: data-model-overview -->",
+      "description": "Database design decisions, entity descriptions, and ERD"
+    },
+    {
+      "key": "behavior-and-communication",
+      "file": "04_Behavior_and_Communication.md",
+      "start_anchor": "<!-- anchor: behavior-and-communication -->",
+      "description": "Dynamic behavioral views and communication patterns"
+    },
+    {
+      "key": "api-design-communication",
+      "file": "04_Behavior_and_Communication.md",
+      "start_anchor": "<!-- anchor: api-design-communication -->",
+      "description": "API styles, communication patterns, and interaction flows"
+    },
+    {
+      "key": "api-style",
+      "file": "04_Behavior_and_Communication.md",
+      "start_anchor": "<!-- anchor: api-style -->",
+      "description": "GraphQL primary API rationale and schema organization"
+    },
+    {
+      "key": "communication-patterns",
+      "file": "04_Behavior_and_Communication.md",
+      "start_anchor": "<!-- anchor: communication-patterns -->",
+      "description": "Synchronous and asynchronous communication patterns"
+    },
+    {
+      "key": "key-interaction-flows",
+      "file": "04_Behavior_and_Communication.md",
+      "start_anchor": "<!-- anchor: key-interaction-flows -->",
+      "description": "Sequence diagrams for critical workflows"
+    },
+    {
+      "key": "flow-user-login",
+      "file": "04_Behavior_and_Communication.md",
+      "start_anchor": "<!-- anchor: flow-user-login -->",
+      "description": "OAuth login flow with guest session conversion"
+    },
+    {
+      "key": "flow-place-order",
+      "file": "04_Behavior_and_Communication.md",
+      "start_anchor": "<!-- anchor: flow-place-order -->",
+      "description": "Complete e-commerce order placement and payment processing flow"
+    },
+    {
+      "key": "flow-pdf-generation",
+      "file": "04_Behavior_and_Communication.md",
+      "start_anchor": "<!-- anchor: flow-pdf-generation -->",
+      "description": "Asynchronous PDF generation with job queue and polling"
+    },
+    {
+      "key": "api-versioning-strategy",
+      "file": "04_Behavior_and_Communication.md",
+      "start_anchor": "<!-- anchor: api-versioning-strategy -->",
+      "description": "GraphQL schema evolution and REST versioning approach"
+    },
+    {
+      "key": "operational-architecture",
+      "file": "05_Operational_Architecture.md",
+      "start_anchor": "<!-- anchor: operational-architecture -->",
+      "description": "Cross-cutting concerns and deployment architecture"
+    },
+    {
+      "key": "cross-cutting-concerns",
+      "file": "05_Operational_Architecture.md",
+      "start_anchor": "<!-- anchor: cross-cutting-concerns -->",
+      "description": "Authentication, logging, security, scalability, reliability strategies"
+    },
+    {
+      "key": "authentication-authorization",
+      "file": "05_Operational_Architecture.md",
+      "start_anchor": "<!-- anchor: authentication-authorization -->",
+      "description": "OAuth 2.0 authentication flow and RBAC authorization model"
+    },
+    {
+      "key": "logging-monitoring",
+      "file": "05_Operational_Architecture.md",
+      "start_anchor": "<!-- anchor: logging-monitoring -->",
+      "description": "Structured logging, distributed tracing, metrics collection, health checks"
+    },
+    {
+      "key": "security-considerations",
+      "file": "05_Operational_Architecture.md",
+      "start_anchor": "<!-- anchor: security-considerations -->",
+      "description": "Threat model and comprehensive security controls"
+    },
+    {
+      "key": "scalability-performance",
+      "file": "05_Operational_Architecture.md",
+      "start_anchor": "<!-- anchor: scalability-performance -->",
+      "description": "Horizontal scaling strategy, caching, performance optimizations"
+    },
+    {
+      "key": "reliability-availability",
+      "file": "05_Operational_Architecture.md",
+      "start_anchor": "<!-- anchor: reliability-availability -->",
+      "description": "High availability design, fault tolerance, disaster recovery"
+    },
+    {
+      "key": "deployment-view",
+      "file": "05_Operational_Architecture.md",
+      "start_anchor": "<!-- anchor: deployment-view -->",
+      "description": "Deployment environment, strategy, and infrastructure topology"
+    },
+    {
+      "key": "target-environment",
+      "file": "05_Operational_Architecture.md",
+      "start_anchor": "<!-- anchor: target-environment -->",
+      "description": "Infrastructure components and hybrid deployment rationale"
+    },
+    {
+      "key": "deployment-strategy",
+      "file": "05_Operational_Architecture.md",
+      "start_anchor": "<!-- anchor: deployment-strategy -->",
+      "description": "CI/CD pipeline, environments, rolling updates, database migrations"
+    },
+    {
+      "key": "deployment-diagram",
+      "file": "05_Operational_Architecture.md",
+      "start_anchor": "<!-- anchor: deployment-diagram -->",
+      "description": "C4 deployment diagram showing Kubernetes cluster topology"
+    },
+    {
+      "key": "design-rationale-tradeoffs",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: design-rationale-tradeoffs -->",
+      "description": "Design decisions, alternatives considered, and known risks"
+    },
+    {
+      "key": "key-decisions-summary",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: key-decisions-summary -->",
+      "description": "Table of critical architectural decisions with trade-offs"
+    },
+    {
+      "key": "alternatives-considered",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: alternatives-considered -->",
+      "description": "Alternative architectures evaluated and rejection reasons"
+    },
+    {
+      "key": "alternative-microservices",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: alternative-microservices -->",
+      "description": "Why microservices architecture was rejected for MVP"
+    },
+    {
+      "key": "alternative-nosql",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: alternative-nosql -->",
+      "description": "Why MongoDB/NoSQL was rejected in favor of PostgreSQL"
+    },
+    {
+      "key": "alternative-serverless",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: alternative-serverless -->",
+      "description": "Why AWS Lambda serverless architecture was rejected"
+    },
+    {
+      "key": "alternative-rest-api",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: alternative-rest-api -->",
+      "description": "Why REST-only API was rejected in favor of GraphQL"
+    },
+    {
+      "key": "known-risks-mitigation",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: known-risks-mitigation -->",
+      "description": "Identified architectural risks with mitigation strategies"
+    },
+    {
+      "key": "risk-database-scaling",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: risk-database-scaling -->",
+      "description": "Database bottleneck risk and scaling mitigation plan"
+    },
+    {
+      "key": "risk-pdf-generation-overload",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: risk-pdf-generation-overload -->",
+      "description": "PDF job queue overload risk and capacity management"
+    },
+    {
+      "key": "risk-third-party-downtime",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: risk-third-party-downtime -->",
+      "description": "Stripe/OAuth/Cloudflare downtime risks and fallback strategies"
+    },
+    {
+      "key": "risk-seasonal-demand-surge",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: risk-seasonal-demand-surge -->",
+      "description": "Q4 holiday traffic spike preparation and load testing"
+    },
+    {
+      "key": "risk-security-breach",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: risk-security-breach -->",
+      "description": "Security breach prevention and incident response plan"
+    },
+    {
+      "key": "future-considerations",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: future-considerations -->",
+      "description": "Evolution roadmap and areas requiring deeper design"
+    },
+    {
+      "key": "potential-evolution",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: potential-evolution -->",
+      "description": "Multi-phase evolution plan for the architecture"
+    },
+    {
+      "key": "evolution-phase-2",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: evolution-phase-2 -->",
+      "description": "6-12 month enhancements: collaboration, mobile apps, gallery"
+    },
+    {
+      "key": "evolution-phase-3",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: evolution-phase-3 -->",
+      "description": "12-24 month scalability: read replicas, Redis, CDN, microservices"
+    },
+    {
+      "key": "evolution-phase-4",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: evolution-phase-4 -->",
+      "description": "24+ month advanced features: subscriptions, AI, white-label, i18n"
+    },
+    {
+      "key": "areas-for-deeper-dive",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: areas-for-deeper-dive -->",
+      "description": "Topics requiring detailed design during implementation"
+    },
+    {
+      "key": "deeper-dive-graphql-schema",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: deeper-dive-graphql-schema -->",
+      "description": "GraphQL schema design details and conventions"
+    },
+    {
+      "key": "deeper-dive-job-system",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: deeper-dive-job-system -->",
+      "description": "DelayedJob implementation details and lifecycle"
+    },
+    {
+      "key": "deeper-dive-pdf-rendering",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: deeper-dive-pdf-rendering -->",
+      "description": "PDF rendering engine specifications and quality benchmarks"
+    },
+    {
+      "key": "deeper-dive-analytics",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: deeper-dive-analytics -->",
+      "description": "Analytics data model and business metrics dashboard"
+    },
+    {
+      "key": "deeper-dive-security-hardening",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: deeper-dive-security-hardening -->",
+      "description": "Security hardening tasks and compliance checklists"
+    },
+    {
+      "key": "deeper-dive-infrastructure-automation",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: deeper-dive-infrastructure-automation -->",
+      "description": "Infrastructure as code completeness and disaster recovery testing"
+    },
+    {
+      "key": "glossary",
+      "file": "06_Rationale_and_Future.md",
+      "start_anchor": "<!-- anchor: glossary -->",
+      "description": "Definitions of technical terms and acronyms used throughout the blueprint"
+    }
+  ]
+}
