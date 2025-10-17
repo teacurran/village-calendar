@@ -87,7 +87,7 @@ class AuthenticationServiceTest {
         SecurityIdentity identity = createMockIdentity(
             TEST_OAUTH_SUBJECT, TEST_EMAIL, TEST_NAME, TEST_PICTURE
         );
-        CalendarUser user = authenticationService.handleOAuthCallback("google", identity);
+        CalendarUser user = authenticationService.handleOAuthCallback("google", identity, null);
 
         // Then: User is created with correct information
         assertNotNull(user, "User should be created");
@@ -125,7 +125,7 @@ class AuthenticationServiceTest {
         SecurityIdentity identity = createMockIdentity(
             TEST_OAUTH_SUBJECT, TEST_EMAIL, TEST_NAME, TEST_PICTURE
         );
-        CalendarUser user = authenticationService.handleOAuthCallback("google", identity);
+        CalendarUser user = authenticationService.handleOAuthCallback("google", identity, null);
 
         // Then: User is updated with new information
         assertNotNull(user, "User should be returned");
@@ -150,7 +150,7 @@ class AuthenticationServiceTest {
 
         // When/Then: Should throw exception
         assertThrows(IllegalArgumentException.class, () -> {
-            authenticationService.handleOAuthCallback("google", identity);
+            authenticationService.handleOAuthCallback("google", identity, null);
         }, "Should throw exception when email is missing");
     }
 

@@ -132,7 +132,7 @@
     "acceptance_criteria": "Guest user can create calendar without logging in, Calendar saved to session (CalendarSession entity in database), sessionId persisted in browser localStorage, On login, convertGuestSession mutation transfers calendars to user account, Expired sessions (>30 days old) deleted by cleanup job, Frontend prompts guest user to sign in to save permanently",
     "dependencies": ["I2.T2", "I1.T9"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T10",

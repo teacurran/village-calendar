@@ -74,7 +74,7 @@ class AuthenticationIntegrationTest {
         SecurityIdentity identity = createMockIdentity(
             TEST_OAUTH_SUBJECT, TEST_EMAIL, TEST_NAME, TEST_PICTURE
         );
-        CalendarUser user = authService.handleOAuthCallback("google", identity);
+        CalendarUser user = authService.handleOAuthCallback("google", identity, null);
 
         // Then: User is created with correct information
         assertNotNull(user, "User should be created");
@@ -117,7 +117,7 @@ class AuthenticationIntegrationTest {
         SecurityIdentity identity = createMockIdentity(
             existingUser.oauthSubject, newEmail, newName, newPicture
         );
-        CalendarUser user = authService.handleOAuthCallback("google", identity);
+        CalendarUser user = authService.handleOAuthCallback("google", identity, null);
 
         // Then: User is updated with new information
         assertNotNull(user, "User should be returned");
@@ -146,7 +146,7 @@ class AuthenticationIntegrationTest {
 
         // When/Then: Should throw exception
         assertThrows(IllegalArgumentException.class, () -> {
-            authService.handleOAuthCallback("google", identity);
+            authService.handleOAuthCallback("google", identity, null);
         }, "Should throw exception when email is missing");
     }
 
@@ -322,7 +322,7 @@ class AuthenticationIntegrationTest {
             "Complete Flow Test",
             "https://example.com/avatar.jpg"
         );
-        CalendarUser user = authService.handleOAuthCallback("google", identity);
+        CalendarUser user = authService.handleOAuthCallback("google", identity, null);
 
         assertNotNull(user, "User should be created");
         assertNotNull(user.id, "User ID should be assigned");

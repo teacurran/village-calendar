@@ -9,7 +9,8 @@ import org.junit.jupiter.api.Test;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -50,9 +51,25 @@ class SessionServiceTest {
     @AfterEach
     @Transactional
     void tearDown() {
-        // Clean up test data
-        UserCalendar.deleteAll();
-        CalendarUser.deleteAll();
+        // Clean up test data in proper order due to foreign key constraints
+        try {
+            // Delete calendar_orders first (foreign key to user_calendars)
+            villagecompute.calendar.data.models.CalendarOrder.deleteAll();
+        } catch (Exception e) {
+            // Ignore if table doesn't exist or is empty
+        }
+        try {
+            // Delete calendars
+            UserCalendar.deleteAll();
+        } catch (Exception e) {
+            // Ignore cleanup errors
+        }
+        try {
+            // Delete users
+            CalendarUser.deleteAll();
+        } catch (Exception e) {
+            // Ignore cleanup errors
+        }
     }
 
     // ========== SESSION ID GENERATION TESTS ==========
@@ -281,10 +298,14 @@ class SessionServiceTest {
         oldCalendar.isPublic = true;
         oldCalendar.persist();
 
-        // Manually set old update timestamp (31 days ago)
-        UserCalendar calendar = UserCalendar.findById(oldCalendar.id);
-        calendar.updated = LocalDateTime.now().minusDays(31);
-        calendar.persist();
+        // Manually set old update timestamp (31 days ago) using native SQL
+        // to bypass @UpdateTimestamp annotation
+        Instant oldTimestamp = Instant.now().minus(31, ChronoUnit.DAYS);
+        UserCalendar.getEntityManager()
+            .createNativeQuery("UPDATE user_calendars SET updated = :timestamp WHERE id = :id")
+            .setParameter("timestamp", oldTimestamp)
+            .setParameter("id", oldCalendar.id)
+            .executeUpdate();
 
         // When
         int deletedCount = sessionService.deleteExpiredSessions();
@@ -321,9 +342,14 @@ class SessionServiceTest {
         oldGuestCal.year = 2024;
         oldGuestCal.isPublic = true;
         oldGuestCal.persist();
-        UserCalendar calendar = UserCalendar.findById(oldGuestCal.id);
-        calendar.updated = LocalDateTime.now().minusDays(31);
-        calendar.persist();
+
+        // Manually set old update timestamp using native SQL
+        Instant oldTimestamp = Instant.now().minus(31, ChronoUnit.DAYS);
+        UserCalendar.getEntityManager()
+            .createNativeQuery("UPDATE user_calendars SET updated = :timestamp WHERE id = :id")
+            .setParameter("timestamp", oldTimestamp)
+            .setParameter("id", oldGuestCal.id)
+            .executeUpdate();
 
         // When
         sessionService.deleteExpiredSessions();
@@ -350,6 +376,7 @@ class SessionServiceTest {
     @Transactional
     void testDeleteExpiredSessions_MultipleExpiredSessions() {
         // Given - Create multiple old guest calendars
+        Instant oldTimestamp = Instant.now().minus(35, ChronoUnit.DAYS);
         for (int i = 0; i < 3; i++) {
             UserCalendar oldCal = new UserCalendar();
             oldCal.sessionId = "session-" + i;
@@ -358,9 +385,12 @@ class SessionServiceTest {
             oldCal.isPublic = true;
             oldCal.persist();
 
-            UserCalendar calendar = UserCalendar.findById(oldCal.id);
-            calendar.updated = LocalDateTime.now().minusDays(35);
-            calendar.persist();
+            // Manually set old update timestamp using native SQL
+            UserCalendar.getEntityManager()
+                .createNativeQuery("UPDATE user_calendars SET updated = :timestamp WHERE id = :id")
+                .setParameter("timestamp", oldTimestamp)
+                .setParameter("id", oldCal.id)
+                .executeUpdate();
         }
 
         // When

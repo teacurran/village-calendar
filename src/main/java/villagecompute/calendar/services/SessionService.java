@@ -7,7 +7,8 @@ import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -83,7 +84,7 @@ public class SessionService {
     public int deleteExpiredSessions() {
         LOG.info("Starting cleanup of expired guest session calendars");
 
-        LocalDateTime expirationDate = LocalDateTime.now().minusDays(SESSION_EXPIRATION_DAYS);
+        Instant expirationDate = Instant.now().minus(SESSION_EXPIRATION_DAYS, ChronoUnit.DAYS);
 
         // Find all calendars with sessionId that are expired
         List<UserCalendar> expiredCalendars = UserCalendar.find(
