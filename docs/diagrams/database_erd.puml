@@ -1,0 +1,198 @@
+@startuml database_erd
+
+!define Table(name,desc) class name as "desc" << (T,#FFAAAA) >>
+!define primary_key(x) <b><<PK>> x</b>
+!define foreign_key(x) <u><<FK>> x</u>
+!define unique(x) <<U>> x
+!define not_null(x) <b>x</b>
+
+' Title and Description
+title Village Calendar Database Schema - MVP Implementation
+caption 4 Core Entities | PostgreSQL with JSONB | Optimistic Locking Enabled
+
+' Styling
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor<<Core>> LightBlue
+    BackgroundColor<<Config>> LightGreen
+    BackgroundColor<<Transaction>> LightYellow
+    BorderColor Black
+    ArrowColor Black
+}
+
+' ============================================================
+' ENTITY DEFINITIONS
+' ============================================================
+
+entity "calendar_users" as users <<Core>> {
+  * <<PK>> id : UUID
+  --
+  * oauth_provider : VARCHAR(50)
+  * oauth_subject : VARCHAR(255)
+  * email : VARCHAR(255)
+  display_name : VARCHAR(255)
+  profile_image_url : VARCHAR(500)
+  last_login_at : TIMESTAMPTZ
+  * is_admin : BOOLEAN
+  * created : TIMESTAMPTZ
+  * updated : TIMESTAMPTZ
+  * version : BIGINT
+  ..
+  <<U>> UNIQUE(oauth_provider, oauth_subject)
+  <<idx>> email
+  <<idx>> last_login_at DESC
+  <<idx>> is_admin (partial WHERE is_admin = true)
+}
+
+entity "calendar_templates" as templates <<Config>> {
+  * <<PK>> id : UUID
+  --
+  * name : VARCHAR(255)
+  description : TEXT
+  thumbnail_url : VARCHAR(500)
+  * is_active : BOOLEAN
+  * is_featured : BOOLEAN
+  * display_order : INTEGER
+  * configuration : JSONB
+  preview_svg : TEXT
+  * created : TIMESTAMPTZ
+  * updated : TIMESTAMPTZ
+  * version : BIGINT
+  ..
+  <<idx>> name
+  <<idx>> (is_active, display_order, name)
+  <<idx>> (is_featured, is_active, display_order)
+  <<idx>> configuration (GIN index)
+}
+
+entity "user_calendars" as calendars <<Core>> {
+  * <<PK>> id : UUID
+  --
+  <<FK>> user_id : UUID {nullable}
+  session_id : VARCHAR(255)
+  <<FK>> template_id : UUID {nullable}
+  * name : VARCHAR(255)
+  * year : INTEGER
+  * is_public : BOOLEAN
+  configuration : JSONB
+  generated_svg : TEXT
+  generated_pdf_url : VARCHAR(500)
+  * created : TIMESTAMPTZ
+  * updated : TIMESTAMPTZ
+  * version : BIGINT
+  ..
+  <<idx>> (user_id, year DESC)
+  <<idx>> (session_id, updated DESC)
+  <<idx>> template_id
+  <<idx>> (is_public, updated DESC)
+}
+
+entity "calendar_orders" as orders <<Transaction>> {
+  * <<PK>> id : UUID
+  --
+  * <<FK>> user_id : UUID
+  * <<FK>> calendar_id : UUID
+  * quantity : INTEGER
+  * unit_price : DECIMAL(10,2)
+  * total_price : DECIMAL(10,2)
+  * status : VARCHAR(50)
+  shipping_address : JSONB
+  stripe_payment_intent_id : VARCHAR(255)
+  stripe_charge_id : VARCHAR(255)
+  notes : TEXT
+  paid_at : TIMESTAMPTZ
+  shipped_at : TIMESTAMPTZ
+  * created : TIMESTAMPTZ
+  * updated : TIMESTAMPTZ
+  * version : BIGINT
+  ..
+  <<idx>> (user_id, created DESC)
+  <<idx>> (status, created DESC)
+  <<idx>> calendar_id
+  <<idx>> stripe_payment_intent_id
+}
+
+' ============================================================
+' RELATIONSHIPS
+' ============================================================
+
+' CalendarUser → UserCalendar (one-to-many, optional for guest sessions)
+users ||--o{ calendars : "owns\n(optional for guests)"
+
+' CalendarTemplate → UserCalendar (one-to-many, optional)
+templates ||--o{ calendars : "provides design"
+
+' CalendarUser → CalendarOrder (one-to-many, required)
+users ||--|{ orders : "places"
+
+' UserCalendar → CalendarOrder (one-to-many, required)
+calendars ||--|{ orders : "purchases"
+
+' ============================================================
+' NOTES AND ANNOTATIONS
+' ============================================================
+
+note top of users
+  **OAuth Authentication**
+  - UNIQUE constraint: (oauth_provider, oauth_subject)
+  - Partial index on is_admin for fast admin lookup
+  - Added in migration 002: is_admin field
+end note
+
+note top of templates
+  **Reusable Design Library**
+  - Admin-curated calendar templates
+  - JSONB configuration for flexible schema
+  - GIN index enables efficient JSONB queries
+  - display_order controls template listing
+end note
+
+note right of calendars
+  **Guest Session Support**
+  - user_id is NULLABLE (guest sessions use session_id)
+  - template_id is NULLABLE (ON DELETE SET NULL)
+  - Events embedded in configuration JSONB
+  - FK Cascade Behaviors:
+    * user_id → ON DELETE CASCADE
+    * template_id → ON DELETE SET NULL
+end note
+
+note right of orders
+  **E-Commerce Integration**
+  - Stripe payment processing
+  - Single-item orders (quantity field)
+  - Shipping address stored as JSONB
+  - Status values: PENDING, PAID, PROCESSING,
+    SHIPPED, DELIVERED, CANCELLED
+  - FK Behaviors (data protection):
+    * user_id → ON DELETE RESTRICT
+    * calendar_id → ON DELETE RESTRICT
+end note
+
+legend bottom
+  **MVP Database Schema (4 Entities)**
+
+  **Implemented Tables:**
+  • calendar_users - OAuth authenticated users
+  • calendar_templates - Reusable design templates
+  • user_calendars - User-created calendars
+  • calendar_orders - E-commerce orders
+
+  **Architectural Patterns:**
+  • JSONB Flexibility: configuration fields enable schema evolution
+  • Embedded Data: Events in calendar config, payment data in orders
+  • Guest Sessions: Anonymous users via session_id (no separate table)
+  • Optimistic Locking: All tables have version field
+  • Stripe Integration: Payment intent and charge IDs in orders table
+
+  **Future Entities (Planned but Not Implemented):**
+  • DelayedJob - Async job queue
+  • PageView - Analytics tracking
+  • AnalyticsRollup - Aggregated analytics
+  • Separate Event table (currently embedded in JSONB)
+  • Separate Payment table (currently embedded in orders)
+  • Separate OrderItem table (currently quantity field in orders)
+endlegend
+
+@enduml

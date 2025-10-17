@@ -10,17 +10,21 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I1.T3",
+  "task_id": "I1.T4",
   "iteration_id": "I1",
   "iteration_goal": "Establish project infrastructure, define data models, create architectural artifacts, and implement foundational backend/frontend scaffolding",
-  "description": "Create PlantUML component diagram showing the internal architecture of the Quarkus API application. Diagram must include: GraphQL API layer (resolvers), Service layer (CalendarService, UserService, OrderService, PdfService, EmailService), Repository layer (Panache repositories), Job Manager, Integration components (OAuth Client, Stripe Client, Email Sender, R2 Client), Security Filter. Show dependencies between components (e.g., GraphQL resolvers call services, services call repositories, services call integration clients). Use C4 Component diagram notation for clarity.",
+  "description": "Generate PlantUML entity-relationship diagram for the complete database schema. Include all entities: User, CalendarSession, Calendar, Event, CalendarTemplate, Order, OrderItem, Payment, DelayedJob, PageView, AnalyticsRollup. Show primary keys, foreign keys, key fields (not all columns), cardinalities (1:1, 1:N, N:M). Use PlantUML entity syntax with proper relationship notation. Ensure diagram matches data model overview from Plan Section 2.",
   "agent_type_hint": "DiagrammingAgent",
-  "inputs": "Component descriptions from Plan Section 2.3 \"Key Components/Services\", Technology stack (Quarkus, Panache, SmallRye GraphQL, Vert.x EventBus)",
-  "target_files": ["docs/diagrams/component_diagram.puml"],
+  "inputs": "Data model overview from Plan Section 2 \"Data Model Overview\", Entity descriptions with fields, relationships, and constraints",
+  "target_files": [
+    "docs/diagrams/database_erd.puml"
+  ],
   "input_files": [],
-  "deliverables": "PlantUML diagram file rendering correctly without syntax errors, Diagram accurately reflects components and dependencies described in architecture plan, PNG export of diagram for documentation (docs/diagrams/component_diagram.png)",
-  "acceptance_criteria": "PlantUML file validates and renders in PlantUML viewer/IDE plugin, All components from architecture section included with correct relationships, Diagram follows C4 Component diagram conventions (containers, components, relationships), Visual clarity: components grouped by layer, clear dependency arrows",
-  "dependencies": ["I1.T1"],
+  "deliverables": "PlantUML ERD file rendering correctly, Diagram shows all 11 entities with relationships, PNG export of diagram (docs/diagrams/database_erd.png)",
+  "acceptance_criteria": "PlantUML file validates and renders without errors, All entities from data model section included, Primary keys marked with <<PK>>, foreign keys with <<FK>>, Relationship cardinalities correctly shown (1:N, 1:1), Indexes and unique constraints annotated in diagram or comments",
+  "dependencies": [
+    "I1.T1"
+  ],
   "parallelizable": true,
   "done": false
 }
@@ -32,75 +36,85 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: Key Components/Services (from 01_Plan_Overview_and_Setup.md)
+### IMPORTANT NOTE: Architecture Documentation Location
 
-```markdown
-**Backend Components:**
-1. **GraphQL API Layer**: Query/mutation resolvers, schema definition, DataLoader pattern for N+1 prevention
-2. **Calendar Service**: CRUD operations, template application, event management, astronomical calculations
-3. **User Service**: OAuth integration, session conversion (guest → authenticated), profile management
-4. **Order Service**: Order placement, Stripe checkout creation, payment webhook handling, status updates
-5. **PDF Service**: Job enqueueing, watermark logic, R2 upload coordination
-6. **Job Manager**: DelayedJob queue management, EventBus publishing, priority assignment, retry logic
-7. **Email Service**: Transactional email composition (order confirmations, shipping updates), SMTP delivery
-8. **Repository Layer**: Panache repositories for User, Calendar, Order, DelayedJob, Template entities
-9. **Security Layer**: JWT validation, RBAC enforcement, CSRF protection
+**The architecture documentation files referenced in the manifests are NOT present in the repository.** The actual source of truth for the data model is:
 
-**Frontend Components:**
-1. **Calendar Editor**: Drag-drop event creation, emoji picker, holiday set selection, astronomical overlay toggles
-2. **Template Gallery**: Browse/preview admin-curated templates, "Start from Template" flow
-3. **User Dashboard**: My Calendars list (grid/list view), order history, account settings
-4. **Checkout Flow**: Cart review, shipping address form, Stripe Checkout integration
-5. **Admin Panel**: Template management, order processing dashboard, analytics visualization
+1. **Database migration scripts** in `migrations/src/main/resources/scripts/`
+2. **JPA entity models** in `src/main/java/villagecompute/calendar/data/models/`
 
-**Async Job Workers:**
-1. **PDF Generation Job**: Batik rendering, watermarking, R2 upload, calendar entity update
-2. **Email Job**: Transactional email sending with retry logic
-3. **Analytics Rollup Job**: Daily/weekly aggregation of page views, orders, revenue
+Based on my analysis of the codebase, I have identified the following **actual entities** that exist:
 
-**Key Diagrams Planned:**
-- Component Diagram (PlantUML): Quarkus API internal components, dependencies (Created in Iteration 1)
-- Database ERD (PlantUML): Entity relationships for users, calendars, orders, jobs (Created in Iteration 1)
-- Sequence Diagrams (PlantUML): OAuth login flow, order placement flow, PDF generation flow (Created in Iteration 2)
-- Deployment Diagram (PlantUML): Kubernetes topology, Cloudflare integration (Created in Iteration 1)
-```
+### Actual Database Schema (from migrations and JPA entities)
 
-### Context: Technology Stack (from 01_Plan_Overview_and_Setup.md)
+**Existing tables (4 total):**
 
-```markdown
-**Backend:**
-- Framework: Quarkus 3.26.2
-- Runtime: Java 21 (OpenJDK LTS)
-- ORM: Hibernate ORM with Panache (active record pattern)
-- Database: PostgreSQL 17+ with PostGIS extensions
-- API: GraphQL (SmallRye GraphQL) primary, REST (JAX-RS) for webhooks/health checks
-- Job Processing: Custom DelayedJob + Vert.x EventBus, Quarkus Scheduler
-- Authentication: Quarkus OIDC (OAuth 2.0 / OpenID Connect)
-- Observability: OpenTelemetry → Jaeger (tracing), Micrometer → Prometheus (metrics)
-- PDF Generation: Apache Batik 1.17 (SVG to PDF)
-- Astronomical Calcs: SunCalc (port), Proj4J 4.1
-```
+1. **calendar_users** - OAuth authenticated users
+   - Primary Key: `id` (UUID)
+   - Fields: oauth_provider, oauth_subject, email, display_name, profile_image_url, last_login_at, is_admin, created, updated, version
+   - Unique Constraint: (oauth_provider, oauth_subject)
+   - Indexes: email, last_login_at, is_admin (partial, where is_admin = true)
+   - Relationships:
+     * One-to-Many → user_calendars (cascade ALL, orphanRemoval)
+     * One-to-Many → calendar_orders (cascade ALL, orphanRemoval)
 
-### Context: Component Diagram (C4 Level 3) from Architecture Blueprint (from 03_System_Structure_and_Data.md)
+2. **calendar_templates** - Reusable calendar designs
+   - Primary Key: `id` (UUID)
+   - Fields: name, description, thumbnail_url, is_active, is_featured, display_order, configuration (JSONB), preview_svg, created, updated, version
+   - Indexes: name, (is_active, display_order, name), (is_featured, is_active, display_order), configuration (GIN index)
+   - Relationships:
+     * One-to-Many → user_calendars
 
-```markdown
-**Description:**
+3. **user_calendars** - User-created calendars
+   - Primary Key: `id` (UUID)
+   - Fields: user_id (FK), session_id, template_id (FK), name, year, is_public, configuration (JSONB), generated_svg, generated_pdf_url, created, updated, version
+   - Foreign Keys:
+     - user_id → calendar_users(id) ON DELETE CASCADE (optional/nullable - for guest sessions)
+     - template_id → calendar_templates(id) ON DELETE SET NULL
+   - Indexes: (user_id, year DESC), (session_id, updated DESC), template_id, (is_public, updated DESC)
+   - Relationships:
+     * Many-to-One → calendar_users (optional)
+     * Many-to-One → calendar_templates (optional)
+     * One-to-Many → calendar_orders (cascade ALL, orphanRemoval)
 
-This diagram zooms into the **Quarkus API Application** container, revealing the major internal components and their dependencies. The architecture follows a layered pattern:
+4. **calendar_orders** - E-commerce orders
+   - Primary Key: `id` (UUID)
+   - Fields: user_id (FK), calendar_id (FK), quantity, unit_price, total_price, status, shipping_address (JSONB), stripe_payment_intent_id, stripe_charge_id, notes, paid_at, shipped_at, created, updated, version
+   - Foreign Keys:
+     - user_id → calendar_users(id) ON DELETE RESTRICT
+     - calendar_id → user_calendars(id) ON DELETE RESTRICT
+   - Indexes: (user_id, created DESC), (status, created DESC), calendar_id, stripe_payment_intent_id
+   - Relationships:
+     * Many-to-One → calendar_users (mandatory)
+     * Many-to-One → user_calendars (mandatory)
 
-1. **GraphQL/REST Controllers**: HTTP entry points, request validation, response formatting
-2. **Service Layer**: Business logic, workflow orchestration, transaction boundaries
-3. **Repository Layer**: Data access via Panache, query construction, entity mapping
-4. **Job Management**: DelayedJob enqueueing, EventBus integration
-5. **Integration Components**: OAuth client, Stripe client, email sender, R2 client
-6. **Security Components**: OIDC token validation, RBAC enforcement, CSRF protection
+### Entities Mentioned in Task Description But NOT Implemented
 
-**Component Interaction Patterns:**
+The task description mentions these entities which **do NOT exist** in the current codebase:
+- **CalendarSession** - No separate table; session_id is a field in user_calendars for guest tracking
+- **Event** - No separate table; events are stored in JSONB configuration field in user_calendars
+- **OrderItem** - No separate table; orders are single-item only currently (quantity field in calendar_orders)
+- **Payment** - No separate table; payment info is embedded in calendar_orders (stripe_payment_intent_id, stripe_charge_id, paid_at)
+- **DelayedJob** - Mentioned in architecture but not yet implemented in migrations
+- **PageView** - Analytics table mentioned but not yet implemented
+- **AnalyticsRollup** - Analytics table mentioned but not yet implemented
 
-1. **GraphQL Query Flow**: Client → GraphQL API → Service Layer → Repository → PostgreSQL → Response mapping → Client
-2. **Order Placement Flow**: Client → GraphQL Mutation (placeOrder) → Order Service → Stripe Client (create checkout) → Order Repository (persist) → Job Manager (enqueue email) → EventBus → Response
-3. **PDF Generation Flow**: Calendar Service → PDF Service → Job Manager → Job Repository → EventBus → Job Worker (async) → Batik Renderer → R2 Client (upload)
-```
+### Data Model Summary
+
+The **actual implemented data model** (MVP scope) consists of **4 entities** supporting:
+- **User authentication**: OAuth-based user accounts with admin flag
+- **Guest sessions**: Anonymous users can create calendars using session_id before authenticating
+- **Template system**: Admin-curated calendar templates with JSONB configuration
+- **Calendar creation**: Users (authenticated or guest) create calendars from templates
+- **E-commerce**: Single-item orders for printed calendars with Stripe integration
+- **JSONB flexibility**: Configuration stored as JSON for flexible schema evolution
+
+**Key architectural decisions observed:**
+1. **Simplified MVP schema**: Focus on core e-commerce flow, defer advanced features
+2. **Embedded data patterns**: Events in calendar config JSONB, payment data in orders table
+3. **Guest session support**: session_id field enables anonymous users without separate table
+4. **JSONB for flexibility**: Avoid premature normalization, use JSONB for evolving schemas
+5. **Optimistic locking**: All tables have version field for concurrent update protection
 
 ---
 
@@ -110,106 +124,185 @@ The following analysis is based on my direct review of the current codebase. Use
 
 ### Relevant Existing Code
 
-*   **File:** `docs/diagrams/component-architecture.puml`
-    *   **Summary:** This file already contains a PlantUML component diagram for the Village Calendar service. It uses C4 Component diagram notation and shows the API layer, Service layer, Data layer, and External Services. However, it may need to be updated or replaced to match the exact specifications in the current task (I1.T3).
-    *   **Recommendation:** You SHOULD review this existing diagram carefully. The task asks you to create `docs/diagrams/component_diagram.puml` (note the underscore instead of hyphen). You can use the existing `component-architecture.puml` as a reference, but you MUST create a NEW file at the path specified in the task: `docs/diagrams/component_diagram.puml`. The new diagram must include all components specified in the architecture blueprint.
+*   **File:** `migrations/src/main/resources/scripts/001_initial_schema.sql`
+    *   **Summary:** This is the master database schema definition. It creates all 4 core tables (calendar_users, calendar_templates, user_calendars, calendar_orders) with complete column definitions, foreign keys, indexes, and table comments.
+    *   **Recommendation:** You MUST use this file as the authoritative source for the database schema. The ERD should accurately reflect ALL columns, data types, constraints, and relationships defined here.
+    *   **Key Details:**
+        - All tables use UUID primary keys with `uuid_generate_v4()`
+        - All tables have standard timestamp fields: created, updated, version (for optimistic locking)
+        - JSONB columns: configuration (templates, calendars), shipping_address (orders)
+        - Foreign key ON DELETE behaviors:
+          * user_calendars.user_id → CASCADE (delete calendars when user deleted)
+          * user_calendars.template_id → SET NULL (preserve calendar if template deleted)
+          * calendar_orders.user_id → RESTRICT (prevent user deletion if orders exist)
+          * calendar_orders.calendar_id → RESTRICT (prevent calendar deletion if orders exist)
+        - Composite indexes: (user_id, year DESC), (user_id, created DESC)
+        - Partial index: is_admin WHERE is_admin = true
+        - GIN index: configuration (for JSONB queries)
 
-*   **File:** `src/main/java/villagecompute/calendar/services/`
-    *   **Summary:** This directory contains the implemented service layer components. Key services identified:
-        *   `AuthenticationService.java` - OAuth integration (corresponds to "User Service" in the plan)
-        *   `CalendarService.java` - Calendar generation logic
-        *   `CalendarGenerationService.java` - PDF rendering and calendar creation
-        *   `OrderService.java` - E-commerce and fulfillment
-        *   `PaymentService.java` - Stripe payment integration
-        *   `EmailService.java` - Email notifications
-        *   `StorageService.java` - R2 storage integration (corresponds to "R2 Client")
-        *   `TemplateService.java` - Template management
-        *   `AstronomicalCalculationService.java` - Moon phases, etc.
-        *   `HebrewCalendarService.java` - Hebrew calendar calculations
-        *   `PDFRenderingService.java` - PDF rendering logic
-    *   **Recommendation:** Your component diagram MUST include these actual service implementations. Map the service file names to the component descriptions in the architecture plan.
-
-*   **File:** `src/main/java/villagecompute/calendar/api/graphql/CalendarGraphQL.java`
-    *   **Summary:** This file implements the GraphQL API layer using SmallRye GraphQL. It contains queries like `me()` and `myCalendars()`, and is annotated with `@GraphQLApi`.
-    *   **Recommendation:** The diagram MUST show this GraphQL API component (and other GraphQL resolvers like `OrderGraphQL.java`, `TemplateGraphQL.java`) as the entry point that depends on the service layer.
-
-*   **File:** `src/main/java/villagecompute/calendar/api/rest/`
-    *   **Summary:** REST endpoints for OAuth callbacks (`AuthResource.java`), Stripe webhooks (`WebhookResource.java`), and bootstrapping (`BootstrapResource.java`).
-    *   **Recommendation:** Include REST Controllers in your diagram to show that both GraphQL and REST are entry points to the system.
-
-*   **File:** `src/main/java/villagecompute/calendar/data/repositories/`
-    *   **Summary:** This directory contains Panache repository implementations:
-        *   `CalendarUserRepository.java`
-        *   `UserCalendarRepository.java`
-        *   `CalendarTemplateRepository.java`
-        *   `CalendarOrderRepository.java`
-    *   **Recommendation:** Your diagram MUST show the Repository Layer with these specific repositories and their relationships to services.
+*   **File:** `migrations/src/main/resources/scripts/002_add_admin_field.sql`
+    *   **Summary:** Migration that adds the is_admin field to calendar_users table with partial index. This was added after the initial schema.
+    *   **Recommendation:** The ERD MUST reflect the is_admin field as part of calendar_users, since this migration has been applied. Include a note that this was added in migration 002.
 
 *   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarUser.java`
-    *   **Summary:** This is a JPA entity using Panache active record pattern. It extends `DefaultPanacheEntityWithTimestamps` and has static finder methods.
-    *   **Recommendation:** This confirms that the repository layer uses Panache. Make sure the diagram accurately reflects "Panache Repository" as the technology for the data access layer.
+    *   **Summary:** JPA entity for calendar_users table. Uses Panache active record pattern. Defines relationships to UserCalendar and CalendarOrder.
+    *   **Recommendation:** Cross-reference JPA annotations to ensure ERD relationship cardinalities match. Note the @OneToMany relationships with cascade ALL and orphanRemoval.
+    *   **Key Details:**
+        - @OneToMany to calendars (UserCalendar.user) with cascade ALL, orphanRemoval true
+        - @OneToMany to orders (CalendarOrder.user) with cascade ALL, orphanRemoval true
+        - Validation: @Email on email, @Size constraints on varchar fields
+        - Static finder methods: findByOAuthSubject, findByEmail, findActiveUsersSince, hasAdminUsers, findAdminUsers
 
-*   **File:** `src/main/java/villagecompute/calendar/services/jobs/DelayedJobHandler.java`
-    *   **Summary:** This is part of the async job processing system.
-    *   **Recommendation:** The diagram should include a "Job Manager" component that handles DelayedJob enqueueing and EventBus publishing, as specified in the architecture.
+*   **File:** `src/main/java/villagecompute/calendar/data/models/UserCalendar.java`
+    *   **Summary:** JPA entity for user_calendars table. Supports both authenticated users (user_id) and guest sessions (session_id). Links to CalendarTemplate and has CalendarOrders.
+    *   **Recommendation:** The ERD MUST show user_id as optional (nullable) and session_id as alternative identifier for anonymous users. Template relationship is optional (ON DELETE SET NULL).
+    *   **Key Details:**
+        - @ManyToOne to user (optional=true, can be null for guest sessions)
+        - @ManyToOne to template (optional=true, ON DELETE SET NULL)
+        - @OneToMany to orders with cascade ALL, orphanRemoval true
+        - configuration field is JsonNode (JSONB column)
+        - Static finder methods: findBySession, findByUserAndYear, findByUser, findPublicById, findPublicCalendars
+        - Note: session_id field enables guest users without separate CalendarSession table
+
+*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarTemplate.java`
+    *   **Summary:** JPA entity for calendar_templates table. Templates are admin-curated reusable calendar designs with JSONB configuration.
+    *   **Recommendation:** The ERD should show CalendarTemplate as a standalone entity with a one-to-many relationship to UserCalendar. Note the JSONB configuration field and boolean flags.
+    *   **Key Details:**
+        - @OneToMany to userCalendars (UserCalendar.template)
+        - configuration field is JsonNode (JSONB column, NOT NULL)
+        - Boolean flags: isActive, isFeatured
+        - display_order INTEGER for template ordering
+        - Static finder methods: findByName, findActiveTemplates, findActive, findFeatured
+
+*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarOrder.java`
+    *   **Summary:** JPA entity for calendar_orders table. Represents e-commerce orders with Stripe payment integration. Note: No separate Payment or OrderItem tables - data is embedded.
+    *   **Recommendation:** The ERD should show mandatory relationships to both CalendarUser and UserCalendar. Note the ON DELETE RESTRICT constraints to prevent data loss. Show Stripe payment fields as embedded data.
+    *   **Key Details:**
+        - @ManyToOne to user (mandatory, optional=false, ON DELETE RESTRICT)
+        - @ManyToOne to calendar (mandatory, optional=false, ON DELETE RESTRICT)
+        - shippingAddress field is JsonNode (JSONB column)
+        - BigDecimal for monetary values (unit_price, total_price with precision 10, scale 2)
+        - Status constants: PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+        - Stripe integration fields: stripe_payment_intent_id, stripe_charge_id
+        - Timestamp fields: paid_at, shipped_at (nullable)
+        - Static finder methods: findByUser, findByStatusOrderByCreatedDesc, findByCalendar, findByStripePaymentIntent, findRecentOrders
+        - Helper methods: markAsPaid(), markAsShipped(), cancel(), isTerminal()
+
+*   **File:** `docs/diagrams/component_diagram.puml`
+    *   **Summary:** Existing PlantUML component diagram showing the C4 Level 3 internal architecture of the Quarkus API. Uses C4-PlantUML standard library.
+    *   **Recommendation:** You SHOULD follow the same PlantUML styling and structure conventions used in this diagram. Use similar header comments and layout directives for consistency.
+    *   **Key Details:**
+        - Uses `!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml`
+        - Has a descriptive title
+        - Uses LAYOUT_WITH_LEGEND() directive
+        - Well-organized with Container_Boundary groupings for visual clarity
+
+*   **File:** `docs/diagrams/data-model.mmd`
+    *   **Summary:** Existing Mermaid diagram file showing entity relationships. This is an alternative format (Mermaid, not PlantUML).
+    *   **Recommendation:** You can review this for entity understanding, but you MUST create a NEW PlantUML format file, NOT Mermaid. The task specifically requires PlantUML syntax.
 
 ### Implementation Tips & Notes
 
-*   **Tip:** The architecture blueprint provides a complete PlantUML diagram example in section 3.5 (Component Diagram C4 Level 3). You SHOULD use this as your primary template, but you MUST verify it against the actual implemented code.
+*   **Tip:** For PlantUML ERD diagrams, use the standard entity syntax with proper stereotypes:
+    ```
+    entity "table_name" as alias {
+      * <<PK>> column_name : TYPE
+      --
+      * <<FK>> fk_column : TYPE
+      column_name : TYPE
+      column_name : TYPE
+      ..
+      <<index>> index_name
+    }
+    ```
 
-*   **Note:** There is an existing diagram at `docs/diagrams/component-architecture.puml` with similar content. However, the task explicitly requires a NEW file named `component_diagram.puml` (with underscore). Do NOT simply rename the old file. Create a new one that strictly follows the specifications in I1.T3.
+*   **Tip:** Show relationships using proper PlantUML cardinality notation:
+    - One-to-many: `EntityA ||--o{ EntityB : "relationship_name"`
+    - One-to-one: `EntityA ||--|| EntityB : "relationship_name"`
+    - Many-to-one: `EntityB }o--|| EntityA : "relationship_name"`
+    - Optional many-to-one: `EntityB }o..o| EntityA : "relationship_name"` (dotted line for nullable FK)
 
-*   **Warning:** The diagram MUST include ALL components mentioned in the acceptance criteria:
-    - GraphQL API layer (resolvers) ✓
-    - Service layer: CalendarService, UserService, OrderService, PdfService, EmailService ✓
-    - Repository layer (Panache repositories) ✓
-    - Job Manager ✓
-    - Integration components: OAuth Client, Stripe Client, Email Sender, R2 Client ✓
-    - Security Filter ✓
+*   **Note:** The task description mentions 11 entities from a theoretical plan, but the current codebase only has 4 tables implemented in the MVP scope. You MUST create the ERD based on the **actual implemented schema**, not the theoretical 11-entity model. The 4 entities are:
+    1. calendar_users
+    2. calendar_templates
+    3. user_calendars
+    4. calendar_orders
 
-*   **Tip:** Use the C4 PlantUML include: `!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml`
+*   **Critical:** Document the **reality of what exists**, not what was planned. Add a diagram title and notes section explaining that this is the MVP schema (4 entities) and that additional entities (DelayedJob, PageView, AnalyticsRollup, etc.) are planned for future iterations.
 
-*   **Note:** The diagram should show dependencies as arrows:
-    - GraphQL API → Services
-    - Services → Repositories
-    - Services → Integration Clients
-    - Repositories → Database (external)
-    - Integration Clients → External Systems
+*   **Note:** All tables use optimistic locking (version BIGINT field). You SHOULD include this field in the ERD and add a note explaining optimistic concurrency control.
 
-*   **Tip:** Group components by layer using `Container_Boundary` for visual clarity, as shown in the architecture blueprint example.
+*   **Note:** JSONB columns (configuration, shipping_address) are a key architectural feature. Add annotations or notes in the ERD to highlight these flexible schema fields and their purpose:
+    - calendar_templates.configuration: Template design config (colors, layout, features)
+    - user_calendars.configuration: User-specific calendar config and embedded events
+    - calendar_orders.shipping_address: Customer shipping details
 
-*   **Warning:** The acceptance criteria states the diagram must render correctly in a PlantUML viewer. Test your diagram by ensuring it has valid PlantUML syntax with no errors.
+*   **Warning:** The user_calendars table has TWO ways to identify ownership:
+    - **user_id**: For authenticated users (nullable FK to calendar_users)
+    - **session_id**: For anonymous guest users (VARCHAR, no FK)
 
-*   **Tip:** After creating the `.puml` file, you may need to generate a PNG export. However, the task deliverables mention "PNG export of diagram for documentation (docs/diagrams/component_diagram.png)". Check if you have access to a PlantUML rendering tool in your environment. If not, just ensure the .puml file is valid.
+    The ERD should clearly show user_id as optional/nullable with a note about guest session support. This is a critical architectural pattern.
 
-*   **Note:** Based on the actual codebase structure, here are the key mappings you should use:
-    - "User Service" → `AuthenticationService` (handles OAuth, user management)
-    - "Calendar Service" → `CalendarService` + `CalendarGenerationService` (calendar CRUD and generation)
-    - "PDF Service" → `PDFRenderingService` (PDF rendering)
-    - "Email Service" → `EmailService` (email notifications)
-    - "Order Service" → `OrderService` + `PaymentService` (orders and payments)
-    - "Job Manager" → `DelayedJobHandler` (async job processing)
-    - "OAuth Client" → Part of `AuthenticationService` using Quarkus OIDC
-    - "Stripe Client" → Used by `PaymentService`
-    - "R2 Client" → `StorageService`
-    - "Email Sender" → `EmailService`
+*   **Warning:** Foreign key ON DELETE behaviors are critical for data integrity:
+    - user_calendars.user_id: **CASCADE** - If user deleted, cascade delete their calendars
+    - user_calendars.template_id: **SET NULL** - If template deleted, keep calendar but clear template reference
+    - calendar_orders.user_id: **RESTRICT** - Prevent deletion of users who have orders
+    - calendar_orders.calendar_id: **RESTRICT** - Prevent deletion of calendars that have orders
 
-*   **Warning:** The existing `component-architecture.puml` shows slightly different component names. Your NEW diagram should align with both the architecture plan AND the actual code. When there's a mismatch, prefer the actual implemented code structure but add descriptions that match the plan.
+    Add annotations or notes in the ERD showing these ON DELETE behaviors.
 
-*   **Important:** The task requires you to show the following specific services from the plan:
-    - **CalendarService** (maps to CalendarService + CalendarGenerationService)
-    - **UserService** (maps to AuthenticationService)
-    - **OrderService** (maps to OrderService + PaymentService)
-    - **PdfService** (maps to PDFRenderingService)
-    - **EmailService** (maps to EmailService)
+*   **Best Practice:** Include index annotations, especially for:
+    - Composite indexes: (user_id, year DESC), (user_id, created DESC), (status, created DESC)
+    - Partial indexes: is_admin WHERE is_admin = true
+    - GIN indexes: configuration (JSONB)
+    - Simple indexes: email, last_login_at, session_id, template_id, calendar_id, stripe_payment_intent_id
 
-    You should represent these conceptual services in the diagram even if they map to multiple Java classes.
+*   **Best Practice:** Show unique constraints clearly:
+    - calendar_users: UNIQUE (oauth_provider, oauth_subject) - Ensures one account per OAuth identity
 
-*   **Tip:** Look at the existing `component-architecture.puml` to understand the current structure, but create a NEW diagram that:
-    1. Uses the filename `component_diagram.puml` (with underscore)
-    2. Matches the component list from the architecture blueprint
-    3. Reflects the actual implemented code
-    4. Uses clear, layered organization with Container_Boundary
-    5. Shows all dependencies with relationship arrows
+*   **Best Practice:** After creating the .puml file, you should generate the PNG export using PlantUML. The PNG should be saved to `docs/diagrams/database_erd.png` as specified in the deliverables. You can use the PlantUML CLI or an online renderer.
 
-*   **Note:** The architecture blueprint example includes external systems (PostgreSQL, Cloudflare R2, OAuth Providers, Stripe API, Email Service, Vert.x EventBus) shown with `_Ext` suffixes. Your diagram should follow this pattern.
+*   **Important:** Add a legend or notes section to the diagram explaining:
+    1. This is the MVP schema (4 entities)
+    2. Additional entities planned for future iterations (DelayedJob, PageView, AnalyticsRollup, etc.)
+    3. JSONB columns used for flexible schema evolution
+    4. Guest session support via session_id field (no separate CalendarSession table)
+    5. Events embedded in user_calendars.configuration (no separate Event table)
+    6. Payment data embedded in calendar_orders (no separate Payment table)
+    7. Single-item orders (no separate OrderItem table, quantity field in calendar_orders)
+
+*   **Tip:** Use PlantUML's `note` syntax to add important annotations:
+    ```
+    note right of user_calendars
+      Guest sessions: user_id can be NULL,
+      session_id identifies anonymous users
+    end note
+    ```
+
+*   **Tip:** Use color coding to visually distinguish table types:
+    - Core entities (calendar_users, user_calendars)
+    - Configuration entities (calendar_templates)
+    - Transactional entities (calendar_orders)
+
+### Critical Clarification: MVP Schema vs. Planned Schema
+
+**YOU MUST CREATE AN ERD FOR THE 4 ACTUAL TABLES, NOT 11 HYPOTHETICAL TABLES.**
+
+The task description appears to be based on a planning document that envisioned 11 entities for the complete system, but the actual MVP implementation only has 4 tables. Your ERD should document the **reality of the codebase as it exists today**.
+
+**Actual Implementation (4 tables):**
+1. ✅ calendar_users (corresponds to "User" in plan)
+2. ✅ calendar_templates (corresponds to "CalendarTemplate" in plan)
+3. ✅ user_calendars (corresponds to "Calendar" in plan, with embedded "Event" and "CalendarSession" concepts)
+4. ✅ calendar_orders (corresponds to "Order" in plan, with embedded "Payment" and "OrderItem" concepts)
+
+**Not Yet Implemented (7 entities from plan):**
+- ❌ CalendarSession (concept exists as session_id field in user_calendars)
+- ❌ Event (concept exists as JSONB array in user_calendars.configuration)
+- ❌ OrderItem (concept exists as quantity field in calendar_orders)
+- ❌ Payment (concept exists as Stripe fields in calendar_orders)
+- ❌ DelayedJob (planned for async job queue)
+- ❌ PageView (planned for analytics)
+- ❌ AnalyticsRollup (planned for analytics)
+
+**Your task:** Create an accurate ERD showing the 4 implemented tables, with clear notes explaining the MVP scope and architectural decisions (embedded data patterns, JSONB flexibility, guest session support).

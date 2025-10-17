@@ -57,7 +57,7 @@
     "acceptance_criteria": "PlantUML file validates and renders without errors, All entities from data model section included, Primary keys marked with <<PK>>, foreign keys with <<FK>>, Relationship cardinalities correctly shown (1:N, 1:1), Indexes and unique constraints annotated in diagram or comments",
     "dependencies": ["I1.T1"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T5",
