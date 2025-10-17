@@ -392,4 +392,50 @@ public class CalendarGraphQL {
 
         return true;
     }
+
+    /**
+     * Convert anonymous guest session to authenticated user account.
+     * Links all calendars from the guest session to the newly authenticated user.
+     * Called after successful OAuth authentication when user had existing session.
+     *
+     * TODO: Implement guest session conversion logic
+     *
+     * @param sessionId Guest session ID to convert
+     * @return User with linked calendars
+     */
+    @Mutation("convertGuestSession")
+    @Description("Convert anonymous guest session to authenticated user account. Links all calendars from the guest session to the newly authenticated user.")
+    @RolesAllowed("USER")
+    @Transactional
+    public CalendarUser convertGuestSession(
+        @Name("sessionId")
+        @Description("Guest session ID to convert")
+        @NotNull
+        String sessionId
+    ) {
+        LOG.infof("Mutation: convertGuestSession(sessionId=%s) (STUB IMPLEMENTATION)", sessionId);
+
+        // Get current user
+        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
+        if (currentUser.isEmpty()) {
+            LOG.error("User not found despite passing @RolesAllowed check");
+            throw new IllegalStateException("Unauthorized: User not found");
+        }
+
+        CalendarUser user = currentUser.get();
+
+        // TODO: Implement the actual guest session conversion logic:
+        // 1. Find all calendars with the provided sessionId
+        // 2. Update those calendars to link them to the current authenticated user
+        // 3. Clear the sessionId field on those calendars
+        // 4. Return the user with updated calendar list
+
+        LOG.warnf("Guest session conversion not yet implemented. Would convert session %s to user %s",
+            sessionId, user.email);
+
+        throw new UnsupportedOperationException(
+            "Guest session conversion not yet implemented. " +
+            "TODO: Link all calendars with sessionId=" + sessionId + " to authenticated user."
+        );
+    }
 }

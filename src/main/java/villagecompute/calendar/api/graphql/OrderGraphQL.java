@@ -290,6 +290,87 @@ public class OrderGraphQL {
         return orderService.updateOrderStatus(orderId, input.status, input.notes);
     }
 
+    /**
+     * Cancel an order and initiate refund.
+     * Requires authentication and order ownership (or admin role).
+     * Can only cancel orders in PENDING or PAID status.
+     * Automatically triggers Stripe refund for paid orders.
+     *
+     * TODO: Implement Stripe refund integration and order cancellation logic
+     *
+     * @param orderId Order ID to cancel
+     * @param reason Reason for cancellation (optional, stored in notes)
+     * @return Cancelled order
+     */
+    @Mutation("cancelOrder")
+    @Description("Cancel an order and initiate refund. Can only cancel orders in PENDING or PAID status.")
+    @RolesAllowed("USER")
+    @Transactional
+    public CalendarOrder cancelOrder(
+        @Name("orderId")
+        @Description("Order ID to cancel")
+        @NonNull
+        String orderId,
+
+        @Name("reason")
+        @Description("Reason for cancellation (optional, stored in notes)")
+        String reason
+    ) {
+        LOG.infof("Mutation: cancelOrder(orderId=%s, reason=%s) (STUB IMPLEMENTATION)",
+            orderId, reason);
+
+        // Get current user
+        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
+        if (currentUser.isEmpty()) {
+            throw new IllegalStateException("Unauthorized: User not found");
+        }
+
+        CalendarUser user = currentUser.get();
+
+        // Parse order ID
+        UUID orderIdUuid;
+        try {
+            orderIdUuid = UUID.fromString(orderId);
+        } catch (IllegalArgumentException e) {
+            LOG.errorf("Invalid order ID format: %s", orderId);
+            throw new IllegalArgumentException("Invalid order ID format");
+        }
+
+        // Find the order
+        Optional<CalendarOrder> orderOpt = orderService.getOrderById(orderIdUuid);
+        if (orderOpt.isEmpty()) {
+            LOG.warnf("Order not found: %s", orderId);
+            throw new IllegalArgumentException("Order not found");
+        }
+
+        CalendarOrder order = orderOpt.get();
+
+        // Check authorization (user must own the order or be admin)
+        boolean isOwner = order.user != null && order.user.id.equals(user.id);
+        boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains("ADMIN");
+
+        if (!isOwner && !isAdmin) {
+            LOG.warnf("User %s attempted to cancel order %s owned by another user",
+                user.email, orderId);
+            throw new SecurityException("Unauthorized: You don't have access to this order");
+        }
+
+        // TODO: Implement the actual cancellation logic:
+        // 1. Verify order is in PENDING or PAID status (not PROCESSING, SHIPPED, or DELIVERED)
+        // 2. If order is PAID, initiate Stripe refund via paymentService
+        // 3. Update order status to CANCELLED
+        // 4. Store cancellation reason in notes field
+        // 5. Update order timestamps
+
+        LOG.warnf("Order cancellation not yet implemented. Order %s would be cancelled with reason: %s",
+            orderId, reason);
+
+        throw new UnsupportedOperationException(
+            "Order cancellation not yet implemented. " +
+            "TODO: Implement Stripe refund integration and order status update to CANCELLED."
+        );
+    }
+
     // ============================================================================
     // RESPONSE TYPES
     // ============================================================================
