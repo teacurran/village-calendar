@@ -1,0 +1,433 @@
+@startuml
+title Order Placement Flow - Cart Checkout to Email Confirmation
+
+' Description: This diagram demonstrates the complete e-commerce workflow from cart checkout
+' to payment processing to asynchronous job creation for order confirmation emails.
+' Includes Stripe Checkout session creation, webhook validation, and async email job processing.
+
+actor User
+participant "Vue SPA" as SPA
+participant "Quarkus API" as API
+participant "OrderService" as OrderSvc
+participant "Stripe Client" as StripeClient
+participant "Stripe API" as Stripe
+participant "Job Manager" as JobMgr
+database "PostgreSQL" as DB
+participant "Vert.x EventBus" as EventBus
+queue "Email Job" as EmailJob
+participant "EmailService" as EmailSvc
+participant "SMTP Server" as SMTP
+
+== Order Creation Phase ==
+
+User -> SPA : Reviews cart, clicks "Checkout"
+activate SPA
+note right of SPA
+  Cart contains:
+  - Calendar ID
+  - Product type (STANDARD/PREMIUM)
+  - Quantity
+  User enters shipping address
+end note
+
+SPA -> API : GraphQL Mutation: placeOrder(input)
+activate API
+note right of SPA
+  mutation {
+    placeOrder(input: {
+      calendarId: "123"
+      productType: STANDARD
+      quantity: 1
+      shippingAddress: {
+        street: "123 Main St"
+        city: "Portland"
+        state: "OR"
+        zip: "97201"
+        country: "US"
+      }
+    }) {
+      id
+      status
+      total
+      checkoutUrl
+    }
+  }
+end note
+
+API -> OrderSvc : placeOrder(input, currentUser)
+activate OrderSvc
+
+OrderSvc -> DB : BEGIN TRANSACTION
+activate DB
+
+OrderSvc -> DB : INSERT INTO calendar_orders\n(user_id, status='PENDING', subtotal, tax, shipping_cost, total, shipping_address, created_at)\nVALUES ({user_id}, 'PENDING', 29.99, 2.40, 5.00, 37.39, {address}, NOW())
+DB -> OrderSvc : order_id=456
+
+OrderSvc -> DB : INSERT INTO order_items\n(order_id, calendar_id, product_type, quantity, unit_price)\nVALUES (456, 123, 'STANDARD', 1, 29.99)
+DB -> OrderSvc : Success
+
+note right of OrderSvc
+  Order created in PENDING state.
+  Will be updated to PAID after
+  webhook confirmation.
+end note
+
+== Stripe Checkout Session Creation ==
+
+OrderSvc -> StripeClient : createCheckoutSession(order)
+activate StripeClient
+
+StripeClient -> Stripe : POST /v1/checkout/sessions
+activate Stripe
+note right of StripeClient
+  Request body:
+  {
+    line_items: [{
+      name: "Custom Calendar 2025"
+      amount: 3739 (cents)
+      quantity: 1
+    }]
+    mode: "payment"
+    success_url: "https://app.village.com/orders/456/success"
+    cancel_url: "https://app.village.com/orders/456/cancel"
+    metadata: {
+      order_id: "456"
+      user_id: "{user_id}"
+    }
+  }
+end note
+
+Stripe -> StripeClient : Checkout Session\n{ id: "cs_...", url: "https://checkout.stripe.com/..." }
+deactivate Stripe
+
+StripeClient -> OrderSvc : { sessionId, checkoutUrl }
+deactivate StripeClient
+
+OrderSvc -> DB : UPDATE calendar_orders\nSET stripe_checkout_session_id='cs_...'\nWHERE id=456
+DB -> OrderSvc : Success
+
+OrderSvc -> DB : COMMIT TRANSACTION
+deactivate DB
+
+OrderSvc -> API : Order with checkout_url
+deactivate OrderSvc
+
+API -> SPA : 200 OK\n{ order: { id: 456, status: "PENDING", checkoutUrl: "..." } }
+deactivate API
+
+== User Payment Flow ==
+
+SPA -> User : Redirect to Stripe Checkout
+deactivate SPA
+
+User -> Stripe : Enters payment info, confirms
+activate Stripe
+note right of User
+  User enters card details
+  on Stripe-hosted page:
+  - Card number
+  - Expiry date
+  - CVC
+  - Billing ZIP
+end note
+
+Stripe -> Stripe : Process payment
+note right of Stripe
+  Stripe validates card,
+  checks fraud detection,
+  processes payment with
+  card network.
+end note
+
+alt Payment Succeeded
+  Stripe -> User : Redirect to success_url\n/orders/456/success
+  deactivate Stripe
+
+  note right of Stripe
+    Payment authorized successfully.
+    Webhook will be sent to API
+    asynchronously (1-3 seconds later).
+  end note
+
+else Payment Declined
+  Stripe -> User : Show error\n"Your card was declined"
+  activate Stripe
+  deactivate Stripe
+
+  note right of User
+    Payment failure ends here.
+    Order remains in PENDING status.
+    User can retry payment via
+    order dashboard.
+  end note
+end
+
+== Stripe Webhook Processing ==
+
+note over Stripe
+  Stripe sends webhook asynchronously
+  1-3 seconds after payment succeeds.
+  Webhook ensures payment confirmation
+  even if user closes browser.
+end note
+
+Stripe ->> API : POST /api/webhooks/stripe\nStripe-Signature: {signature}\n{\n  "type": "checkout.session.completed",\n  "data": {\n    "object": {\n      "id": "cs_...",\n      "payment_intent": "pi_...",\n      "metadata": { "order_id": "456" }\n    }\n  }\n}
+activate API
+
+== Webhook Signature Validation ==
+
+API -> API : Validate Stripe-Signature header
+note right of API
+  Uses Stripe SDK:
+  Webhook.constructEvent(
+    payload,
+    signature,
+    webhookSecret
+  )
+
+  Prevents fraudulent webhooks
+  by verifying HMAC signature.
+end note
+
+alt Signature Invalid
+  API --> Stripe : 400 Bad Request\n{ error: "Invalid signature" }
+
+  note right of API
+    Malicious webhook attempt blocked.
+    Log security incident.
+  end note
+
+else Signature Valid
+
+  API -> OrderSvc : handlePaymentSuccess(checkoutSessionId)
+  activate OrderSvc
+
+  OrderSvc -> DB : BEGIN TRANSACTION
+  activate DB
+
+  OrderSvc -> DB : SELECT * FROM calendar_orders\nWHERE stripe_checkout_session_id='cs_...'\nFOR UPDATE
+  DB -> OrderSvc : Order (id=456, status=PENDING)
+
+  alt Order Not Found
+    DB -> OrderSvc : Empty result
+    deactivate DB
+
+    OrderSvc -> OrderSvc : Log error
+    note right of OrderSvc
+      This shouldn't happen unless
+      metadata is corrupted.
+      Log error and return 200 OK
+      to prevent Stripe retries.
+    end note
+
+    OrderSvc -> API : Error logged
+    deactivate OrderSvc
+
+    API --> Stripe : 200 OK\n{ status: "error_logged" }
+    deactivate API
+
+  else Order Found
+
+    OrderSvc -> DB : INSERT INTO payments\n(order_id, stripe_payment_intent_id, amount, status='SUCCEEDED', paid_at)\nVALUES (456, 'pi_...', 37.39, 'SUCCEEDED', NOW())
+    DB -> OrderSvc : payment_id=789
+
+    OrderSvc -> DB : UPDATE calendar_orders\nSET status='PAID', paid_at=NOW(), updated_at=NOW()\nWHERE id=456
+    DB -> OrderSvc : Success
+
+    note right of OrderSvc
+      Two-phase payment:
+      1. Order created in PENDING
+      2. Updated to PAID after webhook
+
+      Handles race conditions where
+      webhook arrives before user redirect.
+    end note
+
+    == Async Email Job Enqueueing ==
+
+    OrderSvc -> JobMgr : enqueueEmailJob(type=ORDER_CONFIRMATION, orderId=456)
+    activate JobMgr
+
+    JobMgr -> DB : INSERT INTO delayed_jobs\n(job_type, payload, priority, status, run_at, created_at)\nVALUES ('OrderEmailJob', '{"orderId":456}', 10, 'PENDING', NOW(), NOW())
+    DB -> JobMgr : job_id=999
+
+    note right of JobMgr
+      Email sent asynchronously to prevent
+      SMTP latency from blocking webhook response.
+      Priority=10 (HIGH) ensures fast processing.
+    end note
+
+    JobMgr -> EventBus : publish("jobs.new", jobId=999)
+    activate EventBus
+    note right of EventBus
+      Vert.x EventBus notifies
+      job worker pods of new job.
+      Workers listen on "jobs.new" channel.
+    end note
+    deactivate EventBus
+
+    JobMgr -> OrderSvc : Job enqueued (id=999)
+    deactivate JobMgr
+
+    OrderSvc -> DB : COMMIT TRANSACTION
+    deactivate DB
+
+    OrderSvc -> API : Payment processed successfully
+    deactivate OrderSvc
+
+    API --> Stripe : 200 OK\n{ status: "success" }
+    deactivate API
+
+    note right of Stripe
+      Webhook acknowledged.
+      Stripe will not retry.
+    end note
+  end
+end
+
+== Background Email Delivery ==
+
+note over EmailJob
+  Job worker pod receives EventBus event
+  and claims job from queue.
+end note
+
+EventBus -> EmailJob : Event: "jobs.new", jobId=999
+activate EmailJob
+
+EmailJob -> DB : SELECT * FROM delayed_jobs\nWHERE id=999\nFOR UPDATE SKIP LOCKED
+activate DB
+DB -> EmailJob : DelayedJob (status=PENDING)
+
+EmailJob -> DB : UPDATE delayed_jobs\nSET status='IN_PROGRESS', locked_at=NOW(), locked_by='worker-pod-3'\nWHERE id=999
+DB -> EmailJob : Success
+deactivate DB
+
+EmailJob -> DB : SELECT o.*, u.email, u.display_name, c.title, c.pdf_url\nFROM calendar_orders o\nJOIN calendar_users u ON o.user_id = u.id\nJOIN user_calendars c ON o.calendar_id = c.id\nWHERE o.id=456
+activate DB
+DB -> EmailJob : Order with user and calendar info
+deactivate DB
+
+EmailJob -> EmailJob : Compose order confirmation email
+note right of EmailJob
+  Use Qute template:
+  Templates.orderConfirmation(order)
+
+  Email includes:
+  - Order details and total
+  - Calendar preview image
+  - Shipping address
+  - PDF download link
+  - Estimated delivery date
+end note
+
+EmailJob -> EmailSvc : sendHtmlEmail(from, to, subject, htmlContent)
+activate EmailSvc
+
+EmailSvc -> SMTP : SMTP transaction\nFROM: orders@villagecompute.com\nTO: user@example.com\nSubject: Order Confirmation #456
+activate SMTP
+
+alt SMTP Success
+  SMTP -> EmailSvc : 250 OK (Message accepted)
+  deactivate SMTP
+
+  EmailSvc -> EmailJob : Success
+  deactivate EmailSvc
+
+  EmailJob -> DB : UPDATE delayed_jobs\nSET status='COMPLETED', completed_at=NOW()\nWHERE id=999
+  activate DB
+  DB -> EmailJob : Success
+  deactivate DB
+
+  note right of EmailJob
+    Email sent successfully.
+    Customer receives order
+    confirmation in inbox.
+  end note
+
+  deactivate EmailJob
+
+else SMTP Failure
+  SMTP -> EmailSvc : Error: Connection timeout
+  activate SMTP
+  deactivate SMTP
+
+  EmailSvc -> EmailJob : Exception
+  activate EmailSvc
+  deactivate EmailSvc
+
+  EmailJob -> DB : UPDATE delayed_jobs\nSET status='FAILED', attempts=attempts+1,\nrun_at=NOW() + exponential_backoff,\nerror_message='SMTP timeout'\nWHERE id=999
+  activate DB
+  DB -> EmailJob : Success
+  deactivate DB
+
+  note right of EmailJob
+    Job will retry with exponential backoff:
+    Delay = 5 seconds + (attempts^4)
+    Max retries: 25 attempts over 7 days
+
+    Admin monitoring alert triggered
+    if attempts > 5.
+  end note
+
+  deactivate EmailJob
+end
+
+== User Order Status Polling ==
+
+User -> SPA : Returns from Stripe, views order page
+activate SPA
+
+SPA -> API : GraphQL Query: order(id: 456)
+activate API
+
+API -> DB : SELECT * FROM calendar_orders WHERE id=456
+activate DB
+DB -> API : Order (status=PAID)
+deactivate DB
+
+API -> SPA : { order: { id: 456, status: "PAID", total: 37.39 } }
+deactivate API
+
+SPA -> User : Show "Order confirmed! Check your email."
+deactivate SPA
+
+note right of User
+  User sees confirmation on website
+  and receives email confirmation
+  within 1-2 minutes.
+end note
+
+== Error Scenarios Summary ==
+
+note over API, SMTP
+  **Critical Error Handling:**
+
+  1. **Stripe API Failure** (checkout session creation):
+     - OrderService catches exception
+     - Returns 503 Service Unavailable to client
+     - User shown: "Payment system temporarily unavailable"
+
+  2. **Webhook Signature Validation Failure**:
+     - Returns 400 Bad Request
+     - Logs security incident
+     - Prevents fraudulent payment confirmations
+
+  3. **Order Not Found in Webhook**:
+     - Logs error with checkout session ID
+     - Returns 200 OK (prevent Stripe retries)
+     - Admin investigates via monitoring
+
+  4. **Email Delivery Failure**:
+     - Job marked FAILED with retry
+     - Exponential backoff up to 7 days
+     - Admin alerted after 5 failures
+     - User can view order status on website
+
+  5. **Database Transaction Failure**:
+     - Rollback triggered automatically
+     - Order remains in PENDING state
+     - User can retry checkout
+end note
+
+@enduml

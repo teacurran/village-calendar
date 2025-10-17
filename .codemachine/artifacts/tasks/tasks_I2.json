@@ -12,7 +12,7 @@
     "acceptance_criteria": "All three PlantUML files validate and render without errors, OAuth login diagram shows complete flow from user click to JWT token response, Order placement diagram includes Stripe webhook validation and async email job, PDF generation diagram shows job queue polling, worker processing, R2 upload, Timing and activation bars clearly show which components are active, Error scenarios documented (e.g., OAuth provider down, Stripe API failure)",
     "dependencies": ["I1.T1"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T2",

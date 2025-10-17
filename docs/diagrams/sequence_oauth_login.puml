@@ -1,0 +1,201 @@
+@startuml
+title OAuth Login Flow - User Authentication and Session Conversion
+
+' Description: This diagram illustrates how an anonymous user authenticates via OAuth (Google/Facebook/Apple),
+' with the system converting their guest session into a permanent user account and linking any calendars
+' created pre-authentication.
+
+actor User
+participant "Vue SPA" as SPA
+participant "Quarkus API" as API
+participant "Quarkus OIDC" as OIDC
+participant "Google OAuth" as Google
+database "PostgreSQL" as DB
+
+== OAuth Authentication Flow ==
+
+User -> SPA : Clicks "Sign in with Google"
+activate SPA
+
+SPA -> API : GET /oauth/login?provider=google
+activate API
+
+API -> OIDC : Initiate OAuth flow
+activate OIDC
+
+OIDC -> Google : Redirect to Google login
+activate Google
+
+Google -> User : Show Google consent screen
+note right of Google
+  User authorizes the application
+  to access basic profile info:
+  - Email address
+  - Display name
+  - Profile picture
+end note
+
+User -> Google : Approves access
+
+Google -> OIDC : Redirect with auth code
+deactivate Google
+
+OIDC -> Google : Exchange code for tokens
+activate Google
+note right of OIDC
+  POST /token
+  grant_type=authorization_code
+  code={auth_code}
+  client_id={app_client_id}
+  client_secret={app_secret}
+end note
+
+Google -> OIDC : ID token + access token
+deactivate Google
+
+OIDC -> API : Validated user info (email, sub, name)
+note right of OIDC
+  OIDC validates token signature
+  and extracts claims:
+  - sub (OAuth subject ID)
+  - email
+  - name
+  - picture
+end note
+deactivate OIDC
+
+== User Lookup or Creation ==
+
+API -> DB : SELECT * FROM calendar_users\nWHERE oauth_provider='google'\nAND oauth_subject_id={sub}
+activate DB
+
+alt User exists
+  DB -> API : Return existing user
+  deactivate DB
+
+  API -> DB : UPDATE calendar_users\nSET last_login_at=NOW()\nWHERE id={user_id}
+  activate DB
+  DB -> API : Success
+  deactivate DB
+
+  note right of API
+    Existing user found.
+    Update last login timestamp.
+  end note
+
+else User does not exist
+  DB -> API : Empty result set
+  deactivate DB
+
+  API -> DB : INSERT INTO calendar_users\n(oauth_provider, oauth_subject_id, email, display_name, profile_picture_url, created_at)\nVALUES ('google', {sub}, {email}, {name}, {picture}, NOW())
+  activate DB
+  DB -> API : Return new user_id
+  deactivate DB
+
+  note right of API
+    New user created.
+    Now convert guest session calendars.
+  end note
+
+  == Guest Session Conversion ==
+
+  API -> DB : SELECT * FROM user_calendars\nWHERE session_id={current_session_id}\nAND user_id IS NULL
+  activate DB
+  DB -> API : Guest session calendars
+  deactivate DB
+
+  alt Guest calendars exist
+    API -> DB : UPDATE user_calendars\nSET user_id={new_user_id}, session_id=NULL\nWHERE session_id={current_session_id}
+    activate DB
+    DB -> API : Success (N rows updated)
+    deactivate DB
+
+    note right of API
+      Guest calendars linked to new user.
+      User can now access their calendars
+      after authentication.
+    end note
+  else No guest calendars
+    note right of API
+      No guest calendars to convert.
+      User starts fresh.
+    end note
+  end
+end
+
+== JWT Token Generation ==
+
+API -> API : Generate JWT token
+note right of API
+  JWT payload:
+  - user_id: {user_id}
+  - email: {email}
+  - role: "USER"
+  - iat: {issued_at}
+  - exp: {issued_at + 24 hours}
+
+  Signed with HS256 using
+  application secret key
+end note
+
+API -> SPA : 200 OK\n{\n  "jwt": "eyJhbGc...",\n  "user": {\n    "id": {user_id},\n    "email": "{email}",\n    "displayName": "{name}",\n    "profilePictureUrl": "{picture}"\n  }\n}
+deactivate API
+
+== Frontend State Update ==
+
+SPA -> SPA : Store JWT in localStorage
+note right of SPA
+  localStorage.setItem('jwt', token)
+
+  Frontend includes JWT
+  in Authorization header
+  for all subsequent requests:
+  Authorization: Bearer {jwt}
+end note
+
+SPA -> SPA : Update Pinia state
+note right of SPA
+  Store user profile in Pinia:
+  - authStore.user = userData
+  - authStore.isAuthenticated = true
+
+  Trigger navigation and UI updates
+end note
+
+SPA -> User : Redirect to dashboard\nShow "Welcome {name}!"
+deactivate SPA
+
+== Error Scenarios ==
+
+note over Google, API
+  **Error Case 1: OAuth Provider Unavailable**
+
+  If Google OAuth is down or network fails:
+  - OIDC throws OAuthException
+  - API returns 503 Service Unavailable
+  - SPA shows: "Google login temporarily unavailable.
+    Please try again later."
+end note
+
+note over API, DB
+  **Error Case 2: Email Already Exists (Different Provider)**
+
+  If user previously logged in with Facebook
+  using same email, then tries Google:
+  - Phase 2 feature: API merges accounts
+  - MVP: API returns 409 Conflict
+  - SPA prompts: "Account exists with different provider.
+    Please use Facebook to log in."
+end note
+
+note over API, DB
+  **Error Case 3: Session Conversion Failure**
+
+  If guest calendar UPDATE fails due to database error:
+  - API logs error with user_id and session_id
+  - API still returns successful login
+  - Calendars remain in session (can be manually saved later)
+  - Background job retries conversion (Phase 2)
+end note
+
+@enduml

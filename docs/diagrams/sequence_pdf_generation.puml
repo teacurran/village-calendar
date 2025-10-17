@@ -1,0 +1,457 @@
+@startuml
+title Asynchronous PDF Generation Flow - Job Queue to R2 Upload
+
+' Description: This diagram shows how a user's request to generate a high-resolution PDF is handled
+' asynchronously, with job status polling and final download via presigned URL.
+' Demonstrates async job workflow, calendar data retrieval, Batik rendering, R2 upload, and status polling.
+
+actor User
+participant "Vue SPA" as SPA
+participant "Quarkus API" as API
+participant "PDFService" as PDFSvc
+participant "Job Manager" as JobMgr
+database "PostgreSQL" as DB
+participant "Vert.x EventBus" as EventBus
+participant "Job Worker Pod" as Worker
+participant "Batik Renderer" as Batik
+participant "R2 Client" as R2Client
+participant "Cloudflare R2" as R2Storage
+
+== PDF Generation Request ==
+
+User -> SPA : Clicks "Download PDF"
+activate SPA
+note right of User
+  User requests high-resolution
+  PDF download from calendar
+  editor or dashboard.
+end note
+
+SPA -> API : GraphQL Mutation: generatePdf(calendarId: "123", watermark: false)
+activate API
+note right of SPA
+  mutation {
+    generatePdf(
+      calendarId: "123"
+      watermark: false
+    ) {
+      id
+      status
+      progress
+    }
+  }
+
+  watermark=false for paid users
+  watermark=true for free tier
+end note
+
+API -> PDFSvc : generatePdf(calendarId, watermark, currentUser)
+activate PDFSvc
+
+== Authorization Check ==
+
+PDFSvc -> DB : SELECT * FROM user_calendars\nWHERE id=123 AND user_id={currentUser.id}
+activate DB
+
+alt Calendar not found or unauthorized
+  DB -> PDFSvc : Empty result
+  deactivate DB
+
+  PDFSvc -> API : Throw UnauthorizedException
+  deactivate PDFSvc
+
+  API -> SPA : 403 Forbidden\n{ error: "Calendar not found or unauthorized" }
+  deactivate API
+
+  SPA -> User : Show "Calendar not found"
+  deactivate SPA
+
+  note right of User
+    Authorization failure ends flow.
+    User cannot generate PDF for
+    calendars they don't own.
+  end note
+
+else Calendar found and authorized
+  DB -> PDFSvc : Calendar data (id=123, title, template_id, config)
+  deactivate DB
+
+  == Check for Cached PDF ==
+
+  PDFSvc -> DB : SELECT pdf_url, pdf_generated_at, updated_at\nFROM user_calendars WHERE id=123
+  activate DB
+  DB -> PDFSvc : { pdf_url, pdf_generated_at, updated_at }
+  deactivate DB
+
+  alt PDF cached and calendar unchanged
+    note right of PDFSvc
+      Optimization: If PDF already exists
+      and calendar.updated_at < pdf_generated_at,
+      return cached R2 URL immediately.
+      Skip job creation for faster response.
+    end note
+
+    PDFSvc -> R2Client : generatePresignedUrl(pdfUrl, expiry=1h)
+    activate R2Client
+    R2Client -> PDFSvc : Presigned URL (valid 1 hour)
+    deactivate R2Client
+
+    PDFSvc -> API : Cached PDF URL
+    deactivate PDFSvc
+
+    API -> SPA : 200 OK\n{ downloadUrl: "https://r2.../calendar.pdf?signature=..." }
+    deactivate API
+
+    SPA -> User : Show "Download ready!" button
+    deactivate SPA
+
+  else PDF stale or not generated
+    note right of PDFSvc
+      Calendar modified or no PDF exists.
+      Create async job for PDF generation.
+    end note
+
+    == Async Job Creation ==
+
+    PDFSvc -> JobMgr : enqueueJob(type=PDF_GENERATION, payload={calendarId, watermark, userId})
+    activate JobMgr
+
+    JobMgr -> DB : INSERT INTO delayed_jobs\n(job_type, payload, priority, status, run_at, created_at)\nVALUES ('PdfGenerationJob', '{"calendarId":123,"watermark":false,"userId":456}', 10, 'PENDING', NOW(), NOW())
+    activate DB
+    DB -> JobMgr : job_id=789
+    deactivate DB
+
+    note right of JobMgr
+      Job priority:
+      - Paid users: priority=10 (HIGH)
+      - Free tier: priority=5 (NORMAL)
+
+      Workers process higher priority
+      jobs first.
+    end note
+
+    JobMgr -> EventBus : publish("jobs.new", jobId=789)
+    activate EventBus
+    note right of EventBus
+      Vert.x EventBus notifies all
+      worker pods of new job.
+      First available worker claims job.
+    end note
+    deactivate EventBus
+
+    JobMgr -> PDFSvc : Job created (id=789, status=PENDING)
+    deactivate JobMgr
+
+    PDFSvc -> API : PdfJob(id=789, status=PENDING, progress=0%)
+    deactivate PDFSvc
+
+    API -> SPA : 200 OK\n{ job: { id: 789, status: "PENDING", progress: 0 } }
+    deactivate API
+
+    SPA -> User : Show progress bar "Generating PDF... 0%"
+    deactivate SPA
+
+    == Asynchronous Processing ==
+
+    note over Worker
+      Job worker pod receives EventBus event
+      and claims job from queue using
+      database row-level locking.
+    end note
+
+    EventBus -> Worker : Consume event (jobId=789)
+    activate Worker
+
+    Worker -> DB : SELECT * FROM delayed_jobs\nWHERE id=789 AND status='PENDING'\nFOR UPDATE SKIP LOCKED
+    activate DB
+    DB -> Worker : Job data (status=PENDING)
+    deactivate DB
+
+    note right of Worker
+      FOR UPDATE SKIP LOCKED prevents
+      multiple workers from claiming
+      same job. First worker wins.
+    end note
+
+    Worker -> DB : UPDATE delayed_jobs\nSET status='IN_PROGRESS', locked_at=NOW(), locked_by='worker-pod-2'\nWHERE id=789
+    activate DB
+    DB -> Worker : Success
+    deactivate DB
+
+    Worker -> DB : SELECT c.*, t.config AS template_config, e.*\nFROM user_calendars c\nJOIN calendar_templates t ON c.template_id = t.id\nLEFT JOIN calendar_events e ON e.calendar_id = c.id\nWHERE c.id=123
+    activate DB
+    DB -> Worker : Full calendar data with events and template
+    deactivate DB
+
+    note right of Worker
+      Retrieve complete calendar:
+      - Calendar configuration (colors, fonts, layout)
+      - Template defaults
+      - All calendar events with emojis
+      - Astronomical calculation parameters
+    end note
+
+    == PDF Rendering with Batik ==
+
+    Worker -> Batik : renderCalendarToPdf(calendar, watermark)
+    activate Batik
+    note right of Batik
+      Apache Batik rendering pipeline:
+
+      1. Generate SVG from calendar config
+         - Layout 36" x 23" grid (300 DPI)
+         - Apply template styling
+         - Render month grid and day cells
+
+      2. Apply astronomical overlays
+         - Calculate moon phases (SunCalc)
+         - Hebrew calendar dates
+         - Sunrise/sunset times
+
+      3. Embed calendar events
+         - Position events by date
+         - Render emoji icons (Unicode)
+         - Apply user color schemes
+
+      4. Add watermark if free tier
+         - Diagonal "SAMPLE" text
+         - 30% opacity overlay
+
+      5. Convert SVG to PDF
+         - Apache PDFBox rendering
+         - Embed fonts (supports Unicode)
+         - Output 36" x 23" @ 300 DPI
+         - Result: 5-10 MB PDF
+    end note
+
+    Batik -> Worker : PDF byte array (8.2 MB)
+    deactivate Batik
+
+    Worker -> DB : UPDATE delayed_jobs\nSET progress=50, updated_at=NOW()\nWHERE id=789
+    activate DB
+    DB -> Worker : Success
+    deactivate DB
+
+    note right of Worker
+      Update progress for frontend polling.
+      50% = rendering complete, upload next.
+    end note
+
+    == R2 Upload ==
+
+    Worker -> R2Client : uploadPdf(userId, calendarId, pdfBytes)
+    activate R2Client
+
+    R2Client -> R2Storage : PUT /calendars/{userId}/{calendarId}-{timestamp}.pdf\nContent-Type: application/pdf\nContent-Length: 8623104
+    activate R2Storage
+    note right of R2Client
+      S3 API multipart upload:
+      - Chunk size: 5 MB
+      - Concurrent uploads: 3
+      - Retry with exponential backoff
+
+      Object metadata:
+      - user_id: 456
+      - calendar_id: 123
+      - generated_at: 2025-10-17T10:30:00Z
+    end note
+
+    alt R2 Upload Successful
+      R2Storage -> R2Client : 200 OK\n{ url: "https://pub-abc123.r2.dev/calendars/456/123-20251017.pdf" }
+      deactivate R2Storage
+
+      R2Client -> Worker : Object URL
+      deactivate R2Client
+
+      == Update Calendar and Complete Job ==
+
+      Worker -> DB : BEGIN TRANSACTION
+      activate DB
+
+      Worker -> DB : UPDATE user_calendars\nSET pdf_url='https://pub-abc123.r2.dev/...', pdf_generated_at=NOW(), updated_at=NOW()\nWHERE id=123
+      DB -> Worker : Success
+
+      Worker -> DB : UPDATE delayed_jobs\nSET status='COMPLETED', progress=100, completed_at=NOW()\nWHERE id=789
+      DB -> Worker : Success
+
+      Worker -> DB : COMMIT TRANSACTION
+      deactivate DB
+
+      note right of Worker
+        PDF generation successful.
+        Job marked COMPLETED.
+        Worker moves to next job.
+      end note
+
+      deactivate Worker
+
+    else R2 Upload Failed
+      R2Storage -> R2Client : 503 Service Unavailable
+      activate R2Storage
+      deactivate R2Storage
+
+      R2Client -> Worker : Exception (R2UploadException)
+      activate R2Client
+      deactivate R2Client
+
+      Worker -> DB : UPDATE delayed_jobs\nSET status='FAILED', attempts=attempts+1,\nrun_at=NOW() + exponential_backoff,\nerror_message='R2 upload failed: 503'\nWHERE id=789
+      activate DB
+      DB -> Worker : Success
+      deactivate DB
+
+      note right of Worker
+        Retryable error handling:
+        - Retry 1: 5 seconds
+        - Retry 2: 16 seconds (5 + 2^4)
+        - Retry 3: 86 seconds (5 + 3^4)
+        - Max retries: 3 attempts
+
+        After 3 failures, job marked
+        FAILED permanently.
+        Admin notified via monitoring.
+      end note
+
+      deactivate Worker
+    end
+
+    == Frontend Polling ==
+
+    note over SPA
+      SPA polls job status every 2 seconds
+      using GraphQL subscription or
+      polling query.
+    end note
+
+    loop Every 2 seconds while status != COMPLETED
+      SPA -> API : GraphQL Query: pdfJob(id: 789)
+      activate SPA
+      activate API
+
+      API -> DB : SELECT status, progress, error_message\nFROM delayed_jobs WHERE id=789
+      activate DB
+      DB -> API : Job (status=IN_PROGRESS, progress=50)
+      deactivate DB
+
+      API -> SPA : { job: { id: 789, status: "IN_PROGRESS", progress: 50 } }
+      deactivate API
+
+      SPA -> User : Update progress bar "Generating PDF... 50%"
+      deactivate SPA
+    end
+
+    note right of SPA
+      Polling continues until:
+      - status=COMPLETED (success)
+      - status=FAILED (error)
+      - Timeout after 60 seconds
+    end note
+
+    == Final Poll - Job Completed ==
+
+    SPA -> API : GraphQL Query: pdfJob(id: 789)
+    activate SPA
+    activate API
+
+    API -> DB : SELECT * FROM delayed_jobs WHERE id=789
+    activate DB
+    DB -> API : Job (status=COMPLETED, progress=100)
+    deactivate DB
+
+    API -> DB : SELECT pdf_url FROM user_calendars WHERE id=123
+    activate DB
+    DB -> API : Calendar (pdf_url='https://pub-abc123.r2.dev/...')
+    deactivate DB
+
+    API -> R2Client : generatePresignedUrl(pdfUrl, expiry=1h)
+    activate R2Client
+    R2Client -> API : Presigned URL with signature
+    deactivate R2Client
+
+    note right of API
+      Presigned URLs enable secure,
+      direct downloads from R2 without
+      proxying through API server.
+
+      URL valid for 1 hour.
+      After expiry, user must request
+      new presigned URL.
+    end note
+
+    API -> SPA : 200 OK\n{ job: { status: "COMPLETED", downloadUrl: "https://r2...?signature=..." } }
+    deactivate API
+
+    SPA -> User : Show "Download ready!" button
+    deactivate SPA
+
+    == PDF Download ==
+
+    User -> SPA : Clicks "Download"
+    activate SPA
+
+    SPA -> R2Storage : GET {presigned_url}
+    activate R2Storage
+    note right of SPA
+      Direct download from R2.
+      No API involvement for
+      bandwidth efficiency.
+    end note
+
+    R2Storage -> User : PDF file (8.2 MB)\nContent-Disposition: attachment; filename="calendar-2025.pdf"
+    deactivate R2Storage
+
+    deactivate SPA
+
+    note right of User
+      PDF downloads to browser.
+      User can print or save locally.
+    end note
+  end
+end
+
+== Failure Handling Summary ==
+
+note over Worker, R2Storage
+  **Critical Error Scenarios:**
+
+  1. **Worker Crashes Mid-Job**:
+     - locked_at timeout (5 minutes)
+     - Job status remains IN_PROGRESS with stale lock
+     - Monitoring detects stale lock and resets to PENDING
+     - Another worker reclaims job
+
+  2. **Batik Rendering Failure**:
+     - Worker catches RenderingException
+     - Updates job status=FAILED, attempts+1
+     - Schedules retry in 5 seconds
+     - Max retries: 3 attempts
+     - After 3 failures: job marked FAILED permanently
+     - User shown: "PDF generation failed. Please try again."
+
+  3. **R2 Upload Failure**:
+     - Retryable 503/504 errors trigger automatic retry
+     - Exponential backoff: 5s, 16s, 86s
+     - Non-retryable 4xx errors fail immediately
+     - User shown: "Upload failed. Please contact support."
+
+  4. **Max Retries Exceeded**:
+     - Job marked FAILED after 3 attempts
+     - Admin notified via monitoring alert (Slack/PagerDuty)
+     - Manual investigation required
+     - User receives email: "PDF generation failed after multiple attempts"
+
+  5. **Database Transaction Failure**:
+     - Rollback prevents partial updates
+     - Job status remains IN_PROGRESS
+     - Worker retries from last checkpoint
+     - If persistent failure, job marked FAILED
+
+  **Performance Optimizations:**
+
+  - **Caching**: Cached PDF returned immediately if calendar unchanged
+  - **Presigned URLs**: Direct R2 downloads without API proxy
+  - **Job Priority**: Paid users get priority=10, free tier priority=5
+  - **Progress Updates**: Frontend shows real-time progress (0% → 50% → 100%)
+  - **Async Processing**: User receives immediate response, processing in background
+end note
+
+@enduml
