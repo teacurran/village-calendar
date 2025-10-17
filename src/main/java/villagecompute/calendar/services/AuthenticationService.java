@@ -30,18 +30,23 @@ public class AuthenticationService {
     @Inject
     SecurityIdentity securityIdentity;
 
+    @Inject
+    CalendarService calendarService;
+
     /**
      * Handle OAuth callback after successful authentication with an OAuth provider.
      * Creates a new user if this is their first login, or updates the last login timestamp
-     * for existing users.
+     * for existing users. If a sessionId is provided, converts guest session calendars to
+     * the authenticated user.
      *
      * @param provider OAuth provider name (e.g., "google", "facebook")
      * @param identity The authenticated security identity from OIDC
+     * @param sessionId Optional guest session ID to convert to user account
      * @return The CalendarUser entity (created or updated)
      */
     @Transactional
-    public CalendarUser handleOAuthCallback(String provider, SecurityIdentity identity) {
-        LOG.infof("Handling OAuth callback for provider: %s", provider);
+    public CalendarUser handleOAuthCallback(String provider, SecurityIdentity identity, String sessionId) {
+        LOG.infof("Handling OAuth callback for provider: %s, sessionId: %s", provider, sessionId);
 
         // Extract user information from the OIDC UserInfo
         UserInfo userInfo = identity.getAttribute("userinfo");
@@ -102,6 +107,19 @@ public class AuthenticationService {
             user.persist();
 
             LOG.infof("Created new user: %s (ID: %s)", user.email, user.id);
+        }
+
+        // Convert guest session calendars to user account if sessionId provided
+        if (sessionId != null && !sessionId.isBlank()) {
+            try {
+                int convertedCount = calendarService.convertSessionToUser(sessionId, user);
+                LOG.infof("Converted %d calendars from session %s to user %s",
+                         convertedCount, sessionId, user.email);
+            } catch (Exception e) {
+                // Log error but don't fail authentication
+                LOG.errorf(e, "Error converting session %s to user %s. Session calendars will remain unconverted.",
+                          sessionId, user.email);
+            }
         }
 
         return user;

@@ -136,12 +136,14 @@ public class AuthResource {
             )
         )
     })
-    public Response handleGoogleCallback() {
+    public Response handleGoogleCallback(
+        @jakarta.ws.rs.QueryParam("sessionId") String sessionId
+    ) {
         LOG.info("Handling Google OAuth callback");
 
         try {
             // Handle the OAuth callback and create/update user
-            CalendarUser user = authenticationService.handleOAuthCallback("google", securityIdentity);
+            CalendarUser user = authenticationService.handleOAuthCallback("google", securityIdentity, sessionId);
 
             // Issue JWT token for the user
             String jwtToken = authenticationService.issueJWT(user);
@@ -241,12 +243,14 @@ public class AuthResource {
             )
         )
     })
-    public Response handleFacebookCallback() {
+    public Response handleFacebookCallback(
+        @jakarta.ws.rs.QueryParam("sessionId") String sessionId
+    ) {
         LOG.info("Handling Facebook OAuth callback");
 
         try {
             // Handle the OAuth callback and create/update user
-            CalendarUser user = authenticationService.handleOAuthCallback("facebook", securityIdentity);
+            CalendarUser user = authenticationService.handleOAuthCallback("facebook", securityIdentity, sessionId);
 
             // Issue JWT token for the user
             String jwtToken = authenticationService.issueJWT(user);
@@ -346,12 +350,14 @@ public class AuthResource {
             )
         )
     })
-    public Response handleAppleCallback() {
+    public Response handleAppleCallback(
+        @jakarta.ws.rs.QueryParam("sessionId") String sessionId
+    ) {
         LOG.info("Handling Apple OAuth callback");
 
         try {
             // Handle the OAuth callback and create/update user
-            CalendarUser user = authenticationService.handleOAuthCallback("apple", securityIdentity);
+            CalendarUser user = authenticationService.handleOAuthCallback("apple", securityIdentity, sessionId);
 
             // Issue JWT token for the user
             String jwtToken = authenticationService.issueJWT(user);

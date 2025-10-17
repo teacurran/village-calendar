@@ -1,6 +1,7 @@
 // ./stores/authStore.ts
 import { defineStore } from "pinia";
 import { hasAdminRole } from "../navigation/adminRoutes";
+import { getSessionId, clearSessionId } from "../utils/session";
 
 export interface CalendarUser {
   id: string;
@@ -121,6 +122,13 @@ export const useAuthStore = defineStore("auth", {
       const returnTo = window.location.pathname + window.location.search;
       sessionStorage.setItem("auth_return_to", returnTo);
 
+      // Get session ID to include in OAuth flow for session conversion
+      const sessionId = getSessionId();
+      if (sessionId) {
+        sessionStorage.setItem("guest_session_id", sessionId);
+        console.log("[Auth] Stored session ID for OAuth flow:", sessionId);
+      }
+
       // Redirect to OAuth provider
       window.location.href = `/auth/login/${provider}`;
     },
@@ -153,6 +161,25 @@ export const useAuthStore = defineStore("auth", {
         console.error("Failed to decode JWT token:", err);
       }
 
+      // Convert guest session if exists
+      const guestSessionId = sessionStorage.getItem("guest_session_id");
+      if (guestSessionId) {
+        try {
+          console.log(
+            "[Auth] Converting guest session to user:",
+            guestSessionId,
+          );
+          await this.convertGuestSession(guestSessionId);
+          sessionStorage.removeItem("guest_session_id");
+        } catch (err) {
+          console.error("[Auth] Failed to convert guest session:", err);
+          // Don't block login if session conversion fails
+        }
+      }
+
+      // Clear guest session ID from localStorage after conversion
+      clearSessionId();
+
       // Check if user is an admin
       if (hasAdminRole()) {
         // Redirect admin users to the admin dashboard
@@ -162,6 +189,54 @@ export const useAuthStore = defineStore("auth", {
         const returnTo = sessionStorage.getItem("auth_return_to") || "/";
         sessionStorage.removeItem("auth_return_to");
         window.location.href = returnTo;
+      }
+    },
+
+    /**
+     * Convert guest session calendars to authenticated user
+     */
+    async convertGuestSession(sessionId: string): Promise<number> {
+      if (!this.token) {
+        throw new Error("Authentication required to convert guest session");
+      }
+
+      try {
+        const response = await fetch("/graphql", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.token}`,
+          },
+          body: JSON.stringify({
+            query: `
+              mutation ConvertGuestSession($sessionId: String!) {
+                convertGuestSession(sessionId: $sessionId)
+              }
+            `,
+            variables: { sessionId },
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to convert guest session");
+        }
+
+        const result = await response.json();
+
+        if (result.errors) {
+          throw new Error(
+            result.errors[0]?.message || "GraphQL error during conversion",
+          );
+        }
+
+        const convertedCount = result.data?.convertGuestSession || 0;
+        console.log(
+          `[Auth] Converted ${convertedCount} calendars from guest session`,
+        );
+        return convertedCount;
+      } catch (err: any) {
+        console.error("[Auth] Error converting guest session:", err);
+        throw err;
       }
     },
 

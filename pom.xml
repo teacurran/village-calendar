@@ -91,6 +91,12 @@
       <artifactId>quarkus-mailer</artifactId>
     </dependency>
 
+    <!-- Scheduler for periodic tasks -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-scheduler</artifactId>
+    </dependency>
+
     <!-- Hibernate ORM specific dependencies -->
     <dependency>
       <groupId>io.quarkus</groupId>
