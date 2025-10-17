@@ -162,7 +162,7 @@
     "acceptance_criteria": "Navigating to http://localhost:8080/ displays Home view, Clicking navigation links in AppHeader routes to correct views, Protected routes (Dashboard, Admin) redirect to login if not authenticated, User store persists authentication state in localStorage, PrimeVue components styled correctly with Aura theme",
     "dependencies": ["I1.T1"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T12",

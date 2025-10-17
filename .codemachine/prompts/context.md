@@ -10,30 +10,35 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I1.T10",
+  "task_id": "I1.T11",
   "iteration_id": "I1",
   "iteration_goal": "Establish project infrastructure, define data models, create architectural artifacts, and implement foundational backend/frontend scaffolding",
-  "description": "Implement skeleton GraphQL resolvers for all queries and mutations defined in the GraphQL schema. Create resolver classes: CalendarResolver (queries: calendar, calendars; mutations: createCalendar, updateCalendar, deleteCalendar), OrderResolver (queries: order, orders; mutations: placeOrder, cancelOrder), UserResolver (query: currentUser; mutation: convertGuestSession), PdfResolver (query: pdfJob; mutation: generatePdf). Each resolver method should return stub data or throw NotImplementedException with TODO comments. Use SmallRye GraphQL annotations (@GraphQLApi, @Query, @Mutation). Configure authentication context injection (@Context SecurityIdentity). Ensure GraphQL endpoint (/graphql) is accessible and GraphQL UI loads at /graphql-ui.",
-  "agent_type_hint": "BackendAgent",
-  "inputs": "GraphQL schema from Task I1.T6, SmallRye GraphQL documentation",
+  "description": "Configure Vue Router with routes for main application pages: Home (/), Calendar Editor (/editor/:id?), Dashboard (/dashboard), Checkout (/checkout), Admin Panel (/admin/*), Login Callback (/auth/callback). Create root App.vue component with PrimeVue layout (header with navigation, main content area, footer). Implement common components: AppHeader.vue (navigation menu, user profile dropdown), AppFooter.vue (copyright, links). Create placeholder view components for each route (Home.vue, CalendarEditor.vue, Dashboard.vue, Checkout.vue, AdminPanel.vue). Configure route guards for authentication (redirect to login if not authenticated for protected routes). Set up Pinia store for user state (currentUser, isAuthenticated).",
+  "agent_type_hint": "FrontendAgent",
+  "inputs": "Frontend structure from Plan Section 3, Vue Router and Pinia requirements, PrimeVue documentation for layout components",
   "target_files": [
-    "src/main/java/villagecompute/calendar/api/graphql/CalendarResolver.java",
-    "src/main/java/villagecompute/calendar/api/graphql/OrderResolver.java",
-    "src/main/java/villagecompute/calendar/api/graphql/UserResolver.java",
-    "src/main/java/villagecompute/calendar/api/graphql/PdfResolver.java",
-    "src/main/java/villagecompute/calendar/api/graphql/TemplateResolver.java"
+    "frontend/src/router/index.ts",
+    "frontend/src/App.vue",
+    "frontend/src/components/common/AppHeader.vue",
+    "frontend/src/components/common/AppFooter.vue",
+    "frontend/src/views/Home.vue",
+    "frontend/src/views/CalendarEditor.vue",
+    "frontend/src/views/Dashboard.vue",
+    "frontend/src/views/Checkout.vue",
+    "frontend/src/views/AdminPanel.vue",
+    "frontend/src/views/AuthCallback.vue",
+    "frontend/src/stores/user.ts"
   ],
   "input_files": [
-    "api/schema.graphql",
-    "src/main/java/villagecompute/calendar/data/models/*.java"
+    "frontend/src/main.ts",
+    "frontend/package.json"
   ],
-  "deliverables": "All resolver classes created with stub methods, GraphQL endpoint accessible at /graphql, GraphQL UI (Playground) accessible at /graphql-ui, Stub queries return placeholder data (e.g., empty lists, mock objects), Mutations throw NotImplementedException or return null",
-  "acceptance_criteria": "curl -X POST http://localhost:8080/graphql -H \"Content-Type: application/json\" -d '{\"query\": \"{ calendars(userId: 1) { id title } }\"}' returns 200 with stub response, GraphQL UI loads in browser and displays schema documentation, All query/mutation methods from schema represented in resolver classes, SecurityIdentity context injection works (user ID accessible in resolver methods), No runtime errors when querying any defined schema field",
+  "deliverables": "Vue Router configured with all main routes, Root App.vue with PrimeVue layout (Menubar, Toolbar, or custom header/footer), All placeholder view components render without errors, Route guards redirect unauthenticated users to login, User Pinia store manages authentication state",
+  "acceptance_criteria": "Navigating to http://localhost:8080/ displays Home view, Clicking navigation links in AppHeader routes to correct views, Protected routes (Dashboard, Admin) redirect to login if not authenticated, User store persists authentication state in localStorage, PrimeVue components styled correctly with Aura theme",
   "dependencies": [
-    "I1.T6",
-    "I1.T8"
+    "I1.T1"
   ],
-  "parallelizable": false,
+  "parallelizable": true,
   "done": false
 }
 ```
@@ -42,373 +47,284 @@ This is the full specification of the task you must complete.
 
 ## 2. Architectural & Planning Context
 
-The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
+The following are the relevant sections from the architecture and plan documents.
 
-### Context: api-style (from 04_Behavior_and_Communication.md)
+### CRITICAL: Actual Directory Structure Differs from Task Specification
 
-```markdown
-#### 3.7.1. API Style
+**The task specification references `frontend/` as the root directory for the Vue application. However, the actual project structure places the Vue application at:**
 
-**Primary API: GraphQL**
-
-The Village Calendar application uses **GraphQL** as its primary API protocol for frontend-to-backend communication. This choice is driven by the complex, nested data requirements of the calendar editor interface.
-
-**Rationale for GraphQL:**
-
-1. **Flexible Data Fetching**: Calendar editor requires nested data structures (User → Calendars → Events, Calendar → Template → Config). GraphQL allows fetching all related data in a single round-trip, eliminating the N+1 query problem common with REST.
-
-2. **Reduced Over-fetching**: Frontend can request exactly the fields needed for each view (e.g., calendar list view only needs `id`, `title`, `preview_image_url`, while editor needs full `config`, `events[]`). This reduces payload size and improves performance on mobile connections.
-
-3. **Schema Evolution**: GraphQL's strong typing and introspection enable adding new fields without versioning. Deprecated fields can be marked and gracefully removed over time.
-
-4. **Developer Experience**: GraphQL Playground (auto-generated from schema) provides interactive API documentation and testing interface. Frontend developers can explore schema without reading separate docs.
-
-5. **Type Safety**: SmallRye GraphQL generates TypeScript types for Vue.js frontend, ensuring compile-time type checking across the API boundary.
-
-**GraphQL Schema Organization:**
-
-- **Queries**: Read operations (e.g., `calendar(id)`, `calendars(userId)`, `templates()`, `order(orderId)`)
-- **Mutations**: Write operations (e.g., `createCalendar`, `updateCalendar`, `placeOrder`, `generatePdf`)
-- **Subscriptions**: Not implemented in MVP (future: real-time collaboration notifications)
+```
+src/main/webui/
 ```
 
-### Context: technology-stack-summary (from 02_Architecture_Overview.md)
+This is because the project uses **Quarkus Quinoa**, which integrates the Vue frontend into the Quarkus Maven build.
 
-```markdown
-### 3.2. Technology Stack Summary
-
-Key technologies for this task:
-
-| **Category** | **Technology** | **Version** | **Justification** |
-|--------------|----------------|-------------|-------------------|
-| **Backend Framework** | Quarkus | 3.26.2 | Mandated by existing stack. Provides fast startup, low memory footprint (ideal for containers), and rich ecosystem (Hibernate, GraphQL, OIDC, Health). |
-| **API - Primary** | GraphQL (SmallRye) | (bundled) | Flexible frontend queries (fetch calendar + user + templates in single request). Schema evolution without versioning. Strong typing. |
-| **ORM** | Hibernate ORM with Panache | (bundled) | Active record pattern simplifies CRUD. Type-safe queries. Integrated with Quarkus transaction management. |
-| **Authentication** | Quarkus OIDC | (bundled) | OAuth 2.0 / OpenID Connect for Google, Facebook, Apple login. Industry-standard security. Delegated identity management. |
-```
-
-### Context: api-contract-style (from 01_Plan_Overview_and_Setup.md)
-
-```markdown
-### API Contract Style
-
-**Primary: GraphQL (SmallRye GraphQL)**
-
-**Endpoint**: `POST /graphql`
-
-**Schema Evolution**: Additive-only changes, field deprecation with `@deprecated` annotation, no versioning required for MVP
-
-**Key Queries:**
-- `calendar(id: ID!): Calendar`
-- `calendars(userId: ID!, year: Int): [Calendar!]!`
-- `templates(isActive: Boolean): [CalendarTemplate!]!`
-- `order(orderId: ID!): Order`
-- `orders(userId: ID!, status: OrderStatus): [Order!]!`
-
-**Key Mutations:**
-- `createCalendar(input: CreateCalendarInput!): Calendar!`
-- `updateCalendar(id: ID!, input: UpdateCalendarInput!): Calendar!`
-- `generatePdf(calendarId: ID!, watermark: Boolean!): PdfJob!`
-- `placeOrder(input: PlaceOrderInput!): Order!`
-- `convertGuestSession(sessionId: ID!): User!`
-
-**Type Safety**: GraphQL schema generates TypeScript types for Vue.js frontend (compile-time validation)
-```
+**All file paths in the task specification must be adjusted:**
+- `frontend/src/` → `src/main/webui/src/`
+- `frontend/package.json` → `src/main/webui/package.json`
 
 ---
 
 ## 3. Codebase Analysis & Strategic Guidance
 
-The following analysis is based on my direct review of the current codebase. Use these notes and tips to guide your implementation.
+The following analysis is based on my direct review of the current codebase.
 
-### 🔍 **CRITICAL DISCOVERY: Task is Already 90% Complete!**
+### 🔍 CRITICAL DISCOVERY: Task is Already 85% Complete!
 
-After comprehensive codebase analysis, I discovered that **most GraphQL resolvers are already fully implemented**, not as stubs but as production-ready code. The existing files use the naming pattern `*GraphQL.java` (NOT `*Resolver.java` as the task description states).
+After comprehensive codebase analysis, I discovered that **most of the infrastructure specified in this task already exists and is fully functional**. The task appears to be partially completed or was created based on an older understanding of what needed to be built.
 
 ### Relevant Existing Code
 
-*   **File:** `src/main/java/villagecompute/calendar/api/graphql/CalendarGraphQL.java`
-    *   **Summary:** Complete, production-ready calendar resolver with ALL primary calendar operations fully implemented (NOT stub code). Contains 442 lines of working Java code including authentication, authorization, transaction management, error handling, and comprehensive logging.
-    *   **Recommendation:** You MUST use this file as the PRIMARY REFERENCE PATTERN for implementing any missing resolvers. This is NOT stub code - it is production-ready implementation that you should study and emulate.
-    *   **Key Pattern Examples:**
-        - Class annotation pattern: `@GraphQLApi` + `@ApplicationScoped`
-        - Dependency injection: `@Inject JsonWebToken jwt` + `@Inject AuthenticationService authService`
-        - Query pattern: `@Query("queryName")` + `@Description()` + `@RolesAllowed()` or `@PermitAll`
-        - Mutation pattern: `@Mutation("mutationName")` + `@Description()` + `@RolesAllowed()` + `@Transactional`
-        - Authentication: `Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);`
-        - Authorization: Check ownership with `calendar.user.id.equals(currentUser.get().id)`
-        - UUID handling: `UUID calendarId = UUID.fromString(id);` wrapped in try-catch
-        - Error handling: Return null for not-found, throw IllegalArgumentException for invalid input, SecurityException for unauthorized access
-        - Logging: `LOG.infof()`, `LOG.warnf()`, `LOG.errorf()` with contextual messages
-    *   **Implemented Queries:**
-        - `me()` - Get current authenticated user (lines 55-75)
-        - `myCalendars(year)` - Get user's calendars with optional year filter (lines 84-114)
-        - `calendar(id)` - Get single calendar by ID with public/owner authorization (lines 123-169)
-    *   **Implemented Mutations:**
-        - `createCalendar(input)` - Create calendar from template with validation (lines 182-241)
-        - `updateCalendar(id, input)` - Update calendar with ownership verification (lines 251-319)
-        - `deleteCalendar(id)` - Delete calendar with paid order checks (lines 329-394)
-        - `convertGuestSession(sessionId)` - **STUB with UnsupportedOperationException** (lines 406-440)
+#### **File:** `src/main/webui/src/router.ts`
+   - **Summary:** Complete Vue Router configuration with all routes already defined.
+   - **Status:** ✅ **FULLY IMPLEMENTED** - Routes already exist for all pages mentioned in the task.
+   - **Existing Routes:**
+     - `/` → `CalendarBrowser.vue` (home page)
+     - `/editor/:templateId` → `CalendarEditor.vue`
+     - `/checkout/:calendarId` → `Checkout.vue`
+     - `/order/:orderId/confirmation` → `OrderConfirmation.vue`
+     - `/auth/callback` → `OAuthCallback.vue`
+     - `/payment/callback` → `PaymentCallback.vue`
+     - `/admin/*` → Admin routes (imported from `./navigation/adminRoutes`)
+     - Legacy routes: `/generator`, `/marketing`, `/cart`
+   - **Authentication Guard:** Already implemented with `router.beforeEach` checking `authStore.isAuthenticated`
+   - **Recommendation:** **DO NOT create `src/main/webui/src/router/index.ts`**. The router already exists at `src/main/webui/src/router.ts` (no index.ts subdirectory). Review it to understand the current structure.
 
-*   **File:** `src/main/java/villagecompute/calendar/api/graphql/OrderGraphQL.java`
-    *   **Summary:** Complete, production-ready order resolver with Stripe payment integration. Contains 392 lines of working Java code including complex business logic for e-commerce operations, payment processing, and admin order management.
-    *   **Recommendation:** Another EXCELLENT REFERENCE for implementing resolvers with external service integration (Stripe) and admin functionality. Shows how to create custom response types as nested classes.
-    *   **Key Pattern Examples:**
-        - External service injection: `@Inject PaymentService paymentService`
-        - Admin queries: `@Query("queryName")` + `@RolesAllowed("ADMIN")`
-        - Complex authorization: Check both ownership AND admin role
-        - Custom response type: `@Type("CreateOrderResponse")` as nested static class
-        - Error handling for external APIs: try-catch for StripeException
-    *   **Implemented Queries:**
-        - `myOrders()` - Get user's orders (lines 67-85)
-        - `order(id)` - Get single order with owner/admin authorization (lines 94-142)
-        - `ordersByStatus(status)` - Admin query for orders by status (lines 150-161)
-    *   **Implemented Mutations:**
-        - `createOrder(input)` - Create order with Stripe PaymentIntent (lines 174-258)
-        - `updateOrderStatus(input)` - Admin-only order status updates (lines 267-291)
-        - `cancelOrder(orderId, reason)` - **STUB with UnsupportedOperationException** (lines 305-372)
+#### **File:** `src/main/webui/src/App.vue`
+   - **Summary:** Root Vue component that renders `<RouterView />` with global PrimeVue components.
+   - **Status:** ⚠️ **PARTIALLY COMPLETE** - Exists but lacks header/footer layout as specified in task.
+   - **Current Structure:**
+     ```vue
+     <template>
+       <div id="app">
+         <Toast />
+         <ConfirmDialog />
+         <RouterView />
+       </div>
+     </template>
+     ```
+   - **Task Requirement:** Add PrimeVue layout with header (navigation) and footer.
+   - **Recommendation:** **MODIFY this file** to add `<AppHeader />` and `<AppFooter />` components. The basic structure exists but needs enhancement.
 
-*   **File:** `src/main/java/villagecompute/calendar/api/graphql/TemplateGraphQL.java`
-    *   **Summary:** Complete, production-ready template resolver for template management. Contains 237 lines including public queries (no authentication) and admin-only mutations.
-    *   **Recommendation:** Shows how to implement PUBLIC queries that don't require authentication (no `@RolesAllowed` annotation at all) and mix them with admin-only mutations.
-    *   **Key Pattern Examples:**
-        - Public query: No `@RolesAllowed` annotation (lines 45-79)
-        - Service layer pattern: `@Inject TemplateService templateService`
-        - Repository direct access: `@Inject CalendarTemplateRepository templateRepository`
-    *   **Implemented Queries:**
-        - `templates(isActive, isFeatured)` - Public query with filtering (lines 45-79)
-        - `template(id)` - Get single template by ID (lines 88-121)
-    *   **Implemented Mutations:**
-        - `createTemplate(input)` - Admin-only template creation (lines 134-159)
-        - `updateTemplate(id, input)` - Admin-only template updates (lines 169-200)
-        - `deleteTemplate(id)` - Admin-only template deletion (lines 210-235)
+#### **File:** `src/main/webui/src/stores/user.ts`
+   - **Summary:** Pinia store for user state management.
+   - **Status:** ✅ **FULLY IMPLEMENTED** - Complete with all required functionality.
+   - **Existing Features:**
+     - State: `currentUser`, `loading`, `error`, `isAuthenticated`
+     - Actions: `fetchCurrentUser()`, `login(provider)`, `logout()`, `clearError()`
+     - Getters: `isLoggedIn`, `userName`, `userEmail`, `userAvatar`
+   - **GraphQL Integration:** Uses GraphQL `currentUser` query to fetch authenticated user
+   - **Recommendation:** **DO NOT recreate this file**. It already exists and is production-ready.
 
-*   **File:** `src/main/java/villagecompute/calendar/api/graphql/PdfGraphQL.java`
-    *   **Summary:** STUB IMPLEMENTATION of PDF resolver. Contains 153 lines with two stub methods that return null or throw UnsupportedOperationException. Defines a temporary stub class `PdfJobStub` to represent the PDF job type.
-    *   **Recommendation:** This file demonstrates the EXACT STUB PATTERN you need to follow for unimplemented resolvers. This is your reference for how to write proper stubs.
-    *   **Key Stub Patterns:**
-        - Query stub: Return null with LOG message "STUB IMPLEMENTATION" (lines 44-58)
-        - Mutation stub: Throw UnsupportedOperationException with descriptive TODO message (lines 76-101)
-        - Nested stub type: `@Type("PdfJob")` with `@Description("... (stub)")` (lines 109-151)
-        - Comprehensive TODO comments in method JavaDoc explaining what needs to be implemented
-    *   **Implemented Stubs:**
-        - `pdfJob(id)` - **STUB returning null** (lines 43-58)
-        - `generatePdf(calendarId, watermark)` - **STUB throwing UnsupportedOperationException** (lines 72-101)
+#### **File:** `src/main/webui/src/stores/authStore.ts`
+   - **Summary:** Alternative/duplicate authentication store.
+   - **Status:** ⚠️ **DUPLICATE FUNCTIONALITY** - Project has BOTH `user.ts` and `authStore.ts`.
+   - **Observation:** The router and existing components use `authStore.isAuthenticated`, suggesting `authStore` is the "active" store.
+   - **Recommendation:** Use `authStore` for consistency with existing code. Consider if `user.ts` and `authStore.ts` should be consolidated (but this is out of scope for this task).
 
-*   **File:** `api/schema.graphql`
-    *   **Summary:** Complete GraphQL schema definition (855 lines) defining all types, queries, mutations, enums, and input types for the Village Calendar API.
-    *   **Recommendation:** You MUST use this schema file as the AUTHORITATIVE SOURCE for all resolver method signatures. Every Query and Mutation defined in this schema needs a corresponding Java resolver method with matching parameters and return types.
-    *   **Schema Coverage:**
-        - 13 queries in Query root (lines 546-692)
-        - 14 mutations in Mutation root (lines 701-854)
-        - All types, enums, inputs fully documented with GraphQL descriptions
-    *   **Critical for Implementation:** When you implement a resolver method, you MUST:
-        1. Match the exact query/mutation name from the schema
-        2. Match all parameter names and types
-        3. Match the return type
-        4. Preserve the GraphQL description as `@Description()` annotation in Java
+#### **File:** `src/main/webui/src/view/public/CalendarBrowser.vue`
+   - **Summary:** Home page component with template gallery.
+   - **Status:** ✅ **FULLY IMPLEMENTED** - Production-ready home page.
+   - **Existing Features:**
+     - Admin button (floating, top-right) for admin users
+     - User menu (floating) with logout
+     - Hero section with title and description
+     - Template gallery grid with cards
+     - Preview modal for templates
+     - Uses `authStore` for authentication state
+   - **Recommendation:** **DO NOT create `src/main/webui/src/views/Home.vue`**. The home page already exists at `src/main/webui/src/view/public/CalendarBrowser.vue` and is referenced in the router.
 
-*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarUser.java`
-    *   **Summary:** JPA entity for authenticated users (127 lines). Extends `DefaultPanacheEntityWithTimestamps`. Includes OAuth fields, relationships to UserCalendar and CalendarOrder, and static finder methods using Panache ActiveRecord pattern.
-    *   **Recommendation:** You MUST import and reference this entity type in resolver return types. SmallRye GraphQL automatically maps JPA entities to GraphQL types when names match.
+#### **File:** `src/main/webui/src/view/public/CalendarEditor.vue`
+   - **Status:** ✅ **FULLY IMPLEMENTED**
+   - **Recommendation:** **DO NOT create this file**. It already exists at `src/main/webui/src/view/public/CalendarEditor.vue`.
 
-*   **File:** `src/main/java/villagecompute/calendar/data/models/UserCalendar.java`
-    *   **Summary:** JPA entity for user calendars (148 lines). Contains user relationship, sessionId for guest users, JSONB configuration field, template relationship, and orders relationship. Includes static finder methods like `findByUserAndYear`.
-    *   **Recommendation:** You MUST use this entity in calendar-related resolvers. The GraphQL type `UserCalendar` maps directly to this JPA entity.
+#### **File:** `src/main/webui/src/view/public/Checkout.vue`
+   - **Status:** ✅ **FULLY IMPLEMENTED**
+   - **Recommendation:** **DO NOT create this file**. It already exists.
 
-*   **File:** `src/main/java/villagecompute/calendar/services/AuthenticationService.java`
-    *   **Summary:** Service for OAuth2 authentication and JWT management (176 lines). Provides `getCurrentUser(JsonWebToken jwt)` method that retrieves CalendarUser from JWT token - THIS IS THE CRITICAL METHOD for authentication in resolvers.
-    *   **Recommendation:** You MUST inject this service in all resolver classes and use `authService.getCurrentUser(jwt)` to get the authenticated user. This is the standard pattern across all existing resolvers.
+#### **File:** `src/main/webui/src/view/public/OAuthCallback.vue`
+   - **Status:** ✅ **FULLY IMPLEMENTED** (AuthCallback equivalent)
+   - **Recommendation:** **DO NOT create `AuthCallback.vue`**. The OAuth callback handler already exists.
 
-### 📋 Gap Analysis: What's Actually Missing?
+#### **File:** `src/main/webui/src/view/admin/` (directory)
+   - **Summary:** Admin section with existing views.
+   - **Status:** ✅ **ADMIN STRUCTURE EXISTS**
+   - **Recommendation:** Check this directory for existing admin views. The task mentions creating `AdminPanel.vue`, but admin functionality may already exist.
 
-Comparing schema (api/schema.graphql) against existing resolvers:
+#### **File:** `src/main/webui/package.json`
+   - **Summary:** Package configuration for Vue application.
+   - **Status:** ✅ **ALL DEPENDENCIES INSTALLED**
+   - **Existing Dependencies:**
+     - `vue@^3.5.13`
+     - `vue-router@^4.5.0`
+     - `pinia@^3.0.3`
+     - `primevue@^4.3.2`
+     - `@primevue/themes@^4.3.2`
+     - `primeicons@^7.0.0`
+     - `tailwindcss@^4.0.15`
+   - **Recommendation:** No package installation needed. Everything is already configured.
 
-#### Already Complete (DO NOT RECREATE):
-- ✅ CalendarGraphQL.java - Production-ready with 3 queries + 3 mutations
-- ✅ OrderGraphQL.java - Production-ready with 3 queries + 2 mutations
-- ✅ TemplateGraphQL.java - Production-ready with 2 queries + 3 mutations
-- ✅ PdfGraphQL.java - Stub implementation with 1 query + 1 mutation
+#### **File:** `api/schema.graphql`
+   - **Summary:** GraphQL schema definition.
+   - **Relevant Queries:**
+     - `currentUser: CalendarUser` - Returns authenticated user
+     - `me: CalendarUser` - Alias for currentUser
+   - **Recommendation:** The user store already uses the `currentUser` query correctly.
 
-#### Missing Operations (Need to be Added):
-- ❌ Query `currentUser` - Schema shows this as alias of `me` (lines 594-603). CalendarGraphQL only has `me()`. Need to add `currentUser()` as an alias.
-- ❌ Query `calendars(userId, year)` - Schema shows admin variant with userId parameter (lines 577-588). CalendarGraphQL only has `myCalendars(year)` for current user.
-- ❌ Query `allUsers(limit)` - Schema shows admin query (lines 563-566). Not implemented in any resolver.
-- ❌ Query `allOrders(status, limit)` - Schema shows admin query (lines 551-557). OrderGraphQL has `ordersByStatus(status)` but missing `limit` parameter.
-- ❌ Query `orders(userId, status)` - Schema shows admin variant with userId parameter (lines 632-643). OrderGraphQL only has `myOrders()` for current user.
-- ❌ Mutation `placeOrder(input)` - Schema shows this (lines 805-808). Might be duplicate of `createOrder` - need to verify.
+### Missing Components Analysis
 
-#### Stub Mutations Already in Place (Good to leave as-is):
-- ⚠️ Mutation `convertGuestSession(sessionId)` - Stub in CalendarGraphQL (lines 406-440)
-- ⚠️ Mutation `cancelOrder(orderId, reason)` - Stub in OrderGraphQL (lines 305-372)
-- ⚠️ Query `pdfJob(id)` - Stub in PdfGraphQL (lines 43-58)
-- ⚠️ Mutation `generatePdf(calendarId, watermark)` - Stub in PdfGraphQL (lines 72-101)
+Based on my analysis, here's what's **actually missing**:
+
+1. ❌ **`src/main/webui/src/components/common/AppHeader.vue`** - Does not exist, MUST be created
+2. ❌ **`src/main/webui/src/components/common/AppFooter.vue`** - Does not exist, MUST be created
+3. ⚠️ **`src/main/webui/src/views/Dashboard.vue`** - May not exist, verify and create if missing
+4. ⚠️ **Layout in `App.vue`** - Needs header/footer integration
 
 ### Implementation Tips & Notes
 
-**Tip #1: Task Naming Mismatch**
-The task description says to create "*Resolver.java" classes, but the existing codebase uses "*GraphQL.java" naming. You MUST follow the existing convention and use `EntityGraphQL` suffix, NOT `EntityResolver`.
+**Tip #1: Directory Structure Mismatch**
+The task uses `frontend/` but the actual path is `src/main/webui/`. Always use the correct path:
+- ❌ `frontend/src/components/`
+- ✅ `src/main/webui/src/components/`
 
-**Tip #2: What "Skeleton Resolver" Means in This Codebase**
-Looking at the existing code, "skeleton resolver" has two interpretations:
-1. **Stub with UnsupportedOperationException** - For operations where business logic will be implemented later (see PdfGraphQL, convertGuestSession, cancelOrder)
-2. **Complete Production Implementation** - For operations where the logic is straightforward CRUD (see CalendarGraphQL, OrderGraphQL, TemplateGraphQL)
+**Tip #2: Router Already Exists**
+Do NOT create `src/main/webui/src/router/index.ts`. The router exists at `src/main/webui/src/router.ts` (root level, no subdirectory).
 
-The project chose to implement production-ready code where feasible instead of pure stubs. You should follow this pattern.
+**Tip #3: View Directory Naming**
+Existing views are in `src/main/webui/src/view/` (singular), not `views/` (plural). The task specifies `views/` but the project uses `view/`. Follow the existing convention.
 
-**Tip #3: Authentication Pattern (CRITICAL)**
-The task says "Configure authentication context injection (@Context SecurityIdentity)" but the existing code uses a DIFFERENT pattern:
-```java
-@Inject JsonWebToken jwt;
-@Inject AuthenticationService authService;
+**Tip #4: Store Duplication**
+Both `user.ts` and `authStore.ts` exist. The router uses `authStore`, so your new components should use `authStore` for consistency.
 
-// Then in methods:
-Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-if (currentUser.isEmpty()) {
-    throw new IllegalStateException("Unauthorized: User not found");
-}
-```
-You MUST use this pattern, NOT `@Context SecurityIdentity`.
+**Tip #5: PrimeVue Components for Header/Footer**
+For your `AppHeader` and `AppFooter` components, you can use:
+- `Menubar` - For main navigation menu
+- `Button` - For navigation buttons/links
+- `Menu` - For dropdown menus
+- `Avatar` - For user profile display
 
-**Tip #4: Error Handling Patterns**
-- Return `null` for not-found queries (GraphQL handles this gracefully)
-- Throw `IllegalArgumentException` for invalid input (invalid UUID format, etc.)
-- Throw `SecurityException` for authorization failures (user doesn't own resource)
-- Throw `IllegalStateException` for business logic violations (can't delete calendar with paid orders)
-- Throw `UnsupportedOperationException` for stub mutations with TODO message
+Example PrimeVue Menubar structure:
+```vue
+<template>
+  <Menubar :model="menuItems">
+    <template #end>
+      <!-- User profile dropdown -->
+    </template>
+  </Menubar>
+</template>
 
-**Tip #5: Transaction Management**
-- Use `@Transactional` on ALL mutations that modify database state
-- Queries typically don't need @Transactional (read-only)
+<script setup lang="ts">
+import Menubar from 'primevue/menubar';
+import type { MenuItem } from 'primevue/menuitem';
 
-**Tip #6: Stub Implementation Pattern**
-When you need to create a stub method, follow the PdfGraphQL pattern:
-```java
-@Mutation("mutationName")
-@Description("Mutation description")
-@RolesAllowed("USER")
-@Transactional
-public ReturnType mutationName(
-    @Name("paramName")
-    @NotNull
-    @Description("Parameter description")
-    ParamType param
-) {
-    LOG.infof("Mutation mutationName called with param=%s (STUB IMPLEMENTATION)", param);
-
-    // TODO: Implement the actual logic:
-    // 1. Step one explanation
-    // 2. Step two explanation
-    // 3. Step three explanation
-
-    throw new UnsupportedOperationException(
-        "Mutation not yet implemented. " +
-        "TODO: Brief description of what needs to be implemented."
-    );
-}
+const menuItems: MenuItem[] = [
+  { label: 'Home', icon: 'pi pi-home', to: '/' },
+  { label: 'Templates', icon: 'pi pi-calendar', to: '/' },
+  // ... more items
+];
+</script>
 ```
 
-**Tip #7: GraphQL UI Location**
-- SmallRye GraphQL automatically exposes UI at `/graphql-ui` (note: no trailing slash)
-- Schema introspection endpoint: `/graphql/schema.graphql`
-- Main GraphQL endpoint: `/graphql` (POST requests)
-- No manual configuration needed if quarkus-smallrye-graphql extension is in pom.xml
+**Tip #6: Styling Conventions**
+The project uses:
+- **TailwindCSS v4** for utility classes
+- **PrimeVue Aura theme** for component styling
+- **Scoped styles** in `<style scoped>` blocks
 
-**Warning: Do Not Downgrade Production Code**
-The task asks for "stub implementations", but THREE out of FOUR resolver files already have production-ready implementations. **DO NOT** downgrade working code to stubs. This would break the application. Instead:
-- ✅ Leave CalendarGraphQL.java as-is (it's production-ready)
-- ✅ Leave OrderGraphQL.java as-is (it's production-ready)
-- ✅ Leave TemplateGraphQL.java as-is (it's production-ready)
-- ✅ Leave PdfGraphQL.java as-is (it already has proper stubs)
-- ✅ Only add the truly MISSING operations identified in the gap analysis
+Follow the pattern from `CalendarBrowser.vue`:
+```vue
+<style scoped>
+.header-class {
+  /* Use Tailwind or custom CSS */
+}
+</style>
+```
 
-### Project-Specific Conventions Observed
+**Tip #7: Authentication Pattern**
+The existing code uses this pattern:
+```typescript
+import { useAuthStore } from '@/stores/authStore';
 
-1. **Resolver naming**: `EntityGraphQL.java`, NOT `EntityResolver.java`
-2. **Package structure**: `villagecompute.calendar.api.graphql`
-3. **Class annotations**: `@GraphQLApi` + `@ApplicationScoped` (in that order)
-4. **Method annotation order**: `@Query/@Mutation` → `@Description` → `@RolesAllowed/@PermitAll` → `@Transactional` (if needed)
-5. **Parameter annotations**: Always `@Name("paramName")`, add `@NonNull` for required non-null params, add `@Description()` for documentation
-6. **Logging**: Use `org.jboss.logging.Logger` (JBoss Logger, NOT java.util.logging)
-7. **Error message format**: Prefix with category like "Unauthorized:", "Invalid:", "Calendar not found:", "Failed to:"
-8. **UUID handling**: Always parse strings with `UUID.fromString(id)` wrapped in try-catch for `IllegalArgumentException`
-9. **Authorization pattern**: Use `@RolesAllowed("USER")` for authenticated endpoints, `@RolesAllowed("ADMIN")` for admin endpoints, `@PermitAll` for public endpoints
-10. **Dependency injection**: Use `@Inject` (NOT `@Context`) for all dependencies including JsonWebToken
+const authStore = useAuthStore();
 
----
+if (authStore.isAuthenticated) {
+  // User is logged in
+}
+```
 
-## 4. Final Recommendation for Coder Agent
+**Warning: Avoid Duplicate Code**
+Do NOT recreate files that already exist. The task description may be outdated or based on initial plans. Always check the codebase first.
 
-### ✅ Task Status: 95% Complete - Only Minor Additions Needed
+### Action Items
 
-**IMPORTANT:** The task description asked for "skeleton resolvers" but the project has already implemented production-ready code for most operations. This is BETTER than what was requested.
+Based on the analysis, here is what you **actually need to do**:
 
-### What You Need To Do:
+1. ✅ **CREATE:** `src/main/webui/src/components/common/AppHeader.vue`
+   - Navigation menu with links to Home, Dashboard (if exists), Admin (if admin)
+   - User profile dropdown (name, avatar, logout button)
+   - Use PrimeVue Menubar or custom nav
 
-**Option 1: Minimal Compliance (Recommended)**
-To satisfy the acceptance criteria with minimal changes:
+2. ✅ **CREATE:** `src/main/webui/src/components/common/AppFooter.vue`
+   - Copyright notice
+   - Links (Privacy Policy, Terms of Service, Contact)
+   - Simple, minimal design
 
-1. **Add missing `currentUser` query to CalendarGraphQL.java:**
-   ```java
-   @Query("currentUser")
-   @Description("Alias for 'me' query")
-   @PermitAll
-   public CalendarUser currentUser() {
-       return me(); // Just delegate to existing me() method
-   }
-   ```
+3. ✅ **MODIFY:** `src/main/webui/src/App.vue`
+   - Import AppHeader and AppFooter
+   - Wrap RouterView with header/footer:
+     ```vue
+     <template>
+       <div id="app">
+         <Toast />
+         <ConfirmDialog />
+         <AppHeader />
+         <main>
+           <RouterView />
+         </main>
+         <AppFooter />
+       </div>
+     </template>
+     ```
 
-2. **Add missing admin queries** (choose ONE of these approaches):
-   - **Approach A**: Add `allUsers` and `calendars(userId)` to CalendarGraphQL.java
-   - **Approach B**: Create new `AdminGraphQL.java` with all admin queries consolidated
+4. ⚠️ **CHECK/CREATE:** `src/main/webui/src/view/Dashboard.vue` (or `views/Dashboard.vue`)
+   - Check if this file exists
+   - If missing, create a simple placeholder:
+     ```vue
+     <template>
+       <div class="dashboard">
+         <h1>Dashboard</h1>
+         <p>Welcome, {{ authStore.userName }}!</p>
+       </div>
+     </template>
+     ```
 
-   I recommend Approach A for simplicity.
+5. ✅ **VERIFY:** Test all routes work correctly
+   - Home: http://localhost:8080/
+   - Editor: http://localhost:8080/editor/TEMPLATE_ID
+   - Dashboard: http://localhost:8080/dashboard (if route exists)
+   - Admin: http://localhost:8080/admin (if admin user)
 
-3. **Verify GraphQL UI accessibility:**
-   ```bash
-   ./mvnw quarkus:dev
-   # Then visit: http://localhost:8080/graphql-ui
-   ```
+6. ✅ **VERIFY:** Authentication guard redirects unauthenticated users
 
-4. **Test with the acceptance criteria curl command:**
-   ```bash
-   curl -X POST http://localhost:8080/graphql \
-     -H "Content-Type: application/json" \
-     -d '{"query": "{ calendars(userId: \"<UUID>\") { id name } }"}'
-   ```
+### Final Notes
 
-**Option 2: Complete Gap Coverage (If Time Permits)**
-Add all missing operations identified in the gap analysis:
-- Add `allUsers(limit)` query
-- Add `calendars(userId, year)` query (admin variant)
-- Add `orders(userId, status)` query (admin variant)
-- Verify `allOrders` has `limit` parameter or add it
-- Add `placeOrder` mutation (or verify it's same as `createOrder`)
+**This task is 85% complete.** The router, stores, and most views already exist. Your main task is:
+1. Create `AppHeader.vue` and `AppFooter.vue` components
+2. Integrate them into `App.vue`
+3. Verify everything works
 
-### ⚠️ DO NOT:
-- ❌ Rewrite CalendarGraphQL.java as stubs (it's production-ready - leave it alone)
-- ❌ Rewrite OrderGraphQL.java as stubs (it's production-ready - leave it alone)
-- ❌ Rewrite TemplateGraphQL.java as stubs (it's production-ready - leave it alone)
-- ❌ Modify PdfGraphQL.java (it already has proper stub implementations)
-- ❌ Change the naming convention from EntityGraphQL to EntityResolver
-- ❌ Remove existing business logic from working implementations
-- ❌ Use `@Context SecurityIdentity` (use `@Inject JsonWebToken` instead)
+**DO NOT recreate existing files.** The project has evolved beyond the initial task specification.
 
-### Acceptance Criteria Verification:
+### Success Checklist
 
-1. ✅ "GraphQL endpoint accessible at /graphql" - Already working (verified in existing resolvers)
-2. ✅ "GraphQL UI loads at /graphql-ui" - SmallRye GraphQL auto-configures this
-3. ⚠️ "All query/mutation methods from schema represented" - Need to add missing admin queries
-4. ✅ "Stub queries return placeholder data" - Existing queries return REAL data (better than stubs!)
-5. ✅ "SecurityIdentity context injection works" - Using JsonWebToken + AuthenticationService pattern (works great)
-6. ✅ "No runtime errors when querying fields" - All existing operations work correctly
+Before marking this task complete, verify:
+- [ ] AppHeader.vue created with navigation menu
+- [ ] AppFooter.vue created with copyright/links
+- [ ] App.vue includes header and footer in layout
+- [ ] Navigation links in header work (route to correct pages)
+- [ ] Protected routes redirect to login (existing guard already does this)
+- [ ] User authentication state displays in header (name, avatar, logout)
+- [ ] PrimeVue styling works correctly (Aura theme)
+- [ ] No console errors when navigating between routes
 
-### Success Criteria Summary:
-
-Your **MINIMAL** task to complete this:
-1. Add `currentUser` query alias to CalendarGraphQL.java
-2. Add `allUsers(limit)` admin query (either to CalendarGraphQL or new AdminGraphQL)
-3. Verify GraphQL UI loads at http://localhost:8080/graphql-ui
-4. Mark task as done
-
-The existing implementations are production-ready and EXCEED the requirements of this task. Do not downgrade them to stubs.
+The existing router and stores already handle the authentication and routing requirements. Your focus should be on the visual layout components.
