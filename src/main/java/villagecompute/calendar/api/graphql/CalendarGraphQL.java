@@ -42,6 +42,12 @@ public class CalendarGraphQL {
     @Inject
     CalendarTemplateRepository templateRepository;
 
+    @Inject
+    villagecompute.calendar.services.CalendarService calendarService;
+
+    @Inject
+    villagecompute.calendar.services.EventService eventService;
+
     // ============================================================================
     // QUERIES
     // ============================================================================
@@ -114,15 +120,11 @@ public class CalendarGraphQL {
         CalendarUser user = currentUser.get();
         UUID userId = user.id;
 
-        // Query calendars with optional year filter
-        List<UserCalendar> calendars;
-        if (year != null) {
-            calendars = UserCalendar.findByUserAndYear(userId, year);
-            LOG.infof("Found %d calendars for user %s in year %d", calendars.size(), user.email, year);
-        } else {
-            calendars = UserCalendar.findByUser(userId).list();
-            LOG.infof("Found %d calendars for user %s (all years)", calendars.size(), user.email);
-        }
+        // Query calendars using service with pagination (return all by using large page size)
+        List<UserCalendar> calendars = calendarService.listCalendars(userId, year, 0, 1000, user);
+
+        LOG.infof("Found %d calendars for user %s%s",
+            calendars.size(), user.email, year != null ? " in year " + year : " (all years)");
 
         return calendars;
     }
@@ -185,15 +187,11 @@ public class CalendarGraphQL {
             LOG.infof("Returning calendars for current user %s", user.email);
         }
 
-        // Query calendars with optional year filter
-        List<UserCalendar> calendars;
-        if (year != null) {
-            calendars = UserCalendar.findByUserAndYear(targetUserId, year);
-            LOG.infof("Found %d calendars for user %s in year %d", calendars.size(), targetUserId, year);
-        } else {
-            calendars = UserCalendar.findByUser(targetUserId).list();
-            LOG.infof("Found %d calendars for user %s (all years)", calendars.size(), targetUserId);
-        }
+        // Query calendars using service with pagination (return all by using large page size)
+        List<UserCalendar> calendars = calendarService.listCalendars(targetUserId, year, 0, 1000, user);
+
+        LOG.infof("Found %d calendars for user %s%s",
+            calendars.size(), targetUserId, year != null ? " in year " + year : " (all years)");
 
         return calendars;
     }
@@ -218,34 +216,29 @@ public class CalendarGraphQL {
 
         try {
             UUID calendarId = UUID.fromString(id);
-            Optional<UserCalendar> calendarOpt = UserCalendar.<UserCalendar>findByIdOptional(calendarId);
 
-            if (calendarOpt.isEmpty()) {
+            // Get current user (may be null for anonymous access)
+            CalendarUser currentUser = null;
+            if (jwt != null && jwt.getSubject() != null) {
+                Optional<CalendarUser> userOpt = authService.getCurrentUser(jwt);
+                currentUser = userOpt.orElse(null);
+            }
+
+            // Use service to get calendar with authorization check
+            try {
+                UserCalendar calendar = calendarService.getCalendar(calendarId, currentUser);
+                LOG.infof("Returning calendar: %s (name=%s, owner=%s)",
+                    id, calendar.name, calendar.user != null ? calendar.user.email : "anonymous");
+                return calendar;
+            } catch (IllegalArgumentException e) {
+                // Calendar not found
                 LOG.warnf("Calendar not found: %s", id);
                 return null;
-            }
-
-            UserCalendar calendar = calendarOpt.get();
-
-            // Check access: either public or user owns it
-            boolean isPublic = calendar.isPublic;
-            boolean isOwner = false;
-
-            if (jwt != null && jwt.getSubject() != null) {
-                Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-                if (currentUser.isPresent() && calendar.user != null) {
-                    isOwner = calendar.user.id.equals(currentUser.get().id);
-                }
-            }
-
-            if (!isPublic && !isOwner) {
-                LOG.warnf("Access denied to private calendar %s", id);
+            } catch (SecurityException e) {
+                // Access denied
+                LOG.warnf("Access denied to calendar %s: %s", id, e.getMessage());
                 return null;
             }
-
-            LOG.infof("Returning calendar: %s (name=%s, owner=%s)",
-                id, calendar.name, calendar.user != null ? calendar.user.email : "anonymous");
-            return calendar;
 
         } catch (IllegalArgumentException e) {
             LOG.errorf("Invalid UUID format for calendar ID: %s", id);
@@ -316,7 +309,7 @@ public class CalendarGraphQL {
 
         CalendarUser user = currentUser.get();
 
-        // Validate template exists and is active
+        // Parse and validate template ID
         UUID templateId;
         try {
             templateId = UUID.fromString(input.templateId);
@@ -325,28 +318,16 @@ public class CalendarGraphQL {
             throw new IllegalArgumentException("Invalid template ID format");
         }
 
-        CalendarTemplate template = CalendarTemplate.<CalendarTemplate>findByIdOptional(templateId).orElse(null);
-        if (template == null) {
-            LOG.errorf("Template not found: %s", input.templateId);
-            throw new IllegalArgumentException("Template not found");
-        }
-
-        if (!template.isActive) {
-            LOG.errorf("Template is inactive: %s", input.templateId);
-            throw new IllegalStateException("Template is not active");
-        }
-
-        // Create the calendar
-        UserCalendar calendar = new UserCalendar();
-        calendar.user = user;
-        calendar.name = input.name;
-        calendar.year = input.year;
-        calendar.template = template;
-        calendar.configuration = input.configuration;
-        calendar.isPublic = input.isPublic != null ? input.isPublic : true; // Default to public
-
-        // Persist the calendar
-        calendar.persist();
+        // Create calendar using service
+        UserCalendar calendar = calendarService.createCalendar(
+            input.name,
+            input.year,
+            templateId,
+            input.configuration,
+            input.isPublic,
+            user,
+            null // sessionId is null for authenticated users
+        );
 
         LOG.infof("Created calendar: %s (ID: %s) for user %s",
             calendar.name, calendar.id, user.email);
@@ -389,7 +370,7 @@ public class CalendarGraphQL {
 
         CalendarUser user = currentUser.get();
 
-        // Find the calendar
+        // Parse calendar ID
         UUID calendarId;
         try {
             calendarId = UUID.fromString(id);
@@ -398,34 +379,14 @@ public class CalendarGraphQL {
             throw new IllegalArgumentException("Invalid calendar ID format");
         }
 
-        Optional<UserCalendar> calendarOpt = UserCalendar.<UserCalendar>findByIdOptional(calendarId);
-        if (calendarOpt.isEmpty()) {
-            LOG.errorf("Calendar not found: %s", id);
-            throw new IllegalArgumentException("Calendar not found");
-        }
-
-        UserCalendar calendar = calendarOpt.get();
-
-        // Verify ownership
-        if (calendar.user == null || !calendar.user.id.equals(user.id)) {
-            LOG.errorf("User %s attempted to update calendar %s owned by another user",
-                user.email, id);
-            throw new SecurityException("Unauthorized: You don't own this calendar");
-        }
-
-        // Apply updates
-        if (input.name != null) {
-            calendar.name = input.name;
-        }
-        if (input.configuration != null) {
-            calendar.configuration = input.configuration;
-        }
-        if (input.isPublic != null) {
-            calendar.isPublic = input.isPublic;
-        }
-
-        // Persist changes
-        calendar.persist();
+        // Update calendar using service (handles authorization and validation)
+        UserCalendar calendar = calendarService.updateCalendar(
+            calendarId,
+            input.name,
+            input.configuration,
+            input.isPublic,
+            user
+        );
 
         LOG.infof("Updated calendar: %s (ID: %s)", calendar.name, calendar.id);
 
@@ -461,7 +422,7 @@ public class CalendarGraphQL {
 
         CalendarUser user = currentUser.get();
 
-        // Find the calendar
+        // Parse calendar ID
         UUID calendarId;
         try {
             calendarId = UUID.fromString(id);
@@ -470,39 +431,30 @@ public class CalendarGraphQL {
             throw new IllegalArgumentException("Invalid calendar ID format");
         }
 
+        // Note: Order validation is not handled by CalendarService yet
+        // We need to check for paid orders before deletion
         Optional<UserCalendar> calendarOpt = UserCalendar.<UserCalendar>findByIdOptional(calendarId);
-        if (calendarOpt.isEmpty()) {
-            LOG.errorf("Calendar not found: %s", id);
-            throw new IllegalArgumentException("Calendar not found");
-        }
+        if (calendarOpt.isPresent()) {
+            UserCalendar calendar = calendarOpt.get();
+            // Check for paid orders
+            if (calendar.orders != null && !calendar.orders.isEmpty()) {
+                boolean hasPaidOrders = calendar.orders.stream()
+                    .anyMatch(order -> CalendarOrder.STATUS_PAID.equals(order.status)
+                        || CalendarOrder.STATUS_PROCESSING.equals(order.status)
+                        || CalendarOrder.STATUS_SHIPPED.equals(order.status)
+                        || CalendarOrder.STATUS_DELIVERED.equals(order.status));
 
-        UserCalendar calendar = calendarOpt.get();
-
-        // Verify ownership
-        if (calendar.user == null || !calendar.user.id.equals(user.id)) {
-            LOG.errorf("User %s attempted to delete calendar %s owned by another user",
-                user.email, id);
-            throw new SecurityException("Unauthorized: You don't own this calendar");
-        }
-
-        // Check for paid orders
-        if (calendar.orders != null && !calendar.orders.isEmpty()) {
-            boolean hasPaidOrders = calendar.orders.stream()
-                .anyMatch(order -> CalendarOrder.STATUS_PAID.equals(order.status)
-                    || CalendarOrder.STATUS_PROCESSING.equals(order.status)
-                    || CalendarOrder.STATUS_SHIPPED.equals(order.status)
-                    || CalendarOrder.STATUS_DELIVERED.equals(order.status));
-
-            if (hasPaidOrders) {
-                LOG.errorf("Cannot delete calendar %s: has paid orders", id);
-                throw new IllegalStateException("Cannot delete calendar with paid orders");
+                if (hasPaidOrders) {
+                    LOG.errorf("Cannot delete calendar %s: has paid orders", id);
+                    throw new IllegalStateException("Cannot delete calendar with paid orders");
+                }
             }
         }
 
-        // Delete the calendar
-        calendar.delete();
+        // Delete calendar using service (handles authorization)
+        calendarService.deleteCalendar(calendarId, user);
 
-        LOG.infof("Deleted calendar: %s (ID: %s)", calendar.name, calendar.id);
+        LOG.infof("Deleted calendar: %s", id);
 
         return true;
     }
@@ -527,7 +479,7 @@ public class CalendarGraphQL {
         @NotNull
         String sessionId
     ) {
-        LOG.infof("Mutation: convertGuestSession(sessionId=%s) (STUB IMPLEMENTATION)", sessionId);
+        LOG.infof("Mutation: convertGuestSession(sessionId=%s)", sessionId);
 
         // Get current user
         Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
@@ -538,18 +490,12 @@ public class CalendarGraphQL {
 
         CalendarUser user = currentUser.get();
 
-        // TODO: Implement the actual guest session conversion logic:
-        // 1. Find all calendars with the provided sessionId
-        // 2. Update those calendars to link them to the current authenticated user
-        // 3. Clear the sessionId field on those calendars
-        // 4. Return the user with updated calendar list
+        // Convert session calendars to user calendars using service
+        int convertedCount = calendarService.convertSessionToUser(sessionId, user);
 
-        LOG.warnf("Guest session conversion not yet implemented. Would convert session %s to user %s",
-            sessionId, user.email);
+        LOG.infof("Converted %d calendars from session %s to user %s",
+            convertedCount, sessionId, user.email);
 
-        throw new UnsupportedOperationException(
-            "Guest session conversion not yet implemented. " +
-            "TODO: Link all calendars with sessionId=" + sessionId + " to authenticated user."
-        );
+        return user;
     }
 }

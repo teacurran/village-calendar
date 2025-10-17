@@ -10,26 +10,27 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I2.T5",
+  "task_id": "I2.T6",
   "iteration_id": "I2",
   "iteration_goal": "Implement calendar creation, editing, and template system. Build calendar editor UI components. Integrate astronomical calculations (moon phases, Hebrew calendar). Create sequence diagrams for key workflows",
-  "description": "Integrate SunCalc library (or Java port) for moon phase calculations and Proj4J for geospatial projections. Create AstronomicalService with methods: calculateMoonPhases (for calendar year, returns array of phase dates and illumination percentages), calculateHebrewCalendarDates (convert Gregorian dates to Hebrew calendar), calculateSeasonalEvents (equinoxes, solstices). Store calculation results in calendar.config JSONB field or separate table (if complex). Add configuration option in calendar editor to enable/disable astronomical overlays. Write unit tests verifying calculation accuracy against known astronomical data (e.g., 2025 full moon dates).",
+  "description": "Replace stub implementations in CalendarResolver with real service calls. Implement queries: calendar(id) (fetch calendar with events, authorize user), calendars(userId, year) (list user's calendars with pagination). Implement mutations: createCalendar(input) (validate input, call CalendarService), updateCalendar(id, input) (authorize, update), deleteCalendar(id) (authorize, soft/hard delete). Inject SecurityIdentity for user context. Implement DataLoader pattern to prevent N+1 queries when fetching related entities (e.g., calendar with user and events). Add error handling (map service exceptions to GraphQL errors). Write integration tests for all resolver methods.",
   "agent_type_hint": "BackendAgent",
-  "inputs": "Astronomical calculation requirements from Plan Section \"Features\", SunCalc and Proj4J library documentation",
+  "inputs": "CalendarService from Task I2.T2, EventService from Task I2.T3, GraphQL schema from I1.T6",
   "target_files": [
-    "src/main/java/villagecompute/calendar/services/AstronomicalService.java",
-    "src/main/java/villagecompute/calendar/util/astronomical/MoonPhaseCalculator.java",
-    "src/main/java/villagecompute/calendar/util/astronomical/HebrewCalendarConverter.java",
-    "src/test/java/villagecompute/calendar/services/AstronomicalServiceTest.java"
+    "src/main/java/villagecompute/calendar/api/graphql/CalendarResolver.java",
+    "src/main/java/villagecompute/calendar/api/graphql/dataloader/CalendarDataLoader.java",
+    "src/test/java/villagecompute/calendar/api/graphql/CalendarResolverTest.java"
   ],
   "input_files": [
-    "pom.xml",
-    "src/main/java/villagecompute/calendar/model/Calendar.java"
+    "src/main/java/villagecompute/calendar/service/CalendarService.java",
+    "src/main/java/villagecompute/calendar/service/EventService.java",
+    "src/main/java/villagecompute/calendar/api/graphql/CalendarResolver.java",
+    "api/graphql-schema.graphql"
   ],
-  "deliverables": "AstronomicalService class with calculation methods, SunCalc/Proj4J integration (Maven dependencies added), Moon phase and Hebrew calendar calculation logic, Unit tests verifying calculation accuracy",
-  "acceptance_criteria": "AstronomicalService.calculateMoonPhases(2025) returns correct full moon dates for 2025, AstronomicalService.calculateHebrewCalendarDates() converts Gregorian to Hebrew dates accurately, Unit tests compare calculations against NASA moon phase data or Hebrew calendar tables, Service methods handle edge cases (leap years, timezone conversions), Calculation performance: <100ms for full year of moon phases",
-  "dependencies": ["I2.T2"],
-  "parallelizable": true,
+  "deliverables": "All calendar query/mutation resolvers implemented, DataLoader pattern implemented for efficient queries, Authorization checks (user can only query own calendars), Error handling (service exceptions mapped to GraphQL errors), Integration tests for all resolvers",
+  "acceptance_criteria": "GraphQL query { calendar(id: \"123\") { title events { eventText } } } returns calendar with events, Unauthorized access to other user's calendar returns GraphQL error, createCalendar mutation persists calendar and returns new ID, DataLoader batches queries (e.g., fetching 10 calendars with users requires 2 DB queries, not 11), Integration tests verify end-to-end GraphQL request/response flow",
+  "dependencies": ["I2.T2", "I2.T3", "I1.T10"],
+  "parallelizable": false,
   "done": false
 }
 ```
@@ -40,99 +41,140 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: Astronomical Calculation Requirements (from 02_Architecture_Overview.md)
+### Context: GraphQL API Style (from 04_Behavior_and_Communication.md)
 
-From the Technology Stack Summary table, line 105:
+From architecture blueprint line 23:
 ```markdown
-| **Astronomical Calculations** | SunCalc (port) + Proj4J | Custom/4.1 | Moon phase calculations, Hebrew calendar conversions. Geospatial projections. |
+1. **Flexible Data Fetching**: Calendar editor requires nested data structures (User → Calendars → Events, Calendar → Template → Config). GraphQL allows fetching all related data in a single round-trip, eliminating the N+1 query problem common with REST.
 ```
 
-### Context: Project Vision (from 01_Context_and_Drivers.md)
+### Context: DataLoader Pattern for N+1 Prevention (from 05_Operational_Architecture.md)
 
-From line 15:
+From architecture blueprint line 411-419:
 ```markdown
-Village Calendar is a full-stack web application that empowers users to create, customize, and order professional-quality full-year calendars. The platform combines an intuitive browser-based calendar editor with sophisticated astronomical calculations (moon phases, Hebrew calendar integration) and a complete e-commerce fulfillment pipeline. Users can design calendars with custom events, emojis, holiday sets, and astronomical overlays, then either download high-resolution PDFs or order physical printed versions delivered to their door.
+1. **GraphQL DataLoader Pattern**: Batch and cache database queries to prevent N+1 problem
+
+   // Without DataLoader: N+1 queries
+   calendars.forEach(cal -> cal.getUser())  // N separate DB queries
+
+   // With DataLoader: 2 queries
+   UserDataLoader.loadMany(userIds)  // Single batch query
 ```
 
-### Context: Functional Requirements - Calendar Features (from 01_Context_and_Drivers.md)
+### Context: Design Trade-offs for GraphQL (from 06_Rationale_and_Future.md)
 
-From line 119:
+From architecture blueprint line 139:
 ```markdown
-- Enable astronomical overlays (moon phases, Hebrew calendar dates)
-- Real-time preview with print-safe area indicators
+- GraphQL adds complexity (query parsing, N+1 problem mitigation). Team accepted this trade-off for frontend flexibility.
 ```
 
-### Context: Technology Stack - Backend Components (from 01_Plan_Overview_and_Setup.md)
-
-From line 122:
+From architecture blueprint line 483:
 ```markdown
-2. **Calendar Service**: CRUD operations, template application, event management, astronomical calculations
+- Document resolver implementation patterns (DataLoader usage, N+1 prevention)
 ```
 
-### Context: Directory Structure - Utility Classes (from 01_Plan_Overview_and_Setup.md)
+### Context: Task I2.T6 Full Description (from 02_Iteration_I2.md)
 
-From lines 394-395:
+From plan document (iteration 2 tasks):
 ```markdown
-│   │   │       ├── astronomical/        # Moon phase, Hebrew calendar calcs
-│   │   │       └── pdf/                 # Batik rendering utilities
-```
+### Task 2.6: Implement Calendar GraphQL Resolvers
 
-### Context: Task I2.T5 Full Description (from 02_Iteration_I2.md)
-
-From lines 205-245:
-```markdown
-### Task 2.5: Integrate Astronomical Calculation Libraries
-
-**Task ID:** `I2.T5`
+**Task ID:** `I2.T6`
 
 **Description:**
-Integrate SunCalc library (or Java port) for moon phase calculations and Proj4J for geospatial projections. Create AstronomicalService with methods: calculateMoonPhases (for calendar year, returns array of phase dates and illumination percentages), calculateHebrewCalendarDates (convert Gregorian dates to Hebrew calendar), calculateSeasonalEvents (equinoxes, solstices). Store calculation results in calendar.config JSONB field or separate table (if complex). Add configuration option in calendar editor to enable/disable astronomical overlays. Write unit tests verifying calculation accuracy against known astronomical data (e.g., 2025 full moon dates).
+Replace stub implementations in CalendarResolver with real service calls. Implement queries: calendar(id) (fetch calendar with events, authorize user), calendars(userId, year) (list user's calendars with pagination). Implement mutations: createCalendar(input) (validate input, call CalendarService), updateCalendar(id, input) (authorize, update), deleteCalendar(id) (authorize, soft/hard delete). Inject SecurityIdentity for user context. Implement DataLoader pattern to prevent N+1 queries when fetching related entities (e.g., calendar with user and events). Add error handling (map service exceptions to GraphQL errors). Write integration tests for all resolver methods.
 
 **Agent Type Hint:** `BackendAgent`
 
 **Inputs:**
-- Astronomical calculation requirements from Plan Section "Features"
-- SunCalc and Proj4J library documentation
+- CalendarService from Task I2.T2
+- EventService from Task I2.T3
+- GraphQL schema from I1.T6
 
 **Input Files:**
-- `pom.xml` (add SunCalc/Proj4J dependencies)
-- `src/main/java/villagecompute/calendar/model/Calendar.java`
+- `src/main/java/villagecompute/calendar/service/CalendarService.java`
+- `src/main/java/villagecompute/calendar/service/EventService.java`
+- `src/main/java/villagecompute/calendar/api/graphql/CalendarResolver.java`
+- `api/graphql-schema.graphql`
 
 **Target Files:**
-- `src/main/java/villagecompute/calendar/services/AstronomicalService.java`
-- `src/main/java/villagecompute/calendar/util/astronomical/MoonPhaseCalculator.java`
-- `src/main/java/villagecompute/calendar/util/astronomical/HebrewCalendarConverter.java`
-- `src/test/java/villagecompute/calendar/services/AstronomicalServiceTest.java`
+- `src/main/java/villagecompute/calendar/api/graphql/CalendarResolver.java`
+- `src/main/java/villagecompute/calendar/api/graphql/dataloader/CalendarDataLoader.java`
+- `src/test/java/villagecompute/calendar/api/graphql/CalendarResolverTest.java`
 
 **Deliverables:**
-- AstronomicalService class with calculation methods
-- SunCalc/Proj4J integration (Maven dependencies added)
-- Moon phase and Hebrew calendar calculation logic
-- Unit tests verifying calculation accuracy
+- All calendar query/mutation resolvers implemented
+- DataLoader pattern implemented for efficient queries
+- Authorization checks (user can only query own calendars)
+- Error handling (service exceptions mapped to GraphQL errors)
+- Integration tests for all resolvers
 
 **Acceptance Criteria:**
-- `AstronomicalService.calculateMoonPhases(2025)` returns correct full moon dates for 2025
-- `AstronomicalService.calculateHebrewCalendarDates()` converts Gregorian to Hebrew dates accurately
-- Unit tests compare calculations against NASA moon phase data or Hebrew calendar tables
-- Service methods handle edge cases (leap years, timezone conversions)
-- Calculation performance: <100ms for full year of moon phases
+- GraphQL query { calendar(id: "123") { title events { eventText } } } returns calendar with events
+- Unauthorized access to other user's calendar returns GraphQL error
+- createCalendar mutation persists calendar and returns new ID
+- DataLoader batches queries (e.g., fetching 10 calendars with users requires 2 DB queries, not 11)
+- Integration tests verify end-to-end GraphQL request/response flow
 
-**Dependencies:** `I2.T2` (requires Calendar entity and config structure)
+**Dependencies:** `I2.T2`, `I2.T3`, `I1.T10` (requires CalendarService, EventService, and basic GraphQL stubs)
 
-**Parallelizable:** Yes (independent library integration)
+**Parallelizable:** No (depends on completed services)
 ```
 
-### Context: PDF Generation with Astronomical Overlays (from 04_Behavior_and_Communication.md)
+### Context: GraphQL Schema Definition (from api/schema.graphql)
 
-From line 428:
-```markdown
-note right of Batik
-  - Generate SVG from calendar config
-  - Apply astronomical overlays (moon phases)
-  - Embed events with emojis
-  - Add watermark if free tier
-  - Convert SVG to PDF (36" x 23" @ 300 DPI)
-end note
+The GraphQL schema defines the following calendar-related operations:
+
+**Queries:**
+```graphql
+# Get a single calendar by ID (lines 568-575)
+calendar(id: ID!): UserCalendar
+
+# Get calendars for a user or filter by year (lines 577-588)
+calendars(userId: ID, year: Int): [UserCalendar!]!
+
+# Get authenticated user's calendars (lines 608-612)
+myCalendars(year: Int): [UserCalendar!]!
+
+# Get currently authenticated user (lines 595-603)
+currentUser: CalendarUser
+me: CalendarUser
+```
+
+**Mutations:**
+```graphql
+# Create a new calendar (lines 726-736)
+createCalendar(input: CalendarInput!): UserCalendar!
+
+# Update an existing calendar (lines 816-823)
+updateCalendar(id: ID!, input: CalendarUpdateInput!): UserCalendar!
+
+# Delete a calendar (lines 767-774)
+deleteCalendar(id: ID!): Boolean!
+
+# Convert guest session to authenticated user (lines 720-724)
+convertGuestSession(sessionId: ID!): CalendarUser!
+```
+
+**Key Types:**
+```graphql
+# UserCalendar type (lines 195-241) contains:
+type UserCalendar {
+  id: ID!
+  name: String!
+  year: Int!
+  configuration: JSON
+  status: CalendarStatus!
+  isPublic: Boolean!
+  sessionId: String
+  generatedPdfUrl: String
+  generatedSvg: String
+  created: DateTime!
+  updated: DateTime!
+  user: CalendarUser     # Potential N+1 query
+  template: CalendarTemplate!  # Potential N+1 query
+  orders: [CalendarOrder!]!    # Potential N+1 query
+}
 ```
 
 ---
@@ -143,103 +185,167 @@ The following analysis is based on my direct review of the current codebase. Use
 
 ### Relevant Existing Code
 
-*   **File:** `pom.xml` (lines 153-170)
-    *   **Summary:** The Maven dependencies for astronomical libraries are **ALREADY INTEGRATED**. SunCalc (org.shredzone.commons:commons-suncalc:3.11) is at lines 153-158, and Proj4J (org.locationtech.proj4j:proj4j:1.3.0 + proj4j-epsg:1.3.0) is at lines 160-170.
-    *   **Recommendation:** You DO NOT need to add these dependencies to pom.xml - they are already present. Focus on using these libraries in your implementation.
-
-*   **File:** `src/main/java/villagecompute/calendar/services/AstronomicalCalculationService.java`
-    *   **Summary:** This service **ALREADY EXISTS** with a substantial implementation. It includes:
-        - `getMoonPhases(int year)` - returns `List<MoonPhaseData>` with phase transitions
-        - `calculateMoonPhase(LocalDate date)` - returns `MoonPhase` enum (NEW_MOON, FULL_MOON, etc.)
-        - `calculateMoonPhaseValue(LocalDate date)` - returns fractional phase (0.0 to 1.0)
-        - `calculateMoonIllumination(LocalDate date)` - returns `MoonIllumination` with fraction, phase, angle
-        - `calculateMoonPosition(LocalDate date, double latitude, double longitude)` - calculates azimuth, altitude, parallactic angle for hemisphere-aware rendering
-        - `isMoonPhaseDay(LocalDate date)` - determines if a date is a major phase transition
-        - `getHebrewDates(int year)` - placeholder that returns empty list (delegates to HebrewCalendarService)
-        - `getSunriseSunset(LocalDate date, double latitude, double longitude)` - placeholder returning null times
-        - Data classes: `MoonPhaseData`, `MoonPhase` enum, `MoonIllumination`, `MoonPosition`, `HebrewDateMapping`, `SunriseSunset`
-    *   **Recommendation:** You MUST enhance the existing `AstronomicalCalculationService.java` file, NOT create a new one. Focus on:
-        1. **Integrating the actual SunCalc library** - The current implementation uses simplified astronomical formulas. Replace the custom calculations in `calculateMoonIllumination()` and `getSunriseSunset()` with calls to `org.shredzone.commons.suncalc.SunTimes` and `org.shredzone.commons.suncalc.MoonPhase`.
-        2. **Implementing `calculateSeasonalEvents()`** - This method is missing. Use SunCalc's `SunTimes` to calculate equinoxes and solstices.
-        3. **Completing the `getHebrewDates()` method** - Currently returns an empty list. Integrate with HebrewCalendarService (which already exists).
-
-*   **File:** `src/main/java/villagecompute/calendar/services/HebrewCalendarService.java`
-    *   **Summary:** This service already exists with extensive Hebrew calendar functionality:
-        - `isHebrewLeapYear(int year)` - checks if a Hebrew year is a leap year (19-year cycle)
-        - `getMonthsInHebrewYear(int year)` - returns 12 or 13 months
-        - `getDaysInHebrewMonth(int month, int year)` - handles variable month lengths
-        - `getHebrewMonthName(int month, int year)` - returns transliterated Hebrew month names
-        - `hebrewToGregorian(int hebrewYear, int hebrewMonth, int hebrewDay)` - simplified conversion
-        - `getHebrewHolidays(int hebrewYear, String holidaySet)` - returns Map of holidays
-        - `generateHebrewCalendarSVG(HebrewCalendarConfig config, String holidaySet)` - full Hebrew calendar rendering
-    *   **Recommendation:** The Hebrew calendar logic is **already implemented**. You SHOULD integrate this into `AstronomicalCalculationService.getHebrewDates()` by calling `hebrewCalendarService` methods. The service is already injected at line 20 of AstronomicalCalculationService.
-
-*   **File:** `src/main/java/villagecompute/calendar/data/models/UserCalendar.java`
-    *   **Summary:** This is the main calendar entity with a `configuration` field (line 53) that is a JSONB column storing `JsonNode`. This is where astronomical overlay settings should be stored (e.g., `{"showMoonPhases": true, "showHebrewCalendar": false}`).
-    *   **Recommendation:** Astronomical overlay configuration should be stored in the `calendar.configuration` JSONB field. You do NOT need to create a separate table.
+*   **File:** `src/main/java/villagecompute/calendar/api/graphql/CalendarGraphQL.java`
+    *   **Summary:** This file **ALREADY CONTAINS A SUBSTANTIAL IMPLEMENTATION** of the calendar GraphQL API. It includes:
+        - **User Queries:** `me()` and `currentUser()` queries (lines 55-89) that return the authenticated user using `AuthenticationService.getCurrentUser(jwt)`
+        - **Calendar Queries:**
+          - `myCalendars(year)` (lines 98-128) - fetches user's calendars with optional year filter
+          - `calendars(userId, year)` (lines 139-199) - supports both admin access (with userId) and current user access (without userId)
+          - `calendar(id)` (lines 208-254) - fetches single calendar with authorization checks (public or owner)
+        - **Admin Query:** `allUsers(limit)` (lines 263-283) - requires ADMIN role
+        - **Calendar Mutations:**
+          - `createCalendar(input)` (lines 296-355) - creates calendar from template with validation
+          - `updateCalendar(id, input)` (lines 365-433) - updates calendar with ownership verification
+          - `deleteCalendar(id)` (lines 443-508) - deletes calendar with ownership check and order validation
+          - `convertGuestSession(sessionId)` (lines 520-554) - **STUB IMPLEMENTATION** that throws UnsupportedOperationException
+        - **Authorization:** Uses `@RolesAllowed("USER")` and `@RolesAllowed("ADMIN")` annotations extensively
+        - **JWT Integration:** Injects `JsonWebToken jwt` and uses it for authentication context
+        - **Service Injection:** Uses `AuthenticationService` and `CalendarTemplateRepository` but **DOES NOT YET INJECT CalendarService or EventService**
+    *   **Recommendation:** The task description mentions "Replace stub implementations in CalendarResolver" but I found that CalendarGraphQL (not CalendarResolver) already has most functionality implemented. Your work should focus on:
+        1. **CRITICAL:** The file uses direct Panache queries (`UserCalendar.findByUserAndYear()`, `UserCalendar.findByUser()`) instead of calling CalendarService. You MUST refactor these to use CalendarService and EventService for proper separation of concerns.
+        2. **Implement DataLoader pattern** - Currently there's no DataLoader implementation, which means fetching related entities (user, template, events) will cause N+1 queries. You need to create `CalendarDataLoader`, `UserDataLoader`, `TemplateDataLoader`, and `EventDataLoader`.
+        3. **Complete convertGuestSession** - Currently throws UnsupportedOperationException. Use `CalendarService.convertSessionToUser()` method.
+        4. **Add event fetching** - The schema shows UserCalendar should have events, but this isn't currently exposed as a field resolver.
 
 *   **File:** `src/main/java/villagecompute/calendar/services/CalendarService.java`
-    *   **Summary:** This service handles calendar CRUD operations and works with the `UserCalendar` entity. It supports configuration updates via the `updateCalendar()` method (line 116).
-    *   **Recommendation:** The CalendarService already handles configuration management. Your astronomical calculations should read from and write to `calendar.configuration` when needed.
+    *   **Summary:** This service provides all the business logic needed for calendar operations:
+        - `createCalendar()` (lines 49-99) - accepts name, year, templateId, configuration, isPublic, user, sessionId
+        - `updateCalendar()` (lines 116-153) - handles optimistic locking with version field
+        - `deleteCalendar()` (lines 166-185) - hard delete with authorization
+        - `getCalendar()` (lines 196-210) - fetches with authorization check
+        - `listCalendars()` (lines 223-260) - lists with pagination and authorization
+        - `convertSessionToUser()` (lines 270-297) - converts guest session calendars to authenticated user
+        - **Authorization helpers:** `checkReadAccess()` (lines 324-349), `checkWriteAccess()` (lines 363-383)
+        - **Validation:** `validateCalendarInput()` (lines 396-415)
+    *   **Recommendation:** You MUST use this service in CalendarGraphQL instead of direct Panache queries. All authorization logic is already implemented here - reuse it.
 
-*   **File:** `src/main/java/villagecompute/calendar/services/CalendarRenderingService.java` (mentioned but not read - it's 69KB)
-    *   **Summary:** This service likely uses AstronomicalCalculationService to render moon phases in SVG calendars. It's injected into HebrewCalendarService and used in `generateHebrewCalendarSVG()`.
-    *   **Recommendation:** Your enhanced AstronomicalCalculationService will be called by CalendarRenderingService. Ensure your API is compatible with existing usage patterns.
+*   **File:** `src/main/java/villagecompute/calendar/services/EventService.java`
+    *   **Summary:** This service provides event management:
+        - `addEvent()` (lines 68-111) - creates event with validation (max 500 chars, date within calendar year, valid emoji/color)
+        - `updateEvent()` (lines 128-168) - updates text/emoji/color (cannot change date)
+        - `deleteEvent()` (lines 182-201) - deletes with authorization
+        - `listEvents()` (lines 216-243) - lists events for calendar with optional date range filter
+        - `getEvent()` (lines 254-267) - fetch single event
+        - **Bulk operations:** `importEventsFromJson()` (lines 282-341), `importEventsFromCsv()` (lines 356-430)
+        - **Validation:** Validates emoji Unicode ranges (lines 520-561), hex color patterns (lines 569-578), 500-char limit (lines 506-512)
+    *   **Recommendation:** You SHOULD add EventService to CalendarGraphQL to expose event operations. However, the task description focuses on calendar resolvers, not event CRUD. Events are accessed as nested fields on UserCalendar - use a DataLoader to batch-load events for multiple calendars.
+
+*   **File:** `src/main/java/villagecompute/calendar/data/models/UserCalendar.java`
+    *   **Summary:** The UserCalendar entity with Panache provides active record methods:
+        - Static finder methods: `findByUser(UUID userId)`, `findByUserAndYear(UUID userId, int year)`, `findBySession(String sessionId)`, `findPublicById(UUID id)`
+        - Fields: `id`, `user`, `sessionId`, `name`, `year`, `template`, `configuration` (JSONB), `isPublic`, `status`, `generatedPdfUrl`, `generatedSvg`, `created`, `updated`, `version`, `orders`
+    *   **Recommendation:** The CalendarGraphQL currently calls these static methods directly (lines 120-124, 191-196). You MUST replace these with CalendarService calls to maintain proper layering.
+
+*   **File:** `src/main/java/villagecompute/calendar/api/graphql/inputs/CalendarInput.java` and `CalendarUpdateInput.java`
+    *   **Summary:** These input DTOs already exist and are used by CalendarGraphQL:
+        - `CalendarInput`: name, year, templateId, configuration, isPublic
+        - `CalendarUpdateInput`: name (optional), configuration (optional), isPublic (optional)
+    *   **Recommendation:** These are already correctly integrated into the mutations. No changes needed.
+
+*   **File:** `src/main/java/villagecompute/calendar/services/AuthenticationService.java`
+    *   **Summary:** Already injected and used in CalendarGraphQL (line 40). Provides:
+        - `getCurrentUser(JsonWebToken jwt)` - returns `Optional<CalendarUser>` by looking up oauth_subject claim
+    *   **Recommendation:** Continue using this service as currently implemented. It correctly handles JWT-to-user mapping.
 
 ### Implementation Tips & Notes
 
-*   **Tip:** The task asks you to create `src/main/java/villagecompute/calendar/util/astronomical/MoonPhaseCalculator.java` and `HebrewCalendarConverter.java`, but I can see that all this logic is **already implemented directly in AstronomicalCalculationService.java and HebrewCalendarService.java**. You have two options:
-    1. **Extract** the existing calculation logic into utility classes (cleaner architecture)
-    2. **Keep** the logic in the services and only create wrapper utility classes if needed for testing
+*   **Tip:** The task asks for "CalendarResolver" but the actual file is named "CalendarGraphQL.java" (line 32: `public class CalendarGraphQL`). The task description appears to use "Resolver" as a generic term for GraphQL API classes. You should work with the existing CalendarGraphQL.java file.
 
-    Given the task specification explicitly requests these util classes, I recommend Option 1: **refactor** the calculation methods from AstronomicalCalculationService into `MoonPhaseCalculator` utility class, and delegate Hebrew calendar conversions to `HebrewCalendarConverter` that wraps HebrewCalendarService.
+*   **Tip:** DataLoader pattern in Quarkus with SmallRye GraphQL:
+    - You need to create a `@ApplicationScoped` DataLoader class for each entity type that might have N+1 issues
+    - Use `@GraphQLApi` annotation and inject the DataLoader into the GraphQL class
+    - Example structure for UserDataLoader:
+      ```java
+      @ApplicationScoped
+      public class UserDataLoader {
+          @Inject
+          CalendarUserRepository userRepository;
 
-*   **Tip:** The SunCalc library (org.shredzone.commons:commons-suncalc:3.11) provides:
-    - `SunTimes.compute()` - for sunrise/sunset/solstice/equinox calculations
-    - `MoonPhase.compute()` - for precise moon phase calculations with dates
-    - `MoonIllumination.compute()` - for illumination percentage
-    - `MoonPosition.compute()` - for azimuth/altitude calculations
+          @DataLoader
+          public CompletionStage<List<CalendarUser>> loadUsers(List<UUID> userIds) {
+              // Batch load all users in single query
+              return CompletableFuture.supplyAsync(() ->
+                  userRepository.findByIds(userIds)
+              );
+          }
+      }
+      ```
+    - You need to implement custom finder methods in repositories to support batch loading (e.g., `CalendarUserRepository.findByIds(List<UUID>)`)
 
-    You SHOULD use these classes instead of the simplified astronomical formulas currently in the code (which use the synodic month approximation from line 60: `double synodicMonth = 29.53059;`).
+*   **Note:** The acceptance criteria states "fetching 10 calendars with users requires 2 DB queries, not 11". This means:
+    - Query 1: Fetch 10 calendars (single query)
+    - Query 2: Batch fetch all unique users for those calendars (single query using IN clause)
+    - WITHOUT DataLoader: 1 query for calendars + 10 separate queries for each calendar's user = 11 queries
+    - This same pattern applies to templates, events, and orders
 
-*   **Tip:** The Proj4J library is for geospatial projections (e.g., orthographic projection for moon rendering). The current code doesn't appear to use Proj4J yet. Based on the comment in pom.xml line 160 "orthographic projection for moon", this may be for advanced moon rendering. This is likely a **future enhancement** - focus first on integrating SunCalc for accurate calculations.
+*   **Warning:** The CalendarGraphQL class uses field injection (`@Inject` on fields) rather than constructor injection. Follow the same pattern for consistency:
+    ```java
+    @Inject
+    CalendarService calendarService;
 
-*   **Note:** The acceptance criteria requires comparing against "NASA moon phase data" for 2025. You can use these known full moon dates for 2025 to write your unit tests:
-    - January 13, 2025
-    - February 12, 2025
-    - March 14, 2025
-    - April 13, 2025
-    - May 12, 2025
-    - June 11, 2025
-    - July 10, 2025
-    - August 9, 2025
-    - September 7, 2025
-    - October 7, 2025
-    - November 5, 2025
-    - December 4, 2025
+    @Inject
+    EventService eventService;
+    ```
 
-*   **Warning:** The HebrewCalendarService uses a **simplified** Hebrew-to-Gregorian conversion (line 156-177). The comment explicitly states this is a "very simplified approximation". For production accuracy, you may want to note in your tests that the Hebrew calendar conversions have known limitations. However, for the MVP scope of this task, the existing approximation is acceptable.
+*   **Warning:** Error handling in GraphQL is different from REST. The task requires "map service exceptions to GraphQL errors". In SmallRye GraphQL:
+    - Throwing a standard exception will return a GraphQL error response with the exception message
+    - The current code throws `IllegalArgumentException`, `SecurityException`, and `IllegalStateException` - these are automatically converted to GraphQL errors
+    - You should continue this pattern and NOT catch exceptions unless you need to transform them
 
-*   **Warning:** Be careful with the `@Inject` annotations. Both AstronomicalCalculationService (line 19-20) and HebrewCalendarService (line 14-15) use field injection. Follow the same pattern in your code.
+*   **Note:** The task mentions testing should verify "GraphQL query { calendar(id: \"123\") { title events { eventText } } }". However, looking at the schema (line 218), UserCalendar doesn't have a `title` field - it has `name`. Also, UserCalendar doesn't currently have an `events` field in the GraphQL schema, even though the entity has an `events` relationship. You need to add a field resolver for events:
+    ```java
+    @Query
+    public List<Event> events(@Source UserCalendar calendar) {
+        return eventService.listEvents(calendar.id, null, null, getCurrentUser());
+    }
+    ```
 
-*   **Note:** The task requires "Calculation performance: <100ms for full year of moon phases". The current implementation iterates through all 365 days (line 35-44). This is inefficient for just finding major phase transitions. You SHOULD optimize this by calculating only the ~13 major phases per year (new/full/quarter moons) using SunCalc's direct phase calculation, rather than iterating every day.
+*   **Note:** The existing code already handles the major queries and mutations. The PRIMARY work for this task is:
+    1. **Refactor to use services** - Replace direct Panache calls with CalendarService/EventService
+    2. **Implement DataLoaders** - Create DataLoader classes for User, Template, and Event batching
+    3. **Complete guest session conversion** - Implement convertGuestSession using CalendarService.convertSessionToUser()
+    4. **Add event field resolver** - Expose events as a field on UserCalendar type
+    5. **Write integration tests** - Test end-to-end GraphQL queries with REST Assured or similar
 
-*   **Note:** JaCoCo code coverage is configured in pom.xml (lines 281-345) with a 70% coverage requirement for models and repositories packages. Your tests must achieve adequate coverage. The test file should be placed at `src/test/java/villagecompute/calendar/services/AstronomicalServiceTest.java` to match the existing test structure (I verified tests exist for AuthenticationService, CalendarService, EventService, OrderService, TemplateService).
+*   **Note:** Integration test structure for GraphQL in Quarkus:
+    ```java
+    @QuarkusTest
+    public class CalendarGraphQLTest {
+        @Test
+        @TestSecurity(user = "testuser", roles = {"USER"})
+        public void testCalendarQuery() {
+            given()
+                .contentType("application/json")
+                .body("{\"query\": \"{ calendar(id: \\\"" + calendarId + "\\\") { name year } }\"}")
+            .when()
+                .post("/graphql")
+            .then()
+                .statusCode(200)
+                .body("data.calendar.name", equalTo("Test Calendar"));
+        }
+    }
+    ```
+
+*   **Warning:** The GraphQL schema uses `ID!` type for identifiers, but the Java code uses `UUID`. Quarkus GraphQL automatically converts between String and UUID, so your resolvers should accept `String` parameters and convert to `UUID` using `UUID.fromString()` as the existing code does (e.g., line 220, 322, 394).
 
 ### Directory Structure Note
 
-The task specifies creating files in `src/main/java/villagecompute/calendar/util/astronomical/` but this directory does not currently exist. You will need to create it. The parent `util` directory also doesn't exist yet. This aligns with the plan's directory structure showing `util/astronomical/` at line 394 of the plan document.
+The task specifies creating `src/main/java/villagecompute/calendar/api/graphql/dataloader/` directory for DataLoader classes. This directory does not currently exist. You will need to create it.
+
+The test file `src/test/java/villagecompute/calendar/api/graphql/CalendarResolverTest.java` should actually be `CalendarGraphQLTest.java` to match the actual class name.
 
 ### Summary of What You Need to Do
 
-1. **Enhance AstronomicalCalculationService** - Integrate actual SunCalc library calls for accurate moon phase, illumination, and sunrise/sunset calculations
-2. **Add calculateSeasonalEvents() method** - For equinoxes and solstices using SunCalc
-3. **Complete getHebrewDates() method** - Integrate with existing HebrewCalendarService
-4. **Create utility classes** (optional but recommended):
-   - `src/main/java/villagecompute/calendar/util/astronomical/MoonPhaseCalculator.java` - Extract moon calculation logic
-   - `src/main/java/villagecompute/calendar/util/astronomical/HebrewCalendarConverter.java` - Wrap Hebrew calendar conversion
-5. **Write comprehensive unit tests** - Verify against NASA 2025 full moon dates, test edge cases, ensure <100ms performance
-6. **Optimize performance** - Use direct phase calculations instead of daily iteration for better performance
+1. **Refactor CalendarGraphQL to use services** - Replace direct Panache queries with CalendarService and EventService calls
+2. **Inject CalendarService and EventService** - Add these as @Inject fields
+3. **Implement DataLoader classes:**
+   - `UserDataLoader` - batch load CalendarUser entities
+   - `TemplateDataLoader` - batch load CalendarTemplate entities
+   - `EventDataLoader` - batch load Event entities for multiple calendars
+4. **Add repository batch methods** - Implement `findByIds(List<UUID>)` in CalendarUserRepository, CalendarTemplateRepository, and EventRepository to support DataLoaders
+5. **Complete convertGuestSession mutation** - Replace stub with call to `calendarService.convertSessionToUser()`
+6. **Add event field resolver** - Expose `events` as a GraphQL field on UserCalendar type using EventService
+7. **Write comprehensive integration tests** - Test all queries and mutations with REST Assured, verify DataLoader batching works (check query count), test authorization failures, test validation failures
 
 Good luck with the implementation!
 

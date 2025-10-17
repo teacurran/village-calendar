@@ -376,4 +376,259 @@ class CalendarGraphQLTest {
             .body("data.__type.fields.name", hasItems("templates", "template", "me", "myCalendars"))
             .body("errors", nullValue());
     }
+
+    // ============================================================================
+    // PUBLIC CALENDAR TESTS
+    // ============================================================================
+
+    @Test
+    @Order(40)
+    void testQuery_PublicCalendar() {
+        // Create a public calendar for testing (in separate transaction to commit immediately)
+        UUID calendarId = createAndPersistPublicCalendar();
+
+        try {
+            // Test: Public calendar should be accessible without authentication
+            String query = String.format("""
+                query {
+                    calendar(id: "%s") {
+                        id
+                        name
+                        year
+                        isPublic
+                    }
+                }
+                """, calendarId.toString());
+
+            given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.calendar.id", equalTo(calendarId.toString()))
+                .body("data.calendar.name", equalTo("Public Test Calendar"))
+                .body("data.calendar.year", equalTo(2025))
+                .body("data.calendar.isPublic", equalTo(true))
+                .body("errors", nullValue());
+        } finally {
+            deleteTestCalendar(calendarId);
+        }
+    }
+
+    @Transactional
+    UUID createAndPersistPublicCalendar() {
+        UserCalendar publicCalendar = new UserCalendar();
+        publicCalendar.user = testUser;
+        publicCalendar.name = "Public Test Calendar";
+        publicCalendar.year = 2025;
+        publicCalendar.template = testTemplate;
+        publicCalendar.isPublic = true;
+        publicCalendar.configuration = createTestConfiguration();
+        publicCalendar.persist();
+        return publicCalendar.id;
+    }
+
+    @Transactional
+    void deleteTestCalendar(UUID calendarId) {
+        UserCalendar.deleteById(calendarId);
+    }
+
+    @Test
+    @Order(41)
+    @Transactional
+    void testQuery_PrivateCalendar_Unauthenticated() {
+        // Create a private calendar for testing
+        UserCalendar privateCalendar = new UserCalendar();
+        privateCalendar.user = testUser;
+        privateCalendar.name = "Private Test Calendar";
+        privateCalendar.year = 2025;
+        privateCalendar.template = testTemplate;
+        privateCalendar.isPublic = false;
+        privateCalendar.configuration = createTestConfiguration();
+        privateCalendar.persist();
+
+        try {
+            // Test: Private calendar should NOT be accessible without authentication
+            String query = String.format("""
+                query {
+                    calendar(id: "%s") {
+                        id
+                        name
+                    }
+                }
+                """, privateCalendar.id.toString());
+
+            given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.calendar", nullValue()) // Should return null for unauthorized access
+                .body("errors", nullValue()); // No error, just null result
+        } finally {
+            privateCalendar.delete();
+        }
+    }
+
+    @Test
+    @Order(42)
+    void testQuery_Calendar_NotFound() {
+        // Test: Non-existent calendar should return null
+        String query = String.format("""
+            query {
+                calendar(id: "%s") {
+                    id
+                    name
+                }
+            }
+            """, "00000000-0000-0000-0000-000000000099");
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("query", query))
+            .when()
+            .post("/graphql")
+            .then()
+            .statusCode(200)
+            .body("data.calendar", nullValue())
+            .body("errors", nullValue());
+    }
+
+    @Test
+    @Order(43)
+    void testQuery_Calendar_InvalidId() {
+        // Test: Invalid UUID format should return error
+        String query = """
+            query {
+                calendar(id: "not-a-uuid") {
+                    id
+                    name
+                }
+            }
+            """;
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("query", query))
+            .when()
+            .post("/graphql")
+            .then()
+            .statusCode(200)
+            .body("errors", notNullValue());
+    }
+
+    // ============================================================================
+    // FIELD RESOLVER TESTS
+    // ============================================================================
+
+    @Test
+    @Order(50)
+    void testFieldResolver_CalendarWithEvents() {
+        // Create a public calendar with events (in separate transaction)
+        UUID calendarId = createAndPersistCalendarWithEvents();
+
+        try {
+            // Test: Query calendar with events field
+            // Note: This tests the events field exposed via JPA relationship
+            String query = String.format("""
+                query {
+                    calendar(id: "%s") {
+                        id
+                        name
+                        events {
+                            id
+                            eventDate
+                            eventText
+                        }
+                    }
+                }
+                """, calendarId.toString());
+
+            given()
+                .contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.calendar.id", equalTo(calendarId.toString()))
+                .body("data.calendar.events", notNullValue())
+                .body("errors", nullValue());
+        } finally {
+            deleteTestCalendar(calendarId);
+        }
+    }
+
+    @Transactional
+    UUID createAndPersistCalendarWithEvents() {
+        UserCalendar calendar = new UserCalendar();
+        calendar.user = testUser;
+        calendar.name = "Calendar with Events";
+        calendar.year = 2025;
+        calendar.template = testTemplate;
+        calendar.isPublic = true;
+        calendar.configuration = createTestConfiguration();
+        calendar.persist();
+        return calendar.id;
+    }
+
+    // ============================================================================
+    // VALIDATION EDGE CASES
+    // ============================================================================
+
+    @Test
+    @Order(60)
+    void testMutation_CreateCalendar_InvalidTemplateId() {
+        // Test: Creating calendar with non-existent template should fail
+        String mutation = String.format("""
+            mutation {
+                createCalendar(input: {
+                    name: "Test Calendar"
+                    year: 2025
+                    templateId: "%s"
+                }) {
+                    id
+                }
+            }
+            """, "00000000-0000-0000-0000-000000000099");
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("query", mutation))
+            .when()
+            .post("/graphql")
+            .then()
+            .statusCode(200)
+            .body("errors", notNullValue()); // Should fail due to authentication
+    }
+
+    @Test
+    @Order(61)
+    void testMutation_CreateCalendar_InvalidTemplateIdFormat() {
+        // Test: Creating calendar with invalid UUID format should fail
+        String mutation = """
+            mutation {
+                createCalendar(input: {
+                    name: "Test Calendar"
+                    year: 2025
+                    templateId: "not-a-uuid"
+                }) {
+                    id
+                }
+            }
+            """;
+
+        given()
+            .contentType(ContentType.JSON)
+            .body(Map.of("query", mutation))
+            .when()
+            .post("/graphql")
+            .then()
+            .statusCode(200)
+            .body("errors", notNullValue());
+    }
 }

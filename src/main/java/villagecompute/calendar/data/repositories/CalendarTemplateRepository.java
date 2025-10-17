@@ -75,4 +75,18 @@ public class CalendarTemplateRepository implements PanacheRepository<CalendarTem
         .setParameter("templateId", templateId)
         .getSingleResult();
     }
+
+    /**
+     * Batch load templates by their IDs.
+     * Used by DataLoader to prevent N+1 queries.
+     *
+     * @param ids List of template IDs
+     * @return List of templates matching the IDs
+     */
+    public List<CalendarTemplate> findByIds(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return find("id IN ?1", ids).list();
+    }
 }

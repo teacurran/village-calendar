@@ -91,4 +91,18 @@ public class EventRepository implements PanacheRepository<Event> {
         return find("calendar.id = ?1 AND LOWER(eventText) LIKE ?2 ORDER BY eventDate ASC",
                     calendarId, "%" + searchText.toLowerCase() + "%").list();
     }
+
+    /**
+     * Batch load events for multiple calendars.
+     * Used by DataLoader to prevent N+1 queries.
+     *
+     * @param calendarIds List of calendar IDs
+     * @return List of events for all the calendars ordered by calendar ID and date
+     */
+    public List<Event> findByCalendarIds(List<UUID> calendarIds) {
+        if (calendarIds == null || calendarIds.isEmpty()) {
+            return List.of();
+        }
+        return find("calendar.id IN ?1 ORDER BY calendar.id, eventDate ASC", calendarIds).list();
+    }
 }

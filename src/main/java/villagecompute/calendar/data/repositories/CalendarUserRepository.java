@@ -68,4 +68,18 @@ public class CalendarUserRepository implements PanacheRepository<CalendarUser> {
     public List<CalendarUser> findByProvider(String provider) {
         return find("oauthProvider = ?1 ORDER BY created DESC", provider).list();
     }
+
+    /**
+     * Batch load users by their IDs.
+     * Used by DataLoader to prevent N+1 queries.
+     *
+     * @param ids List of user IDs
+     * @return List of users matching the IDs
+     */
+    public List<CalendarUser> findByIds(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return find("id IN ?1", ids).list();
+    }
 }
