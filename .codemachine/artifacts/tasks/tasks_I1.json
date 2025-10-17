@@ -132,7 +132,7 @@
     "acceptance_criteria": "GET /oauth/login?provider=google redirects to Google OAuth consent screen, After approval, callback URL creates/retrieves user in database, Response includes JWT token with claims: sub (user_id), role, email, exp, JWT token validates with Quarkus SmallRye JWT (can be decoded and verified), OAuth setup guide tested with fresh Google Cloud project, Configuration supports environment variable overrides for client secrets",
     "dependencies": ["I1.T8", "I1.T2"],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T10",
