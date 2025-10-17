@@ -18,6 +18,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: "/calendar/:id/edit",
+      name: "calendar-editor",
+      component: () => import("./views/CalendarEditor.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
       path: "/dashboard",
       name: "dashboard",
       component: () => import("./view/Dashboard.vue"),

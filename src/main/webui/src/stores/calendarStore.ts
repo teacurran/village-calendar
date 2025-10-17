@@ -1,6 +1,11 @@
 // ./stores/calendarStore.ts
 import { defineStore } from "pinia";
 import { useAuthStore } from "./authStore";
+import type {
+  CalendarConfiguration,
+  CalendarEvent,
+  DateSelection,
+} from "@/types/calendar";
 
 export interface CalendarTemplate {
   id: string;
@@ -21,7 +26,7 @@ export interface UserCalendar {
   name: string;
   year: number;
   status: "DRAFT" | "GENERATING" | "READY" | "FAILED";
-  configuration?: any;
+  configuration?: CalendarConfiguration;
   generatedPdfUrl?: string;
   generatedSvg?: string;
   isPublic: boolean;
@@ -38,6 +43,11 @@ export const useCalendarStore = defineStore("calendar", {
     loading: false,
     error: null as string | null,
     lastFetchTime: 0,
+    // Editor-specific state
+    selectedDate: null as DateSelection | null,
+    draftConfiguration: null as CalendarConfiguration | null,
+    isSaving: false,
+    saveError: null as string | null,
   }),
 
   actions: {
@@ -583,6 +593,125 @@ export const useCalendarStore = defineStore("calendar", {
      */
     clearCurrentCalendar() {
       this.currentCalendar = null;
+      this.draftConfiguration = null;
+      this.selectedDate = null;
+    },
+
+    /**
+     * Editor Actions
+     */
+
+    /**
+     * Select a date in the calendar editor
+     */
+    selectDate(date: DateSelection) {
+      this.selectedDate = date;
+    },
+
+    /**
+     * Clear selected date
+     */
+    clearSelectedDate() {
+      this.selectedDate = null;
+    },
+
+    /**
+     * Initialize draft configuration from current calendar
+     */
+    initializeDraftConfiguration() {
+      if (this.currentCalendar?.configuration) {
+        this.draftConfiguration = JSON.parse(
+          JSON.stringify(this.currentCalendar.configuration),
+        );
+      }
+    },
+
+    /**
+     * Update draft configuration (optimistic update)
+     */
+    updateDraftConfiguration(config: CalendarConfiguration) {
+      this.draftConfiguration = config;
+    },
+
+    /**
+     * Add or update event in draft configuration
+     */
+    addOrUpdateEvent(event: CalendarEvent) {
+      if (!this.draftConfiguration) return;
+
+      const existingIndex = this.draftConfiguration.events.findIndex(
+        (e) => e.date === event.date,
+      );
+
+      if (existingIndex !== -1) {
+        this.draftConfiguration.events[existingIndex] = event;
+      } else {
+        this.draftConfiguration.events.push(event);
+      }
+    },
+
+    /**
+     * Remove event from draft configuration
+     */
+    removeEvent(date: string) {
+      if (!this.draftConfiguration) return;
+
+      this.draftConfiguration.events = this.draftConfiguration.events.filter(
+        (e) => e.date !== date,
+      );
+    },
+
+    /**
+     * Update holiday sets in draft configuration
+     */
+    updateHolidaySets(sets: string[]) {
+      if (!this.draftConfiguration) return;
+      this.draftConfiguration.holidays.sets = sets;
+    },
+
+    /**
+     * Update astronomy settings in draft configuration
+     */
+    updateAstronomySettings(settings: {
+      showMoonPhases?: boolean;
+      showHebrewCalendar?: boolean;
+    }) {
+      if (!this.draftConfiguration) return;
+      this.draftConfiguration.astronomy = {
+        ...this.draftConfiguration.astronomy,
+        ...settings,
+      };
+    },
+
+    /**
+     * Save draft configuration to backend
+     */
+    async saveDraftConfiguration(
+      calendarId: string,
+    ): Promise<UserCalendar | null> {
+      if (!this.draftConfiguration) return null;
+
+      this.isSaving = true;
+      this.saveError = null;
+
+      try {
+        const updated = await this.updateCalendar(calendarId, {
+          configuration: this.draftConfiguration,
+        });
+        return updated;
+      } catch (err: any) {
+        this.saveError = err.message || "Failed to save calendar configuration";
+        throw err;
+      } finally {
+        this.isSaving = false;
+      }
+    },
+
+    /**
+     * Clear save error
+     */
+    clearSaveError() {
+      this.saveError = null;
     },
   },
 
@@ -609,5 +738,28 @@ export const useCalendarStore = defineStore("calendar", {
      * Check if calendar generation is in progress
      */
     isGenerating: (state) => state.currentCalendar?.status === "GENERATING",
+
+    /**
+     * Get events for a specific date
+     */
+    getEventsForDate: (state) => (dateString: string) => {
+      if (!state.draftConfiguration) return [];
+      return state.draftConfiguration.events.filter(
+        (e) => e.date === dateString,
+      );
+    },
+
+    /**
+     * Check if editor has unsaved changes
+     */
+    hasUnsavedChanges: (state) => {
+      if (!state.currentCalendar?.configuration || !state.draftConfiguration) {
+        return false;
+      }
+      return (
+        JSON.stringify(state.currentCalendar.configuration) !==
+        JSON.stringify(state.draftConfiguration)
+      );
+    },
   },
 });

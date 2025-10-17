@@ -102,7 +102,7 @@
     "acceptance_criteria": "Calendar editor loads existing calendar via GraphQL query on mount, Clicking date in calendar grid opens event editor dialog, Adding event updates Pinia store and triggers GraphQL mutation, Emoji picker allows selecting emoji, updates event in editor, Holiday selector changes persist to backend (updateCalendar mutation), Real-time preview: changes visible immediately without page reload, Loading spinner shown while GraphQL queries in flight, Error messages displayed if GraphQL mutations fail",
     "dependencies": ["I2.T6", "I1.T11"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T8",
