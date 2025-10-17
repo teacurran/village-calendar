@@ -12,7 +12,7 @@
     "acceptance_criteria": "StripeService.createCheckoutSession() returns valid Stripe Checkout Session URL, Webhook signature validation accepts valid Stripe signatures, rejects invalid ones, Stripe test mode uses test API keys (sk_test_...), Stripe setup guide tested with new Stripe account creation, No production API keys committed to repository (env variables only)",
     "dependencies": ["I1.T8"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I3.T2",
