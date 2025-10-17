@@ -1,10 +1,8 @@
 -- //
 -- Initial database schema for Village Calendar service
 -- Creates calendar_users, calendar_templates, user_calendars, and calendar_orders tables
+-- Requires: 000_enable_postgis.sql (for uuid-ossp extension)
 -- //
-
--- Enable UUID extension for PostgreSQL
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create calendar_users table for OAuth authenticated users
 CREATE TABLE calendar_users (
@@ -119,5 +117,4 @@ DROP TABLE IF EXISTS user_calendars;
 DROP TABLE IF EXISTS calendar_templates;
 DROP TABLE IF EXISTS calendar_users;
 
--- Drop UUID extension (only if not used by other schemas)
--- DROP EXTENSION IF EXISTS "uuid-ossp";
+-- Note: Extensions are managed by 000_enable_postgis.sql and should not be dropped here
