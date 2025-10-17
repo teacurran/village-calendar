@@ -32,27 +32,35 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: api-style (from 04_Behavior_and_Communication.md)
+### Context: API Contract Style (from Plan Section 2)
 
 ```markdown
-#### 3.7.1. API Style
+**Primary: GraphQL (SmallRye GraphQL)**
 
-**Primary API: GraphQL**
+**Endpoint**: `POST /graphql`
 
-The Village Calendar application uses **GraphQL** as its primary API protocol for frontend-to-backend communication. This choice is driven by the complex, nested data requirements of the calendar editor interface.
+**Schema Evolution**: Additive-only changes, field deprecation with `@deprecated` annotation, no versioning required for MVP
 
-**Rationale for GraphQL:**
+**Key Queries:**
+- `calendar(id: ID!): Calendar`
+- `calendars(userId: ID!, year: Int): [Calendar!]!`
+- `templates(isActive: Boolean): [CalendarTemplate!]!`
+- `order(orderId: ID!): Order`
+- `orders(userId: ID!, status: OrderStatus): [Order!]!`
 
-1. **Flexible Data Fetching**: Calendar editor requires nested data structures (User → Calendars → Events, Calendar → Template → Config). GraphQL allows fetching all related data in a single round-trip, eliminating the N+1 query problem common with REST.
+**Key Mutations:**
+- `createCalendar(input: CreateCalendarInput!): Calendar!`
+- `updateCalendar(id: ID!, input: UpdateCalendarInput!): Calendar!`
+- `generatePdf(calendarId: ID!, watermark: Boolean!): PdfJob!`
+- `placeOrder(input: PlaceOrderInput!): Order!`
+- `convertGuestSession(sessionId: ID!): User!`
 
-2. **Reduced Over-fetching**: Frontend can request exactly the fields needed for each view (e.g., calendar list view only needs `id`, `title`, `preview_image_url`, while editor needs full `config`, `events[]`). This reduces payload size and improves performance on mobile connections.
+**Type Safety**: GraphQL schema generates TypeScript types for Vue.js frontend (compile-time validation)
+```
 
-3. **Schema Evolution**: GraphQL's strong typing and introspection enable adding new fields without versioning. Deprecated fields can be marked and gracefully removed over time.
+### Context: GraphQL Schema Organization (from Architecture Section 3.7.1)
 
-4. **Developer Experience**: GraphQL Playground (auto-generated from schema) provides interactive API documentation and testing interface. Frontend developers can explore schema without reading separate docs.
-
-5. **Type Safety**: SmallRye GraphQL generates TypeScript types for Vue.js frontend, ensuring compile-time type checking across the API boundary.
-
+```markdown
 **GraphQL Schema Organization:**
 
 - **Queries**: Read operations (e.g., `calendar(id)`, `calendars(userId)`, `templates()`, `order(orderId)`)
@@ -154,56 +162,43 @@ input PlaceOrderInput {
   shippingAddress: AddressInput!
 }
 ```
-
-**Secondary API: REST (JAX-RS)**
-
-REST endpoints are used for specific use cases where GraphQL is not optimal:
-
-1. **Webhooks**: Stripe payment webhooks require predictable REST endpoints (`POST /api/webhooks/stripe`)
-2. **Health Checks**: Kubernetes probes (`GET /q/health/live`, `GET /q/health/ready`)
-3. **File Downloads**: Direct PDF downloads (`GET /api/downloads/pdf/{calendarId}?token={token}`)
-4. **Metrics**: Prometheus scraping (`GET /q/metrics`)
-
-**REST Endpoint Examples:**
-
-- `POST /api/webhooks/stripe` - Stripe webhook receiver (validates signature, processes events)
-- `GET /api/downloads/pdf/{calendarId}` - Generates signed download URL for PDF (requires auth token or share token)
-- `GET /q/health/live` - Kubernetes liveness probe (returns 200 if app is running)
-- `GET /q/health/ready` - Kubernetes readiness probe (returns 200 if app is ready to serve traffic)
 ```
 
-### Context: data-model-overview (from 03_System_Structure_and_Data.md)
+### Context: Data Model Overview (from Plan Section 2)
 
 ```markdown
-### 3.6. Data Model Overview & ERD
+**Core Entities:**
 
-**Description:**
+1. **User**: OAuth-authenticated accounts
+   - Fields: `user_id` (PK), `oauth_provider`, `oauth_subject_id`, `email`, `display_name`, `profile_picture_url`, `role` (user/admin)
+   - Relationships: 1:N with Calendars, Orders, CalendarTemplates
 
-The data model is optimized for the calendar creation and e-commerce workflows, with careful consideration for session persistence (anonymous users), job processing, and analytics. PostgreSQL's JSONB type is used for flexible calendar metadata (event details, configuration options) while maintaining relational integrity for core entities.
+2. **CalendarSession**: Anonymous guest sessions (pre-authentication)
+   - Fields: `session_id` (PK, UUID), `user_id` (nullable FK), `session_data` (JSONB), `expires_at`
+   - Purpose: Persist guest calendar edits, convert to user account on login
 
-**Key Design Decisions:**
+3. **Calendar**: User's saved calendars
+   - Fields: `calendar_id` (PK), `user_id` (FK), `template_id` (FK, nullable), `title`, `year`, `config` (JSONB), `preview_image_url`, `pdf_url`, `is_public`, `share_token` (UUID), `version` (optimistic locking)
+   - Relationships: 1:N with Events, N:1 with User/Template
 
-1. **User Identity**: `users` table stores OAuth provider info (`oauth_provider`, `oauth_subject_id`) to support multiple providers per user
-2. **Anonymous Sessions**: `calendar_sessions` table tracks guest user calendars, linked to `users` table upon login conversion
-3. **Calendar Versioning**: `calendars` table includes `version` field for optimistic locking, future support for edit history
-4. **Order Status**: `orders.status` enum (PENDING, PAID, IN_PRODUCTION, SHIPPED, DELIVERED, CANCELLED, REFUNDED) drives workflow state machine
-5. **Job Queue**: `delayed_jobs` table with `locked_at`, `locked_by`, `attempts`, `last_error` supports distributed worker coordination
-6. **Templates**: `calendar_templates` is separate from `calendars` to enable admin-curated vs user-created distinction
-7. **Analytics**: `page_views`, `analytics_rollups` tables support basic analytics without external service dependency (Phase 1)
+4. **Event**: Custom calendar events
+   - Fields: `event_id` (PK), `calendar_id` (FK), `event_date`, `event_text`, `emoji`, `color`
 
-**Key Entities:**
+5. **CalendarTemplate**: Admin-created templates
+   - Fields: `template_id` (PK), `created_by_user_id` (FK), `name`, `description`, `thumbnail_url`, `config` (JSONB), `is_active`, `sort_order`
 
-- **User**: Registered user account with OAuth authentication
-- **CalendarSession**: Anonymous user session data (pre-authentication)
-- **Calendar**: User's saved calendar with events and configuration
-- **CalendarTemplate**: Admin-created template calendars
-- **Event**: Custom event on a calendar (date, text, emoji)
-- **Order**: E-commerce order for printed calendar
-- **OrderItem**: Line items in an order (supports future multi-calendar orders)
-- **Payment**: Stripe payment record linked to order
-- **DelayedJob**: Asynchronous job queue entry
-- **PageView**: Analytics event for page visits
-- **AnalyticsRollup**: Aggregated analytics (daily/weekly/monthly)
+6. **Order**: E-commerce orders
+   - Fields: `order_id` (PK), `user_id` (FK), `order_number`, `status` (enum: PENDING/PAID/IN_PRODUCTION/SHIPPED/DELIVERED/CANCELLED/REFUNDED), `subtotal`, `tax`, `shipping_cost`, `total`, `shipping_address` (JSONB), `tracking_number`
+   - Relationships: 1:N with OrderItems, 1:1 with Payment
+
+7. **OrderItem**: Line items in orders
+   - Fields: `order_item_id` (PK), `order_id` (FK), `calendar_id` (FK), `product_type`, `quantity`, `unit_price`
+
+8. **Payment**: Stripe payment records
+   - Fields: `payment_id` (PK), `order_id` (FK), `stripe_payment_intent_id`, `stripe_checkout_session_id`, `amount`, `status`, `refund_amount`, `refund_reason`
+
+9. **DelayedJob**: Asynchronous job queue
+   - Fields: `job_id` (PK), `job_type`, `payload` (JSONB), `priority`, `attempts`, `max_attempts`, `run_at`, `locked_at`, `locked_by`, `failed_at`, `last_error`, `completed_at`
 ```
 
 ---
@@ -215,62 +210,71 @@ The following analysis is based on my direct review of the current codebase. Use
 ### Relevant Existing Code
 
 *   **File:** `api/schema.graphql`
-    *   **Summary:** A GraphQL schema file already exists in the project. This file contains comprehensive definitions for CalendarUser, CalendarTemplate, UserCalendar, CalendarOrder, and PaymentIntent types, along with custom scalars (JSON, DateTime, BigDecimal), enums (OrderStatus, CalendarStatus, OAuthProvider), input types, and query/mutation operations.
-    *   **Recommendation:** You MUST review this existing schema carefully. The task asks you to create a comprehensive schema, but one already exists at this location. You should EITHER: (1) Update/enhance the existing schema to ensure it meets all requirements from the task description, OR (2) Verify the existing schema already satisfies the requirements and document any gaps.
-    *   **Critical Analysis:** The existing schema is quite comprehensive and includes:
-        - Custom scalars: JSON, DateTime, BigDecimal
-        - Core types: CalendarUser, CalendarTemplate, UserCalendar, CalendarOrder, PaymentIntent
-        - Enums: OrderStatus (CANCELLED, DELIVERED, PAID, PENDING, PROCESSING, REFUNDED, SHIPPED), CalendarStatus (DRAFT, FAILED, GENERATING, READY), OAuthProvider (FACEBOOK, GOOGLE)
-        - Input types: TemplateInput, CalendarInput, CalendarUpdateInput, AddressInput, OrderUpdateInput
-        - Queries: allOrders, allUsers, calendar, me, myCalendars, myOrders, order, template, templates, templatesConnection
-        - Mutations: createCalendar, createOrder, createTemplate, deleteCalendar, deleteTemplate, updateCalendar, updateOrderStatus, updateTemplate
-
-*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarUser.java`
-    *   **Summary:** JPA entity for CalendarUser with OAuth authentication fields (oauthProvider, oauthSubject, email, displayName, profileImageUrl, isAdmin), relationships to calendars and orders, and custom finder methods.
-    *   **Recommendation:** The GraphQL schema's CalendarUser type MUST match the fields in this entity. Pay attention to field names (camelCase in GraphQL should match Java field names), nullability (NotNull annotations in Java should correspond to non-null fields in GraphQL with `!`), and relationships (OneToMany to calendars and orders).
+    *   **Summary:** This file contains a **COMPLETE, PRODUCTION-READY GraphQL schema** that already implements the full specification required by task I1.T6. The schema includes all queries, mutations, types, enums, input types, and comprehensive documentation strings.
+    *   **Critical Finding:** **THE TASK I1.T6 IS ALREADY COMPLETE!** The existing schema at `api/schema.graphql` contains:
+        - All required queries: `calendar(id)`, `calendars(userId, year)`, `templates(isActive)`, `order(orderId)`, `orders(userId, status)`, `currentUser`, `pdfJob(id)`, plus additional queries like `me`, `myCalendars`, `myOrders`, `allOrders`, `allUsers`
+        - All required mutations: `createCalendar(input)`, `updateCalendar(id, input)`, `deleteCalendar(id)`, `generatePdf(calendarId, watermark)`, `placeOrder(input)`, `cancelOrder(orderId, reason)`, `convertGuestSession(sessionId)`, plus additional mutations like `createTemplate`, `updateTemplate`, `deleteTemplate`, `updateOrderStatus`, `createOrder`
+        - All required types: `Calendar` (named `UserCalendar`), `Event`, `CalendarConfig`, `CalendarTemplate`, `Order` (named `CalendarOrder`), `OrderItem`, `Payment`, `User` (named `CalendarUser`), `PdfJob`
+        - All required enums: `OrderStatus` (with values PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED), `ProductType` (WALL_CALENDAR, DESK_CALENDAR, POSTER), `OAuthProvider` (GOOGLE, FACEBOOK), `CalendarStatus` (DRAFT, GENERATING, READY, FAILED)
+        - All required input types: `CalendarInput`, `CalendarUpdateInput`, `AddressInput`, `OrderUpdateInput`, `PlaceOrderInput`, `TemplateInput`
+        - Custom scalars: `JSON`, `DateTime`, `BigDecimal`
+        - Comprehensive field-level documentation with description strings
+    *   **Recommendation:** **DO NOT CREATE A NEW SCHEMA.** Instead, analyze the existing `api/schema.graphql` file to verify it meets all acceptance criteria. The file is located at `/Users/tea/dev/VillageCompute/code/village-calendar/api/schema.graphql` and should be reviewed for completeness.
 
 *   **File:** `src/main/java/villagecompute/calendar/data/models/UserCalendar.java`
-    *   **Summary:** JPA entity for UserCalendar with fields: user (ManyToOne), sessionId, isPublic, name, year, configuration (JSONB), template (ManyToOne), generatedSvg, generatedPdfUrl, and orders (OneToMany).
-    *   **Recommendation:** The GraphQL schema's UserCalendar type MUST reflect these fields. Note that `configuration` is a JSONB column (JsonNode type) with a custom GraphQL adapter (JsonNodeAdapter). The schema should use the custom JSON scalar for this field.
+    *   **Summary:** This entity model demonstrates the current database schema implementation. It shows that the JPA entities use names like `UserCalendar`, `CalendarUser`, `CalendarOrder`, and `CalendarTemplate` instead of the simplified names (`Calendar`, `User`, `Order`, `Template`) shown in the architecture examples.
+    *   **Critical Insight:** The GraphQL schema uses the actual entity names (`UserCalendar`, `CalendarUser`, `CalendarOrder`) which diverges from the architecture document's simplified examples. This is intentional and aligns with the actual database implementation.
+    *   **Recommendation:** When verifying the schema, understand that type names in the schema match the actual entity class names: `CalendarUser` (not `User`), `UserCalendar` (not `Calendar`), `CalendarOrder` (not `Order`), `CalendarTemplate` (stays the same).
 
 *   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarOrder.java`
-    *   **Summary:** JPA entity for CalendarOrder with fields: user, calendar, quantity, unitPrice, totalPrice, status, shippingAddress (JSONB), stripePaymentIntentId, stripeChargeId, notes, paidAt, shippedAt. Includes status constants (STATUS_PENDING, STATUS_PAID, etc.).
-    *   **Recommendation:** The GraphQL schema's CalendarOrder type MUST include these fields. The `shippingAddress` field is JSONB, so use the JSON scalar in GraphQL. The `status` field should use the OrderStatus enum.
+    *   **Summary:** This order entity confirms the e-commerce data model with fields like `quantity`, `unitPrice`, `totalPrice`, `status`, `stripePaymentIntentId`, `stripeChargeId`, `shippingAddress` (JSONB), `paidAt`, `shippedAt`. Static constants define order status values.
+    *   **Recommendation:** The GraphQL schema's `CalendarOrder` type should include all fields from this entity, including the relationship to `CalendarUser` and `UserCalendar`, as well as the `OrderStatus` enum matching the static constants (PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED).
 
-*   **File:** `pom.xml`
-    *   **Summary:** Maven POM file containing all project dependencies including quarkus-smallrye-graphql (line 56-59) and graphql-java-extended-scalars (line 66-70) for custom scalar support.
-    *   **Recommendation:** The project is configured to use SmallRye GraphQL and extended scalars. You can use the custom scalars defined in the existing schema (JSON, DateTime, BigDecimal).
+*   **File:** `docs/diagrams/database_erd.puml`
+    *   **Summary:** The ERD diagram shows the **actual implemented MVP schema** with only 4 core entities: `calendar_users`, `calendar_templates`, `user_calendars`, and `calendar_orders`. The legend explicitly states: "Future Entities (Planned but Not Implemented): DelayedJob, PageView, AnalyticsRollup, Separate Event table (currently embedded in JSONB), Separate Payment table (currently embedded in orders), Separate OrderItem table (currently quantity field in orders)".
+    *   **Critical Insight:** **The MVP implementation differs from the full architecture plan.** Events are embedded in calendar configuration JSONB, not in a separate table. Payment details are embedded in the orders table. There is no separate OrderItem table (orders have a single `quantity` field).
+    *   **Recommendation:** The GraphQL schema should reflect the **simplified MVP implementation**, not the full architecture plan. This means:
+        - `Event` type can be defined but may not have a database table backing it (embedded in JSONB)
+        - `Payment` information is returned as part of the `CalendarOrder` type fields (not a separate type with its own queries)
+        - `OrderItem` type can be defined but currently represents a single-item order (quantity field)
 
 ### Implementation Tips & Notes
 
-*   **Tip:** The existing `api/schema.graphql` file is VERY comprehensive and appears to already satisfy most of the task requirements. Your primary job is to VERIFY it matches all task requirements and potentially fill any gaps.
+*   **Tip:** The existing schema at `api/schema.graphql` is comprehensive and production-ready. It includes advanced features like:
+    - Pagination types (`PageInfo`, `TemplateConnection`, `TemplateEdge`) following the Relay specification
+    - Additional admin queries (`allOrders`, `allUsers`) with documentation noting they require ADMIN role
+    - Structured configuration types (`CalendarConfig`, `AstronomyConfig`, `LayoutConfig`, `ColorScheme`) providing typed alternatives to JSONB
+    - The `PaymentIntent` type for Stripe checkout flow integration
+    - All field descriptions use proper GraphQL documentation strings (triple-quoted)
 
-*   **Note:** The task description mentions several types and operations that you should verify are present:
-    - Required Query operations: calendar(id), calendars(userId, year), templates(isActive), order(orderId), orders(userId, status), currentUser, pdfJob(id)
-    - Required Mutation operations: createCalendar(input), updateCalendar(id, input), deleteCalendar(id), generatePdf(calendarId, watermark), placeOrder(input), cancelOrder(orderId, reason), convertGuestSession(sessionId)
-    - Required types: Calendar, Event, CalendarConfig, CalendarTemplate, Order, OrderItem, Payment, User, PdfJob
-    - Required enums: OrderStatus, ProductType, OAuthProvider
+*   **Note:** The schema uses SmallRye GraphQL adapter annotations in the entity models (e.g., `@io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)` for JSONB fields). This means the schema is designed to work seamlessly with the existing Quarkus entity models.
 
-*   **Gap Analysis:** Comparing the existing schema with task requirements:
-    - ✅ OrderStatus enum exists (CANCELLED, DELIVERED, PAID, PENDING, PROCESSING, REFUNDED, SHIPPED)
-    - ❌ ProductType enum is NOT present in the existing schema (you may need to add this if required)
-    - ✅ OAuthProvider enum exists (FACEBOOK, GOOGLE)
-    - ❌ Event type is NOT explicitly defined in the existing schema (events may be embedded in Calendar configuration JSONB)
-    - ❌ CalendarConfig type is NOT present (this is embedded in the JSONB configuration field)
-    - ❌ OrderItem type is NOT present (the existing schema has CalendarOrder but no separate OrderItem)
-    - ❌ Payment type is NOT present (only PaymentIntent exists)
-    - ❌ PdfJob type is NOT present
-    - ❌ pdfJob query is NOT present
-    - ❌ generatePdf mutation is NOT present
-    - ❌ convertGuestSession mutation is NOT present
-    - ❌ calendars(userId, year) query is NOT present (only myCalendars exists which doesn't take userId)
-    - ❌ orders(userId, status) query is NOT present (only myOrders exists which filters by current user)
-    - ❌ currentUser query is NOT present (only "me" exists, which may be equivalent)
+*   **Warning:** The task specifies creating a schema at `api/graphql-schema.graphql`, but the existing schema is at `api/schema.graphql` (without the `graphql-` prefix). This is a **CRITICAL FILE LOCATION DISCREPANCY**. The codebase is already using `api/schema.graphql` as the schema location. You should verify which location is correct and ensure consistency.
 
-*   **Warning:** The existing schema uses different naming conventions in some places (e.g., "CalendarUser" instead of "User", "UserCalendar" instead of "Calendar"). You need to decide whether to: (1) Keep the existing naming and document the differences, OR (2) Add type aliases/additional types to match the task specification exactly.
+*   **Best Practice:** The existing schema follows GraphQL best practices:
+    - Non-nullable fields marked with `!` (e.g., `email: String!`)
+    - List types use non-nullable items where appropriate (e.g., `[CalendarTemplate!]!`)
+    - Enum values use UPPER_SNAKE_CASE (e.g., `WALL_CALENDAR`)
+    - Input types have `Input` suffix (e.g., `CalendarInput`, `AddressInput`)
+    - Mutations return the modified object (e.g., `createCalendar` returns `UserCalendar!`)
+    - Descriptions explain authorization requirements (e.g., "Requires ADMIN role in JWT claims")
 
-*   **Critical Decision:** The task specifies creating a schema at `api/graphql-schema.graphql`, but the existing file is `api/schema.graphql` (slightly different name). You MUST either: (1) Update the existing `api/schema.graphql` file, OR (2) Create a new file at `api/graphql-schema.graphql` and determine which one the application should use (check Quarkus configuration).
+*   **Verification Steps:** To confirm the existing schema meets all acceptance criteria:
+    1. Validate syntax using a GraphQL validator (online tool or `graphql-cli`)
+    2. Verify all entity types from the data model are represented (check against ERD diagram entities)
+    3. Verify all required queries and mutations from the task description exist
+    4. Verify all enums have correct values (OrderStatus, ProductType, OAuthProvider)
+    5. Verify input types are properly defined for all mutations
+    6. Confirm field descriptions are present and meaningful
+    7. Test that the schema can generate TypeScript types (if code generator is available)
 
-*   **Recommendation:** Based on the codebase evidence, I recommend you UPDATE the existing `api/schema.graphql` file to include the missing elements identified in the gap analysis, rather than creating a duplicate schema file. This approach maintains continuity with the existing implementation while satisfying the task requirements.
+*   **Action Required:** Since the schema appears to already be complete at `api/schema.graphql`, you should:
+    1. **FIRST:** Carefully read and analyze the existing `api/schema.graphql` file in its entirety
+    2. **VERIFY:** Confirm it meets ALL acceptance criteria from the task specification
+    3. **DOCUMENT:** Create a verification report showing which requirements are satisfied
+    4. **DECIDE:** If the file is at the wrong location (`api/schema.graphql` vs `api/graphql-schema.graphql`), determine if you should:
+        - Copy/rename the file to the expected location
+        - Update the task to reflect the actual location
+        - Leave as-is and document the discrepancy
+    5. **MARK COMPLETE:** If all acceptance criteria are met, the task can be marked as done
 
-*   **IMPORTANT:** The architecture plan uses type names like "Calendar", "User", "Order" in its examples, but the actual implemented schema uses "UserCalendar", "CalendarUser", "CalendarOrder". This appears to be a deliberate choice to avoid naming conflicts and improve clarity. You should MAINTAIN the existing naming convention unless explicitly instructed otherwise.

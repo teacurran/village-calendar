@@ -86,14 +86,14 @@ Product types available for purchase.
 Determines the physical product format and pricing.
 """
 enum ProductType {
-  """Standard 12-month wall calendar (11x17 inches)"""
-  WALL_CALENDAR
-
   """Desk calendar with stand (8x10 inches)"""
   DESK_CALENDAR
 
   """Poster format (18x24 inches, single page)"""
   POSTER
+
+  """Standard 12-month wall calendar (11x17 inches)"""
+  WALL_CALENDAR
 }
 
 # ============================================================================
@@ -187,9 +187,17 @@ type CalendarTemplate {
 User-created calendar based on a template.
 Represents a customized calendar for a specific year that can be
 ordered for printing.
+
+Note: Event data (dates, descriptions, emojis, colors) and detailed
+calendar configuration (layout, colors, astronomy settings) are embedded
+in the JSONB 'configuration' field for MVP flexibility.
 """
 type UserCalendar {
-  """JSONB customization data (user overrides of template configuration)"""
+  """
+  JSONB customization data (user overrides of template configuration).
+  Contains embedded event data and configuration settings.
+  Structure includes: { events: [...], layout: {...}, colors: {...}, astronomy: {...} }
+  """
   configuration: JSON
 
   """Timestamp when calendar was created"""
@@ -236,6 +244,11 @@ type UserCalendar {
 E-commerce order for printed calendars.
 Integrates with Stripe for payment processing. Orders are created
 after successful payment via Stripe webhook.
+
+Note: Payment details are embedded directly in the order entity via
+Stripe-specific fields (stripePaymentIntentId, stripeChargeId, paidAt)
+rather than a separate Payment entity. Orders currently support single-item
+purchases (one calendar design with quantity field).
 """
 type CalendarOrder {
   """Calendar being ordered for printing"""
@@ -323,183 +336,40 @@ Users can poll this job to check generation progress and retrieve the
 final PDF URL when complete.
 """
 type PdfJob {
-  """Unique job identifier (UUID)"""
-  id: ID!
+  """Number of retry attempts"""
+  attempts: Int!
 
   """Calendar being rendered to PDF"""
   calendarId: ID!
 
-  """Job status (PENDING, PROCESSING, COMPLETED, FAILED)"""
-  status: String!
-
-  """Progress percentage (0-100)"""
-  progress: Int!
-
-  """URL to generated PDF (null until job completes successfully)"""
-  pdfUrl: String
-
-  """Error message if job failed"""
-  errorMessage: String
-
-  """Number of retry attempts"""
-  attempts: Int!
+  """Timestamp when job completed (success or failure)"""
+  completedAt: DateTime
 
   """Timestamp when job was created"""
   createdAt: DateTime!
 
-  """Timestamp when job started processing"""
-  startedAt: DateTime
+  """Error message if job failed"""
+  errorMessage: String
 
-  """Timestamp when job completed (success or failure)"""
-  completedAt: DateTime
+  """Unique job identifier (UUID)"""
+  id: ID!
 
   """Whether watermark should be included in PDF (for preview mode)"""
   includeWatermark: Boolean!
-}
 
-"""
-Custom event on a calendar (birthday, anniversary, holiday, etc.).
-Events appear on specific dates within the calendar view.
-"""
-type Event {
-  """Unique event identifier (UUID)"""
-  id: ID!
+  """URL to generated PDF (null until job completes successfully)"""
+  pdfUrl: String
 
-  """Date of the event (YYYY-MM-DD format)"""
-  eventDate: String!
+  """Progress percentage (0-100)"""
+  progress: Int!
 
-  """Event description/title (e.g., "Mom's Birthday")"""
-  eventText: String!
+  """Timestamp when job started processing"""
+  startedAt: DateTime
 
-  """Optional emoji icon for the event (single Unicode emoji)"""
-  emoji: String
-
-  """Optional color code for event styling (hex color, e.g., "#FF5733")"""
-  color: String
-}
-
-"""
-Structured configuration for calendar customization.
-This type provides a typed alternative to the JSONB configuration field.
-"""
-type CalendarConfig {
-  """Holiday sets to include (e.g., ["US", "UK", "religious"])"""
-  holidaySets: [String!]!
-
-  """Astronomy configuration (moon phases, solstices, etc.)"""
-  astronomy: AstronomyConfig!
-
-  """Layout and grid configuration"""
-  layout: LayoutConfig!
-
-  """Color scheme customization"""
-  colors: ColorScheme!
-}
-
-"""
-Astronomy features configuration.
-"""
-type AstronomyConfig {
-  """Show moon phases"""
-  showMoonPhases: Boolean!
-
-  """Show solstices and equinoxes"""
-  showSolstices: Boolean!
-
-  """Show meteor showers"""
-  showMeteorShowers: Boolean!
-}
-
-"""
-Calendar layout configuration.
-"""
-type LayoutConfig {
-  """Grid layout style (CLASSIC, MODERN, MINIMALIST)"""
-  gridStyle: String!
-
-  """Show week numbers"""
-  showWeekNumbers: Boolean!
-
-  """First day of week (0 = Sunday, 1 = Monday)"""
-  firstDayOfWeek: Int!
-}
-
-"""
-Color scheme for calendar styling.
-"""
-type ColorScheme {
-  """Primary color (hex code)"""
-  primary: String!
-
-  """Secondary color (hex code)"""
-  secondary: String!
-
-  """Background color (hex code)"""
-  background: String!
-
-  """Text color (hex code)"""
-  text: String!
-}
-
-"""
-Line item in an order.
-Supports future enhancement for ordering multiple calendars in one order.
-"""
-type OrderItem {
-  """Unique line item identifier (UUID)"""
-  id: ID!
-
-  """Calendar being ordered"""
-  calendar: UserCalendar!
-
-  """Product type (wall calendar, desk calendar, poster)"""
-  productType: ProductType!
-
-  """Quantity of this item"""
-  quantity: Int!
-
-  """Unit price at time of order (USD)"""
-  unitPrice: BigDecimal!
-
-  """Line item total (quantity * unitPrice)"""
-  lineTotal: BigDecimal!
-}
-
-"""
-Payment record for an order.
-Links to Stripe payment details and provides audit trail.
-"""
-type Payment {
-  """Unique payment identifier (UUID)"""
-  id: ID!
-
-  """Associated order"""
-  order: CalendarOrder!
-
-  """Stripe PaymentIntent ID"""
-  stripePaymentIntentId: String!
-
-  """Stripe Charge ID (set after payment captured)"""
-  stripeChargeId: String
-
-  """Payment amount (USD)"""
-  amount: BigDecimal!
-
-  """Payment status (PENDING, SUCCEEDED, FAILED, REFUNDED)"""
+  """Job status (PENDING, PROCESSING, COMPLETED, FAILED)"""
   status: String!
-
-  """Timestamp when payment was created"""
-  createdAt: DateTime!
-
-  """Timestamp when payment succeeded"""
-  paidAt: DateTime
-
-  """Timestamp when payment was refunded"""
-  refundedAt: DateTime
-
-  """Refund amount if partial refund (USD)"""
-  refundedAmount: BigDecimal
 }
+
 
 """
 Pagination information following the Relay specification.
@@ -830,6 +700,30 @@ Root mutation type for write operations.
 """
 type Mutation {
   """
+  Cancel an order and initiate refund.
+  Requires authentication and order ownership (or admin role).
+  Can only cancel orders in PENDING or PAID status.
+  Automatically triggers Stripe refund for paid orders.
+  """
+  cancelOrder(
+    """Order ID to cancel"""
+    orderId: ID!
+
+    """Reason for cancellation (optional, stored in notes)"""
+    reason: String
+  ): CalendarOrder!
+
+  """
+  Convert anonymous guest session to authenticated user account.
+  Links all calendars from the guest session to the newly authenticated user.
+  Called after successful OAuth authentication when user had existing session.
+  """
+  convertGuestSession(
+    """Guest session ID to convert"""
+    sessionId: ID!
+  ): CalendarUser!
+
+  """
   Create a new calendar based on a template.
   Requires authentication.
 
@@ -868,30 +762,6 @@ type Mutation {
     """Template creation data"""
     input: TemplateInput!
   ): CalendarTemplate!
-
-  """
-  Cancel an order and initiate refund.
-  Requires authentication and order ownership (or admin role).
-  Can only cancel orders in PENDING or PAID status.
-  Automatically triggers Stripe refund for paid orders.
-  """
-  cancelOrder(
-    """Order ID to cancel"""
-    orderId: ID!
-
-    """Reason for cancellation (optional, stored in notes)"""
-    reason: String
-  ): CalendarOrder!
-
-  """
-  Convert anonymous guest session to authenticated user account.
-  Links all calendars from the guest session to the newly authenticated user.
-  Called after successful OAuth authentication when user had existing session.
-  """
-  convertGuestSession(
-    """Guest session ID to convert"""
-    sessionId: ID!
-  ): CalendarUser!
 
   """
   Delete a calendar.
