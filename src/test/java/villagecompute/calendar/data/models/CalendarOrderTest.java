@@ -53,7 +53,7 @@ class CalendarOrderTest {
         // Create test user
         testUser = new CalendarUser();
         testUser.oauthProvider = "GOOGLE";
-        testUser.oauthSubject = "test-subject";
+        testUser.oauthSubject = "test-subject-order-test";
         testUser.email = "test@example.com";
         testUser.displayName = "Test User";
         testUser.isAdmin = false;
@@ -90,6 +90,7 @@ class CalendarOrderTest {
 
         // When
         order.persist();
+        entityManager.flush(); // Flush to generate ID and timestamps
 
         // Then
         assertNotNull(order.id);

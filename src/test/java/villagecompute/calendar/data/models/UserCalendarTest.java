@@ -50,7 +50,7 @@ class UserCalendarTest {
         // Create test user
         testUser = new CalendarUser();
         testUser.oauthProvider = "GOOGLE";
-        testUser.oauthSubject = "test-subject";
+        testUser.oauthSubject = "test-subject-calendar-test";
         testUser.email = "test@example.com";
         testUser.displayName = "Test User";
         testUser.isAdmin = false;
@@ -78,6 +78,7 @@ class UserCalendarTest {
 
         // When
         calendar.persist();
+        entityManager.flush(); // Flush to generate ID and timestamps
 
         // Then
         assertNotNull(calendar.id);
@@ -384,6 +385,9 @@ class UserCalendarTest {
         order.totalPrice = java.math.BigDecimal.valueOf(19.99);
         order.status = "PENDING";
         order.persist();
+
+        // Flush to ensure all entities are in managed state
+        entityManager.flush();
 
         // When
         calendar.delete();

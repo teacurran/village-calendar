@@ -121,6 +121,6 @@ public class CalendarUser extends DefaultPanacheEntityWithTimestamps {
      * @return Query of admin users
      */
     public static PanacheQuery<CalendarUser> findAdminUsers() {
-        return find("isAdmin = true ORDER BY createdAt ASC");
+        return find("isAdmin = true ORDER BY created ASC");
     }
 }

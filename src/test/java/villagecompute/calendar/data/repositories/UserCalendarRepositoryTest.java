@@ -45,7 +45,7 @@ class UserCalendarRepositoryTest {
         // Create test user
         testUser = new CalendarUser();
         testUser.oauthProvider = "GOOGLE";
-        testUser.oauthSubject = "test-subject";
+        testUser.oauthSubject = "test-subject-usercalendar-repo-test";
         testUser.email = "test@example.com";
         testUser.displayName = "Test User";
         calendarUserRepository.persist(testUser);

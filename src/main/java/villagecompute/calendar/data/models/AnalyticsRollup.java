@@ -59,7 +59,7 @@ public class AnalyticsRollup extends DefaultPanacheEntityWithTimestamps {
 
     @NotNull
     @DecimalMin("0.00")
-    @Column(nullable = false, precision = 15, scale = 2)
+    @Column(name = "metric_value", nullable = false, precision = 15, scale = 2)
     public BigDecimal value;
 
     @NotNull
