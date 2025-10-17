@@ -13,115 +13,83 @@ Create PaymentService for handling Stripe payment processing: createPayment (sto
 ## Issues Detected
 
 *   **Test Failure:** `testWebhook_CheckoutSessionCompleted_UpdatesOrderStatus` - Order status remains PENDING instead of being updated to PAID
-*   **Test Failure:** `testWebhook_PaymentIntentSucceeded_UpdatesOrderStatus` - Returns 500 error with "Order not found for PaymentIntent: pi_test_direct_flow"
-*   **Test Failure:** `testWebhook_ChargeRefunded_UpdatesOrderNotes` - Order notes are null, refund not being recorded
-*   **Test Failure:** `testWebhook_ChargeRefunded_IdempotentProcessing` - Refund not recorded (count is 0 instead of 1)
-*   **Root Cause:** Test data created in `@BeforeEach @Transactional setup()` method is not visible to the REST endpoint when called via RestAssured HTTP request. The test transaction is not committed before the HTTP request is made, so the webhook handler runs in a separate transaction and cannot see the test data.
+*   **Root Cause:** The webhook handler is successfully processing the payment and updating the order to PAID (confirmed by logs showing "Order d1c2c50f-981b-4abf-8a0e-dedeb1a82112 marked as PAID"), but the test is reading stale data. The `@Transactional` annotation on the WebhookResource endpoint causes the transaction to commit AFTER the HTTP response is sent. When the test immediately queries CalendarOrder.findById() after receiving the 200 OK response, the transaction might not have committed yet, so it reads the old PENDING status.
 
 ---
 
 ## Best Approach to Fix
 
-You MUST modify the test file `src/test/java/villagecompute/calendar/api/rest/StripeWebhookControllerTest.java` to fix the transaction isolation issue:
+The issue is a **transaction timing problem** in the test, NOT in the production code. The PaymentService and WebhookResource implementations are correct and working as designed.
 
-### Solution 1: Use QuarkusTransaction for Programmatic Transactions
+You MUST modify the test file `src/test/java/villagecompute/calendar/api/rest/StripeWebhookControllerTest.java` to fix the transaction visibility issue:
 
-Replace the `@Transactional` annotation on the `setup()` method with programmatic transaction management using `io.quarkus.narayana.jta.QuarkusTransaction`:
+### Solution: Add EntityManager.clear() and Fetch Fresh Data
 
-1. Remove `@Transactional` annotation from the `setup()` method
-2. Wrap the setup code in `QuarkusTransaction.requiringNew().run(() -> { ... })` to ensure data is committed
-3. This ensures test data is persisted and visible to subsequent HTTP requests
+After the webhook HTTP call completes, the test needs to ensure it's reading fresh data from the database, not cached entity state. Add the following changes:
 
-Example fix:
+1. **Inject EntityManager into the test class:**
 
 ```java
-@BeforeEach
-void setup() throws Exception {
-    // Wrap in programmatic transaction that commits immediately
-    QuarkusTransaction.requiringNew().run(() -> {
-        try {
-            // Create test user
-            testUser = new CalendarUser();
-            testUser.oauthProvider = "GOOGLE";
-            testUser.oauthSubject = "webhook-test-" + System.currentTimeMillis();
-            testUser.email = "webhook-test-" + System.currentTimeMillis() + "@example.com";
-            testUser.displayName = "Webhook Test User";
-            testUser.persist();
-
-            // Create test template
-            testTemplate = new CalendarTemplate();
-            testTemplate.name = "Webhook Test Template";
-            testTemplate.description = "Template for webhook testing";
-            testTemplate.isActive = true;
-            testTemplate.isFeatured = false;
-            testTemplate.displayOrder = 1;
-            testTemplate.configuration = createTestConfiguration();
-            testTemplate.persist();
-
-            // Create test calendar
-            testCalendar = calendarService.createCalendar(
-                "Test Calendar for Order",
-                2025,
-                testTemplate.id,
-                null,
-                true,
-                testUser,
-                null
-            );
-
-            // Create test order in PENDING status
-            JsonNode shippingAddress = objectMapper.readTree("""
-                {
-                    "line1": "123 Test St",
-                    "city": "Test City",
-                    "state": "CA",
-                    "postalCode": "12345",
-                    "country": "US"
-                }
-                """);
-
-            testOrder = orderService.createOrder(
-                testUser,
-                testCalendar,
-                1,
-                new BigDecimal("19.99"),
-                shippingAddress
-            );
-
-            // Set payment intent ID for webhook correlation
-            testOrder.stripePaymentIntentId = TEST_PAYMENT_INTENT_ID;
-            testOrder.persist();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    });
-}
+@Inject
+EntityManager entityManager;
 ```
 
-4. Add the import statement at the top of the file:
+2. **After each webhook HTTP call that should update the database, clear the persistence context before querying:**
+
+In `testWebhook_CheckoutSessionCompleted_UpdatesOrderStatus()` at line 265, replace:
+
 ```java
-import io.quarkus.narayana.jta.QuarkusTransaction;
+// Verify order updated to PAID (fetch fresh from DB)
+order = CalendarOrder.findById(testOrder.id);
+assertEquals(CalendarOrder.STATUS_PAID, order.status);
 ```
 
-5. Similarly, update ANY test method that uses `@Transactional` and makes HTTP calls to use programmatic transactions instead, OR remove `@Transactional` from those methods entirely and let the cleanup method handle transaction management.
+With:
 
-6. Keep `@Transactional` on the `cleanup()` method as it doesn't make HTTP calls and just needs to clean up the database.
+```java
+// Clear persistence context to ensure fresh read from database
+entityManager.clear();
 
-7. For test methods that need to update test data before making HTTP calls (like `testWebhook_ChargeRefunded_UpdatesOrderNotes`), wrap the setup code in `QuarkusTransaction.requiringNew().run(() -> { ... })` to commit changes before the HTTP request.
+// Verify order updated to PAID (fetch fresh from DB)
+order = CalendarOrder.findById(testOrder.id);
+assertEquals(CalendarOrder.STATUS_PAID, order.status);
+```
 
-### Critical Implementation Notes:
+3. **Apply the same fix to ALL test methods that verify database changes after webhook calls:**
 
-- The test currently uses `@BeforeEach @Transactional` which keeps the transaction open throughout the entire test method execution
-- When RestAssured makes an HTTP call to `/api/webhooks/stripe`, the REST endpoint runs in a DIFFERENT transaction and cannot see uncommitted data from the test transaction
-- Using `QuarkusTransaction.requiringNew().run()` forces an immediate commit, making the data visible to subsequent HTTP requests
-- This pattern is REQUIRED for all integration tests that create data and then make HTTP requests to REST endpoints
+- `testWebhook_CheckoutSessionCompleted_UpdatesOrderStatus` (line ~267)
+- `testWebhook_CheckoutSessionCompleted_EnqueuesEmailJob` (line ~312)
+- `testWebhook_IdempotentProcessing_NoDuplicateUpdates` (line ~365 and ~383)
+- `testWebhook_PaymentIntentSucceeded_UpdatesOrderStatus` (line ~448)
+- `testWebhook_ChargeRefunded_UpdatesOrderNotes` (line ~515)
+- `testWebhook_ChargeRefunded_IdempotentProcessing` (line ~572 and ~588)
 
-### Additional Fixes Needed:
+### Why This Fix Works
 
-1. In `testWebhook_PaymentIntentSucceeded_UpdatesOrderStatus`, the order created within the test method needs to be committed before the HTTP call:
-   - Wrap the order creation in `QuarkusTransaction.requiringNew().run(() -> { ... })`
+- `EntityManager.clear()` detaches all managed entities from the persistence context
+- Subsequent `CalendarOrder.findById()` calls will execute a fresh SELECT query against the database
+- This ensures the test reads the committed transaction data from the webhook handler
+- This pattern is standard for integration tests that verify database state changes via HTTP endpoints
 
-2. In `testWebhook_ChargeRefunded_UpdatesOrderNotes` and `testWebhook_ChargeRefunded_IdempotentProcessing`, the order status update needs to be committed before the HTTP call:
-   - Wrap the order update code in `QuarkusTransaction.requiringNew().run(() -> { ... })`
+### Important Notes
 
-This will ensure all test data is committed and visible to the webhook handler, allowing all tests to pass.
+- **DO NOT** modify the PaymentService or WebhookResource implementations - they are correct
+- The `@Transactional` annotation on the webhook endpoint is correct and must remain
+- The test issue is a consequence of Quarkus transaction boundaries, not a bug in the production code
+- Adding `entityManager.clear()` is a standard testing pattern for REST endpoint integration tests
+
+### Alternative Solution (Less Preferred)
+
+If EntityManager injection causes issues, you can use `QuarkusTransaction.requiringNew().run()` to wrap the verification code in a new transaction:
+
+```java
+// Verify order updated in a new transaction context
+QuarkusTransaction.requiringNew().run(() -> {
+    CalendarOrder order = CalendarOrder.findById(testOrder.id);
+    assertEquals(CalendarOrder.STATUS_PAID, order.status);
+    assertNotNull(order.paidAt);
+    assertTrue(order.notes.contains("Payment succeeded"));
+});
+```
+
+However, this approach is more verbose, so prefer the EntityManager.clear() solution.

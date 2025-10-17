@@ -2,6 +2,7 @@ package villagecompute.calendar.api.rest;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
@@ -21,6 +22,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.*;
@@ -63,59 +65,66 @@ public class StripeWebhookControllerTest {
     private static final String TEST_CHARGE_ID = "ch_test_123456789";
 
     @BeforeEach
-    @Transactional
     void setup() throws Exception {
-        // Create test user
-        testUser = new CalendarUser();
-        testUser.oauthProvider = "GOOGLE";
-        testUser.oauthSubject = "webhook-test-" + System.currentTimeMillis();
-        testUser.email = "webhook-test-" + System.currentTimeMillis() + "@example.com";
-        testUser.displayName = "Webhook Test User";
-        testUser.persist();
+        // Wrap in programmatic transaction that commits immediately
+        // This ensures test data is visible to HTTP requests made by RestAssured
+        QuarkusTransaction.requiringNew().run(() -> {
+            try {
+                // Create test user
+                testUser = new CalendarUser();
+                testUser.oauthProvider = "GOOGLE";
+                testUser.oauthSubject = "webhook-test-" + System.currentTimeMillis();
+                testUser.email = "webhook-test-" + System.currentTimeMillis() + "@example.com";
+                testUser.displayName = "Webhook Test User";
+                testUser.persist();
 
-        // Create test template
-        testTemplate = new CalendarTemplate();
-        testTemplate.name = "Webhook Test Template";
-        testTemplate.description = "Template for webhook testing";
-        testTemplate.isActive = true;
-        testTemplate.isFeatured = false;
-        testTemplate.displayOrder = 1;
-        testTemplate.configuration = createTestConfiguration();
-        testTemplate.persist();
+                // Create test template
+                testTemplate = new CalendarTemplate();
+                testTemplate.name = "Webhook Test Template";
+                testTemplate.description = "Template for webhook testing";
+                testTemplate.isActive = true;
+                testTemplate.isFeatured = false;
+                testTemplate.displayOrder = 1;
+                testTemplate.configuration = createTestConfiguration();
+                testTemplate.persist();
 
-        // Create test calendar
-        testCalendar = calendarService.createCalendar(
-            "Test Calendar for Order",
-            2025,
-            testTemplate.id,
-            null,
-            true,
-            testUser,
-            null
-        );
+                // Create test calendar
+                testCalendar = calendarService.createCalendar(
+                    "Test Calendar for Order",
+                    2025,
+                    testTemplate.id,
+                    null,
+                    true,
+                    testUser,
+                    null
+                );
 
-        // Create test order in PENDING status
-        JsonNode shippingAddress = objectMapper.readTree("""
-            {
-                "line1": "123 Test St",
-                "city": "Test City",
-                "state": "CA",
-                "postalCode": "12345",
-                "country": "US"
+                // Create test order in PENDING status
+                JsonNode shippingAddress = objectMapper.readTree("""
+                    {
+                        "line1": "123 Test St",
+                        "city": "Test City",
+                        "state": "CA",
+                        "postalCode": "12345",
+                        "country": "US"
+                    }
+                    """);
+
+                testOrder = orderService.createOrder(
+                    testUser,
+                    testCalendar,
+                    1,
+                    new BigDecimal("19.99"),
+                    shippingAddress
+                );
+
+                // Set payment intent ID for webhook correlation
+                testOrder.stripePaymentIntentId = TEST_PAYMENT_INTENT_ID;
+                testOrder.persist();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
-            """);
-
-        testOrder = orderService.createOrder(
-            testUser,
-            testCalendar,
-            1,
-            new BigDecimal("19.99"),
-            shippingAddress
-        );
-
-        // Set payment intent ID for webhook correlation
-        testOrder.stripePaymentIntentId = TEST_PAYMENT_INTENT_ID;
-        testOrder.persist();
+        });
     }
 
     @AfterEach
@@ -263,10 +272,11 @@ public class StripeWebhookControllerTest {
 
     @Test
     @Order(4)
-    @Transactional
     void testWebhook_CheckoutSessionCompleted_EnqueuesEmailJob() throws Exception {
-        // Clear any existing delayed jobs
-        DelayedJob.delete("actorId", testOrder.id.toString());
+        // Clear any existing delayed jobs - use programmatic transaction
+        QuarkusTransaction.requiringNew().run(() -> {
+            DelayedJob.delete("actorId", testOrder.id.toString());
+        });
 
         String payload = String.format("""
             {
@@ -315,10 +325,11 @@ public class StripeWebhookControllerTest {
 
     @Test
     @Order(5)
-    @Transactional
     void testWebhook_IdempotentProcessing_NoDuplicateUpdates() throws Exception {
-        // Clear delayed jobs
-        DelayedJob.delete("actorId", testOrder.id.toString());
+        // Clear delayed jobs - use programmatic transaction
+        QuarkusTransaction.requiringNew().run(() -> {
+            DelayedJob.delete("actorId", testOrder.id.toString());
+        });
 
         String payload = String.format("""
             {
@@ -384,18 +395,25 @@ public class StripeWebhookControllerTest {
 
     @Test
     @Order(6)
-    @Transactional
     void testWebhook_PaymentIntentSucceeded_UpdatesOrderStatus() throws Exception {
-        // Create new order for this test
-        CalendarOrder order = orderService.createOrder(
-            testUser,
-            testCalendar,
-            1,
-            new BigDecimal("29.99"),
-            objectMapper.readTree("{\"city\": \"Test\"}")
-        );
-        order.stripePaymentIntentId = "pi_test_direct_flow";
-        order.persist();
+        // Create new order for this test in a separate transaction
+        // Use programmatic transaction to ensure data is committed before HTTP call
+        UUID orderId = QuarkusTransaction.requiringNew().call(() -> {
+            try {
+                CalendarOrder order = orderService.createOrder(
+                    testUser,
+                    testCalendar,
+                    1,
+                    new BigDecimal("29.99"),
+                    objectMapper.readTree("{\"city\": \"Test\"}")
+                );
+                order.stripePaymentIntentId = "pi_test_direct_flow";
+                order.persist();
+                return order.id;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
 
         String payload = String.format("""
             {
@@ -428,14 +446,16 @@ public class StripeWebhookControllerTest {
             .statusCode(200);
 
         // Verify order updated
-        order = CalendarOrder.findById(order.id);
+        CalendarOrder order = CalendarOrder.findById(orderId);
         assertEquals(CalendarOrder.STATUS_PAID, order.status);
         assertEquals(TEST_CHARGE_ID, order.stripeChargeId);
         assertNotNull(order.paidAt);
 
         // Cleanup
-        DelayedJob.delete("actorId", order.id.toString());
-        CalendarOrder.deleteById(order.id);
+        QuarkusTransaction.requiringNew().run(() -> {
+            DelayedJob.delete("actorId", orderId.toString());
+            CalendarOrder.deleteById(orderId);
+        });
     }
 
     // ============================================================================
@@ -445,11 +465,13 @@ public class StripeWebhookControllerTest {
     @Test
     @Order(7)
     void testWebhook_ChargeRefunded_UpdatesOrderNotes() throws Exception {
-        // Mark order as PAID first (fetch fresh, update, persist)
-        CalendarOrder order = CalendarOrder.findById(testOrder.id);
-        order.status = CalendarOrder.STATUS_PAID;
-        order.stripeChargeId = TEST_CHARGE_ID;
-        order.persist();
+        // Mark order as PAID first - use programmatic transaction to commit before HTTP call
+        QuarkusTransaction.requiringNew().run(() -> {
+            CalendarOrder order = CalendarOrder.findById(testOrder.id);
+            order.status = CalendarOrder.STATUS_PAID;
+            order.stripeChargeId = TEST_CHARGE_ID;
+            order.persist();
+        });
 
         String payload = String.format("""
             {
@@ -501,11 +523,13 @@ public class StripeWebhookControllerTest {
     @Test
     @Order(8)
     void testWebhook_ChargeRefunded_IdempotentProcessing() throws Exception {
-        // Mark order as PAID (fetch fresh, update, persist)
-        CalendarOrder order = CalendarOrder.findById(testOrder.id);
-        order.status = CalendarOrder.STATUS_PAID;
-        order.stripeChargeId = TEST_CHARGE_ID;
-        order.persist();
+        // Mark order as PAID - use programmatic transaction to commit before HTTP call
+        QuarkusTransaction.requiringNew().run(() -> {
+            CalendarOrder order = CalendarOrder.findById(testOrder.id);
+            order.status = CalendarOrder.STATUS_PAID;
+            order.stripeChargeId = TEST_CHARGE_ID;
+            order.persist();
+        });
 
         String payload = String.format("""
             {

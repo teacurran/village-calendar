@@ -26,21 +26,8 @@ This is the full specification of the task you must complete.
     "src/main/java/villagecompute/calendar/services/OrderService.java",
     "src/main/java/villagecompute/calendar/model/Payment.java"
   ],
-  "deliverables": [
-    "PaymentService with payment processing logic",
-    "Webhook endpoint handling Stripe events",
-    "Idempotent webhook processing (duplicate handling)",
-    "Email job enqueuing on payment success",
-    "Integration tests for webhook scenarios"
-  ],
-  "acceptance_criteria": [
-    "Webhook endpoint validates Stripe signature, rejects invalid requests",
-    "checkout.session.completed event creates Payment record, updates Order status to PAID",
-    "Duplicate webhook delivery (same event ID) does not create duplicate payments",
-    "Payment success triggers email job enqueue (order confirmation)",
-    "Integration test simulates Stripe webhook POST, verifies order status change",
-    "charge.refunded webhook updates Payment record with refund amount"
-  ],
+  "deliverables": "PaymentService with payment processing logic, Webhook endpoint handling Stripe events, Idempotent webhook processing (duplicate handling), Email job enqueuing on payment success, Integration tests for webhook scenarios",
+  "acceptance_criteria": "Webhook endpoint validates Stripe signature, rejects invalid requests, checkout.session.completed event creates Payment record, updates Order status to PAID, Duplicate webhook delivery (same event ID) does not create duplicate payments, Payment success triggers email job enqueue (order confirmation), Integration test simulates Stripe webhook POST, verifies order status change, charge.refunded webhook updates Payment record with refund amount",
   "dependencies": ["I3.T1", "I3.T2"],
   "parallelizable": false,
   "done": false
@@ -53,94 +40,109 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: flow-place-order (from 04_Behavior_and_Communication.md)
+### Context: Payment Processing Flow (from sequence_order_placement.puml)
 
 ```markdown
-##### Flow 2: Place Order for Printed Calendar
+The order placement sequence diagram shows the complete webhook processing flow:
 
-**Description:**
+**Stripe Webhook Processing Phase:**
+1. Stripe sends POST /api/webhooks/stripe asynchronously 1-3 seconds after payment succeeds
+2. Webhook includes Stripe-Signature header with HMAC signature
+3. API validates signature using Webhook.constructEvent(payload, signature, webhookSecret)
+4. If signature is invalid, return 400 Bad Request to prevent fraudulent webhooks
+5. If signature is valid, extract checkout session ID and metadata (order_id)
+6. OrderService.handlePaymentSuccess(checkoutSessionId) processes payment
+7. Transaction begins: SELECT order FOR UPDATE, INSERT payment record, UPDATE order status to PAID
+8. Enqueue email job: INSERT INTO delayed_jobs for ORDER_CONFIRMATION
+9. Publish EventBus event for async job processing
+10. Return 200 OK to acknowledge webhook (prevents Stripe retries)
 
-This flow demonstrates the complete e-commerce workflow from cart checkout to payment processing to asynchronous job creation for order confirmation emails.
+**Idempotency Handling:**
+- Check if order already PAID before processing webhook
+- Log and return 200 OK if duplicate (prevents duplicate payment records)
+- Use FOR UPDATE lock to prevent concurrent webhook processing
 
-**Key Design Points:**
-
-1. **Two-Phase Payment**: Order created in PENDING state, updated to PAID after webhook confirmation (handles race conditions)
-2. **Webhook Signature Validation**: Prevents fraudulent payment confirmations
-3. **Transactional Integrity**: Order and payment records created atomically within database transaction
-4. **Asynchronous Email**: Email sending offloaded to job queue to prevent SMTP latency from blocking webhook response
-5. **Idempotent Webhooks**: Stripe may retry webhooks; order service checks if payment already processed (via `stripe_payment_intent_id` uniqueness)
-
-**Critical Workflow Steps:**
-- Stripe sends webhook: checkout.session.completed (contains payment_intent ID)
-- Webhook validates Stripe-Signature header using HMAC-SHA256
-- Payment processing (within transaction):
-  * UPDATE orders SET status=PAID, paid_at=NOW()
-  * INSERT INTO delayed_jobs (queue=EMAIL_ORDER_CONFIRMATION, actor_id=order_id)
-- Webhook responds 200 OK to acknowledge receipt
-- Email worker picks up job asynchronously and sends confirmation
+**Error Scenarios:**
+- Signature validation failure → 400 Bad Request, log security incident
+- Order not found → Log error, return 200 OK (prevent retries)
+- Email delivery failure → Job marked FAILED with exponential backoff retry
 ```
 
-### Context: security-considerations (from 05_Operational_Architecture.md)
+### Context: Webhook Requirements (from stripe-setup.md)
 
 ```markdown
-#### 3.8.3. Security Considerations - Payment Security
+**Webhook Events to Handle:**
+1. checkout.session.completed - Primary payment success event for hosted checkout flow
+2. payment_intent.succeeded - Direct PaymentIntent success (alternative flow)
+3. payment_intent.payment_failed - Payment declined
+4. charge.refunded - Refund processed
 
-**PCI DSS Compliance Requirements:**
+**Webhook Security:**
+- Signature validation is CRITICAL - never process webhooks without validation
+- Use Stripe.net.Webhook.constructEvent() for automatic signature verification
+- Webhook secret format: starts with whsec_
+- Invalid signatures must return 400 Bad Request
+- Valid webhooks return 200 OK to prevent retries
 
-- **Stripe Checkout**: Card data NEVER touches application servers (entered directly into Stripe-hosted form)
-- **SAQ A Eligibility**: Lowest scope merchant self-assessment questionnaire
-- **Webhook Signature Validation**: MANDATORY security control
-  * Uses HMAC-SHA256 with webhook secret
-  * Stripe SDK provides `Webhook.constructEvent(payload, signature, secret)` method
-  * Invalid signatures MUST return 400 Bad Request
-  * Valid signatures proceed with event processing
-- **No Card Storage**: Application stores only `stripe_payment_intent_id` token, never raw card numbers
-
-**Critical Security Threats:**
-
-**Threat: Webhook Spoofing Attack**
-- Attack Vector: Attacker POSTs fake `checkout.session.completed` webhooks to /api/webhooks/stripe
-- Consequence: Fraudulent order confirmations, free products shipped without payment
-- Mitigation: Validate `Stripe-Signature` header using webhook secret on EVERY request
-- Severity: CRITICAL (direct financial loss)
+**Webhook Signature Validation:**
+```java
+Event event = Webhook.constructEvent(payload, signatureHeader, webhookSecret);
+// Throws SignatureVerificationException if invalid
+```
 
 **Idempotency Requirements:**
-- Stripe retries failed webhooks with exponential backoff (up to 3 days)
-- Application MUST handle duplicate event deliveries gracefully
-- Implementation pattern: Check if payment already processed (order.status == PAID) before updating
-- Duplicate webhooks should return 200 OK but skip re-processing
+- Stripe may send duplicate webhooks (network retries)
+- Use event ID or payment intent ID to detect duplicates
+- If payment already processed, return 200 OK without changes
+- Log duplicate detection for monitoring
 ```
 
-### Context: task-i3-t3 (from 02_Iteration_I3.md)
+### Context: Stripe Integration (from StripeService.java analysis)
 
 ```markdown
-### Task 3.3: Implement Payment Service and Webhook Handler
+**Existing StripeService Implementation:**
+Located at: src/main/java/villagecompute/calendar/integration/stripe/StripeService.java
 
-**Detailed Acceptance Criteria:**
+The service provides:
+1. getPublishableKey() - Returns Stripe publishable key for frontend
+2. getWebhookSecret() - Returns webhook secret for signature validation
+3. Configuration via @ConfigProperty annotations:
+   - stripe.api.key (secret key)
+   - stripe.publishable.key (publishable key)
+   - stripe.webhook.secret (webhook signing secret)
 
-1. Webhook signature validation: 400 response for invalid/missing `Stripe-Signature` header
-2. checkout.session.completed event processing:
-   - Locate order by stripe_payment_intent_id from session.payment_intent
-   - Update order.status to PAID
-   - Set order.paid_at timestamp
-   - Append payment success note to order.notes
-   - Enqueue EMAIL_ORDER_CONFIRMATION delayed job
-3. Idempotent processing: Duplicate webhooks do NOT create duplicate email jobs
-4. charge.refunded event processing:
-   - Locate order by stripe_charge_id
-   - Append refund details to order.notes (refund ID, amount)
-   - Handle idempotently (check if refund ID already in notes)
-5. Integration tests must verify all above scenarios with real webhook payloads
+**Important:** StripeService already exists but does NOT contain webhook validation methods.
+You will need to USE the getWebhookSecret() method in your webhook controller.
+```
 
-**Implementation Requirements:**
+### Context: Order Status Management (from OrderService.java)
 
-- Endpoint: POST /api/webhooks/stripe with @PermitAll security (auth via signature, not JWT)
-- Transaction boundary: @Transactional on webhook handler method
-- Event routing: switch on event.getType() for different webhook types
-- Error responses:
-  * 400 for signature validation failures
-  * 200 for successfully processed events (even unknown types)
-  * 500 only for unexpected exceptions
+```markdown
+**OrderService Status Transition Logic:**
+File: src/main/java/villagecompute/calendar/services/OrderService.java
+
+**Status Constants (from CalendarOrder.java):**
+- STATUS_PENDING - Initial order state
+- STATUS_PAID - Payment confirmed (target state for webhook)
+- STATUS_PROCESSING - Order being prepared
+- STATUS_SHIPPED - Order shipped to customer
+- STATUS_DELIVERED - Order received
+- STATUS_CANCELLED - Order cancelled
+
+**Critical Methods:**
+1. findByStripePaymentIntent(String paymentIntentId) - Find order by Stripe payment intent ID
+   - Returns Optional<CalendarOrder>
+   - Used by webhook handler to locate order
+
+2. Order Status Updates:
+   - Order has paidAt timestamp field (Instant)
+   - Order has stripeChargeId field (String) for storing charge ID
+   - Order has notes field (TEXT) for audit trail
+
+**State Machine Validation:**
+- validateStatusTransition(currentStatus, newStatus) enforces valid transitions
+- PENDING → PAID transition is valid
+- PAID → CANCELLED requires refund processing
 ```
 
 ---
@@ -152,237 +154,94 @@ The following analysis is based on my direct review of the current codebase. Use
 ### Relevant Existing Code
 
 *   **File:** `src/main/java/villagecompute/calendar/services/PaymentService.java`
-    *   **Summary:** This file ALREADY EXISTS and contains a complete PaymentService implementation.
-    *   **CRITICAL STATUS:** The PaymentService is FULLY IMPLEMENTED with:
-        - `createPaymentIntent()` - creates Stripe PaymentIntent for orders
-        - `processPaymentSuccess(String paymentIntentId, String chargeId)` - handles payment confirmation
-        - `processRefund()` - creates refunds via Stripe API
-        - `processRefundWebhook()` - handles charge.refunded webhook events
-    *   **Key Feature:** processPaymentSuccess() ALREADY implements:
-        - Idempotent processing (checks if order.status == PAID before updating)
-        - Order status update to PAID with paid_at timestamp
-        - Email job enqueueing via `DelayedJob.createDelayedJob(orderId, EMAIL_ORDER_CONFIRMATION, Instant.now())`
-        - Transaction boundary (called from @Transactional webhook handler)
-    *   **Recommendation:** You MUST review this existing implementation. The task is ALREADY COMPLETE for PaymentService. Verify it matches all acceptance criteria and add missing functionality only if gaps exist.
+    *   **Summary:** This file **ALREADY EXISTS** and contains a complete PaymentService implementation. It includes createPaymentIntent, processPaymentSuccess, processRefund, and processRefundWebhook methods.
+    *   **Recommendation:** You MUST NOT create this file from scratch. The PaymentService is already fully implemented with all required methods. However, you should REVIEW it to understand the implementation and ensure it meets the acceptance criteria. The task may be asking you to verify/test the existing implementation rather than create it.
 
 *   **File:** `src/main/java/villagecompute/calendar/api/rest/WebhookResource.java`
-    *   **Summary:** This file ALREADY EXISTS as the REST webhook controller (named WebhookResource, not StripeWebhookController).
-    *   **CRITICAL STATUS:** The webhook handler is FULLY IMPLEMENTED with:
-        - Endpoint: POST /api/webhooks/stripe with @PermitAll access
-        - Signature validation using `Webhook.constructEvent(payload, signatureHeader, webhookSecret)`
-        - Event routing for: checkout.session.completed, payment_intent.succeeded, payment_intent.payment_failed, charge.refunded
-        - Delegation to PaymentService.processPaymentSuccess() and processRefundWebhook()
-        - Proper error handling (400 for bad signature, 200 for success, 500 for internal errors)
-    *   **File Naming Note:** The task specifies "StripeWebhookController.java" but the codebase uses "WebhookResource.java". This follows JAX-RS naming conventions. You should KEEP this name for consistency with other resources (CalendarResource, AuthResource, etc.).
-    *   **Recommendation:** The webhook controller EXISTS and is functional. You should verify it handles all required event types and matches acceptance criteria. No new file creation needed.
-
-*   **File:** `src/test/java/villagecompute/calendar/api/rest/StripeWebhookControllerTest.java`
-    *   **Summary:** This file ALREADY EXISTS and contains comprehensive integration tests.
-    *   **CRITICAL STATUS:** The test suite ALREADY covers:
-        - Invalid signature rejection: `testWebhook_RejectInvalidSignature()`
-        - Missing signature rejection: `testWebhook_RejectMissingSignature()`
-        - checkout.session.completed processing: `testWebhook_CheckoutSessionCompleted_UpdatesOrderStatus()`
-        - Email job enqueueing: `testWebhook_CheckoutSessionCompleted_EnqueuesEmailJob()`
-        - Idempotent processing: `testWebhook_IdempotentProcessing_NoDuplicateUpdates()`
-        - payment_intent.succeeded event processing (alternative flow)
-        - charge.refunded event processing with idempotency
-        - Unknown event type handling (returns 200)
-    *   **Test Quality:** Tests use proper setup/teardown with @BeforeEach/@AfterEach, mock Stripe webhook signatures using HMAC-SHA256, and verify database state changes.
-    *   **Recommendation:** RUN THE EXISTING TESTS with `./mvnw test -Dtest=StripeWebhookControllerTest` to verify all pass. If any fail, debug and fix the implementation. If tests are missing edge cases, add them.
-
-*   **File:** `src/main/java/villagecompute/calendar/integration/stripe/StripeService.java`
-    *   **Summary:** Contains Stripe SDK integration for Checkout Sessions and webhook validation.
-    *   **Key Methods:**
-        - `createCheckoutSession(order, successUrl, cancelUrl)` - creates Stripe Checkout Session
-        - `retrieveSession(sessionId)` - fetches session details from Stripe
-        - `validateWebhookSignature(payload, signature)` - validates webhook HMAC signature
-    *   **Recommendation:** The WebhookResource currently duplicates signature validation logic. It should be refactored to use `StripeService.validateWebhookSignature()` for better code reuse, but this is a minor improvement, not a blocker.
-
-*   **File:** `src/main/java/villagecompute/calendar/services/OrderService.java`
-    *   **Summary:** Contains complete order lifecycle management.
-    *   **Key Methods:**
-        - `createOrder()` - creates order in PENDING status
-        - `updateOrderStatus()` - transitions order through state machine
-        - `findByStripePaymentIntent()` - locates order by payment intent ID
-        - `cancelOrder()` - cancels orders with authorization checks
-    *   **Recommendation:** The PaymentService correctly uses `OrderService.findByStripePaymentIntent()` to locate orders during webhook processing. The state machine validates allowed transitions (PENDING → PAID is valid).
+    *   **Summary:** This file **ALREADY EXISTS** and contains a complete StripeWebhookController implementation at path /api/webhooks/stripe. It handles all required webhook events (checkout.session.completed, payment_intent.succeeded, payment_intent.payment_failed, charge.refunded) with signature validation and idempotent processing.
+    *   **Recommendation:** You MUST NOT create this file from scratch. The webhook controller is already fully implemented. Your task is to CREATE INTEGRATION TESTS for this existing implementation.
 
 *   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarOrder.java`
-    *   **Summary:** JPA entity for e-commerce orders with Panache active record pattern.
-    *   **Critical Fields:**
-        - `stripePaymentIntentId` (String) - correlates order with Stripe payment
-        - `stripeChargeId` (String) - used for refund processing
-        - `status` (String) - order lifecycle state (use `CalendarOrder.STATUS_PAID` constant)
-        - `paidAt` (Instant) - payment confirmation timestamp
-        - `notes` (String, TEXT) - append payment processing notes
-    *   **Helper Methods:**
-        - `markAsPaid()` - sets status=PAID, paidAt=now, persists
-        - `isTerminal()` - checks if order is DELIVERED or CANCELLED
-    *   **Recommendation:** The PaymentService correctly updates order.status and order.paidAt. The helper method `markAsPaid()` provides a convenient alternative to manual field updates.
+    *   **Summary:** Order entity with Panache active record pattern. Contains status constants, foreign keys to User and Calendar, payment tracking fields (stripePaymentIntentId, stripeChargeId, paidAt), and finder methods.
+    *   **Recommendation:** Use CalendarOrder.findByStripePaymentIntent(paymentIntentId) to locate orders in webhook handlers. Use the markAsPaid() helper method or manually set status/paidAt fields.
 
-*   **File:** `src/main/java/villagecompute/calendar/data/models/DelayedJob.java`
-    *   **Summary:** JPA entity for asynchronous job processing with retry logic.
-    *   **Factory Method:** `DelayedJob.createDelayedJob(actorId, queue, runAt)` - creates and persists job
-    *   **Recommendation:** The PaymentService correctly enqueues email jobs using: `DelayedJob.createDelayedJob(order.id.toString(), DelayedJobQueue.EMAIL_ORDER_CONFIRMATION, Instant.now())` within the same transaction.
+*   **File:** `src/main/java/villagecompute/calendar/services/OrderService.java`
+    *   **Summary:** Service for order management with findByStripePaymentIntent() method already implemented.
+    *   **Recommendation:** The PaymentService already uses OrderService.findByStripePaymentIntent() - no changes needed to OrderService.
+
+*   **File:** `src/main/java/villagecompute/calendar/integration/stripe/StripeService.java`
+    *   **Summary:** Stripe SDK integration service providing getWebhookSecret() and getPublishableKey() methods.
+    *   **Recommendation:** The WebhookResource already uses PaymentService.getWebhookSecret() - the integration is complete.
 
 ### Implementation Tips & Notes
 
-*   **CRITICAL: Task is ALREADY COMPLETE:** All three target files (PaymentService.java, WebhookResource.java, StripeWebhookControllerTest.java) EXIST and appear to be fully functional. Your primary responsibility is to VERIFY that the implementation matches all acceptance criteria, RUN the existing tests, and FIX any gaps or failures.
+*   **CRITICAL FINDING:** Both PaymentService.java and WebhookResource.java **ALREADY EXIST** and are **FULLY IMPLEMENTED**. The task description asks you to "create" these files, but they are already complete. Your actual task is to:
+    1. **VERIFY** the existing implementations meet all acceptance criteria
+    2. **CREATE INTEGRATION TESTS** for the webhook handling (this is the missing piece)
+    3. **DO NOT MODIFY** the existing PaymentService or WebhookResource unless you find bugs
 
-*   **File Naming Clarification:** The task specifies "StripeWebhookController.java" but the actual implementation is "WebhookResource.java". This is NOT an error - it's a naming convention difference. JAX-RS resources typically use the "Resource" suffix. You should either:
-    1. Rename WebhookResource.java to StripeWebhookController.java (requires updating imports in tests)
-    2. OR document that WebhookResource fulfills the StripeWebhookController requirement (RECOMMENDED)
+*   **Integration Test Requirements:**
+    - Test file location: `src/test/java/villagecompute/calendar/api/rest/StripeWebhookControllerTest.java`
+    - Test must simulate Stripe webhook POST requests with valid signatures
+    - Test idempotent processing (send same webhook twice, verify only one payment created)
+    - Test signature validation failure (invalid signature returns 400)
+    - Test checkout.session.completed → order status changes to PAID
+    - Test charge.refunded → refund recorded in order notes
+    - Use Quarkus @QuarkusTest annotation and REST Assured for HTTP testing
+    - Use Testcontainers for PostgreSQL database
 
-*   **Payment Entity Mystery:** The task mentions a "Payment" entity from I1.T8, but NO SUCH ENTITY EXISTS in the codebase. The CalendarOrder entity has embedded payment fields (stripePaymentIntentId, stripeChargeId, paidAt) instead of a separate Payment table. This architectural decision simplifies the data model for MVP. You should NOT create a separate Payment entity unless explicitly requested.
+*   **Webhook Signature Testing:**
+    - You will need to generate valid Stripe signatures for test webhooks
+    - Use Stripe's Webhook.calculateSignature() method or mock the signature validation
+    - Alternative: Use @MockBean to mock PaymentService.getWebhookSecret() and Webhook validation
 
-*   **Idempotency Pattern (CRITICAL):** The PaymentService.processPaymentSuccess() implements the correct pattern:
-    ```java
-    // Idempotent check: if already paid, skip processing
-    if (CalendarOrder.STATUS_PAID.equals(order.status)) {
-        LOG.infof("Order %s already marked as PAID, skipping update (idempotent)", order.id);
-        return false; // Indicates no processing occurred
-    }
-    ```
-    This prevents duplicate email jobs when Stripe retries webhooks. DO NOT modify this logic unless you find a bug.
+*   **Idempotency Testing Strategy:**
+    - Create order, send webhook event once → verify order PAID
+    - Send same webhook event again (same event ID) → verify still only one payment record
+    - Check logs for idempotent message "already marked as PAID, skipping update"
 
-*   **Email Job Transactional Consistency:** The email job is enqueued WITHIN THE SAME TRANSACTION as the order status update in PaymentService.processPaymentSuccess():
-    ```java
-    // Enqueue confirmation email (within same transaction for consistency)
-    DelayedJob emailJob = DelayedJob.createDelayedJob(
-        order.id.toString(),
-        DelayedJobQueue.EMAIL_ORDER_CONFIRMATION,
-        Instant.now() // Send immediately
-    );
-    LOG.infof("Enqueued order confirmation email job %s for order %s", emailJob.id, order.id);
-    ```
-    This ensures ACID properties - either both order update AND email job are committed, or neither. This is correct behavior per the architecture.
+*   **Email Job Verification:**
+    - After webhook processing, verify delayed_jobs table contains ORDER_CONFIRMATION job
+    - Check job status is PENDING and payload contains order ID
+    - Do NOT test actual email sending (that's covered in I3.T7 tests)
 
-*   **Webhook Signature Validation:** The WebhookResource uses the correct Stripe SDK method:
-    ```java
-    Event event = Webhook.constructEvent(payload, signatureHeader, webhookSecret);
-    ```
-    This validates the HMAC-SHA256 signature and prevents webhook spoofing. The method throws `SignatureVerificationException` if invalid, which the webhook handler catches and returns 400 Bad Request.
+*   **Existing Test Patterns:**
+    - Review `src/test/java/villagecompute/calendar/service/OrderServiceTest.java` for testing patterns
+    - Use @Transactional annotation on test methods for automatic rollback
+    - Use CalendarOrder.deleteAll() in @BeforeEach to clean test data
 
-*   **Error Response Codes (Stripe Best Practices):** The WebhookResource correctly implements:
-    - 400 Bad Request: Invalid/missing signature, malformed payload
-    - 200 OK: Successfully processed webhooks (even unknown event types)
-    - 500 Internal Server Error: Unexpected exceptions during processing
+*   **Warning:** The PaymentService uses @Transactional annotation - ensure tests verify transaction behavior (rollback on error, commit on success).
 
-    This ensures Stripe doesn't retry client errors (400) but does retry server errors (500).
+*   **Note:** The WebhookResource uses Jackson ObjectMapper to parse Stripe event JSON. The existing implementation parses JSON manually (event.getData().toJson() → JsonNode) which works in both test and production. Do NOT change this approach.
 
-*   **Refund Processing Idempotency:** The PaymentService.processRefundWebhook() implements idempotent refund recording:
-    ```java
-    // Check if refund already recorded (idempotent)
-    if (order.notes != null && order.notes.contains("Refund ID: " + refundId)) {
-        LOG.infof("Refund %s already recorded for order %s, skipping (idempotent)", refundId, order.id);
-        return;
-    }
-    ```
-    This prevents duplicate refund notes when Stripe sends multiple charge.refunded webhooks.
+### Testing Checklist
 
-*   **Test Execution Command:** Run the integration tests with:
-    ```bash
-    ./mvnw test -Dtest=StripeWebhookControllerTest
-    ```
-    This executes all 9 test methods in the suite. If any fail, investigate the logs and fix the implementation.
+Based on the acceptance criteria, your integration tests MUST verify:
 
-*   **Test Signature Generation:** The tests generate valid Stripe webhook signatures using HMAC-SHA256:
-    ```java
-    private String generateStripeSignature(String payload) throws Exception {
-        long timestamp = System.currentTimeMillis() / 1000;
-        String signedPayload = timestamp + "." + payload;
+1. ✅ Webhook endpoint validates Stripe signature (test with invalid signature → 400)
+2. ✅ Valid checkout.session.completed creates Payment record (verify in database)
+3. ✅ Valid checkout.session.completed updates Order status to PAID
+4. ✅ Duplicate webhook delivery does not create duplicate payments (idempotency)
+5. ✅ Payment success triggers email job enqueue (verify delayed_jobs table)
+6. ✅ Integration test simulates Stripe webhook POST (full end-to-end)
+7. ✅ charge.refunded webhook updates Payment record with refund amount
 
-        Mac mac = Mac.getInstance("HmacSHA256");
-        SecretKeySpec secretKey = new SecretKeySpec(webhookSecret.getBytes(), "HmacSHA256");
-        mac.init(secretKey);
-        byte[] hash = mac.doFinal(signedPayload.getBytes());
-        String signature = HexFormat.of().formatHex(hash);
+### Files You Will Actually Create/Modify
 
-        return "t=" + timestamp + ",v1=" + signature;
-    }
-    ```
-    This replicates Stripe's signature format: `t=<timestamp>,v1=<signature>`. The webhook endpoint must validate this format.
+**CREATE:**
+- `src/test/java/villagecompute/calendar/api/rest/StripeWebhookControllerTest.java` - Integration tests for webhook handling
 
-### Verification Checklist
+**DO NOT MODIFY (already complete):**
+- `src/main/java/villagecompute/calendar/services/PaymentService.java`
+- `src/main/java/villagecompute/calendar/api/rest/WebhookResource.java`
 
-Before marking this task complete, you MUST verify:
-
-1. ✅ PaymentService.processPaymentSuccess() exists and implements idempotent payment processing
-2. ✅ WebhookResource exists at POST /api/webhooks/stripe with @PermitAll access
-3. ✅ Webhook signature validation rejects invalid/missing signatures with 400 response
-4. ✅ checkout.session.completed event updates order to PAID status
-5. ✅ payment_intent.succeeded event updates order to PAID status (alternative flow)
-6. ✅ Email job is enqueued on payment success within the same transaction
-7. ✅ Duplicate webhook delivery does NOT create duplicate email jobs (idempotent)
-8. ✅ charge.refunded event appends refund details to order.notes
-9. ✅ Refund webhook processing is idempotent (duplicate refunds NOT re-recorded)
-10. ✅ Integration tests exist for all above scenarios
-11. ✅ RUN TESTS: `./mvnw test -Dtest=StripeWebhookControllerTest` - all tests PASS
-12. ✅ Unknown event types return 200 OK (Stripe best practice)
-
-### Recommended Actions
-
-**PRIMARY TASK: RUN AND VERIFY EXISTING TESTS**
-
-1. **Execute Test Suite:**
-   ```bash
-   ./mvnw test -Dtest=StripeWebhookControllerTest
-   ```
-   This is your FIRST action. The tests will reveal if the implementation is correct.
-
-2. **Analyze Test Results:**
-   - If all tests PASS: Task is COMPLETE. Proceed to step 6 (documentation).
-   - If tests FAIL: Analyze failure logs, identify root cause, proceed to step 3.
-
-3. **Debug Failed Tests (if applicable):**
-   - Check order status updates in database
-   - Verify email job creation in delayed_jobs table
-   - Inspect webhook signature validation logic
-   - Review transaction boundaries and commit behavior
-
-4. **Fix Implementation Issues (if applicable):**
-   - Update PaymentService or WebhookResource to fix identified bugs
-   - Re-run tests after each fix until all pass
-   - DO NOT refactor working code unnecessarily
-
-5. **Add Missing Test Coverage (if applicable):**
-   - Review acceptance criteria against existing tests
-   - If any criteria lack coverage, add new test methods
-   - Examples: Test payment failure handling, test webhook with missing order, test concurrent webhook delivery
-
-6. **Document Task Completion:**
-   - Update task status to done=true in tasks_I3.json
-   - Document file naming discrepancy (WebhookResource vs StripeWebhookController)
-   - Document Payment entity decision (embedded in CalendarOrder, not separate entity)
-   - Note any deviations from original task specification with rationale
-
-7. **Prepare for Next Task (I3.T4):**
-   - Verify PaymentService can be injected into OrderGraphQL resolver
-   - Confirm webhook processing doesn't interfere with GraphQL mutation responses
-   - Review any TODO comments left in PaymentService or WebhookResource
-
-### Critical Warnings
-
-*   **DO NOT reimplement existing functionality.** The PaymentService and WebhookResource appear to be fully functional based on code review. Your role is to VERIFY, TEST, and FIX any gaps, NOT to rewrite working code from scratch.
-
-*   **DO NOT create duplicate webhook endpoints.** The WebhookResource already handles POST /api/webhooks/stripe. Creating a new StripeWebhookController would result in duplicate endpoint registration and runtime errors.
-
-*   **DO NOT create a separate Payment entity** unless you find explicit requirements for it. The current architecture stores payment data in CalendarOrder fields, which is a valid design choice for MVP scope.
-
-*   **DO NOT modify the idempotency logic** in processPaymentSuccess() or processRefundWebhook() unless you find a bug. This logic is security-critical for preventing duplicate charges and fraudulent confirmations.
-
-*   **DO NOT skip test execution.** The tests are the acceptance criteria verification mechanism. Passing tests = task complete. Failing tests = implementation issues to fix.
-
-### Known Issues to Investigate
-
-*   **Potential Issue:** The WebhookResource duplicates signature validation code instead of using StripeService.validateWebhookSignature(). This is a code smell but not a functional bug. Consider refactoring to use StripeService for better maintainability.
-
-*   **Potential Issue:** The task specifies "create Payment record" but no Payment entity exists. This may be an oversight in the task description, or the Payment entity was supposed to be created in I1.T8 but wasn't. You should clarify this with the user if it blocks progress.
-
-*   **Potential Issue:** The tests use a mock webhook secret from application.properties. Verify that the test configuration (`application-test.properties` or similar) has a valid `stripe.webhook.secret` value, otherwise signature validation will fail in tests.
+**MAY NEED TO REVIEW (for test setup):**
+- Test fixtures for creating test orders, users, calendars
+- Test utilities for generating Stripe webhook payloads
+- Database cleanup utilities (@BeforeEach methods)
 
 ---
 
-**END OF BRIEFING PACKAGE**
+## Summary
 
-This briefing package provides all information needed to verify and complete task I3.T3. The implementation appears to be largely complete - your primary responsibility is test execution and verification, not new development.
+This task is primarily a **TESTING TASK**, not an implementation task. The PaymentService and WebhookResource are already fully implemented. Your job is to create comprehensive integration tests that verify the webhook handling meets all acceptance criteria, particularly focusing on idempotent processing, signature validation, and order status updates.
