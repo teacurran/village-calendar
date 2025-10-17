@@ -300,8 +300,25 @@
             </goals>
             <configuration>
               <rules>
+                <!-- Check each package separately -->
                 <rule>
                   <element>PACKAGE</element>
+                  <includes>
+                    <include>villagecompute.calendar.data.models</include>
+                  </includes>
+                  <limits>
+                    <limit>
+                      <counter>LINE</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>0.70</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+                <rule>
+                  <element>PACKAGE</element>
+                  <includes>
+                    <include>villagecompute.calendar.data.repositories</include>
+                  </includes>
                   <limits>
                     <limit>
                       <counter>LINE</counter>

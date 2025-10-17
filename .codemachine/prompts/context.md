@@ -17,16 +17,14 @@ This is the full specification of the task you must complete.
   "agent_type_hint": "BackendAgent",
   "inputs": "Entity models from Task I1.T8, Quarkus testing documentation",
   "target_files": [
-    "src/test/java/villagecompute/calendar/model/UserTest.java",
-    "src/test/java/villagecompute/calendar/model/CalendarTest.java",
-    "src/test/java/villagecompute/calendar/model/OrderTest.java",
-    "src/test/java/villagecompute/calendar/repository/UserRepositoryTest.java",
-    "src/test/java/villagecompute/calendar/repository/CalendarRepositoryTest.java",
+    "src/test/java/villagecompute/calendar/data/repositories/AnalyticsRollupRepositoryTest.java",
+    "src/test/java/villagecompute/calendar/data/repositories/DelayedJobRepositoryTest.java",
+    "src/test/java/villagecompute/calendar/data/repositories/PageViewRepositoryTest.java",
     "pom.xml"
   ],
   "input_files": [
-    "src/main/java/villagecompute/calendar/model/*.java",
-    "src/main/java/villagecompute/calendar/repository/*.java"
+    "src/main/java/villagecompute/calendar/data/models/*.java",
+    "src/main/java/villagecompute/calendar/data/repositories/*.java"
   ],
   "deliverables": "Unit tests for all 11 entity classes, Unit tests for all repository classes, Tests run successfully with ./mvnw test, JaCoCo coverage report generated (target/site/jacoco/index.html), Coverage >70% for model and repository packages",
   "acceptance_criteria": "./mvnw test runs all tests without failures, Entity validation tests verify @NotNull, @Email, @Size constraints, Relationship tests confirm cascade and fetch behavior, Repository tests verify CRUD operations and custom queries, JaCoCo report shows line/branch coverage percentages, No test depends on external services (all use in-memory database)",
@@ -143,6 +141,32 @@ The Village Calendar project employs a multi-layered testing strategy to ensure 
 
 The following analysis is based on my direct review of the current codebase. Use these notes and tips to guide your implementation.
 
+### Current Status Summary
+
+**BUILD STATUS:** ❌ FAILING - JaCoCo coverage check failing with:
+- `villagecompute.calendar.data.models`: 18% covered (needs 70%)
+- `villagecompute.calendar.data.repositories`: 0% covered (needs 70%)
+
+**ENTITY TESTS (7/7 complete):**
+- ✅ AnalyticsRollup - CalendarUserTest.java exists
+- ✅ CalendarOrder - CalendarOrderTest.java exists
+- ✅ CalendarTemplate - CalendarTemplateTest.java exists
+- ✅ CalendarUser - CalendarUserTest.java exists (EXEMPLARY REFERENCE)
+- ✅ DelayedJob - DelayedJobTest.java exists
+- ✅ PageView - PageViewTest.java exists
+- ✅ UserCalendar - UserCalendarTest.java exists
+
+**REPOSITORY TESTS (4/7 complete):**
+- ❌ AnalyticsRollupRepository - **MISSING TEST** (CRITICAL - MUST CREATE)
+- ✅ CalendarOrderRepository - CalendarOrderRepositoryTest.java exists
+- ✅ CalendarTemplateRepository - CalendarTemplateRepositoryTest.java exists
+- ✅ CalendarUserRepository - CalendarUserRepositoryTest.java exists
+- ❌ DelayedJobRepository - **MISSING TEST** (CRITICAL - MUST CREATE)
+- ❌ PageViewRepository - **MISSING TEST** (CRITICAL - MUST CREATE)
+- ✅ UserCalendarRepository - UserCalendarRepositoryTest.java exists (EXEMPLARY REFERENCE)
+
+**TASK COMPLETION STATUS:** The task requires creating the 3 missing repository tests to achieve 70% coverage threshold.
+
 ### Relevant Existing Code
 
 *   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarUser.java`
@@ -175,6 +199,18 @@ The following analysis is based on my direct review of the current codebase. Use
     *   **Summary:** Utility class that deletes test data in correct order to avoid FK violations (Orders → Calendars → PageView → AnalyticsRollup → DelayedJob → Users → Templates).
     *   **Recommendation:** You MUST inject and use this in every test @BeforeEach method. Call testDataCleaner.deleteAll() to ensure test isolation.
 
+*   **File:** `src/main/java/villagecompute/calendar/data/repositories/AnalyticsRollupRepository.java`
+    *   **Summary:** Repository with 8 custom query methods: findById, findByMetric, findByMetricAndDimension, findByMetricAndDimensionValue, findByTimeRange, findByMetricAndTimeRange, sumByMetricAndTimeRange. All use HQL queries with ORDER BY clauses.
+    *   **Recommendation:** You MUST create AnalyticsRollupRepositoryTest.java testing ALL 8 methods. Test ordering (DESC on periodStart), filtering logic, time range queries, and sum aggregation.
+
+*   **File:** `src/main/java/villagecompute/calendar/data/repositories/DelayedJobRepository.java`
+    *   **Summary:** Repository with 7 custom query methods: findById, findReadyToRun (uses named query), findByQueue, findByActorId, findIncomplete, findFailed. Uses DelayedJobQueue enum.
+    *   **Recommendation:** You MUST create DelayedJobRepositoryTest.java testing ALL 7 methods. Pay special attention to findReadyToRun which uses a named query from the DelayedJob entity.
+
+*   **File:** `src/main/java/villagecompute/calendar/data/repositories/PageViewRepository.java`
+    *   **Summary:** Repository with 7 custom query methods: findById, findBySession, findByUser, findByPath, findByTimeRange, findByReferrer, countByPathAndTimeRange. Multiple methods use time range filtering.
+    *   **Recommendation:** You MUST create PageViewRepositoryTest.java testing ALL 7 methods. Test session/user relationships, path filtering, time range queries, and count aggregation.
+
 *   **File:** `src/main/java/villagecompute/calendar/data/models/UserCalendar.java`
     *   **Summary:** Entity demonstrating JSONB field usage with @JdbcTypeCode(SqlTypes.JSON) and relationship to CalendarTemplate. Has custom finder methods in ActiveRecord pattern.
     *   **Recommendation:** When testing entities with JSONB fields, you MUST test serialization/deserialization. Use ObjectMapper to create JsonNode objects for testing.
@@ -203,28 +239,96 @@ The following analysis is based on my direct review of the current codebase. Use
 
 *   **Coverage Target:** The task requires >70% code coverage for model and repository packages. Based on the exemplary tests, you can achieve this by testing: all validation constraints, all custom finder methods, all CRUD operations, relationship cascade, optimistic locking, and JSONB serialization.
 
-### Entities Requiring Tests (Based on Codebase Survey)
+### Specific Guidance for Missing Repository Tests
 
-From my analysis, the following entities already have tests and should be used as references:
-- ✅ CalendarUser (CalendarUserTest.java) - **COMPLETE REFERENCE**
-- ✅ UserCalendar (UserCalendarTest.java)
-- ✅ CalendarTemplate (CalendarTemplateTest.java)
-- ✅ CalendarOrder (CalendarOrderTest.java)
-- ✅ PageView (PageViewTest.java)
-- ✅ AnalyticsRollup (AnalyticsRollupTest.java)
-- ✅ DelayedJob (DelayedJobTest.java)
+#### 1. AnalyticsRollupRepositoryTest.java (MUST CREATE)
 
-The task says "all 11 entity classes" but I found 7 existing entity test files. You should verify which entities are missing tests by comparing the entities in `src/main/java/villagecompute/calendar/data/models/` with existing test files.
+**Required Test Methods:**
+- `testFindById()` - Create rollup, verify findById returns it
+- `testFindByMetric()` - Create 3 rollups with same metric but different times, verify ORDER BY periodStart DESC
+- `testFindByMetricAndDimension()` - Create rollups with same metric+dimension, verify filtering and ordering
+- `testFindByMetricAndDimensionValue()` - Create rollups with specific dimension value, verify filtering
+- `testFindByTimeRange()` - Create rollups at different times, verify time range filtering (since inclusive, until exclusive)
+- `testFindByMetricAndTimeRange()` - Combine metric and time range filters
+- `testSumByMetricAndTimeRange()` - Create rollups with BigDecimal values (100.00, 200.00, 300.00), verify sum returns 600.00
 
-### Repositories Requiring Tests (Based on Codebase Survey)
+**Test Data Setup Pattern:**
+```java
+AnalyticsRollup rollup = new AnalyticsRollup();
+rollup.metricName = "page_views";
+rollup.dimensionKey = "path";
+rollup.dimensionValue = "/templates";
+rollup.periodStart = Instant.now().minus(1, ChronoUnit.HOURS);
+rollup.periodEnd = Instant.now();
+rollup.value = new BigDecimal("100.00");
+rollup.sampleCount = 50L;
+rollup.persist();
+entityManager.flush();
+```
 
-From my analysis, the following repositories already have tests:
-- ✅ CalendarUserRepository (CalendarUserRepositoryTest.java)
-- ✅ UserCalendarRepository (UserCalendarRepositoryTest.java) - **COMPLETE REFERENCE**
-- ✅ CalendarTemplateRepository (CalendarTemplateRepositoryTest.java)
-- ✅ CalendarOrderRepository (CalendarOrderRepositoryTest.java)
+#### 2. DelayedJobRepositoryTest.java (MUST CREATE)
 
-The task says "all repository classes" - you should verify which repositories exist in `src/main/java/villagecompute/calendar/data/repositories/` and ensure all have tests.
+**Required Test Methods:**
+- `testFindById()` - Create job, verify findById returns it
+- `testFindReadyToRun()` - Create jobs with different runAt times, verify only jobs with runAt <= now returned
+- `testFindByQueue()` - Create jobs in different queues (DEFAULT, ANALYTICS, PDF), verify filtering by queue
+- `testFindByActorId()` - Create jobs for different actors, verify filtering by actorId, ORDER BY created DESC
+- `testFindIncomplete()` - Create mix of complete/incomplete jobs, verify only incomplete returned
+- `testFindFailed()` - Create jobs with completedWithFailure=true/false, verify only failed returned, ORDER BY failedAt DESC
+
+**Test Data Setup Pattern:**
+```java
+DelayedJob job = new DelayedJob();
+job.queue = DelayedJobQueue.DEFAULT;
+job.jobType = "TestJob";
+job.actorId = "user-123";
+job.runAt = Instant.now().plus(1, ChronoUnit.MINUTES);
+job.priority = 10;
+job.attempts = 0;
+job.complete = false;
+job.completedWithFailure = false;
+job.persist();
+entityManager.flush();
+```
+
+**CRITICAL:** The findReadyToRun method uses a named query. You MUST verify the DelayedJob entity has the named query defined.
+
+#### 3. PageViewRepositoryTest.java (MUST CREATE)
+
+**Required Test Methods:**
+- `testFindById()` - Create page view, verify findById returns it
+- `testFindBySession()` - Create 3 page views with same sessionId, verify ORDER BY created ASC
+- `testFindByUser()` - Create page views for user, verify filtering by user.id, ORDER BY created DESC
+- `testFindByPath()` - Create page views for same path ("/templates"), verify filtering
+- `testFindByTimeRange()` - Create page views at different times, verify time range filtering
+- `testFindByReferrer()` - Create page views with different referrers, verify filtering
+- `testCountByPathAndTimeRange()` - Create 5 page views for same path in time range, verify count=5
+
+**Test Data Setup Pattern:**
+```java
+// Create a user first (PageView has FK to CalendarUser)
+CalendarUser user = new CalendarUser();
+user.email = "test@example.com";
+user.displayName = "Test User";
+user.oauthProvider = OAuthProvider.GOOGLE;
+user.oauthSubject = "google-123";
+user.persist();
+entityManager.flush();
+
+PageView pageView = new PageView();
+pageView.user = user;
+pageView.sessionId = "session-123";
+pageView.path = "/templates";
+pageView.method = "GET";
+pageView.statusCode = 200;
+pageView.referrer = "https://google.com";
+pageView.ipAddressHash = "abc123";
+pageView.userAgent = "Mozilla/5.0";
+pageView.persist();
+entityManager.flush();
+```
+
+**CRITICAL:** PageView has a FK relationship to CalendarUser. You MUST create a CalendarUser first in @BeforeEach setup method.
 
 ### Test Execution & Verification Commands
 
@@ -239,18 +343,24 @@ The task says "all repository classes" - you should verify which repositories ex
 
 Based on my analysis, the task will be successful ONLY if:
 
-1. ✅ You follow the **exact test patterns** from CalendarUserTest.java and UserCalendarRepositoryTest.java
-2. ✅ Every entity test includes: validation tests, relationship tests, CRUD tests, custom finder tests, optimistic locking tests
-3. ✅ Every repository test includes: all custom query methods tested with correct filtering and ordering
-4. ✅ You use TestDataCleaner.deleteAll() in every @BeforeEach for test isolation
-5. ✅ You achieve >70% code coverage for model and repository packages (verify with JaCoCo report)
-6. ✅ All tests pass with ./mvnw test (0% failure tolerance per quality gates)
-7. ✅ No tests depend on external services (all use in-memory H2 database with @QuarkusTest)
-8. ✅ JaCoCo configuration in pom.xml is verified/completed (already exists, just verify it works)
+1. ✅ You create **exactly 3 new repository test files**: AnalyticsRollupRepositoryTest.java, DelayedJobRepositoryTest.java, PageViewRepositoryTest.java
+2. ✅ You follow the **exact test patterns** from UserCalendarRepositoryTest.java (the exemplary reference)
+3. ✅ Every repository test includes: @QuarkusTest annotation, @Transactional methods, TestDataCleaner.deleteAll() in @BeforeEach, entityManager.flush() after persist operations
+4. ✅ You test **ALL custom query methods** in each repository (8 for AnalyticsRollup, 7 for DelayedJob, 7 for PageView)
+5. ✅ You verify correct **ordering** (DESC/ASC), **filtering logic**, and **time range queries** in each test
+6. ✅ You achieve >70% code coverage for repository package (verify with JaCoCo report)
+7. ✅ All tests pass with ./mvnw test (0% failure tolerance per quality gates)
+8. ✅ No tests depend on external services (all use in-memory H2 database with @QuarkusTest)
 
-**IMPORTANT:** The task description mentions target files with incorrect package paths. You MUST use the actual package structure:
-- Actual: `src/main/java/villagecompute/calendar/data/models/`
-- Actual: `src/main/java/villagecompute/calendar/data/repositories/`
-- NOT: `src/main/java/villagecompute/calendar/model/` (incorrect)
+**IMPORTANT DEPENDENCIES:**
+- PageViewRepository tests MUST create CalendarUser entities first (FK relationship)
+- DelayedJobRepository tests MUST use DelayedJobQueue enum correctly
+- AnalyticsRollupRepository tests MUST use BigDecimal for value fields and Instant for time fields
 
-The tests already exist for most entities/repositories, but you should verify completeness and coverage targets are met.
+**VERIFICATION STEPS AFTER IMPLEMENTATION:**
+1. Run `./mvnw verify` - should pass without JaCoCo coverage failures
+2. Check target/site/jacoco/index.html - villagecompute.calendar.data.repositories should show >70% coverage
+3. All 3 new test files should have green passing tests
+4. No test should depend on Docker, Testcontainers, or external PostgreSQL (all use H2 in-memory)
+
+The entity tests are already complete (7/7), so you ONLY need to create the 3 missing repository tests to complete this task.
