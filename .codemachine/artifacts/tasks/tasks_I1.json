@@ -102,7 +102,7 @@
     "acceptance_criteria": "All migration scripts run without SQL errors on PostgreSQL 17, Foreign key constraints properly defined (correct ON DELETE behavior), Indexes created on all foreign key columns and frequently queried fields, JSONB columns used for calendar.config, session_data, shipping_address, job payload, BIGSERIAL primary keys, UUID for session_id and share_token, Script execution order produces schema matching ERD",
     "dependencies": ["I1.T2", "I1.T4"],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T8",
