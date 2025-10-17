@@ -1,8 +1,11 @@
 package villagecompute.calendar.api.rest;
 
 import com.stripe.exception.SignatureVerificationException;
+import com.stripe.model.Charge;
 import com.stripe.model.Event;
 import com.stripe.model.PaymentIntent;
+import com.stripe.model.Refund;
+import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -67,7 +70,8 @@ public class WebhookResource {
         summary = "Handle Stripe webhook events",
         description = "Processes Stripe payment webhook events with signature verification. " +
             "This endpoint is called by Stripe when payment events occur. " +
-            "Supported event types: payment_intent.succeeded, payment_intent.payment_failed."
+            "Supported event types: checkout.session.completed, payment_intent.succeeded, " +
+            "payment_intent.payment_failed, charge.refunded."
     )
     @APIResponses({
         @APIResponse(
@@ -163,11 +167,17 @@ public class WebhookResource {
         LOG.infof("Processing webhook event: %s (ID: %s)", eventType, event.getId());
 
         switch (eventType) {
+            case "checkout.session.completed":
+                handleCheckoutSessionCompleted(event);
+                break;
             case "payment_intent.succeeded":
                 handlePaymentIntentSucceeded(event);
                 break;
             case "payment_intent.payment_failed":
                 handlePaymentIntentFailed(event);
+                break;
+            case "charge.refunded":
+                handleChargeRefunded(event);
                 break;
             default:
                 LOG.debugf("Unhandled webhook event type: %s", eventType);
@@ -175,8 +185,34 @@ public class WebhookResource {
     }
 
     /**
-     * Handle successful payment.
-     * Updates order status to PAID and enqueues confirmation email.
+     * Handle Stripe Checkout Session completed event.
+     * This is the primary payment success event for hosted checkout flow.
+     * Extracts payment intent from session and delegates to PaymentService.
+     *
+     * @param event Stripe event
+     */
+    private void handleCheckoutSessionCompleted(Event event) {
+        Session session = (Session) event.getDataObjectDeserializer()
+            .getObject()
+            .orElseThrow(() -> new IllegalStateException("Missing checkout session data"));
+
+        String sessionId = session.getId();
+        String paymentIntentId = session.getPaymentIntent();
+        LOG.infof("Checkout session completed: %s (PaymentIntent: %s)", sessionId, paymentIntentId);
+
+        if (paymentIntentId == null) {
+            LOG.errorf("Checkout session %s has no PaymentIntent", sessionId);
+            return;
+        }
+
+        // Delegate to PaymentService for idempotent processing
+        paymentService.processPaymentSuccess(paymentIntentId, null);
+    }
+
+    /**
+     * Handle successful payment (direct PaymentIntent flow).
+     * This event is for direct PaymentIntent integration (not Checkout Sessions).
+     * Delegates to PaymentService for processing.
      *
      * @param event Stripe event
      */
@@ -186,41 +222,11 @@ public class WebhookResource {
             .orElseThrow(() -> new IllegalStateException("Missing payment intent data"));
 
         String paymentIntentId = paymentIntent.getId();
-        LOG.infof("Payment succeeded for PaymentIntent: %s", paymentIntentId);
+        String chargeId = paymentIntent.getLatestCharge();
+        LOG.infof("Payment succeeded for PaymentIntent: %s (Charge: %s)", paymentIntentId, chargeId);
 
-        // Find the order
-        Optional<CalendarOrder> orderOpt = orderService.findByStripePaymentIntent(paymentIntentId);
-        if (orderOpt.isEmpty()) {
-            LOG.errorf("Order not found for PaymentIntent: %s", paymentIntentId);
-            return;
-        }
-
-        CalendarOrder order = orderOpt.get();
-
-        // Update order status to PAID
-        if (!CalendarOrder.STATUS_PAID.equals(order.status)) {
-            order.status = CalendarOrder.STATUS_PAID;
-            order.paidAt = Instant.now();
-
-            // Store charge ID if available
-            if (paymentIntent.getLatestCharge() != null) {
-                order.stripeChargeId = paymentIntent.getLatestCharge();
-            }
-
-            order.persist();
-            LOG.infof("Order %s marked as PAID", order.id);
-
-            // Enqueue confirmation email
-            DelayedJob emailJob = DelayedJob.createDelayedJob(
-                order.id.toString(),
-                DelayedJobQueue.EMAIL_ORDER_CONFIRMATION,
-                Instant.now() // Send immediately
-            );
-            LOG.infof("Enqueued order confirmation email job %s for order %s",
-                emailJob.id, order.id);
-        } else {
-            LOG.infof("Order %s already marked as PAID, skipping update", order.id);
-        }
+        // Delegate to PaymentService for idempotent processing
+        paymentService.processPaymentSuccess(paymentIntentId, chargeId);
     }
 
     /**
@@ -257,6 +263,38 @@ public class WebhookResource {
         order.persist();
 
         LOG.infof("Logged payment failure for order %s", order.id);
+    }
+
+    /**
+     * Handle charge refunded event.
+     * Updates order notes with refund information.
+     * Delegates to PaymentService for idempotent processing.
+     *
+     * @param event Stripe event
+     */
+    private void handleChargeRefunded(Event event) {
+        Charge charge = (Charge) event.getDataObjectDeserializer()
+            .getObject()
+            .orElseThrow(() -> new IllegalStateException("Missing charge data"));
+
+        String chargeId = charge.getId();
+        LOG.infof("Charge refunded: %s", chargeId);
+
+        // Get refund details from the charge
+        if (charge.getRefunds() == null || charge.getRefunds().getData().isEmpty()) {
+            LOG.warnf("Charge %s refunded but no refund data available", chargeId);
+            return;
+        }
+
+        // Get the most recent refund (Stripe sends one webhook per refund)
+        Refund refund = charge.getRefunds().getData().get(0);
+        String refundId = refund.getId();
+        Long amountRefunded = refund.getAmount();
+
+        LOG.infof("Processing refund %s for charge %s, amount: %d cents", refundId, chargeId, amountRefunded);
+
+        // Delegate to PaymentService for idempotent processing
+        paymentService.processRefundWebhook(chargeId, refundId, amountRefunded);
     }
 
     /**

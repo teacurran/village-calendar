@@ -10,27 +10,26 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I3.T2",
+  "task_id": "I3.T3",
   "iteration_id": "I3",
   "iteration_goal": "Implement complete e-commerce workflow including Stripe payment integration, order placement, order management dashboard (admin), and transactional email notifications",
-  "description": "Create OrderService with business logic for e-commerce: createOrder (from cart/calendar, calculate subtotal/tax/shipping, persist Order and OrderItem entities), updateOrderStatus (transition order through lifecycle: PENDING → PAID → IN_PRODUCTION → SHIPPED → DELIVERED), cancelOrder (set status to CANCELLED, process refund if applicable), getOrder (by ID with authorization), listOrders (by user, by status, with pagination for admin). Implement OrderRepository with custom queries: findByUserId, findByStatus, findByOrderNumber (unique display number). Add order number generation (e.g., \"VC-2025-00001\" format). Handle order status state machine validation (cannot go from SHIPPED back to PENDING). Write unit tests for all order business logic.",
+  "description": "Create PaymentService for handling Stripe payment processing: createPayment (store Payment record linked to Order), processPaymentSuccess (on Stripe webhook, update Payment and Order status to PAID), processRefund (create refund via Stripe API, update Payment record). Implement StripeWebhookController (REST endpoint POST /api/webhooks/stripe) to receive Stripe webhook events: checkout.session.completed (payment succeeded), charge.refunded (refund processed). Add webhook signature validation to prevent spoofing. Implement idempotent webhook processing (handle duplicate webhook delivery). Enqueue email job on payment success (order confirmation email). Write integration tests for webhook handling.",
   "agent_type_hint": "BackendAgent",
-  "inputs": "Order, OrderItem, Payment entities from I1.T8, E-commerce requirements from Plan Section \"Order Management\"",
+  "inputs": "Payment entity from I1.T8, OrderService from Task I3.T2, StripeService from Task I3.T1, Webhook requirements from Plan Section \"Payment Processing\"",
   "target_files": [
-    "src/main/java/villagecompute/calendar/service/OrderService.java",
-    "src/main/java/villagecompute/calendar/repository/OrderRepository.java",
-    "src/main/java/villagecompute/calendar/util/OrderNumberGenerator.java",
-    "src/test/java/villagecompute/calendar/service/OrderServiceTest.java"
+    "src/main/java/villagecompute/calendar/services/PaymentService.java",
+    "src/main/java/villagecompute/calendar/api/rest/StripeWebhookController.java",
+    "src/test/java/villagecompute/calendar/api/rest/StripeWebhookControllerTest.java"
   ],
   "input_files": [
-    "src/main/java/villagecompute/calendar/model/Order.java",
-    "src/main/java/villagecompute/calendar/model/OrderItem.java",
+    "src/main/java/villagecompute/calendar/integration/stripe/StripeService.java",
+    "src/main/java/villagecompute/calendar/services/OrderService.java",
     "src/main/java/villagecompute/calendar/model/Payment.java"
   ],
-  "deliverables": "OrderService with complete e-commerce logic, OrderRepository with custom query methods, Order number generation (unique, sequential), Order status state machine validation, Unit tests with >80% coverage",
-  "acceptance_criteria": "OrderService.createOrder() calculates tax and shipping, persists order, Order number format: \"VC-YYYY-NNNNN\" (e.g., VC-2025-00001), OrderService.updateOrderStatus() enforces valid transitions (PENDING can go to PAID or CANCELLED, but SHIPPED cannot go to PENDING), OrderRepository.findByOrderNumber() retrieves order by display number, Unit tests verify order creation, status transitions, cancellation logic",
-  "dependencies": ["I1.T8"],
-  "parallelizable": true,
+  "deliverables": "PaymentService with payment processing logic, Webhook endpoint handling Stripe events, Idempotent webhook processing (duplicate handling), Email job enqueuing on payment success, Integration tests for webhook scenarios",
+  "acceptance_criteria": "Webhook endpoint validates Stripe signature, rejects invalid requests, checkout.session.completed event creates Payment record, updates Order status to PAID, Duplicate webhook delivery (same event ID) does not create duplicate payments, Payment success triggers email job enqueue (order confirmation), Integration test simulates Stripe webhook POST, verifies order status change, charge.refunded webhook updates Payment record with refund amount",
+  "dependencies": ["I3.T1", "I3.T2"],
+  "parallelizable": false,
   "done": false
 }
 ```
@@ -41,102 +40,81 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: Order Management Domain
+### Context: flow-place-order (from 04_Behavior_and_Communication.md)
 
-**From Analysis:**
-The e-commerce domain in Village Calendar consists of:
-- **CalendarOrder entity**: Already fully implemented with proper JPA annotations, relationships, validation, and helper methods
-- **OrderStatus constants**: Defined in CalendarOrder class (PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED)
-- **OrderRepository**: Already implemented with all required custom queries
-- **OrderService**: Partially implemented - needs enhancement for tax/shipping calculations, order number generation, and refund handling
+```markdown
+##### Flow 2: Place Order for Printed Calendar
 
-**Key Architectural Principles:**
-1. **Panache Active Record Pattern**: The project uses Panache with both active record (entity-based finders) and repository patterns
-2. **Status State Machine**: Status transitions must be validated to prevent invalid state changes
-3. **Transactional Integrity**: All database writes must use `@Transactional` annotation
-4. **Authorization**: Order operations must verify user ownership or admin role
-5. **Integration with Stripe**: Orders link to Stripe via `stripePaymentIntentId` and `stripeChargeId` fields
+**Description:**
 
-### Context: Data Model (from GraphQL Schema)
+This flow demonstrates the complete e-commerce workflow from cart checkout to payment processing to asynchronous job creation for order confirmation emails.
 
-```graphql
-"""
-E-commerce order for printed calendars.
-Integrates with Stripe for payment processing. Orders are created
-after successful payment via Stripe webhook.
+**Key Design Points:**
 
-Note: Payment details are embedded directly in the order entity via
-Stripe-specific fields (stripePaymentIntentId, stripeChargeId, paidAt)
-rather than a separate Payment entity. Orders currently support single-item
-purchases (one calendar design with quantity field).
-"""
-type CalendarOrder {
-  """Calendar being ordered for printing"""
-  calendar: UserCalendar!
+1. **Two-Phase Payment**: Order created in PENDING state, updated to PAID after webhook confirmation (handles race conditions)
+2. **Webhook Signature Validation**: Prevents fraudulent payment confirmations
+3. **Transactional Integrity**: Order and payment records created atomically within database transaction
+4. **Asynchronous Email**: Email sending offloaded to job queue to prevent SMTP latency from blocking webhook response
+5. **Idempotent Webhooks**: Stripe may retry webhooks; order service checks if payment already processed (via `stripe_payment_intent_id` uniqueness)
 
-  """Timestamp when order was created"""
-  created: DateTime!
-
-  """Timestamp when order was delivered"""
-  deliveredAt: DateTime
-
-  """Unique order identifier (UUID)"""
-  id: ID!
-
-  """Admin notes about order fulfillment"""
-  notes: String
-
-  """Timestamp when payment was captured"""
-  paidAt: DateTime
-
-  """Number of calendar copies to print"""
-  quantity: Int!
-
-  """Timestamp when order was shipped"""
-  shippedAt: DateTime
-
-  """Shipping address (JSONB: street, city, state, postalCode, country)"""
-  shippingAddress: JSON!
-
-  """Order fulfillment status"""
-  status: OrderStatus!
-
-  """Stripe Charge ID (set after payment captured)"""
-  stripeChargeId: String
-
-  """Stripe Payment Intent ID"""
-  stripePaymentIntentId: String
-
-  """Total order price (quantity * unitPrice, USD)"""
-  totalPrice: BigDecimal!
-
-  """Shipment tracking number (set when order ships)"""
-  trackingNumber: String
-
-  """Price per calendar (USD)"""
-  unitPrice: BigDecimal!
-
-  """Timestamp when order was last updated"""
-  updated: DateTime!
-
-  """User who placed this order"""
-  user: CalendarUser!
-}
+**Sequence:**
+1. User completes Stripe Checkout (hosted page)
+2. Stripe sends webhook: checkout.session.completed
+3. Webhook validates signature using Stripe-Signature header
+4. Webhook handler processes payment:
+   - INSERT INTO payments (order_id, stripe_payment_intent_id, amount, status=SUCCEEDED)
+   - UPDATE orders SET status=PAID, updated_at=NOW()
+   - INSERT INTO delayed_jobs (job_type=EMAIL_ORDER_CONFIRMATION)
+5. Webhook responds 200 OK to acknowledge
+6. Email worker picks up job and sends confirmation
 ```
 
-### Context: Status Transition Rules (from Architecture)
+### Context: security-considerations (from 05_Operational_Architecture.md)
 
-Valid status transitions:
-```
-PENDING → PAID | CANCELLED
-PAID → PROCESSING | SHIPPED | CANCELLED
-PROCESSING → SHIPPED | CANCELLED
-SHIPPED → DELIVERED
-DELIVERED (terminal)
-CANCELLED (terminal)
+```markdown
+#### 3.8.3. Security Considerations
+
+**8. PCI DSS Compliance (Payment Security)**
+
+- **Stripe Checkout**: Card data never touches application servers (entered directly into Stripe-hosted form)
+- **SAQ A Eligibility**: Merchant self-assessment questionnaire (lowest scope, <100 questions)
+- **Webhook Signature Validation**: Stripe webhooks verified via `Stripe-Signature` header (prevents spoofing)
+  - Uses HMAC-SHA256 with webhook secret
+  - Stripe SDK provides Webhook.constructEvent() for validation
+  - Invalid signatures MUST return 400 Bad Request
+- **No Card Storage**: Application stores only `stripe_payment_intent_id` (token, not card numbers)
+
+**Threat: Webhook Spoofing**
+- Attacker could POST fake payment success webhooks to /api/webhooks/stripe
+- Mitigation: Validate Stripe-Signature header using webhook secret
+- Impact if bypassed: Fraudulent order confirmations, free products
+
+**Idempotency Requirements:**
+- Stripe retries failed webhooks (exponential backoff, up to 3 days)
+- Application MUST handle duplicate event deliveries gracefully
+- Implementation: Check if payment already processed before updating order
 ```
 
-**Important Note**: The task description mentions "IN_PRODUCTION" as a status, but the actual codebase uses "PROCESSING" instead. You MUST use the existing "PROCESSING" status constant from the CalendarOrder entity.
+### Context: task-i3-t3 (from 02_Iteration_I3.md)
+
+```markdown
+### Task 3.3: Implement Payment Service and Webhook Handler
+
+**Acceptance Criteria:**
+- Webhook endpoint validates Stripe signature, rejects invalid requests with 400
+- checkout.session.completed event creates Payment record, updates Order status to PAID
+- Duplicate webhook delivery (same event ID) does not create duplicate payments
+- Payment success triggers email job enqueue (order confirmation)
+- Integration test simulates Stripe webhook POST, verifies order status change
+- charge.refunded webhook updates Payment record with refund amount
+
+**Key Implementation Details:**
+1. POST /api/webhooks/stripe endpoint with @PermitAll (no auth - validated by signature)
+2. Validate Stripe-Signature header using StripeService.validateWebhookSignature()
+3. Process event.type: checkout.session.completed, charge.refunded
+4. Use @Transactional to ensure atomic payment + order + email job updates
+5. Return 200 OK for handled events, 200 OK for unknown event types (Stripe best practice)
+```
 
 ---
 
@@ -146,116 +124,147 @@ The following analysis is based on my direct review of the current codebase. Use
 
 ### Relevant Existing Code
 
-#### File: `src/main/java/villagecompute/calendar/data/models/CalendarOrder.java`
-- **Summary**: Fully implemented JPA entity representing e-commerce orders. Extends `DefaultPanacheEntityWithTimestamps` for automatic UUID id, created/updated timestamps, and optimistic locking via version field. Contains all required fields: user (FK), calendar (FK), quantity, unitPrice, totalPrice, status, shippingAddress (JSONB), Stripe IDs, notes, and timestamp fields.
-- **Recommendation**: You MUST use this existing entity without modification. It already has helper methods `markAsPaid()`, `markAsShipped()`, `cancel()`, and `isTerminal()` that you SHOULD reuse in your service layer.
-- **Important**: The entity defines status as String constants (STATUS_PENDING, STATUS_PAID, etc.). Do NOT create a separate OrderStatus enum - use these String constants.
-- **Active Record Methods**: The entity already provides static finder methods: `findByUser()`, `findByStatusOrderByCreatedDesc()`, `findByCalendar()`, `findByStripePaymentIntent()`. These can be called directly on the entity class.
+*   **File:** `src/main/java/villagecompute/calendar/integration/stripe/StripeService.java`
+    *   **Summary:** This file contains the Stripe integration service with methods for creating Stripe Checkout Sessions, retrieving sessions, and validating webhook signatures.
+    *   **Recommendation:** You MUST import and use the `validateWebhookSignature()` method from this file in your webhook controller. The method signature is: `public Event validateWebhookSignature(String payload, String signatureHeader)`. This method already handles signature verification using Stripe's SDK and throws `SignatureVerificationException` if invalid.
+    *   **Recommendation:** You SHOULD use the `getWebhookSecret()` method from this service if you need direct access to the webhook secret for any reason.
+    *   **Note:** This service already initializes `Stripe.apiKey` in the `@PostConstruct init()` method, so your PaymentService can directly use Stripe SDK classes (like `Refund.create()`).
 
-#### File: `src/main/java/villagecompute/calendar/data/repositories/CalendarOrderRepository.java`
-- **Summary**: Repository layer implementing PanacheRepository<CalendarOrder>. Already contains all required custom query methods including `findByStatusOrderByCreatedDesc()`, `findByUser()`, `findByStripePaymentIntent()`, `findPendingOrders()`, and `findPaidNotShipped()`.
-- **Recommendation**: This repository is COMPLETE and fully implements the task requirements. You do NOT need to modify it. Your OrderService SHOULD inject and use this repository for database operations.
+*   **File:** `src/main/java/villagecompute/calendar/services/OrderService.java`
+    *   **Summary:** This file contains the OrderService with complete order lifecycle management including createOrder, updateOrderStatus, cancelOrder, and various finder methods.
+    *   **Recommendation:** You MUST inject OrderService and use these methods:
+        - `findByStripePaymentIntent(String paymentIntentId)` - to locate the order associated with a payment
+        - `updateOrderStatus(UUID orderId, String newStatus, String notes)` - to transition the order to PAID status (though you may also directly use the CalendarOrder entity's `markAsPaid()` helper method)
+    *   **Warning:** The OrderService already validates status transitions in the `validateStatusTransition()` private method. Make sure you understand the allowed transitions: PENDING → PAID is valid, but attempting to update an already PAID order to PAID again should be handled idempotently (check current status first).
 
-#### File: `src/main/java/villagecompute/calendar/services/OrderService.java`
-- **Summary**: Partially implemented service with basic CRUD operations. Contains `createOrder()` (basic version without tax/shipping), `updateOrderStatus()` (with state machine validation), `getOrdersByStatus()`, `getUserOrders()`, `getOrderById()`, and `findByStripePaymentIntent()`.
-- **Current Gaps**:
-  1. No tax calculation in `createOrder()`
-  2. No shipping calculation in `createOrder()`
-  3. No order number generation
-  4. No `cancelOrder()` method with refund processing
-  5. Missing enhanced logging for business events
-- **Recommendation**: You MUST enhance this existing service rather than creating a new one. Focus on filling the gaps listed above.
-- **State Machine**: The `validateStatusTransition()` method already implements the state machine validation. Review and ensure it matches the requirements (it currently does).
+*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarOrder.java`
+    *   **Summary:** This is the JPA entity for orders with helper methods and status constants.
+    *   **Recommendation:** You SHOULD use the entity's helper methods directly for simpler status updates:
+        - `order.markAsPaid()` - sets status to PAID and paidAt timestamp, then persists
+        - `order.isTerminal()` - checks if order is in a terminal state (DELIVERED or CANCELLED)
+    *   **Note:** The entity has these critical fields you'll need:
+        - `stripePaymentIntentId` (String) - stores the Stripe Payment Intent ID
+        - `stripeChargeId` (String) - stores the Stripe Charge ID
+        - `status` (String) - order status (use constants like CalendarOrder.STATUS_PAID)
+        - `paidAt` (Instant) - timestamp when payment was confirmed
+        - `notes` (String, TEXT) - append payment processing notes here
 
-#### File: `src/main/java/villagecompute/calendar/data/models/enums/OrderStatus.java`
-- **Summary**: Enum defining order statuses (PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED).
-- **Warning**: This enum exists but is NOT used by CalendarOrder entity, which uses String constants instead. For consistency with the existing codebase, continue using String constants in OrderService.
-
-#### File: `src/main/java/villagecompute/calendar/data/models/DefaultPanacheEntityWithTimestamps.java`
-- **Summary**: Base class for all entities providing UUID id, created/updated timestamps (via @CreationTimestamp/@UpdateTimestamp), and optimistic locking version field.
-- **Recommendation**: All entities inherit automatic timestamp management. You do NOT need to manually set created/updated fields.
-
-#### File: `src/main/java/villagecompute/calendar/integration/stripe/StripeService.java`
-- **Summary**: Handles Stripe Checkout Session creation, retrieval, and webhook signature validation. Provides `createCheckoutSession()` which generates a Stripe hosted checkout page URL.
-- **Recommendation**: Your OrderService should NOT call StripeService directly for refunds. Refund processing will be handled in I3.T3 (PaymentService). For now, the `cancelOrder()` method should only update order status to CANCELLED and add notes - actual Stripe refund will be implemented later.
+*   **File:** `src/main/java/villagecompute/calendar/api/rest/WebhookResource.java`
+    *   **Summary:** THIS FILE ALREADY EXISTS! It's a complete webhook controller with signature validation and payment processing logic.
+    *   **CRITICAL WARNING:** The task description asks you to "Implement StripeWebhookController" but the codebase already has a working `WebhookResource.java` at the correct path (`POST /api/webhooks/stripe`). This implementation:
+        - Already validates webhook signatures using `Webhook.constructEvent()` directly (doesn't call StripeService.validateWebhookSignature)
+        - Already handles `payment_intent.succeeded` and `payment_intent.payment_failed` events
+        - Already updates order status to PAID and enqueues email jobs using `DelayedJob.createDelayedJob()`
+        - Already has idempotent handling (checks `!CalendarOrder.STATUS_PAID.equals(order.status)` before updating)
+    *   **CRITICAL DECISION REQUIRED:** The existing WebhookResource handles `payment_intent` events, but the architecture diagram and task description specify `checkout.session.completed` events. These are DIFFERENT Stripe webhook types:
+        - **payment_intent.succeeded**: Fires when a PaymentIntent completes (direct API integration)
+        - **checkout.session.completed**: Fires when a Checkout Session completes (hosted checkout page)
+    *   **RECOMMENDATION:** You need to REFACTOR the existing WebhookResource to:
+        1. Handle `checkout.session.completed` instead of (or in addition to) `payment_intent.succeeded`
+        2. Extract payment processing logic into a new PaymentService
+        3. Add support for `charge.refunded` webhook event
+        4. Ensure the webhook validates signatures using StripeService (currently it duplicates the validation code)
 
 ### Implementation Tips & Notes
 
-#### Tip 1: Order Number Generation Strategy
-- **Pattern**: "VC-YYYY-NNNNN" (e.g., VC-2025-00001)
-- **Implementation Approach**: Create `OrderNumberGenerator` utility class with a method that:
-  1. Extracts the current year
-  2. Queries the database for the last order number for that year
-  3. Increments the sequence number
-  4. Formats as "VC-{year}-{sequence:05d}"
-- **Concurrency Consideration**: Use a transactional query within the order creation transaction to prevent duplicate numbers. You MAY use a database query like `SELECT COUNT(*) FROM calendar_orders WHERE EXTRACT(YEAR FROM created) = ?` to get the next sequence number.
-- **Alternative**: Consider adding an `orderNumber` field to CalendarOrder entity with a unique constraint and let the database enforce uniqueness.
+*   **Tip:** The existing WebhookResource uses `DelayedJob.createDelayedJob()` to enqueue emails. The signature is: `DelayedJob.createDelayedJob(String entityId, String queue, Instant runAt)` where queue should be `DelayedJobQueue.EMAIL_ORDER_CONFIRMATION`.
 
-#### Tip 2: Tax and Shipping Calculation Placeholders
-- **Task Requirement**: The task says "calculate subtotal/tax/shipping" but I3.T8 specifically implements shipping calculation.
-- **Recommendation for I3.T2**: Add method signatures for `calculateTax()` and `calculateShipping()` in OrderService, but implement them as simple placeholders returning BigDecimal.ZERO. Add TODO comments referencing I3.T8.
-- **Rationale**: This allows I3.T2 to focus on order lifecycle management while deferring actual calculation logic to the dedicated shipping task.
+*   **CRITICAL: Event Type Decision:** The Stripe event types you need to handle are:
+    - **PRIMARY EVENT**: `checkout.session.completed` - This is what the architecture flow diagram specifies
+    - **SECONDARY EVENT**: `charge.refunded` - For processing refunds
+    - The existing code handles `payment_intent.succeeded` which is a different flow (direct API integration vs hosted checkout)
+    - **DECISION**: You should UPDATE the existing WebhookResource to handle checkout.session.completed instead of payment_intent.succeeded, OR add support for both events if the system needs to support both payment flows.
 
-#### Tip 3: Authorization Checks
-- **Existing Pattern**: The project uses `@Context SecurityIdentity` injection in GraphQL resolvers and REST resources.
-- **Service Layer**: OrderService methods should accept userId as a parameter (extracted from SecurityIdentity by the calling resolver/resource) and perform ownership checks.
-- **Admin Override**: Check if user has "admin" role to allow admin users to access/modify any order.
-- **Example Pattern** (from existing code):
-```java
-// In resolver/resource layer:
-@Inject SecurityIdentity securityIdentity;
-UUID userId = UUID.fromString(securityIdentity.getPrincipal().getName());
+*   **Critical Idempotency Pattern:** The existing code shows the correct pattern:
+    ```java
+    if (!CalendarOrder.STATUS_PAID.equals(order.status)) {
+        // Update order
+    } else {
+        LOG.infof("Order already marked as PAID, skipping update");
+    }
+    ```
+    This prevents duplicate processing of webhook retries. YOU MUST implement this same pattern.
 
-// Pass to service:
-orderService.getOrder(orderId, userId, isAdmin);
-```
+*   **Email Job Enqueueing Pattern:** From existing code in WebhookResource:
+    ```java
+    DelayedJob emailJob = DelayedJob.createDelayedJob(
+        order.id.toString(),
+        DelayedJobQueue.EMAIL_ORDER_CONFIRMATION,
+        Instant.now() // Send immediately
+    );
+    ```
+    This is the EXACT pattern you should use in PaymentService.
 
-#### Tip 4: Testing Strategy
-- **Project Convention**: Uses Quarkus @QuarkusTest with in-memory H2 database (see pom.xml, quarkus-jdbc-h2 test dependency).
-- **Existing Tests**: Three test files already exist:
-  - `CalendarOrderTest.java` (entity tests)
-  - `CalendarOrderRepositoryTest.java` (repository tests)
-  - `OrderServiceTest.java` (service tests)
-- **Recommendation**: READ the existing `OrderServiceTest.java` file first to understand the project's testing patterns, then enhance it with tests for the new functionality (order number generation, tax/shipping placeholders, cancelOrder).
-- **Coverage Requirement**: JaCoCo is configured to enforce 70% coverage for model and repository packages (see pom.xml lines 318-346). Aim for >80% for OrderService.
+*   **CRITICAL WARNING - Payment Entity:** The task mentions a "Payment" entity from I1.T8, but **I don't see this entity in the codebase**. The CalendarOrder entity has payment-related fields (stripePaymentIntentId, stripeChargeId, paidAt) but **no separate Payment entity exists**.
+    *   **DECISION REQUIRED**: You need to either:
+        1. Create a new Payment entity (as the task specifies), OR
+        2. Continue using the embedded payment fields in CalendarOrder (current approach)
+    *   **RECOMMENDATION**: Based on the GraphQL schema comment "Payment details are embedded directly in the order entity", I recommend NOT creating a separate Payment entity. Instead, store payment data in the CalendarOrder fields. However, you should VERIFY this decision with the user or check if a Payment entity was supposed to be created in I1.T8 but wasn't.
 
-#### Tip 5: Transactional Annotations
-- **Pattern**: All OrderService methods that modify data MUST be annotated with `@Transactional` from `jakarta.transaction.Transactional`.
-- **Existing Usage**: The current OrderService already uses this pattern correctly. Follow the same approach.
-- **Propagation**: Do NOT nest @Transactional methods unless you understand propagation behavior. Stick to method-level annotations on public service methods.
+*   **Refund Handling - Stripe API Pattern:** For the `processRefund()` method and `charge.refunded` webhook, you'll need to use the Stripe SDK:
+    ```java
+    import com.stripe.model.Refund;
+    import com.stripe.param.RefundCreateParams;
 
-#### Warning 1: Status String vs Enum
-- **Inconsistency Detected**: The task description mentions "IN_PRODUCTION" but the codebase uses "PROCESSING" (see CalendarOrder.STATUS_PROCESSING constant).
-- **Action Required**: Use "PROCESSING" everywhere. Do NOT introduce "IN_PRODUCTION" as it will break the state machine.
+    // To CREATE a refund (in PaymentService.processRefund):
+    RefundCreateParams params = RefundCreateParams.builder()
+        .setPaymentIntent(paymentIntentId)
+        .setAmount(amountInCents) // optional, defaults to full refund
+        .setReason(RefundCreateParams.Reason.REQUESTED_BY_CUSTOMER)
+        .build();
+    Refund refund = Refund.create(params);
 
-#### Warning 2: Payment vs Order Entity Confusion
-- **Note from GraphQL Schema**: "Payment details are embedded directly in the order entity via Stripe-specific fields (stripePaymentIntentId, stripeChargeId, paidAt) rather than a separate Payment entity."
-- **Action**: Do NOT create a separate Payment entity for I3.T2. Payment information is stored directly in CalendarOrder fields.
-- **Clarification**: The task description mentions "Payment entities from I1.T8" but this appears to be a planning artifact. The actual implementation uses embedded payment fields in CalendarOrder.
+    // To HANDLE refund webhook (charge.refunded):
+    // Extract refund amount from webhook event data
+    // Update order notes with refund information
+    // Optionally update order status to REFUNDED (or keep as CANCELLED)
+    ```
 
-#### Warning 3: Order Item Complexity
-- **Task Description**: Mentions "OrderItem entities" but the current schema shows orders support single-item purchases via quantity field.
-- **GraphQL Schema Comment**: "Orders currently support single-item purchases (one calendar design with quantity field)."
-- **Action**: Do NOT create an OrderItem entity. The current design is simplified to one calendar per order with a quantity field. This is intentional for MVP scope.
-- **Rationale**: The architecture may evolve to support multi-item orders in future iterations, but I3.T2 should work with the current single-item design.
+*   **Testing Recommendation:** For integration tests, you should:
+    1. Mock the Stripe webhook signature validation (or use a test webhook secret)
+    2. Construct test webhook payloads with valid Stripe event JSON structure
+    3. POST to /api/webhooks/stripe with the test payload and signature
+    4. Verify order status changed to PAID
+    5. Verify email job was enqueued (query delayed_jobs table)
+    6. Test idempotency: send the same webhook twice, verify only one update occurs
+
+*   **Webhook Response Best Practice:** According to Stripe documentation:
+    - Return **200 OK** for all handled events (even unknown event types)
+    - Return **400 Bad Request** ONLY for signature validation failures
+    - Return **500 Internal Server Error** ONLY for unexpected exceptions
+    - Stripe will retry failed webhooks (non-200 responses) with exponential backoff
+    - Fast response times are important - database writes should complete in <500ms
+
+### Architecture Decisions & Critical Notes
+
+*   **Decision:** Based on the sequence diagram in the architecture docs, the flow uses **Stripe Checkout Sessions** (hosted payment pages), not direct PaymentIntents. The webhook should handle `checkout.session.completed`, not `payment_intent.succeeded`. The existing WebhookResource is handling the wrong event type. YOU MUST UPDATE IT.
+
+*   **Decision:** The architecture emphasizes **idempotent webhook processing** to handle Stripe's retry mechanism (Stripe will retry webhooks up to 3 days if they fail). Your implementation must check if the payment was already processed before updating the order. The existing WebhookResource already does this correctly - preserve this pattern.
+
+*   **Decision:** The architecture specifies that **email job enqueueing must happen within the same database transaction** as the payment confirmation to ensure consistency. If the transaction fails, the email won't be sent, which is correct (we don't want to send confirmation emails for failed payments). The existing WebhookResource already uses @Transactional - maintain this.
+
+*   **Decision:** The task asks for a separate `StripeWebhookController.java` file, but the existing codebase uses `WebhookResource.java`. For consistency with the project's naming convention (AuthResource, BootstrapResource, CalendarResource), you should KEEP the name as `WebhookResource.java` and update it rather than creating a new file with a different name.
 
 ### Final Recommendations
 
-1. **Read Existing Tests First**: Start by reading `/Users/tea/dev/VillageCompute/code/village-calendar/src/test/java/villagecompute/calendar/services/OrderServiceTest.java` to understand testing patterns before writing new tests.
+1. **REFACTOR, DON'T CREATE NEW:** Update the existing `WebhookResource.java` rather than creating a new `StripeWebhookController.java`. This avoids duplicate endpoints at the same path.
 
-2. **Enhance, Don't Replace**: The OrderService and OrderRepository are already functional. Your task is to ENHANCE them with missing features (order numbers, tax/shipping placeholders, cancel method), not rewrite from scratch.
+2. **CREATE PaymentService:** Extract the payment processing logic from WebhookResource into a new PaymentService. This improves separation of concerns and testability.
 
-3. **Follow Existing Patterns**: The codebase has strong conventions:
-   - Panache active record + repository hybrid pattern
-   - String constants for status (not enums)
-   - @Transactional on write methods
-   - Logging with jboss Logger
-   - BigDecimal for currency
-   - JSONB for complex objects (shippingAddress)
+3. **UPDATE EVENT TYPES:** Change from `payment_intent.succeeded` to `checkout.session.completed` to align with the architecture flow diagram.
 
-4. **Defer Stripe Refund Logic**: The `cancelOrder()` method should update status and notes but should NOT call Stripe API for refunds yet. That's I3.T3's responsibility (PaymentService).
+4. **ADD REFUND SUPPORT:** Implement `charge.refunded` webhook handling and a `processRefund()` method in PaymentService.
 
-5. **Use Existing Helper Methods**: CalendarOrder entity provides `markAsPaid()`, `markAsShipped()`, `cancel()`, `isTerminal()`. Use these instead of manually updating fields and calling persist().
+5. **DECISION ON PAYMENT ENTITY:** Determine whether to create a separate Payment entity or continue using embedded payment fields in CalendarOrder. Based on the GraphQL schema, I recommend the embedded approach (no separate entity).
+
+6. **USE EXISTING PATTERNS:** The current WebhookResource already demonstrates correct patterns for:
+   - Signature validation
+   - Idempotent processing
+   - Transactional integrity
+   - Email job enqueueing
+   Preserve these patterns in your refactored code.
+
+7. **INJECT StripeService:** Update WebhookResource to inject and use `StripeService.validateWebhookSignature()` instead of duplicating the validation code. This improves maintainability.
 
 ---
 
