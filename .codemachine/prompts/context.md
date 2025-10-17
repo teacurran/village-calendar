@@ -10,21 +10,17 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I1.T4",
+  "task_id": "I1.T5",
   "iteration_id": "I1",
   "iteration_goal": "Establish project infrastructure, define data models, create architectural artifacts, and implement foundational backend/frontend scaffolding",
-  "description": "Generate PlantUML entity-relationship diagram for the complete database schema. Include all entities: User, CalendarSession, Calendar, Event, CalendarTemplate, Order, OrderItem, Payment, DelayedJob, PageView, AnalyticsRollup. Show primary keys, foreign keys, key fields (not all columns), cardinalities (1:1, 1:N, N:M). Use PlantUML entity syntax with proper relationship notation. Ensure diagram matches data model overview from Plan Section 2.",
+  "description": "Generate PlantUML deployment diagram showing production infrastructure topology. Diagram must include: Cloudflare Edge Network (CDN, Tunnel, R2 storage), Kubernetes Cluster (k3s on Proxmox) with namespaces, Deployment nodes (calendar-api deployment with 2-10 replicas, calendar-worker deployment with 1-5 replicas), Kubernetes Service (load balancer), Observability pods (Jaeger, Prometheus), Database VM (PostgreSQL on separate Proxmox VM), External systems (Stripe API, OAuth Providers, Email Service), User devices (browser). Show network relationships and protocols (HTTPS, JDBC, S3 API, SMTP).",
   "agent_type_hint": "DiagrammingAgent",
-  "inputs": "Data model overview from Plan Section 2 \"Data Model Overview\", Entity descriptions with fields, relationships, and constraints",
-  "target_files": [
-    "docs/diagrams/database_erd.puml"
-  ],
+  "inputs": "Deployment architecture from Plan Section 3.9.3 \"Deployment Diagram\", Infrastructure stack from Plan Section 2",
+  "target_files": ["docs/diagrams/deployment_diagram.puml"],
   "input_files": [],
-  "deliverables": "PlantUML ERD file rendering correctly, Diagram shows all 11 entities with relationships, PNG export of diagram (docs/diagrams/database_erd.png)",
-  "acceptance_criteria": "PlantUML file validates and renders without errors, All entities from data model section included, Primary keys marked with <<PK>>, foreign keys with <<FK>>, Relationship cardinalities correctly shown (1:N, 1:1), Indexes and unique constraints annotated in diagram or comments",
-  "dependencies": [
-    "I1.T1"
-  ],
+  "deliverables": "PlantUML deployment diagram file rendering correctly, Diagram shows complete production topology with Cloudflare, k3s, external services, PNG export of diagram (docs/diagrams/deployment_diagram.png)",
+  "acceptance_criteria": "PlantUML file validates and renders without errors, Deployment nodes show replica counts and container details, Network relationships include protocol annotations (HTTPS, JDBC/5432, S3 API), Cloudflare integration clearly depicted (CDN, Tunnel ingress, R2 storage), Diagram matches deployment description in architecture plan",
+  "dependencies": ["I1.T1"],
   "parallelizable": true,
   "done": false
 }
@@ -36,85 +32,232 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### IMPORTANT NOTE: Architecture Documentation Location
+### Context: deployment-view (from 05_Operational_Architecture.md)
 
-**The architecture documentation files referenced in the manifests are NOT present in the repository.** The actual source of truth for the data model is:
+```markdown
+<!-- anchor: deployment-view -->
+### 3.9. Deployment View
 
-1. **Database migration scripts** in `migrations/src/main/resources/scripts/`
-2. **JPA entity models** in `src/main/java/villagecompute/calendar/data/models/`
+<!-- anchor: target-environment -->
+#### 3.9.1. Target Environment
 
-Based on my analysis of the codebase, I have identified the following **actual entities** that exist:
+**Infrastructure:**
 
-### Actual Database Schema (from migrations and JPA entities)
+- **Compute**: Self-hosted Kubernetes (k3s) on Proxmox virtualization platform
+- **Edge Services**: Cloudflare (CDN, DNS, DDoS protection, tunnel ingress, R2 storage)
+- **Database**: PostgreSQL 17 on dedicated VM (outside Kubernetes for stability)
+- **Observability**: Jaeger and Prometheus deployed as Kubernetes services
 
-**Existing tables (4 total):**
+**Rationale for Hybrid Approach:**
 
-1. **calendar_users** - OAuth authenticated users
-   - Primary Key: `id` (UUID)
-   - Fields: oauth_provider, oauth_subject, email, display_name, profile_image_url, last_login_at, is_admin, created, updated, version
-   - Unique Constraint: (oauth_provider, oauth_subject)
-   - Indexes: email, last_login_at, is_admin (partial, where is_admin = true)
-   - Relationships:
-     * One-to-Many → user_calendars (cascade ALL, orphanRemoval)
-     * One-to-Many → calendar_orders (cascade ALL, orphanRemoval)
+- **Cost Optimization**: K3s on owned hardware avoids cloud compute fees (significant for MVP budget)
+- **Cloudflare Integration**: Leverage Cloudflare's global edge network for DDoS protection and CDN (critical for public-facing app)
+- **Database Isolation**: PostgreSQL on VM (not in Kubernetes) prevents accidental deletion during cluster maintenance, simplifies backups
 
-2. **calendar_templates** - Reusable calendar designs
-   - Primary Key: `id` (UUID)
-   - Fields: name, description, thumbnail_url, is_active, is_featured, display_order, configuration (JSONB), preview_svg, created, updated, version
-   - Indexes: name, (is_active, display_order, name), (is_featured, is_active, display_order), configuration (GIN index)
-   - Relationships:
-     * One-to-Many → user_calendars
+<!-- anchor: deployment-strategy -->
+#### 3.9.2. Deployment Strategy
 
-3. **user_calendars** - User-created calendars
-   - Primary Key: `id` (UUID)
-   - Fields: user_id (FK), session_id, template_id (FK), name, year, is_public, configuration (JSONB), generated_svg, generated_pdf_url, created, updated, version
-   - Foreign Keys:
-     - user_id → calendar_users(id) ON DELETE CASCADE (optional/nullable - for guest sessions)
-     - template_id → calendar_templates(id) ON DELETE SET NULL
-   - Indexes: (user_id, year DESC), (session_id, updated DESC), template_id, (is_public, updated DESC)
-   - Relationships:
-     * Many-to-One → calendar_users (optional)
-     * Many-to-One → calendar_templates (optional)
-     * One-to-Many → calendar_orders (cascade ALL, orphanRemoval)
+**Continuous Deployment Pipeline (GitHub Actions):**
 
-4. **calendar_orders** - E-commerce orders
-   - Primary Key: `id` (UUID)
-   - Fields: user_id (FK), calendar_id (FK), quantity, unit_price, total_price, status, shipping_address (JSONB), stripe_payment_intent_id, stripe_charge_id, notes, paid_at, shipped_at, created, updated, version
-   - Foreign Keys:
-     - user_id → calendar_users(id) ON DELETE RESTRICT
-     - calendar_id → user_calendars(id) ON DELETE RESTRICT
-   - Indexes: (user_id, created DESC), (status, created DESC), calendar_id, stripe_payment_intent_id
-   - Relationships:
-     * Many-to-One → calendar_users (mandatory)
-     * Many-to-One → user_calendars (mandatory)
+1. **Trigger**: Git push to `main` branch or manual workflow dispatch
+2. **Build**:
+   - Compile Quarkus application (Maven `./mvnw package`)
+   - Build Vue.js frontend (Vite `npm run build`, bundled into Quarkus via Quinoa)
+   - Run unit tests (JUnit for backend, Vitest for frontend)
+   - Build Docker image (Quarkus native or JVM mode)
+   - Push image to Docker Hub (`villagecompute/calendar-api:${GIT_SHA}`)
+3. **Deploy**:
+   - Connect to k3s cluster via WireGuard VPN
+   - Apply Kubernetes manifests (Ansible playbook or `kubectl apply`)
+   - Update Deployment image tag (`kubectl set image deployment/calendar-api calendar-api=villagecompute/calendar-api:${GIT_SHA}`)
+   - Wait for rollout completion (`kubectl rollout status`)
+   - Run smoke tests (health check, sample GraphQL query)
+4. **Rollback**:
+   - If smoke tests fail: `kubectl rollout undo deployment/calendar-api`
+   - Notify #deploy-alerts Slack channel
 
-### Entities Mentioned in Task Description But NOT Implemented
+**Deployment Environments:**
 
-The task description mentions these entities which **do NOT exist** in the current codebase:
-- **CalendarSession** - No separate table; session_id is a field in user_calendars for guest tracking
-- **Event** - No separate table; events are stored in JSONB configuration field in user_calendars
-- **OrderItem** - No separate table; orders are single-item only currently (quantity field in calendar_orders)
-- **Payment** - No separate table; payment info is embedded in calendar_orders (stripe_payment_intent_id, stripe_charge_id, paid_at)
-- **DelayedJob** - Mentioned in architecture but not yet implemented in migrations
-- **PageView** - Analytics table mentioned but not yet implemented
-- **AnalyticsRollup** - Analytics table mentioned but not yet implemented
+- **Beta**: `calendar-beta.villagecompute.com` (Cloudflare Tunnel → k3s namespace `calendar-beta`)
+  - Purpose: Pre-production testing, early access features
+  - Data: Separate PostgreSQL database (copy of production schema, synthetic test data)
+  - Deployment: Automatic on merge to `beta` branch
+- **Production**: `calendar.villagecompute.com` (Cloudflare Tunnel → k3s namespace `calendar-prod`)
+  - Purpose: Live user traffic
+  - Data: Production PostgreSQL database
+  - Deployment: Manual approval required (GitHub Actions protected environment)
 
-### Data Model Summary
+**Rolling Update Strategy:**
 
-The **actual implemented data model** (MVP scope) consists of **4 entities** supporting:
-- **User authentication**: OAuth-based user accounts with admin flag
-- **Guest sessions**: Anonymous users can create calendars using session_id before authenticating
-- **Template system**: Admin-curated calendar templates with JSONB configuration
-- **Calendar creation**: Users (authenticated or guest) create calendars from templates
-- **E-commerce**: Single-item orders for printed calendars with Stripe integration
-- **JSONB flexibility**: Configuration stored as JSON for flexible schema evolution
+- **Max Surge**: 1 pod (allow N+1 pods during deployment for zero downtime)
+- **Max Unavailable**: 0 pods (ensure at least N pods always running)
+- **Health Checks**: New pod must pass readiness probe before old pod is terminated
+- **Rollout Timeline**: Stagger pod updates by 30 seconds (gradual traffic shift)
 
-**Key architectural decisions observed:**
-1. **Simplified MVP schema**: Focus on core e-commerce flow, defer advanced features
-2. **Embedded data patterns**: Events in calendar config JSONB, payment data in orders table
-3. **Guest session support**: session_id field enables anonymous users without separate table
-4. **JSONB for flexibility**: Avoid premature normalization, use JSONB for evolving schemas
-5. **Optimistic locking**: All tables have version field for concurrent update protection
+**Database Migration Strategy:**
+
+- **Timing**: Migrations run before application deployment (Kubernetes init container or separate job)
+- **Locking**: PostgreSQL advisory locks prevent concurrent migrations
+- **Backward Compatibility**: Schema changes must support N and N-1 application versions (e.g., add column with default value, deploy app, then remove old column in next release)
+- **Rollback**: Down migrations supported in dev/staging, not used in production (forward-only migrations with feature flags)
+
+<!-- anchor: deployment-diagram -->
+#### 3.9.3. Deployment Diagram
+
+**Description:**
+
+This diagram illustrates the production deployment topology, showing how containers are distributed across Kubernetes nodes and how external services integrate via Cloudflare edge.
+
+**Diagram:**
+
+~~~plantuml
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Deployment Diagram - Village Calendar (Production)
+
+Deployment_Node(cloudflare_edge, "Cloudflare Edge Network", "Global CDN") {
+  Container(cdn, "CDN Cache", "Cloudflare CDN", "Caches static assets, calendar previews")
+  Container(tunnel, "Cloudflare Tunnel", "cloudflared", "Secure ingress to k3s cluster")
+  ContainerDb(r2, "R2 Object Storage", "Cloudflare R2", "Stores PDFs, images")
+}
+
+Deployment_Node(k3s_cluster, "Kubernetes Cluster (k3s on Proxmox)", "On-Premises") {
+
+  Deployment_Node(namespace_prod, "Namespace: calendar-prod", "Kubernetes Namespace") {
+
+    Deployment_Node(api_deployment, "Deployment: calendar-api", "2-10 replicas") {
+      Container(api_pod1, "API Pod 1", "Quarkus + Vue SPA", "Handles GraphQL/REST requests")
+      Container(api_pod2, "API Pod 2", "Quarkus + Vue SPA", "Handles GraphQL/REST requests")
+    }
+
+    Deployment_Node(worker_deployment, "Deployment: calendar-worker", "1-5 replicas") {
+      Container(worker_pod1, "Worker Pod 1", "Quarkus", "Processes DelayedJob queue")
+    }
+
+    Container(service_lb, "Service: calendar-api-svc", "Kubernetes ClusterIP", "Load balances across API pods")
+
+    Deployment_Node(observability, "Observability Stack", "Kubernetes") {
+      Container(jaeger_pod, "Jaeger", "All-in-One", "Trace collector & UI")
+      Container(prometheus_pod, "Prometheus", "Server", "Metrics scraper & storage")
+    }
+  }
+}
+
+Deployment_Node(database_vm, "Database VM", "Proxmox VM (Ubuntu)") {
+  ContainerDb(postgres, "PostgreSQL 17", "PostgreSQL + PostGIS", "Primary data store")
+}
+
+System_Ext(stripe_api, "Stripe API", "Payment processing")
+System_Ext(oauth_providers, "OAuth Providers", "Google, Facebook, Apple")
+System_Ext(email_service, "Email Service", "GoogleWorkspace SMTP")
+
+Deployment_Node(user_device, "User Device", "Browser") {
+  Container(browser, "Web Browser", "Chrome/Firefox/Safari", "Runs Vue.js SPA")
+}
+
+Rel(browser, cdn, "Loads static assets", "HTTPS")
+Rel(browser, tunnel, "API requests", "HTTPS/GraphQL")
+
+Rel(tunnel, service_lb, "Forwards requests", "HTTP/1.1")
+Rel(service_lb, api_pod1, "Routes traffic", "HTTP")
+Rel(service_lb, api_pod2, "Routes traffic", "HTTP")
+
+Rel(api_pod1, postgres, "Reads/writes data", "JDBC/5432")
+Rel(api_pod2, postgres, "Reads/writes data", "JDBC/5432")
+Rel(worker_pod1, postgres, "Polls job queue", "JDBC/5432")
+
+Rel(api_pod1, r2, "Uploads PDFs", "S3 API/HTTPS")
+Rel(worker_pod1, r2, "Stores generated PDFs", "S3 API/HTTPS")
+Rel(cdn, r2, "Fetches cached content", "Internal")
+
+Rel(api_pod1, stripe_api, "Creates checkout sessions", "HTTPS/REST")
+Rel(api_pod2, stripe_api, "Creates checkout sessions", "HTTPS/REST")
+Rel(api_pod1, oauth_providers, "Validates OAuth tokens", "HTTPS/OIDC")
+Rel(api_pod1, email_service, "Sends emails", "SMTP/587/TLS")
+Rel(worker_pod1, email_service, "Sends async emails", "SMTP/587/TLS")
+
+Rel(api_pod1, jaeger_pod, "Sends traces", "gRPC/4317")
+Rel(worker_pod1, jaeger_pod, "Sends traces", "gRPC/4317")
+Rel(prometheus_pod, api_pod1, "Scrapes /q/metrics", "HTTP/9090")
+Rel(prometheus_pod, worker_pod1, "Scrapes /q/metrics", "HTTP/9090")
+
+@enduml
+~~~
+
+**Deployment Configuration Details:**
+
+**Resource Allocation (Per Pod):**
+
+| Container | CPU Request | CPU Limit | Memory Request | Memory Limit |
+|-----------|-------------|-----------|----------------|--------------|
+| API Pod | 500m | 2000m | 512Mi | 2Gi |
+| Worker Pod | 1000m | 2000m | 1Gi | 4Gi (PDF rendering) |
+| Jaeger | 200m | 500m | 256Mi | 1Gi |
+| Prometheus | 500m | 1000m | 1Gi | 4Gi |
+```
+
+### Context: artifact-deployment-diagram (from 01_Plan_Overview_and_Setup.md)
+
+```markdown
+<!-- anchor: artifact-deployment-diagram -->
+### 3. Deployment Diagram (PlantUML)
+- **Purpose**: Show Kubernetes topology, Cloudflare integration, external services
+- **Format**: PlantUML (C4 Deployment diagram)
+- **Location**: `docs/diagrams/deployment_diagram.puml`
+- **Created In**: Iteration 1, Task I1.T5
+- **Content**: k3s cluster, API/Worker pods, PostgreSQL VM, Cloudflare edge, Stripe/OAuth providers
+```
+
+### Context: technology-stack (from 01_Plan_Overview_and_Setup.md)
+
+```markdown
+<!-- anchor: technology-stack -->
+### Technology Stack
+
+**Backend:**
+- Framework: Quarkus 3.26.2
+- Runtime: Java 21 (OpenJDK LTS)
+- ORM: Hibernate ORM with Panache (active record pattern)
+- Database: PostgreSQL 17+ with PostGIS extensions
+- API: GraphQL (SmallRye GraphQL) primary, REST (JAX-RS) for webhooks/health checks
+- Job Processing: Custom DelayedJob + Vert.x EventBus, Quarkus Scheduler
+- Authentication: Quarkus OIDC (OAuth 2.0 / OpenID Connect)
+- Observability: OpenTelemetry → Jaeger (tracing), Micrometer → Prometheus (metrics)
+- PDF Generation: Apache Batik 1.17 (SVG to PDF)
+- Astronomical Calcs: SunCalc (port), Proj4J 4.1
+
+**Frontend:**
+- Framework: Vue 3.5+ (Composition API)
+- UI Library: PrimeVue 4.2+ (Aura theme)
+- Icons: PrimeIcons 7.0+
+- CSS: TailwindCSS 4.0+
+- State Management: Pinia
+- Routing: Vue Router 4.5+
+- I18n: Vue I18n (future localization)
+- Build Tool: Vite 6.1+
+- TypeScript: ~5.7.3
+- Integration: Quinoa plugin (Quarkus-Vue seamless integration)
+
+**Infrastructure:**
+- Container Runtime: Docker
+- Orchestration: Kubernetes (k3s on Proxmox)
+- IaC: Terraform 1.7.4 (Cloudflare, AWS resources)
+- Config Management: Ansible
+- Database Migrations: MyBatis Migrations
+- CDN/Edge: Cloudflare CDN, DNS, DDoS protection
+- Tunnel: Cloudflare Tunnel (secure k3s ingress)
+- VPN: WireGuard (CI/CD access)
+- Object Storage: Cloudflare R2 (S3-compatible)
+- Email: GoogleWorkspace SMTP (migrate to AWS SES if needed)
+- CI/CD: GitHub Actions
+
+**External Services:**
+- Payment Processing: Stripe (Checkout Sessions, webhooks)
+- OAuth Providers: Google, Facebook, Apple
+```
 
 ---
 
@@ -124,185 +267,65 @@ The following analysis is based on my direct review of the current codebase. Use
 
 ### Relevant Existing Code
 
-*   **File:** `migrations/src/main/resources/scripts/001_initial_schema.sql`
-    *   **Summary:** This is the master database schema definition. It creates all 4 core tables (calendar_users, calendar_templates, user_calendars, calendar_orders) with complete column definitions, foreign keys, indexes, and table comments.
-    *   **Recommendation:** You MUST use this file as the authoritative source for the database schema. The ERD should accurately reflect ALL columns, data types, constraints, and relationships defined here.
-    *   **Key Details:**
-        - All tables use UUID primary keys with `uuid_generate_v4()`
-        - All tables have standard timestamp fields: created, updated, version (for optimistic locking)
-        - JSONB columns: configuration (templates, calendars), shipping_address (orders)
-        - Foreign key ON DELETE behaviors:
-          * user_calendars.user_id → CASCADE (delete calendars when user deleted)
-          * user_calendars.template_id → SET NULL (preserve calendar if template deleted)
-          * calendar_orders.user_id → RESTRICT (prevent user deletion if orders exist)
-          * calendar_orders.calendar_id → RESTRICT (prevent calendar deletion if orders exist)
-        - Composite indexes: (user_id, year DESC), (user_id, created DESC)
-        - Partial index: is_admin WHERE is_admin = true
-        - GIN index: configuration (for JSONB queries)
-
-*   **File:** `migrations/src/main/resources/scripts/002_add_admin_field.sql`
-    *   **Summary:** Migration that adds the is_admin field to calendar_users table with partial index. This was added after the initial schema.
-    *   **Recommendation:** The ERD MUST reflect the is_admin field as part of calendar_users, since this migration has been applied. Include a note that this was added in migration 002.
-
-*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarUser.java`
-    *   **Summary:** JPA entity for calendar_users table. Uses Panache active record pattern. Defines relationships to UserCalendar and CalendarOrder.
-    *   **Recommendation:** Cross-reference JPA annotations to ensure ERD relationship cardinalities match. Note the @OneToMany relationships with cascade ALL and orphanRemoval.
-    *   **Key Details:**
-        - @OneToMany to calendars (UserCalendar.user) with cascade ALL, orphanRemoval true
-        - @OneToMany to orders (CalendarOrder.user) with cascade ALL, orphanRemoval true
-        - Validation: @Email on email, @Size constraints on varchar fields
-        - Static finder methods: findByOAuthSubject, findByEmail, findActiveUsersSince, hasAdminUsers, findAdminUsers
-
-*   **File:** `src/main/java/villagecompute/calendar/data/models/UserCalendar.java`
-    *   **Summary:** JPA entity for user_calendars table. Supports both authenticated users (user_id) and guest sessions (session_id). Links to CalendarTemplate and has CalendarOrders.
-    *   **Recommendation:** The ERD MUST show user_id as optional (nullable) and session_id as alternative identifier for anonymous users. Template relationship is optional (ON DELETE SET NULL).
-    *   **Key Details:**
-        - @ManyToOne to user (optional=true, can be null for guest sessions)
-        - @ManyToOne to template (optional=true, ON DELETE SET NULL)
-        - @OneToMany to orders with cascade ALL, orphanRemoval true
-        - configuration field is JsonNode (JSONB column)
-        - Static finder methods: findBySession, findByUserAndYear, findByUser, findPublicById, findPublicCalendars
-        - Note: session_id field enables guest users without separate CalendarSession table
-
-*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarTemplate.java`
-    *   **Summary:** JPA entity for calendar_templates table. Templates are admin-curated reusable calendar designs with JSONB configuration.
-    *   **Recommendation:** The ERD should show CalendarTemplate as a standalone entity with a one-to-many relationship to UserCalendar. Note the JSONB configuration field and boolean flags.
-    *   **Key Details:**
-        - @OneToMany to userCalendars (UserCalendar.template)
-        - configuration field is JsonNode (JSONB column, NOT NULL)
-        - Boolean flags: isActive, isFeatured
-        - display_order INTEGER for template ordering
-        - Static finder methods: findByName, findActiveTemplates, findActive, findFeatured
-
-*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarOrder.java`
-    *   **Summary:** JPA entity for calendar_orders table. Represents e-commerce orders with Stripe payment integration. Note: No separate Payment or OrderItem tables - data is embedded.
-    *   **Recommendation:** The ERD should show mandatory relationships to both CalendarUser and UserCalendar. Note the ON DELETE RESTRICT constraints to prevent data loss. Show Stripe payment fields as embedded data.
-    *   **Key Details:**
-        - @ManyToOne to user (mandatory, optional=false, ON DELETE RESTRICT)
-        - @ManyToOne to calendar (mandatory, optional=false, ON DELETE RESTRICT)
-        - shippingAddress field is JsonNode (JSONB column)
-        - BigDecimal for monetary values (unit_price, total_price with precision 10, scale 2)
-        - Status constants: PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED
-        - Stripe integration fields: stripe_payment_intent_id, stripe_charge_id
-        - Timestamp fields: paid_at, shipped_at (nullable)
-        - Static finder methods: findByUser, findByStatusOrderByCreatedDesc, findByCalendar, findByStripePaymentIntent, findRecentOrders
-        - Helper methods: markAsPaid(), markAsShipped(), cancel(), isTerminal()
-
 *   **File:** `docs/diagrams/component_diagram.puml`
-    *   **Summary:** Existing PlantUML component diagram showing the C4 Level 3 internal architecture of the Quarkus API. Uses C4-PlantUML standard library.
-    *   **Recommendation:** You SHOULD follow the same PlantUML styling and structure conventions used in this diagram. Use similar header comments and layout directives for consistency.
-    *   **Key Details:**
-        - Uses `!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml`
-        - Has a descriptive title
-        - Uses LAYOUT_WITH_LEGEND() directive
-        - Well-organized with Container_Boundary groupings for visual clarity
+    *   **Summary:** This file contains the successfully completed C4 Component diagram (Task I1.T3) showing the internal architecture of the Quarkus API application with all services, repositories, and integration components.
+    *   **Recommendation:** You MUST use the EXACT same PlantUML conventions and C4 modeling style from this file. It uses the C4-PlantUML standard library (`!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml`) and follows consistent component naming (e.g., `Component(id, "Name", "Technology", "Description")`).
+    *   **Key Pattern:** The diagram uses `@startuml component_diagram` as the start tag and `@enduml` as the end tag. You MUST follow this exact pattern but change "component_diagram" to "deployment_diagram".
 
-*   **File:** `docs/diagrams/data-model.mmd`
-    *   **Summary:** Existing Mermaid diagram file showing entity relationships. This is an alternative format (Mermaid, not PlantUML).
-    *   **Recommendation:** You can review this for entity understanding, but you MUST create a NEW PlantUML format file, NOT Mermaid. The task specifically requires PlantUML syntax.
+*   **File:** `docs/diagrams/database_erd.puml`
+    *   **Summary:** This file contains the successfully completed database ERD (Task I1.T4) showing all database entities and relationships for the MVP implementation.
+    *   **Recommendation:** This file demonstrates the project's PlantUML style conventions. Note the use of `skinparam` for styling, detailed entity definitions with field types, and comprehensive legends explaining the design.
+    *   **Key Pattern:** The ERD includes a detailed `legend bottom` section that explains the schema patterns. Your deployment diagram should also include a legend explaining the deployment topology and infrastructure choices.
+
+*   **File:** `k8s/beta/deployment.yaml`
+    *   **Summary:** This file contains the actual Kubernetes deployment manifest for the beta environment, showing the real-world configuration with replicas, health checks, resource limits, and all environment variables.
+    *   **Recommendation:** You MUST reference this file to ensure the deployment diagram accurately reflects the ACTUAL implementation. The diagram shows 2 replicas in beta (line 20), ports on 8030 (line 47), and all the actual integrations (OAuth, Stripe, R2, database).
+    *   **Key Detail:** The beta deployment uses `namespace: calendar-beta` (line 14), image `teacurran/village-calendar:beta-latest` (line 44), and has specific resource requests (memory: 512Mi, cpu: 500m) and limits (memory: 1Gi, cpu: 1000m) defined in lines 207-213.
+
+*   **File:** `Dockerfile`
+    *   **Summary:** This multi-stage Dockerfile builds the Quarkus application with integrated Vue.js frontend using Quinoa, creating a JRE-based runtime image.
+    *   **Recommendation:** The deployment diagram should reflect that the API pods run "Quarkus + Vue SPA" as a single container (not separate frontend/backend containers), built from this Dockerfile and exposed on port 8030 (line 59).
+    *   **Key Detail:** The container runs as a non-root user `quarkus` (lines 47, 56) on Alpine Linux with Java 21 JRE (line 42), which demonstrates security best practices you should note in the diagram annotations.
+
+*   **File:** `docs/DEPLOYMENT.md`
+    *   **Summary:** This comprehensive deployment runbook documents the actual deployment procedures, infrastructure details, and operational practices for the Village Calendar service.
+    *   **Recommendation:** Use this document to verify infrastructure details like database host (`10.50.0.10`), namespace names (`calendar-beta`, future `calendar-prod`), and external service integrations. The diagram MUST align with the documented infrastructure.
+    *   **Key Detail:** The runbook confirms beta URL `https://beta.villagecompute.com/calendar/*` (line 24), PostgreSQL database name `village_calendar_beta` (line 25), Cloudflare R2 bucket name `village-calendar-beta` (line 88), and Stripe test keys usage in beta (line 94).
 
 ### Implementation Tips & Notes
 
-*   **Tip:** For PlantUML ERD diagrams, use the standard entity syntax with proper stereotypes:
-    ```
-    entity "table_name" as alias {
-      * <<PK>> column_name : TYPE
-      --
-      * <<FK>> fk_column : TYPE
-      column_name : TYPE
-      column_name : TYPE
-      ..
-      <<index>> index_name
-    }
-    ```
+*   **Tip:** The architecture document at `.codemachine/artifacts/architecture/05_Operational_Architecture.md` (lines 653-727) contains a COMPLETE PlantUML deployment diagram example. You SHOULD use this as your PRIMARY reference and starting template. It already has all the correct structure and relationships defined.
 
-*   **Tip:** Show relationships using proper PlantUML cardinality notation:
-    - One-to-many: `EntityA ||--o{ EntityB : "relationship_name"`
-    - One-to-one: `EntityA ||--|| EntityB : "relationship_name"`
-    - Many-to-one: `EntityB }o--|| EntityA : "relationship_name"`
-    - Optional many-to-one: `EntityB }o..o| EntityA : "relationship_name"` (dotted line for nullable FK)
+*   **Note:** The existing PlantUML diagrams (component_diagram.puml and database_erd.puml) both successfully use the C4 model standard library. Your deployment diagram MUST use `!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml` to maintain consistency.
 
-*   **Note:** The task description mentions 11 entities from a theoretical plan, but the current codebase only has 4 tables implemented in the MVP scope. You MUST create the ERD based on the **actual implemented schema**, not the theoretical 11-entity model. The 4 entities are:
-    1. calendar_users
-    2. calendar_templates
-    3. user_calendars
-    4. calendar_orders
+*   **Important Pattern:** Both existing diagrams use descriptive titles and legends. Your diagram MUST include:
+    - A clear title: `title Deployment Diagram - Village Calendar (Production)`
+    - A legend explaining the hybrid infrastructure approach (k3s on Proxmox + Cloudflare edge)
+    - Annotations on resource allocations (API pods: 512Mi-2Gi memory, 500m-2000m CPU)
 
-*   **Critical:** Document the **reality of what exists**, not what was planned. Add a diagram title and notes section explaining that this is the MVP schema (4 entities) and that additional entities (DelayedJob, PageView, AnalyticsRollup, etc.) are planned for future iterations.
+*   **Critical Detail:** The architecture specifies TWO separate deployments within the k3s cluster:
+    1. `calendar-api` deployment (2-10 replicas, stateless, handles HTTP/GraphQL requests)
+    2. `calendar-worker` deployment (1-5 replicas, processes DelayedJob queue for PDF generation)
 
-*   **Note:** All tables use optimistic locking (version BIGINT field). You SHOULD include this field in the ERD and add a note explaining optimistic concurrency control.
+    You MUST show both deployments as separate `Deployment_Node` blocks in the diagram, not just the API.
 
-*   **Note:** JSONB columns (configuration, shipping_address) are a key architectural feature. Add annotations or notes in the ERD to highlight these flexible schema fields and their purpose:
-    - calendar_templates.configuration: Template design config (colors, layout, features)
-    - user_calendars.configuration: User-specific calendar config and embedded events
-    - calendar_orders.shipping_address: Customer shipping details
+*   **Warning:** The database is NOT running in Kubernetes. It's a PostgreSQL 17 instance on a SEPARATE Proxmox VM (as noted in line 588 of the architecture doc: "Database: PostgreSQL 17 on dedicated VM (outside Kubernetes for stability)"). Your diagram MUST show this as a separate `Deployment_Node(database_vm, "Database VM", "Proxmox VM (Ubuntu)")` OUTSIDE the k3s_cluster node.
 
-*   **Warning:** The user_calendars table has TWO ways to identify ownership:
-    - **user_id**: For authenticated users (nullable FK to calendar_users)
-    - **session_id**: For anonymous guest users (VARCHAR, no FK)
+*   **Protocol Annotations:** The acceptance criteria requires "Network relationships include protocol annotations (HTTPS, JDBC/5432, S3 API)". The existing example diagram (lines 701-725) shows the correct pattern using `Rel()` statements with three parameters: source, target, description with protocol (e.g., `Rel(api_pod1, postgres, "Reads/writes data", "JDBC/5432")`). You MUST follow this exact pattern.
 
-    The ERD should clearly show user_id as optional/nullable with a note about guest session support. This is a critical architectural pattern.
+*   **Observability Stack:** The diagram MUST show Jaeger and Prometheus as separate containers within the `namespace_prod` deployment node (see lines 682-685 in the architecture example). These pods collect traces and metrics from the API and worker pods via gRPC (port 4317 for Jaeger) and HTTP (port 9090 for Prometheus scraping).
 
-*   **Warning:** Foreign key ON DELETE behaviors are critical for data integrity:
-    - user_calendars.user_id: **CASCADE** - If user deleted, cascade delete their calendars
-    - user_calendars.template_id: **SET NULL** - If template deleted, keep calendar but clear template reference
-    - calendar_orders.user_id: **RESTRICT** - Prevent deletion of users who have orders
-    - calendar_orders.calendar_id: **RESTRICT** - Prevent deletion of calendars that have orders
+*   **Cloudflare R2 Storage:** The diagram MUST show R2 as a `ContainerDb(r2, "R2 Object Storage", "Cloudflare R2", "Stores PDFs, images")` within the Cloudflare Edge Network node. Both API pods AND worker pods interact with R2 using the S3 API over HTTPS (see lines 712-714).
 
-    Add annotations or notes in the ERD showing these ON DELETE behaviors.
+*   **Resource Constraints:** The architecture document specifies exact resource allocations in a table (lines 244-252). While you don't need to show these in the main diagram, you SHOULD add annotations or a note explaining that API pods request 512Mi memory and can scale up to 2Gi under load, while worker pods need more memory (1Gi-4Gi) for PDF rendering.
 
-*   **Best Practice:** Include index annotations, especially for:
-    - Composite indexes: (user_id, year DESC), (user_id, created DESC), (status, created DESC)
-    - Partial indexes: is_admin WHERE is_admin = true
-    - GIN indexes: configuration (JSONB)
-    - Simple indexes: email, last_login_at, session_id, template_id, calendar_id, stripe_payment_intent_id
+*   **File Location:** The task specifies the output file MUST be at `docs/diagrams/deployment_diagram.puml` (already verified from the plan manifest). After creating the diagram, you SHOULD generate a PNG export using PlantUML to `docs/diagrams/deployment_diagram.png` for documentation purposes.
 
-*   **Best Practice:** Show unique constraints clearly:
-    - calendar_users: UNIQUE (oauth_provider, oauth_subject) - Ensures one account per OAuth identity
+*   **Validation:** Before completing the task, you MUST validate the PlantUML syntax by running it through a PlantUML renderer or IDE plugin. The diagram must render without errors. Common issues to watch for:
+    - Missing closing braces `}` for deployment nodes
+    - Incorrect relationship syntax (should be `Rel(source, target, "description", "protocol")`)
+    - Mismatched component IDs in relationships (e.g., referencing `api_pod` when you defined `api_pod1`)
 
-*   **Best Practice:** After creating the .puml file, you should generate the PNG export using PlantUML. The PNG should be saved to `docs/diagrams/database_erd.png` as specified in the deliverables. You can use the PlantUML CLI or an online renderer.
+*   **Beta vs Production:** While the architectural diagram shows the "Production" environment, the actual implemented configuration in `k8s/beta/` is for beta. The diagram structure is identical, but you should note in comments or legend that both environments use the same topology, with beta having `calendar-beta` namespace and production having `calendar-prod`.
 
-*   **Important:** Add a legend or notes section to the diagram explaining:
-    1. This is the MVP schema (4 entities)
-    2. Additional entities planned for future iterations (DelayedJob, PageView, AnalyticsRollup, etc.)
-    3. JSONB columns used for flexible schema evolution
-    4. Guest session support via session_id field (no separate CalendarSession table)
-    5. Events embedded in user_calendars.configuration (no separate Event table)
-    6. Payment data embedded in calendar_orders (no separate Payment table)
-    7. Single-item orders (no separate OrderItem table, quantity field in calendar_orders)
-
-*   **Tip:** Use PlantUML's `note` syntax to add important annotations:
-    ```
-    note right of user_calendars
-      Guest sessions: user_id can be NULL,
-      session_id identifies anonymous users
-    end note
-    ```
-
-*   **Tip:** Use color coding to visually distinguish table types:
-    - Core entities (calendar_users, user_calendars)
-    - Configuration entities (calendar_templates)
-    - Transactional entities (calendar_orders)
-
-### Critical Clarification: MVP Schema vs. Planned Schema
-
-**YOU MUST CREATE AN ERD FOR THE 4 ACTUAL TABLES, NOT 11 HYPOTHETICAL TABLES.**
-
-The task description appears to be based on a planning document that envisioned 11 entities for the complete system, but the actual MVP implementation only has 4 tables. Your ERD should document the **reality of the codebase as it exists today**.
-
-**Actual Implementation (4 tables):**
-1. ✅ calendar_users (corresponds to "User" in plan)
-2. ✅ calendar_templates (corresponds to "CalendarTemplate" in plan)
-3. ✅ user_calendars (corresponds to "Calendar" in plan, with embedded "Event" and "CalendarSession" concepts)
-4. ✅ calendar_orders (corresponds to "Order" in plan, with embedded "Payment" and "OrderItem" concepts)
-
-**Not Yet Implemented (7 entities from plan):**
-- ❌ CalendarSession (concept exists as session_id field in user_calendars)
-- ❌ Event (concept exists as JSONB array in user_calendars.configuration)
-- ❌ OrderItem (concept exists as quantity field in calendar_orders)
-- ❌ Payment (concept exists as Stripe fields in calendar_orders)
-- ❌ DelayedJob (planned for async job queue)
-- ❌ PageView (planned for analytics)
-- ❌ AnalyticsRollup (planned for analytics)
-
-**Your task:** Create an accurate ERD showing the 4 implemented tables, with clear notes explaining the MVP scope and architectural decisions (embedded data patterns, JSONB flexibility, guest session support).
+*   **Port Numbers:** The beta deployment actually uses port 8030 (not 8080 as shown in the architecture example). You should use port 8030 in your diagram to match the actual implementation, or add a note that production will use standard port 8080.

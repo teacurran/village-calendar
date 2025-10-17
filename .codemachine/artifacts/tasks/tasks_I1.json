@@ -72,7 +72,7 @@
     "acceptance_criteria": "PlantUML file validates and renders without errors, Deployment nodes show replica counts and container details, Network relationships include protocol annotations (HTTPS, JDBC/5432, S3 API), Cloudflare integration clearly depicted (CDN, Tunnel ingress, R2 storage), Diagram matches deployment description in architecture plan",
     "dependencies": ["I1.T1"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T6",

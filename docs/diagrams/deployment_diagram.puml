@@ -1,0 +1,171 @@
+@startuml deployment_diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Deployment Diagram - Village Calendar (Production)
+
+' ============================================================================
+' CLOUDFLARE EDGE NETWORK
+' ============================================================================
+
+Deployment_Node(cloudflare_edge, "Cloudflare Edge Network", "Global CDN") {
+  Container(cdn, "CDN Cache", "Cloudflare CDN", "Caches static assets (JS, CSS, images), calendar preview images")
+  Container(tunnel, "Cloudflare Tunnel", "cloudflared", "Secure ingress to k3s cluster (replaces traditional load balancer)")
+  ContainerDb(r2, "R2 Object Storage", "Cloudflare R2 (S3-compatible)", "Stores generated PDFs, uploaded images, user assets")
+}
+
+' ============================================================================
+' KUBERNETES CLUSTER (K3S ON PROXMOX)
+' ============================================================================
+
+Deployment_Node(k3s_cluster, "Kubernetes Cluster", "k3s on Proxmox (On-Premises)") {
+
+  Deployment_Node(namespace_prod, "Namespace: calendar-prod", "Kubernetes Namespace (production environment)") {
+
+    ' API Deployment with multiple replicas
+    Deployment_Node(api_deployment, "Deployment: calendar-api", "2-10 replicas (auto-scaling based on CPU)") {
+      Container(api_pod1, "API Pod 1", "Quarkus 3.26 + Vue 3.5 SPA", "Handles GraphQL/REST requests\nPort: 8030\nResources: 512Mi-2Gi RAM, 500m-2000m CPU")
+      Container(api_pod2, "API Pod 2", "Quarkus 3.26 + Vue 3.5 SPA", "Handles GraphQL/REST requests\nPort: 8030\nResources: 512Mi-2Gi RAM, 500m-2000m CPU")
+    }
+
+    ' Worker Deployment for background jobs
+    Deployment_Node(worker_deployment, "Deployment: calendar-worker", "1-5 replicas (scales with job queue depth)") {
+      Container(worker_pod1, "Worker Pod 1", "Quarkus 3.26 (Background Jobs)", "Processes DelayedJob queue\nPDF generation, email sending\nResources: 1Gi-4Gi RAM, 1000m-2000m CPU")
+    }
+
+    ' Kubernetes Service (Internal Load Balancer)
+    Container(service_lb, "Service: calendar-api-svc", "Kubernetes ClusterIP Service", "Internal load balancer (port 8030)\nRoutes traffic across API pod replicas")
+
+    ' Observability Stack
+    Deployment_Node(observability, "Observability Stack", "Monitoring & Tracing") {
+      Container(jaeger_pod, "Jaeger", "All-in-One (v1.50+)", "OpenTelemetry trace collector & UI\nPort: 4317 (gRPC), 16686 (UI)\nResources: 256Mi-1Gi RAM, 200m-500m CPU")
+      Container(prometheus_pod, "Prometheus", "Server (v2.48+)", "Metrics scraper & TSDB\nScrapes /q/metrics endpoint\nPort: 9090\nResources: 1Gi-4Gi RAM, 500m-1000m CPU")
+    }
+  }
+}
+
+' ============================================================================
+' DATABASE VM (OUTSIDE KUBERNETES)
+' ============================================================================
+
+Deployment_Node(database_vm, "Database VM", "Proxmox VM (Ubuntu 22.04)") {
+  ContainerDb(postgres, "PostgreSQL 17", "PostgreSQL 17 + PostGIS 3.4", "Primary data store\nHost: 10.50.0.10\nPort: 5432\nDatabase: village_calendar_prod\nIsolated from k8s for stability & backup safety")
+}
+
+' ============================================================================
+' EXTERNAL SERVICES
+' ============================================================================
+
+System_Ext(stripe_api, "Stripe API", "Payment processing (checkout sessions, webhooks)")
+System_Ext(oauth_providers, "OAuth Providers", "Google, Facebook, Apple (OpenID Connect)")
+System_Ext(email_service, "Email Service", "GoogleWorkspace SMTP (SMTP/587/TLS)")
+
+' ============================================================================
+' USER DEVICES
+' ============================================================================
+
+Deployment_Node(user_device, "User Device", "End-User Browser") {
+  Container(browser, "Web Browser", "Chrome/Firefox/Safari", "Runs Vue.js 3.5 SPA\nAccesses calendar.villagecompute.com")
+}
+
+' ============================================================================
+' RELATIONSHIPS - USER TO CLOUDFLARE EDGE
+' ============================================================================
+
+Rel(browser, cdn, "Loads static assets (JS, CSS, images)", "HTTPS/443")
+Rel(browser, tunnel, "GraphQL/REST API requests", "HTTPS/443")
+
+' ============================================================================
+' RELATIONSHIPS - CLOUDFLARE TO KUBERNETES
+' ============================================================================
+
+Rel(tunnel, service_lb, "Forwards authenticated requests", "HTTP/8030")
+Rel(service_lb, api_pod1, "Routes traffic (round-robin)", "HTTP/8030")
+Rel(service_lb, api_pod2, "Routes traffic (round-robin)", "HTTP/8030")
+
+' ============================================================================
+' RELATIONSHIPS - PODS TO DATABASE
+' ============================================================================
+
+Rel(api_pod1, postgres, "Reads/writes data (Hibernate ORM)", "JDBC/5432")
+Rel(api_pod2, postgres, "Reads/writes data (Hibernate ORM)", "JDBC/5432")
+Rel(worker_pod1, postgres, "Polls DelayedJob queue, writes results", "JDBC/5432")
+
+' ============================================================================
+' RELATIONSHIPS - PODS TO R2 OBJECT STORAGE
+' ============================================================================
+
+Rel(api_pod1, r2, "Uploads user images, PDFs", "S3 API/HTTPS")
+Rel(api_pod2, r2, "Uploads user images, PDFs", "S3 API/HTTPS")
+Rel(worker_pod1, r2, "Stores generated calendar PDFs", "S3 API/HTTPS")
+Rel(cdn, r2, "Fetches cached content for delivery", "Internal Cloudflare Network")
+
+' ============================================================================
+' RELATIONSHIPS - PODS TO EXTERNAL SERVICES
+' ============================================================================
+
+Rel(api_pod1, stripe_api, "Creates checkout sessions, handles webhooks", "HTTPS/REST")
+Rel(api_pod2, stripe_api, "Creates checkout sessions, handles webhooks", "HTTPS/REST")
+Rel(api_pod1, oauth_providers, "Validates OAuth tokens (OIDC flow)", "HTTPS/OIDC")
+Rel(api_pod2, oauth_providers, "Validates OAuth tokens (OIDC flow)", "HTTPS/OIDC")
+Rel(api_pod1, email_service, "Sends transactional emails (notifications)", "SMTP/587/TLS")
+Rel(worker_pod1, email_service, "Sends async emails (PDF delivery, reminders)", "SMTP/587/TLS")
+
+' ============================================================================
+' RELATIONSHIPS - OBSERVABILITY
+' ============================================================================
+
+Rel(api_pod1, jaeger_pod, "Sends distributed traces (OpenTelemetry)", "gRPC/4317")
+Rel(api_pod2, jaeger_pod, "Sends distributed traces (OpenTelemetry)", "gRPC/4317")
+Rel(worker_pod1, jaeger_pod, "Sends background job traces", "gRPC/4317")
+
+Rel(prometheus_pod, api_pod1, "Scrapes /q/metrics endpoint (Micrometer)", "HTTP/9090")
+Rel(prometheus_pod, api_pod2, "Scrapes /q/metrics endpoint (Micrometer)", "HTTP/9090")
+Rel(prometheus_pod, worker_pod1, "Scrapes /q/metrics endpoint (Micrometer)", "HTTP/9090")
+
+' ============================================================================
+' LEGEND AND NOTES
+' ============================================================================
+
+LAYOUT_AS_SKETCH()
+
+legend right
+  **Deployment Architecture Notes**
+
+  **Hybrid Infrastructure Strategy:**
+  - k3s on owned Proxmox hardware (cost optimization, no cloud compute fees)
+  - Cloudflare edge network for DDoS protection, CDN, and secure tunnel ingress
+  - PostgreSQL on separate VM (outside k8s) prevents accidental deletion during cluster maintenance
+
+  **High Availability:**
+  - API pods: 2-10 replicas with horizontal pod autoscaling (HPA) based on CPU/memory
+  - Worker pods: 1-5 replicas scale based on DelayedJob queue depth
+  - Rolling updates: max surge 1, max unavailable 0 (zero-downtime deployments)
+
+  **Security:**
+  - Cloudflare Tunnel eliminates need for public IP exposure (no traditional load balancer)
+  - All external API communication over TLS (HTTPS, SMTP/TLS)
+  - Database isolated on private network (10.50.0.0/24)
+  - Containers run as non-root user (UID 1001)
+
+  **Observability:**
+  - OpenTelemetry traces → Jaeger (request tracing, performance analysis)
+  - Micrometer metrics → Prometheus (resource monitoring, alerting)
+  - Health checks: /q/health/live and /q/health/ready endpoints
+
+  **Deployment Environments:**
+  - Beta: calendar-beta namespace (beta.villagecompute.com)
+  - Production: calendar-prod namespace (calendar.villagecompute.com)
+  - Both use identical topology, different data sources
+
+  **Resource Allocations (Per Pod):**
+  | Component   | CPU Request | CPU Limit | Memory Request | Memory Limit |
+  |-------------|-------------|-----------|----------------|--------------|
+  | API Pod     | 500m        | 2000m     | 512Mi          | 2Gi          |
+  | Worker Pod  | 1000m       | 2000m     | 1Gi            | 4Gi          |
+  | Jaeger      | 200m        | 500m      | 256Mi          | 1Gi          |
+  | Prometheus  | 500m        | 1000m     | 1Gi            | 4Gi          |
+endlegend
+
+@enduml
