@@ -6,8 +6,8 @@
         <div class="hero-content">
           <h1 class="hero-title">Custom Calendar Printing</h1>
           <p class="hero-subtitle">
-            Create beautiful, personalized calendars with moon phases, holidays, and custom events.
-            Perfect for gifts, planning, or decoration.
+            Create beautiful, personalized calendars with moon phases, holidays,
+            and custom events. Perfect for gifts, planning, or decoration.
           </p>
           <div class="hero-buttons">
             <Button
@@ -30,17 +30,23 @@
     <!-- Features Section -->
     <section class="features-section py-16 bg-white">
       <div class="container mx-auto px-4">
-        <h2 class="text-3xl font-bold text-center mb-12">Why Choose Our Calendars?</h2>
+        <h2 class="text-3xl font-bold text-center mb-12">
+          Why Choose Our Calendars?
+        </h2>
         <div class="grid md:grid-cols-3 gap-8">
           <div class="text-center">
             <div class="text-4xl mb-4">🌙</div>
             <h3 class="text-xl font-semibold mb-2">Moon Phases</h3>
-            <p class="text-gray-600">Accurate moon phase calculations for any location on Earth</p>
+            <p class="text-gray-600">
+              Accurate moon phase calculations for any location on Earth
+            </p>
           </div>
           <div class="text-center">
             <div class="text-4xl mb-4">🎨</div>
             <h3 class="text-xl font-semibold mb-2">Customizable Design</h3>
-            <p class="text-gray-600">Choose themes, colors, and layouts to match your style</p>
+            <p class="text-gray-600">
+              Choose themes, colors, and layouts to match your style
+            </p>
           </div>
           <div class="text-center">
             <div class="text-4xl mb-4">📅</div>
@@ -56,9 +62,12 @@
     <!-- Templates Section -->
     <section ref="templatesSection" class="templates-section py-16 bg-gray-50">
       <div class="container mx-auto px-4">
-        <h2 class="text-3xl font-bold text-center mb-4">Start with a Template</h2>
+        <h2 class="text-3xl font-bold text-center mb-4">
+          Start with a Template
+        </h2>
         <p class="text-center text-gray-600 mb-12">
-          Choose from our professionally designed templates or create your own from scratch
+          Choose from our professionally designed templates or create your own
+          from scratch
         </p>
 
         <!-- Loading state -->
@@ -87,7 +96,8 @@
                 <!-- Show loading spinner while generating -->
                 <div
                   v-else-if="
-                    isGeneratingPreviews && previewGenerationQueue.some((t) => t.id === template.id)
+                    isGeneratingPreviews &&
+                    previewGenerationQueue.some((t) => t.id === template.id)
                   "
                   class="w-full h-full flex items-center justify-center"
                 >
@@ -101,7 +111,10 @@
                   class="w-full h-full object-cover"
                 />
                 <!-- Default calendar icon -->
-                <div v-else class="w-full h-full flex items-center justify-center">
+                <div
+                  v-else
+                  class="w-full h-full flex items-center justify-center"
+                >
                   <i class="pi pi-calendar text-4xl text-gray-400"></i>
                 </div>
                 <Tag
@@ -116,8 +129,13 @@
               {{ template.name }}
             </template>
             <template #content>
-              <p class="text-gray-600 text-sm mb-4">{{ template.description }}</p>
-              <div v-if="template.basePrice" class="text-lg font-semibold text-green-600 mb-4">
+              <p class="text-gray-600 text-sm mb-4">
+                {{ template.description }}
+              </p>
+              <div
+                v-if="template.basePrice"
+                class="text-lg font-semibold text-green-600 mb-4"
+              >
                 ${{ template.basePrice }}
               </div>
             </template>
@@ -225,8 +243,14 @@
         <div v-if="previewLoading" class="flex justify-center py-8">
           <ProgressSpinner />
         </div>
-        <div v-else-if="previewSvg" class="calendar-preview" v-html="previewSvg"></div>
-        <div v-else class="text-center py-8 text-gray-500">Preview not available</div>
+        <div
+          v-else-if="previewSvg"
+          class="calendar-preview"
+          v-html="previewSvg"
+        ></div>
+        <div v-else class="text-center py-8 text-gray-500">
+          Preview not available
+        </div>
       </div>
       <template #footer>
         <Button label="Close" text @click="showPreview = false" />
@@ -241,77 +265,77 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import Card from 'primevue/card'
-import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
-import ProgressSpinner from 'primevue/progressspinner'
-import Tag from 'primevue/tag'
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useToast } from "primevue/usetoast";
+import Card from "primevue/card";
+import Button from "primevue/button";
+import Dialog from "primevue/dialog";
+import ProgressSpinner from "primevue/progressspinner";
+import Tag from "primevue/tag";
 
-const router = useRouter()
-const toast = useToast()
+const router = useRouter();
+const toast = useToast();
 
 // State
-const loading = ref(false)
-const templates = ref([])
-const showPreview = ref(false)
-const selectedTemplate = ref(null)
-const previewSvg = ref('')
-const previewLoading = ref(false)
-const templatesSection = ref(null)
-const templatePreviews = ref({})
-const previewGenerationQueue = ref([])
-const isGeneratingPreviews = ref(false)
+const loading = ref(false);
+const templates = ref([]);
+const showPreview = ref(false);
+const selectedTemplate = ref(null);
+const previewSvg = ref("");
+const previewLoading = ref(false);
+const templatesSection = ref(null);
+const templatePreviews = ref({});
+const previewGenerationQueue = ref([]);
+const isGeneratingPreviews = ref(false);
 
 // Load templates
 const loadTemplates = async () => {
-  loading.value = true
+  loading.value = true;
   try {
-    const response = await fetch('/api/calendar-templates')
+    const response = await fetch("/api/calendar-templates");
     if (response.ok) {
-      templates.value = await response.json()
+      templates.value = await response.json();
 
       // If no templates exist, use sample data for demonstration
       if (templates.value.length === 0) {
-        templates.value = getSampleTemplates()
+        templates.value = getSampleTemplates();
       }
 
       // Generate previews for templates after loading
-      generateTemplatePreviews()
+      generateTemplatePreviews();
     } else {
-      throw new Error('Failed to load templates')
+      throw new Error("Failed to load templates");
     }
   } catch (error) {
-    console.error('Error loading templates:', error)
+    console.error("Error loading templates:", error);
     // Use sample templates for demonstration
-    templates.value = getSampleTemplates()
-    generateTemplatePreviews()
+    templates.value = getSampleTemplates();
+    generateTemplatePreviews();
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // Get sample templates for demonstration
 const getSampleTemplates = () => {
-  const currentYear = new Date().getFullYear()
+  const currentYear = new Date().getFullYear();
   return [
     {
-      id: 'sample-1',
-      name: 'Classic Monthly',
-      description: 'Traditional monthly calendar with holidays and moon phases',
+      id: "sample-1",
+      name: "Classic Monthly",
+      description: "Traditional monthly calendar with holidays and moon phases",
       isFeatured: true,
       basePrice: 19.99,
       configuration: {
         year: currentYear,
-        calendarType: 'gregorian',
+        calendarType: "gregorian",
         startMonth: 1,
         endMonth: 12,
         showMoonPhases: true,
         showWeekNumbers: false,
         weekStartsOn: 0,
-        theme: 'modern',
+        theme: "modern",
         showDayNames: true,
         showDayNumbers: true,
         showGrid: true,
@@ -319,20 +343,20 @@ const getSampleTemplates = () => {
       },
     },
     {
-      id: 'sample-2',
-      name: 'Hebrew Calendar',
-      description: 'Hebrew calendar with Jewish holidays and Shabbat times',
+      id: "sample-2",
+      name: "Hebrew Calendar",
+      description: "Hebrew calendar with Jewish holidays and Shabbat times",
       isFeatured: false,
       basePrice: 24.99,
       configuration: {
         year: currentYear,
-        calendarType: 'hebrew',
+        calendarType: "hebrew",
         startMonth: 1,
         endMonth: 12,
         showMoonPhases: false,
         showWeekNumbers: false,
         weekStartsOn: 0,
-        theme: 'classic',
+        theme: "classic",
         showDayNames: true,
         showDayNumbers: true,
         showGrid: true,
@@ -340,20 +364,21 @@ const getSampleTemplates = () => {
       },
     },
     {
-      id: 'sample-3',
-      name: 'Nature Photography',
-      description: 'Beautiful calendar with nature photos and environmental dates',
+      id: "sample-3",
+      name: "Nature Photography",
+      description:
+        "Beautiful calendar with nature photos and environmental dates",
       isFeatured: true,
       basePrice: 29.99,
       configuration: {
         year: currentYear,
-        calendarType: 'gregorian',
+        calendarType: "gregorian",
         startMonth: 1,
         endMonth: 12,
         showMoonPhases: true,
         showWeekNumbers: false,
         weekStartsOn: 1,
-        theme: 'nature',
+        theme: "nature",
         showDayNames: true,
         showDayNumbers: true,
         showGrid: true,
@@ -361,163 +386,171 @@ const getSampleTemplates = () => {
       },
     },
     {
-      id: 'sample-4',
-      name: 'Academic Year',
-      description: 'Perfect for students and teachers, runs from August to July',
+      id: "sample-4",
+      name: "Academic Year",
+      description:
+        "Perfect for students and teachers, runs from August to July",
       isFeatured: false,
       basePrice: 22.99,
       configuration: {
         year: currentYear,
-        calendarType: 'gregorian',
+        calendarType: "gregorian",
         startMonth: 8,
         endMonth: 7,
         showMoonPhases: false,
         showWeekNumbers: true,
         weekStartsOn: 1,
-        theme: 'academic',
+        theme: "academic",
         showDayNames: true,
         showDayNumbers: true,
         showGrid: true,
         compactMode: false,
       },
     },
-  ]
-}
+  ];
+};
 
 // Generate previews for all templates
 const generateTemplatePreviews = async () => {
   // Queue all templates that need previews
   previewGenerationQueue.value = templates.value.filter(
     (template) =>
-      template.configuration && !templatePreviews.value[template.id] && !template.previewSvg
-  )
+      template.configuration &&
+      !templatePreviews.value[template.id] &&
+      !template.previewSvg,
+  );
 
   // Also set any existing previewSvg from templates
   templates.value.forEach((template) => {
     if (template.previewSvg) {
-      templatePreviews.value[template.id] = scaleSvgForThumbnail(template.previewSvg)
+      templatePreviews.value[template.id] = scaleSvgForThumbnail(
+        template.previewSvg,
+      );
     }
-  })
+  });
 
-  processPreviewQueue()
-}
+  processPreviewQueue();
+};
 
 // Process preview generation queue
 const processPreviewQueue = async () => {
   if (isGeneratingPreviews.value || previewGenerationQueue.value.length === 0) {
-    return
+    return;
   }
 
-  isGeneratingPreviews.value = true
+  isGeneratingPreviews.value = true;
 
   while (previewGenerationQueue.value.length > 0) {
-    const template = previewGenerationQueue.value.shift()
+    const template = previewGenerationQueue.value.shift();
 
     try {
       // Generate preview for this template
-      const response = await fetch('/api/calendar/generate', {
-        method: 'POST',
+      const response = await fetch("/api/calendar/generate", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(template.configuration),
-      })
+      });
 
       if (response.ok) {
-        const svg = await response.text()
+        const svg = await response.text();
         // Scale down the SVG for thumbnail display
-        templatePreviews.value[template.id] = scaleSvgForThumbnail(svg)
+        templatePreviews.value[template.id] = scaleSvgForThumbnail(svg);
       }
     } catch (error) {
-      console.error(`Error generating preview for template ${template.id}:`, error)
+      console.error(
+        `Error generating preview for template ${template.id}:`,
+        error,
+      );
     }
 
     // Small delay between requests to avoid overwhelming the server
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
-  isGeneratingPreviews.value = false
-}
+  isGeneratingPreviews.value = false;
+};
 
 // Scale SVG for thumbnail display
 const scaleSvgForThumbnail = (svg) => {
   // Parse the SVG to extract viewBox and set fixed dimensions for thumbnail
-  const viewBoxMatch = svg.match(/viewBox="([^"]+)"/)?.[1]
+  const viewBoxMatch = svg.match(/viewBox="([^"]+)"/)?.[1];
   if (viewBoxMatch) {
-    const [x, y, width, height] = viewBoxMatch.split(' ').map(Number)
-    const aspectRatio = height / width
-    const thumbnailWidth = 300
-    const thumbnailHeight = thumbnailWidth * aspectRatio
+    const [x, y, width, height] = viewBoxMatch.split(" ").map(Number);
+    const aspectRatio = height / width;
+    const thumbnailWidth = 300;
+    const thumbnailHeight = thumbnailWidth * aspectRatio;
 
     // Replace the width and height attributes
     return svg
       .replace(/width="[^"]+"/, `width="${thumbnailWidth}"`)
       .replace(/height="[^"]+"/, `height="${thumbnailHeight}"`)
-      .replace(/style="[^"]*"/, 'style="max-width: 100%; height: auto;"')
+      .replace(/style="[^"]*"/, 'style="max-width: 100%; height: auto;"');
   }
-  return svg
-}
+  return svg;
+};
 
 // Preview template
 const previewTemplate = async (template) => {
-  selectedTemplate.value = template
-  showPreview.value = true
-  previewLoading.value = true
+  selectedTemplate.value = template;
+  showPreview.value = true;
+  previewLoading.value = true;
 
   try {
     // If template has cached preview, use it
     if (template.previewSvg) {
-      previewSvg.value = template.previewSvg
+      previewSvg.value = template.previewSvg;
     } else {
       // Generate preview from configuration
-      const response = await fetch('/api/calendar/generate', {
-        method: 'POST',
+      const response = await fetch("/api/calendar/generate", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(template.configuration),
-      })
+      });
 
       if (response.ok) {
-        previewSvg.value = await response.text()
+        previewSvg.value = await response.text();
       } else {
-        throw new Error('Failed to generate preview')
+        throw new Error("Failed to generate preview");
       }
     }
   } catch (error) {
-    console.error('Error generating preview:', error)
+    console.error("Error generating preview:", error);
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to generate calendar preview',
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to generate calendar preview",
       life: 3000,
-    })
-    previewSvg.value = ''
+    });
+    previewSvg.value = "";
   } finally {
-    previewLoading.value = false
+    previewLoading.value = false;
   }
-}
+};
 
 // Customize template
 const customizeTemplate = (template) => {
   // Navigate to generator with template configuration
   router.push({
-    path: '/printing/calendar-generator',
+    path: "/printing/calendar-generator",
     query: {
       templateId: template.id,
     },
-  })
-}
+  });
+};
 
 // Scroll to templates section
 const scrollToTemplates = () => {
-  templatesSection.value?.scrollIntoView({ behavior: 'smooth' })
-}
+  templatesSection.value?.scrollIntoView({ behavior: "smooth" });
+};
 
 // Load templates on mount
 onMounted(() => {
-  loadTemplates()
-})
+  loadTemplates();
+});
 </script>
 
 <style scoped>

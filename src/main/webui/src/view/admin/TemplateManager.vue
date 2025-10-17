@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed } from "vue";
 import {
   Breadcrumb,
   Button,
@@ -12,123 +12,125 @@ import {
   Message,
   Tag,
   InputNumber,
-} from 'primevue'
-import { useToast } from 'primevue/usetoast'
-import { useTemplateStore } from '../../stores/templateStore'
-import type { CalendarTemplate, TemplateInput } from '../../types/template'
+} from "primevue";
+import { useToast } from "primevue/usetoast";
+import { useTemplateStore } from "../../stores/templateStore";
+import type { CalendarTemplate, TemplateInput } from "../../types/template";
 
-const toast = useToast()
-const templateStore = useTemplateStore()
+const toast = useToast();
+const templateStore = useTemplateStore();
 
 // Breadcrumb
 const homeBreadcrumb = ref({
-  icon: 'pi pi-home',
-  url: '/',
-})
+  icon: "pi pi-home",
+  url: "/",
+});
 
-const breadCrumbs = ref([{ label: 'Admin' }, { label: 'Template Manager' }])
+const breadCrumbs = ref([{ label: "Admin" }, { label: "Template Manager" }]);
 
 // Loading state
-const loading = computed(() => templateStore.loading)
-const error = computed(() => templateStore.error)
-const templates = computed(() => templateStore.templates)
+const loading = computed(() => templateStore.loading);
+const error = computed(() => templateStore.error);
+const templates = computed(() => templateStore.templates);
 
 // Dialog state
-const templateDialog = ref(false)
-const editingTemplate = ref<CalendarTemplate | null>(null)
+const templateDialog = ref(false);
+const editingTemplate = ref<CalendarTemplate | null>(null);
 const templateForm = ref<TemplateInput>({
-  name: '',
-  description: '',
+  name: "",
+  description: "",
   configuration: {},
-  thumbnailUrl: '',
-  previewSvg: '',
+  thumbnailUrl: "",
+  previewSvg: "",
   isActive: true,
   isFeatured: false,
   displayOrder: 0,
-})
+});
 
 // Configuration JSON editor
-const configurationJson = ref('')
+const configurationJson = ref("");
 
 // Validation errors
-const validationErrors = ref<string[]>([])
+const validationErrors = ref<string[]>([]);
 
 // Search filter
-const searchFilter = ref('')
+const searchFilter = ref("");
 
 // Filtered templates
 const filteredTemplates = computed(() => {
   if (!searchFilter.value) {
-    return templates.value
+    return templates.value;
   }
-  const search = searchFilter.value.toLowerCase()
+  const search = searchFilter.value.toLowerCase();
   return templates.value.filter(
     (t) =>
       t.name.toLowerCase().includes(search) ||
-      (t.description && t.description.toLowerCase().includes(search))
-  )
-})
+      (t.description && t.description.toLowerCase().includes(search)),
+  );
+});
 
 /**
  * Open dialog to add new template
  */
 function openAddTemplate() {
-  editingTemplate.value = null
+  editingTemplate.value = null;
   templateForm.value = {
-    name: '',
-    description: '',
+    name: "",
+    description: "",
     configuration: {},
-    thumbnailUrl: '',
-    previewSvg: '',
+    thumbnailUrl: "",
+    previewSvg: "",
     isActive: true,
     isFeatured: false,
     displayOrder: 0,
-  }
-  configurationJson.value = JSON.stringify({}, null, 2)
-  validationErrors.value = []
-  templateDialog.value = true
+  };
+  configurationJson.value = JSON.stringify({}, null, 2);
+  validationErrors.value = [];
+  templateDialog.value = true;
 }
 
 /**
  * Open dialog to edit existing template
  */
 function editTemplate(template: CalendarTemplate) {
-  editingTemplate.value = template
+  editingTemplate.value = template;
   templateForm.value = {
     name: template.name,
-    description: template.description || '',
+    description: template.description || "",
     configuration: template.configuration,
-    thumbnailUrl: template.thumbnailUrl || '',
-    previewSvg: template.previewSvg || '',
+    thumbnailUrl: template.thumbnailUrl || "",
+    previewSvg: template.previewSvg || "",
     isActive: template.isActive,
     isFeatured: template.isFeatured,
     displayOrder: template.displayOrder,
-  }
-  configurationJson.value = JSON.stringify(template.configuration, null, 2)
-  validationErrors.value = []
-  templateDialog.value = true
+  };
+  configurationJson.value = JSON.stringify(template.configuration, null, 2);
+  validationErrors.value = [];
+  templateDialog.value = true;
 }
 
 /**
  * Validate template form
  */
 function validateTemplateForm(): boolean {
-  validationErrors.value = []
+  validationErrors.value = [];
 
-  if (!templateForm.value.name || templateForm.value.name.trim() === '') {
-    validationErrors.value.push('Template name is required')
+  if (!templateForm.value.name || templateForm.value.name.trim() === "") {
+    validationErrors.value.push("Template name is required");
   }
 
   // Validate JSON configuration
   try {
-    const config = JSON.parse(configurationJson.value)
-    templateForm.value.configuration = config
+    const config = JSON.parse(configurationJson.value);
+    templateForm.value.configuration = config;
   } catch (err) {
-    validationErrors.value.push('Invalid JSON configuration: ' + (err as Error).message)
-    return false
+    validationErrors.value.push(
+      "Invalid JSON configuration: " + (err as Error).message,
+    );
+    return false;
   }
 
-  return validationErrors.value.length === 0
+  return validationErrors.value.length === 0;
 }
 
 /**
@@ -136,33 +138,36 @@ function validateTemplateForm(): boolean {
  */
 async function saveTemplate() {
   if (!validateTemplateForm()) {
-    return
+    return;
   }
 
-  let result
+  let result;
   if (editingTemplate.value) {
     // Update existing
-    result = await templateStore.updateTemplate(editingTemplate.value.id, templateForm.value)
+    result = await templateStore.updateTemplate(
+      editingTemplate.value.id,
+      templateForm.value,
+    );
   } else {
     // Create new
-    result = await templateStore.createTemplate(templateForm.value)
+    result = await templateStore.createTemplate(templateForm.value);
   }
 
   if (result) {
     toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Template ${editingTemplate.value ? 'updated' : 'created'} successfully`,
+      severity: "success",
+      summary: "Success",
+      detail: `Template ${editingTemplate.value ? "updated" : "created"} successfully`,
       life: 3000,
-    })
-    templateDialog.value = false
+    });
+    templateDialog.value = false;
   } else {
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: templateStore.error || 'Failed to save template',
+      severity: "error",
+      summary: "Error",
+      detail: templateStore.error || "Failed to save template",
       life: 5000,
-    })
+    });
   }
 }
 
@@ -170,26 +175,28 @@ async function saveTemplate() {
  * Delete template with confirmation
  */
 async function confirmDeleteTemplate(template: CalendarTemplate) {
-  if (!confirm(`Are you sure you want to delete template "${template.name}"?`)) {
-    return
+  if (
+    !confirm(`Are you sure you want to delete template "${template.name}"?`)
+  ) {
+    return;
   }
 
-  const success = await templateStore.deleteTemplate(template.id)
+  const success = await templateStore.deleteTemplate(template.id);
 
   if (success) {
     toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Template deleted successfully',
+      severity: "success",
+      summary: "Success",
+      detail: "Template deleted successfully",
       life: 3000,
-    })
+    });
   } else {
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: templateStore.error || 'Failed to delete template',
+      severity: "error",
+      summary: "Error",
+      detail: templateStore.error || "Failed to delete template",
       life: 5000,
-    })
+    });
   }
 }
 
@@ -206,24 +213,24 @@ async function toggleActive(template: CalendarTemplate) {
     isActive: !template.isActive,
     isFeatured: template.isFeatured,
     displayOrder: template.displayOrder,
-  }
+  };
 
-  const result = await templateStore.updateTemplate(template.id, input)
+  const result = await templateStore.updateTemplate(template.id, input);
 
   if (result) {
     toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: `Template ${result.isActive ? 'activated' : 'deactivated'}`,
+      severity: "success",
+      summary: "Success",
+      detail: `Template ${result.isActive ? "activated" : "deactivated"}`,
       life: 3000,
-    })
+    });
   } else {
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: templateStore.error || 'Failed to update template',
+      severity: "error",
+      summary: "Error",
+      detail: templateStore.error || "Failed to update template",
       life: 5000,
-    })
+    });
   }
 }
 
@@ -231,12 +238,12 @@ async function toggleActive(template: CalendarTemplate) {
  * Format date for display
  */
 function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString()
+  return new Date(date).toLocaleDateString();
 }
 
 onMounted(async () => {
-  await templateStore.loadTemplates(undefined) // Load all templates (including inactive)
-})
+  await templateStore.loadTemplates(undefined); // Load all templates (including inactive)
+});
 </script>
 
 <template>
@@ -285,7 +292,7 @@ onMounted(async () => {
 
       <Column field="description" header="Description" style="width: 25%">
         <template #body="{ data }">
-          {{ data.description || '-' }}
+          {{ data.description || "-" }}
         </template>
       </Column>
 
@@ -364,7 +371,9 @@ onMounted(async () => {
 
         <!-- Template Name -->
         <div class="field">
-          <label for="template-name" class="font-semibold">Template Name *</label>
+          <label for="template-name" class="font-semibold"
+            >Template Name *</label
+          >
           <InputText
             id="template-name"
             v-model="templateForm.name"
@@ -375,7 +384,9 @@ onMounted(async () => {
 
         <!-- Template Description -->
         <div class="field">
-          <label for="template-description" class="font-semibold">Description</label>
+          <label for="template-description" class="font-semibold"
+            >Description</label
+          >
           <Textarea
             id="template-description"
             v-model="templateForm.description"
@@ -387,7 +398,9 @@ onMounted(async () => {
 
         <!-- Configuration JSON -->
         <div class="field">
-          <label for="template-config" class="font-semibold">Configuration (JSON) *</label>
+          <label for="template-config" class="font-semibold"
+            >Configuration (JSON) *</label
+          >
           <Textarea
             id="template-config"
             v-model="configurationJson"
@@ -400,7 +413,9 @@ onMounted(async () => {
 
         <!-- Thumbnail URL -->
         <div class="field">
-          <label for="template-thumbnail" class="font-semibold">Thumbnail URL</label>
+          <label for="template-thumbnail" class="font-semibold"
+            >Thumbnail URL</label
+          >
           <InputText
             id="template-thumbnail"
             v-model="templateForm.thumbnailUrl"
@@ -411,7 +426,9 @@ onMounted(async () => {
 
         <!-- Display Order -->
         <div class="field">
-          <label for="template-order" class="font-semibold">Display Order</label>
+          <label for="template-order" class="font-semibold"
+            >Display Order</label
+          >
           <InputNumber
             id="template-order"
             v-model="templateForm.displayOrder"
@@ -423,13 +440,23 @@ onMounted(async () => {
 
         <!-- Active Checkbox -->
         <div class="field flex items-center gap-2">
-          <Checkbox v-model="templateForm.isActive" binary input-id="template-active" />
-          <label for="template-active" class="font-semibold">Active (visible to users)</label>
+          <Checkbox
+            v-model="templateForm.isActive"
+            binary
+            input-id="template-active"
+          />
+          <label for="template-active" class="font-semibold"
+            >Active (visible to users)</label
+          >
         </div>
 
         <!-- Featured Checkbox -->
         <div class="field flex items-center gap-2">
-          <Checkbox v-model="templateForm.isFeatured" binary input-id="template-featured" />
+          <Checkbox
+            v-model="templateForm.isFeatured"
+            binary
+            input-id="template-featured"
+          />
           <label for="template-featured" class="font-semibold">Featured</label>
         </div>
       </div>

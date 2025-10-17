@@ -37,15 +37,43 @@ class AuthenticationServiceTest {
     @BeforeEach
     @Transactional
     void setUp() {
-        // Clean up any existing test users
-        CalendarUser.delete("email", TEST_EMAIL);
+        // Clean up any existing test users and related data
+        CalendarUser testUser = CalendarUser.find("email", TEST_EMAIL).firstResult();
+        if (testUser != null) {
+            cleanupUserData(testUser.id);
+        }
     }
 
     @AfterEach
     @Transactional
     void tearDown() {
-        // Clean up test users
-        CalendarUser.delete("email", TEST_EMAIL);
+        // Clean up test users and related data
+        CalendarUser testUser = CalendarUser.find("email", TEST_EMAIL).firstResult();
+        if (testUser != null) {
+            cleanupUserData(testUser.id);
+        }
+    }
+
+    private void cleanupUserData(UUID userId) {
+        // Delete in proper order to avoid FK violations
+        try {
+            // Delete orders related to user's calendars
+            villagecompute.calendar.data.models.CalendarOrder.delete("user.id", userId);
+        } catch (Exception e) {
+            // Ignore cleanup errors
+        }
+        try {
+            // Delete user's calendars
+            villagecompute.calendar.data.models.UserCalendar.delete("user.id", userId);
+        } catch (Exception e) {
+            // Ignore cleanup errors
+        }
+        try {
+            // Delete the user
+            CalendarUser.deleteById(userId);
+        } catch (Exception e) {
+            // Ignore cleanup errors
+        }
     }
 
     @Test

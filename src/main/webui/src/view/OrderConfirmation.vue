@@ -1,97 +1,97 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
-import { ROUTE_NAMES } from '../navigation/routes'
-import Breadcrumb from 'primevue/breadcrumb'
-import Button from 'primevue/button'
-import Card from 'primevue/card'
-import Timeline from 'primevue/timeline'
-import { homeBreadcrumb } from '../navigation/breadcrumbs'
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
+import { ROUTE_NAMES } from "../navigation/routes";
+import Breadcrumb from "primevue/breadcrumb";
+import Button from "primevue/button";
+import Card from "primevue/card";
+import Timeline from "primevue/timeline";
+import { homeBreadcrumb } from "../navigation/breadcrumbs";
 
-const { t } = useI18n({ useScope: 'global' })
-const router = useRouter()
+const { t } = useI18n({ useScope: "global" });
+const router = useRouter();
 
-const order = ref(null)
-const estimatedDelivery = ref(null)
+const order = ref(null);
+const estimatedDelivery = ref(null);
 
 const breadcrumbs = ref([
-  { label: 'Store', url: '/store/products' },
-  { label: 'Order Confirmation' },
-])
+  { label: "Store", url: "/store/products" },
+  { label: "Order Confirmation" },
+]);
 
 const orderTimeline = ref([
   {
-    status: 'Order Placed',
+    status: "Order Placed",
     date: new Date().toLocaleDateString(),
-    icon: 'pi-shopping-cart',
-    color: '#9C27B0',
+    icon: "pi-shopping-cart",
+    color: "#9C27B0",
     completed: true,
   },
   {
-    status: 'Processing',
-    date: 'In Progress',
-    icon: 'pi-cog',
-    color: '#673AB7',
+    status: "Processing",
+    date: "In Progress",
+    icon: "pi-cog",
+    color: "#673AB7",
     completed: false,
   },
   {
-    status: 'Shipped',
-    date: 'Pending',
-    icon: 'pi-send',
-    color: '#FF9800',
+    status: "Shipped",
+    date: "Pending",
+    icon: "pi-send",
+    color: "#FF9800",
     completed: false,
   },
   {
-    status: 'Delivered',
-    date: 'Pending',
-    icon: 'pi-check',
-    color: '#607D8B',
+    status: "Delivered",
+    date: "Pending",
+    icon: "pi-check",
+    color: "#607D8B",
     completed: false,
   },
-])
+]);
 
 onMounted(() => {
   // Scroll to top
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  window.scrollTo({ top: 0, behavior: "smooth" });
 
   // Get order data from session
-  const orderData = sessionStorage.getItem('lastOrder')
+  const orderData = sessionStorage.getItem("lastOrder");
   if (orderData) {
-    order.value = JSON.parse(orderData)
-    sessionStorage.removeItem('lastOrder')
+    order.value = JSON.parse(orderData);
+    sessionStorage.removeItem("lastOrder");
 
     // Calculate estimated delivery
     if (order.value.shippingMethod) {
-      const days = order.value.shippingMethod.estimatedDays
-      const deliveryDate = new Date()
-      deliveryDate.setDate(deliveryDate.getDate() + days[1])
-      estimatedDelivery.value = deliveryDate.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
+      const days = order.value.shippingMethod.estimatedDays;
+      const deliveryDate = new Date();
+      deliveryDate.setDate(deliveryDate.getDate() + days[1]);
+      estimatedDelivery.value = deliveryDate.toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
     }
   } else {
     // Redirect if no order data
-    router.push({ name: ROUTE_NAMES.STORE_PRODUCTS })
+    router.push({ name: ROUTE_NAMES.STORE_PRODUCTS });
   }
-})
+});
 
 function formatCurrency(amount) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount)
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(amount);
 }
 
 function printOrder() {
-  window.print()
+  window.print();
 }
 
 function continueShopping() {
-  router.push({ name: ROUTE_NAMES.STORE_PRODUCTS })
+  router.push({ name: ROUTE_NAMES.STORE_PRODUCTS });
 }
 </script>
 
@@ -112,10 +112,13 @@ function continueShopping() {
             Your order has been successfully placed and is being processed.
           </p>
 
-          <div v-if="order" class="order-number-box p-3 bg-gray-50 border-round mb-4 inline-block">
+          <div
+            v-if="order"
+            class="order-number-box p-3 bg-gray-50 border-round mb-4 inline-block"
+          >
             <div class="text-sm text-gray-600 mb-1">Order Number</div>
             <div class="text-2xl font-bold text-primary">
-              {{ order.orderNumber || 'VC-' + Date.now() }}
+              {{ order.orderNumber || "VC-" + Date.now() }}
             </div>
           </div>
 
@@ -136,13 +139,19 @@ function continueShopping() {
             <h3>Order Status</h3>
           </template>
           <template #content>
-            <Timeline :value="orderTimeline" align="horizontal" class="order-timeline">
+            <Timeline
+              :value="orderTimeline"
+              align="horizontal"
+              class="order-timeline"
+            >
               <template #marker="slotProps">
                 <span
                   class="timeline-marker"
                   :class="{ completed: slotProps.item.completed }"
                   :style="{
-                    backgroundColor: slotProps.item.completed ? slotProps.item.color : '#e0e0e0',
+                    backgroundColor: slotProps.item.completed
+                      ? slotProps.item.color
+                      : '#e0e0e0',
                   }"
                 >
                   <i :class="`pi ${slotProps.item.icon}`"></i>
@@ -151,7 +160,9 @@ function continueShopping() {
               <template #content="slotProps">
                 <div class="text-center">
                   <div class="font-semibold">{{ slotProps.item.status }}</div>
-                  <div class="text-sm text-gray-600">{{ slotProps.item.date }}</div>
+                  <div class="text-sm text-gray-600">
+                    {{ slotProps.item.date }}
+                  </div>
                 </div>
               </template>
             </Timeline>
@@ -196,11 +207,19 @@ function continueShopping() {
                   <div class="item-details flex-1">
                     <h4 class="mb-1">{{ item.productName }}</h4>
                     <div class="text-sm text-gray-600 mb-2">
-                      <span v-if="item.configuration">{{ item.configuration }}</span>
+                      <span v-if="item.configuration">{{
+                        item.configuration
+                      }}</span>
                     </div>
-                    <div class="flex justify-content-between align-items-center">
-                      <span class="text-gray-600">Quantity: {{ item.quantity }}</span>
-                      <span class="font-semibold">{{ formatCurrency(item.lineTotal) }}</span>
+                    <div
+                      class="flex justify-content-between align-items-center"
+                    >
+                      <span class="text-gray-600"
+                        >Quantity: {{ item.quantity }}</span
+                      >
+                      <span class="font-semibold">{{
+                        formatCurrency(item.lineTotal)
+                      }}</span>
                     </div>
                   </div>
                 </div>
@@ -221,7 +240,9 @@ function continueShopping() {
                 <span>Tax</span>
                 <span>{{ formatCurrency(order?.taxAmount || 0) }}</span>
               </div>
-              <div class="flex justify-content-between pt-2 border-top-1 border-gray-300">
+              <div
+                class="flex justify-content-between pt-2 border-top-1 border-gray-300"
+              >
                 <span class="text-xl font-bold">Total</span>
                 <span class="text-xl font-bold text-primary">
                   {{ formatCurrency(order?.totalAmount || 0) }}
@@ -241,7 +262,8 @@ function continueShopping() {
               <div class="col-12 md:col-6">
                 <h4 class="mb-3">Shipping Address</h4>
                 <div v-if="order?.shippingAddress" class="text-gray-700">
-                  {{ order.shippingAddress.firstName }} {{ order.shippingAddress.lastName }}<br />
+                  {{ order.shippingAddress.firstName }}
+                  {{ order.shippingAddress.lastName }}<br />
                   <span v-if="order.shippingAddress.company">
                     {{ order.shippingAddress.company }}<br />
                   </span>
@@ -249,7 +271,8 @@ function continueShopping() {
                   <span v-if="order.shippingAddress.address2">
                     {{ order.shippingAddress.address2 }}<br />
                   </span>
-                  {{ order.shippingAddress.city }}, {{ order.shippingAddress.state }}
+                  {{ order.shippingAddress.city }},
+                  {{ order.shippingAddress.state }}
                   {{ order.shippingAddress.postalCode }}<br />
                   {{ order.shippingAddress.phone }}
                 </div>
@@ -258,9 +281,12 @@ function continueShopping() {
               <div class="col-12 md:col-6">
                 <h4 class="mb-3">Billing Address</h4>
                 <div v-if="order?.billingAddress" class="text-gray-700">
-                  <span v-if="order.billingSameAsShipping"> Same as shipping address </span>
+                  <span v-if="order.billingSameAsShipping">
+                    Same as shipping address
+                  </span>
                   <template v-else>
-                    {{ order.billingAddress.firstName }} {{ order.billingAddress.lastName }}<br />
+                    {{ order.billingAddress.firstName }}
+                    {{ order.billingAddress.lastName }}<br />
                     <span v-if="order.billingAddress.company">
                       {{ order.billingAddress.company }}<br />
                     </span>
@@ -268,7 +294,8 @@ function continueShopping() {
                     <span v-if="order.billingAddress.address2">
                       {{ order.billingAddress.address2 }}<br />
                     </span>
-                    {{ order.billingAddress.city }}, {{ order.billingAddress.state }}
+                    {{ order.billingAddress.city }},
+                    {{ order.billingAddress.state }}
                     {{ order.billingAddress.postalCode }}
                   </template>
                 </div>
@@ -278,7 +305,8 @@ function continueShopping() {
             <div class="mt-4">
               <h4 class="mb-3">Shipping Method</h4>
               <div v-if="order?.shippingMethod" class="text-gray-700">
-                {{ order.shippingMethod.name }} - {{ order.shippingMethod.description }}
+                {{ order.shippingMethod.name }} -
+                {{ order.shippingMethod.description }}
               </div>
             </div>
           </template>
@@ -299,7 +327,8 @@ function continueShopping() {
                 <div>
                   <div class="font-semibold mb-1">Check Your Email</div>
                   <div class="text-sm text-gray-600">
-                    We've sent a confirmation with order details and tracking information.
+                    We've sent a confirmation with order details and tracking
+                    information.
                   </div>
                 </div>
               </div>
@@ -349,7 +378,8 @@ function continueShopping() {
           </template>
           <template #content>
             <p class="text-gray-600 mb-3">
-              Create an account to track orders, save addresses, and checkout faster next time.
+              Create an account to track orders, save addresses, and checkout
+              faster next time.
             </p>
             <Button
               label="Create Account"

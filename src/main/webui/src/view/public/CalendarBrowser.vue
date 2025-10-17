@@ -55,8 +55,8 @@
           <Button
             label="Try Again"
             icon="pi pi-refresh"
-            @click="loadTemplates"
             class="mt-4"
+            @click="loadTemplates"
           />
         </div>
 
@@ -80,7 +80,9 @@
                 ></div>
                 <!-- Show loading spinner while generating -->
                 <div
-                  v-else-if="isGeneratingPreviews && previewQueue.includes(template.id)"
+                  v-else-if="
+                    isGeneratingPreviews && previewQueue.includes(template.id)
+                  "
                   class="preview-loading"
                 >
                   <ProgressSpinner style="width: 40px; height: 40px" />
@@ -152,7 +154,11 @@
         <div v-if="previewLoading" class="preview-modal-loading">
           <ProgressSpinner />
         </div>
-        <div v-else-if="previewSvg" class="preview-modal-svg" v-html="previewSvg"></div>
+        <div
+          v-else-if="previewSvg"
+          class="preview-modal-svg"
+          v-html="previewSvg"
+        ></div>
         <div v-else class="preview-modal-empty">Preview not available</div>
       </div>
       <template #footer>
@@ -168,69 +174,69 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import { useCalendarStore } from '../../stores/calendarStore'
-import { useAuthStore } from '../../stores/authStore'
-import { scaleSvgForThumbnail } from '../../services/calendarService'
-import Card from 'primevue/card'
-import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
-import ProgressSpinner from 'primevue/progressspinner'
-import Tag from 'primevue/tag'
-import Message from 'primevue/message'
-import Menu from 'primevue/menu'
-import type { CalendarTemplate } from '../../stores/calendarStore'
-import type { MenuItem } from 'primevue/menuitem'
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useToast } from "primevue/usetoast";
+import { useCalendarStore } from "../../stores/calendarStore";
+import { useAuthStore } from "../../stores/authStore";
+import { scaleSvgForThumbnail } from "../../services/calendarService";
+import Card from "primevue/card";
+import Button from "primevue/button";
+import Dialog from "primevue/dialog";
+import ProgressSpinner from "primevue/progressspinner";
+import Tag from "primevue/tag";
+import Message from "primevue/message";
+import Menu from "primevue/menu";
+import type { CalendarTemplate } from "../../stores/calendarStore";
+import type { MenuItem } from "primevue/menuitem";
 
-const router = useRouter()
-const toast = useToast()
-const calendarStore = useCalendarStore()
-const authStore = useAuthStore()
+const router = useRouter();
+const toast = useToast();
+const calendarStore = useCalendarStore();
+const authStore = useAuthStore();
 
 // State
-const showPreviewModal = ref(false)
-const selectedTemplate = ref<CalendarTemplate | null>(null)
-const previewSvg = ref('')
-const previewLoading = ref(false)
-const templatePreviews = ref<Record<string, string>>({})
-const previewQueue = ref<string[]>([])
-const isGeneratingPreviews = ref(false)
-const userMenuRef = ref()
+const showPreviewModal = ref(false);
+const selectedTemplate = ref<CalendarTemplate | null>(null);
+const previewSvg = ref("");
+const previewLoading = ref(false);
+const templatePreviews = ref<Record<string, string>>({});
+const previewQueue = ref<string[]>([]);
+const isGeneratingPreviews = ref(false);
+const userMenuRef = ref();
 
 // User menu items
 const userMenuItems = ref<MenuItem[]>([
   {
-    label: 'Logout',
-    icon: 'pi pi-sign-out',
+    label: "Logout",
+    icon: "pi pi-sign-out",
     command: () => {
-      authStore.logout()
-      window.location.reload()
-    }
-  }
-])
+      authStore.logout();
+      window.location.reload();
+    },
+  },
+]);
 
 // Toggle user menu
 const toggleUserMenu = (event: Event) => {
-  userMenuRef.value.toggle(event)
-}
+  userMenuRef.value.toggle(event);
+};
 
 // Load templates
 const loadTemplates = async () => {
   try {
-    await calendarStore.fetchTemplates(true)
-    generateTemplatePreviews()
+    await calendarStore.fetchTemplates(true);
+    generateTemplatePreviews();
   } catch (error: any) {
-    console.error('Error loading templates:', error)
+    console.error("Error loading templates:", error);
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: error.message || 'Failed to load templates',
+      severity: "error",
+      summary: "Error",
+      detail: error.message || "Failed to load templates",
       life: 3000,
-    })
+    });
   }
-}
+};
 
 // Generate previews for all templates
 const generateTemplatePreviews = () => {
@@ -240,127 +246,133 @@ const generateTemplatePreviews = () => {
       (template) =>
         template.configuration &&
         !templatePreviews.value[template.id] &&
-        !template.previewSvg
+        !template.previewSvg,
     )
-    .map((t) => t.id)
+    .map((t) => t.id);
 
   // Set existing previewSvg from templates
   calendarStore.templates.forEach((template) => {
     if (template.previewSvg) {
-      templatePreviews.value[template.id] = scaleSvgForThumbnail(template.previewSvg)
+      templatePreviews.value[template.id] = scaleSvgForThumbnail(
+        template.previewSvg,
+      );
     }
-  })
+  });
 
-  processPreviewQueue()
-}
+  processPreviewQueue();
+};
 
 // Process preview generation queue
 const processPreviewQueue = async () => {
   if (isGeneratingPreviews.value || previewQueue.value.length === 0) {
-    return
+    return;
   }
 
-  isGeneratingPreviews.value = true
+  isGeneratingPreviews.value = true;
 
   while (previewQueue.value.length > 0) {
-    const templateId = previewQueue.value.shift()
-    if (!templateId) continue
+    const templateId = previewQueue.value.shift();
+    if (!templateId) continue;
 
-    const template = calendarStore.templates.find((t) => t.id === templateId)
-    if (!template) continue
+    const template = calendarStore.templates.find((t) => t.id === templateId);
+    if (!template) continue;
 
     try {
       // Generate preview for this template
-      const response = await fetch('/api/calendar/generate', {
-        method: 'POST',
+      const response = await fetch("/api/calendar/generate", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(template.configuration),
-      })
+      });
 
       if (response.ok) {
-        const svg = await response.text()
-        templatePreviews.value[template.id] = scaleSvgForThumbnail(svg)
+        const svg = await response.text();
+        templatePreviews.value[template.id] = scaleSvgForThumbnail(svg);
       }
     } catch (error) {
-      console.error(`Error generating preview for template ${template.id}:`, error)
+      console.error(
+        `Error generating preview for template ${template.id}:`,
+        error,
+      );
     }
 
     // Small delay between requests to avoid overwhelming the server
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
-  isGeneratingPreviews.value = false
-}
+  isGeneratingPreviews.value = false;
+};
 
 // Preview template in modal
 const previewTemplate = async (template: CalendarTemplate) => {
-  selectedTemplate.value = template
-  showPreviewModal.value = true
-  previewLoading.value = true
+  selectedTemplate.value = template;
+  showPreviewModal.value = true;
+  previewLoading.value = true;
 
   try {
     if (template.previewSvg) {
-      previewSvg.value = template.previewSvg
+      previewSvg.value = template.previewSvg;
     } else {
       // Generate preview from configuration
-      const response = await fetch('/api/calendar/generate', {
-        method: 'POST',
+      const response = await fetch("/api/calendar/generate", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(template.configuration),
-      })
+      });
 
       if (response.ok) {
-        previewSvg.value = await response.text()
+        previewSvg.value = await response.text();
       } else {
-        throw new Error('Failed to generate preview')
+        throw new Error("Failed to generate preview");
       }
     }
   } catch (error) {
-    console.error('Error generating preview:', error)
+    console.error("Error generating preview:", error);
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to generate calendar preview',
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to generate calendar preview",
       life: 3000,
-    })
-    previewSvg.value = ''
+    });
+    previewSvg.value = "";
   } finally {
-    previewLoading.value = false
+    previewLoading.value = false;
   }
-}
+};
 
 // Customize template - navigate to editor
 const customizeTemplate = (template: CalendarTemplate | null) => {
-  if (!template) return
-  showPreviewModal.value = false
+  if (!template) return;
+  showPreviewModal.value = false;
   router.push({
     path: `/editor/${template.id}`,
-  })
-}
+  });
+};
 
 // Navigate to admin dashboard
 const goToAdmin = () => {
-  console.log('Admin button clicked')
-  console.log('Is admin?', authStore.isAdmin)
-  console.log('Current route:', router.currentRoute.value.path)
+  console.log("Admin button clicked");
+  console.log("Is admin?", authStore.isAdmin);
+  console.log("Current route:", router.currentRoute.value.path);
 
-  router.push('/admin')
+  router
+    .push("/admin")
     .then(() => {
-      console.log('Navigation successful')
+      console.log("Navigation successful");
     })
     .catch((err) => {
-      console.error('Navigation failed:', err)
-    })
-}
+      console.error("Navigation failed:", err);
+    });
+};
 
 // Load templates on mount
 onMounted(() => {
-  loadTemplates()
-})
+  loadTemplates();
+});
 </script>
 
 <style scoped>
@@ -480,7 +492,9 @@ onMounted(() => {
 
 .template-card {
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -570,7 +584,9 @@ onMounted(() => {
   top: 1rem;
   right: 1rem;
   z-index: 1000;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .user-menu {

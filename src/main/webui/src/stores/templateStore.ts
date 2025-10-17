@@ -3,17 +3,17 @@
  * Pinia store for managing calendar templates (admin functions)
  */
 
-import { defineStore } from 'pinia'
-import type { CalendarTemplate, TemplateInput } from '../types/template'
+import { defineStore } from "pinia";
+import type { CalendarTemplate, TemplateInput } from "../types/template";
 import {
   fetchTemplates,
   fetchTemplate,
   createTemplate as createTemplateService,
   updateTemplate as updateTemplateService,
   deleteTemplate as deleteTemplateService,
-} from '../services/templateService'
+} from "../services/templateService";
 
-export const useTemplateStore = defineStore('template', {
+export const useTemplateStore = defineStore("template", {
   state: () => ({
     templates: [] as CalendarTemplate[],
     currentTemplate: null as CalendarTemplate | null,
@@ -26,24 +26,24 @@ export const useTemplateStore = defineStore('template', {
      * Load all templates (includes inactive for admins)
      */
     async loadTemplates(isActive?: boolean) {
-      this.loading = true
-      this.error = null
+      this.loading = true;
+      this.error = null;
 
       try {
-        const result = await fetchTemplates(isActive)
+        const result = await fetchTemplates(isActive);
 
         if (result.error) {
-          this.error = result.error
-          return false
+          this.error = result.error;
+          return false;
         }
 
-        this.templates = result.data || []
-        return true
+        this.templates = result.data || [];
+        return true;
       } catch (err: any) {
-        this.error = err.message || 'Failed to load templates'
-        return false
+        this.error = err.message || "Failed to load templates";
+        return false;
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
 
@@ -51,24 +51,24 @@ export const useTemplateStore = defineStore('template', {
      * Load single template by ID
      */
     async loadTemplate(id: string) {
-      this.loading = true
-      this.error = null
+      this.loading = true;
+      this.error = null;
 
       try {
-        const result = await fetchTemplate(id)
+        const result = await fetchTemplate(id);
 
         if (result.error) {
-          this.error = result.error
-          return false
+          this.error = result.error;
+          return false;
         }
 
-        this.currentTemplate = result.data
-        return true
+        this.currentTemplate = result.data;
+        return true;
       } catch (err: any) {
-        this.error = err.message || 'Failed to load template'
-        return false
+        this.error = err.message || "Failed to load template";
+        return false;
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
 
@@ -76,28 +76,28 @@ export const useTemplateStore = defineStore('template', {
      * Create new template (admin only)
      */
     async createTemplate(input: TemplateInput) {
-      this.loading = true
-      this.error = null
+      this.loading = true;
+      this.error = null;
 
       try {
-        const result = await createTemplateService(input)
+        const result = await createTemplateService(input);
 
         if (result.error) {
-          this.error = result.error
-          return null
+          this.error = result.error;
+          return null;
         }
 
         if (result.data) {
           // Add to templates array
-          this.templates.push(result.data)
+          this.templates.push(result.data);
         }
 
-        return result.data
+        return result.data;
       } catch (err: any) {
-        this.error = err.message || 'Failed to create template'
-        return null
+        this.error = err.message || "Failed to create template";
+        return null;
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
 
@@ -105,31 +105,31 @@ export const useTemplateStore = defineStore('template', {
      * Update existing template (admin only)
      */
     async updateTemplate(id: string, input: TemplateInput) {
-      this.loading = true
-      this.error = null
+      this.loading = true;
+      this.error = null;
 
       try {
-        const result = await updateTemplateService(id, input)
+        const result = await updateTemplateService(id, input);
 
         if (result.error) {
-          this.error = result.error
-          return null
+          this.error = result.error;
+          return null;
         }
 
         if (result.data) {
           // Update in templates array
-          const index = this.templates.findIndex((t) => t.id === id)
+          const index = this.templates.findIndex((t) => t.id === id);
           if (index !== -1) {
-            this.templates[index] = result.data
+            this.templates[index] = result.data;
           }
         }
 
-        return result.data
+        return result.data;
       } catch (err: any) {
-        this.error = err.message || 'Failed to update template'
-        return null
+        this.error = err.message || "Failed to update template";
+        return null;
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
 
@@ -137,28 +137,28 @@ export const useTemplateStore = defineStore('template', {
      * Delete template (admin only)
      */
     async deleteTemplate(id: string) {
-      this.loading = true
-      this.error = null
+      this.loading = true;
+      this.error = null;
 
       try {
-        const result = await deleteTemplateService(id)
+        const result = await deleteTemplateService(id);
 
         if (result.error) {
-          this.error = result.error
-          return false
+          this.error = result.error;
+          return false;
         }
 
         if (result.data) {
           // Remove from templates array
-          this.templates = this.templates.filter((t) => t.id !== id)
+          this.templates = this.templates.filter((t) => t.id !== id);
         }
 
-        return result.data || false
+        return result.data || false;
       } catch (err: any) {
-        this.error = err.message || 'Failed to delete template'
-        return false
+        this.error = err.message || "Failed to delete template";
+        return false;
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
 
@@ -166,14 +166,14 @@ export const useTemplateStore = defineStore('template', {
      * Clear error message
      */
     clearError() {
-      this.error = null
+      this.error = null;
     },
 
     /**
      * Clear current template
      */
     clearCurrentTemplate() {
-      this.currentTemplate = null
+      this.currentTemplate = null;
     },
   },
 
@@ -191,11 +191,12 @@ export const useTemplateStore = defineStore('template', {
     /**
      * Get template by ID
      */
-    getTemplateById: (state) => (id: string) => state.templates.find((t) => t.id === id),
+    getTemplateById: (state) => (id: string) =>
+      state.templates.find((t) => t.id === id),
 
     /**
      * Check if templates are loaded
      */
     hasTemplates: (state) => state.templates.length > 0,
   },
-})
+});

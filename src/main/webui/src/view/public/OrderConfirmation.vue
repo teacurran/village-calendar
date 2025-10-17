@@ -16,7 +16,8 @@
           </div>
           <h1 class="success-title">Order Confirmed!</h1>
           <p class="success-subtitle">
-            Thank you for your order. We'll send you a confirmation email shortly.
+            Thank you for your order. We'll send you a confirmation email
+            shortly.
           </p>
         </div>
 
@@ -63,7 +64,9 @@
                 </div>
                 <div class="calendar-details">
                   <p class="calendar-name">{{ order.calendar?.name }}</p>
-                  <p class="calendar-meta">{{ order.calendar?.year }} Calendar</p>
+                  <p class="calendar-meta">
+                    {{ order.calendar?.year }} Calendar
+                  </p>
                   <p class="calendar-meta">
                     Template: {{ order.calendar?.template?.name }}
                   </p>
@@ -73,8 +76,8 @@
                     icon="pi pi-download"
                     outlined
                     size="small"
-                    @click="downloadPDF"
                     class="mt-2"
+                    @click="downloadPDF"
                   />
                 </div>
               </div>
@@ -91,7 +94,10 @@
               <div v-if="order.trackingNumber" class="tracking-info">
                 <Message severity="info" :closable="false">
                   <div class="tracking-content">
-                    <span>Tracking Number: <strong>{{ order.trackingNumber }}</strong></span>
+                    <span
+                      >Tracking Number:
+                      <strong>{{ order.trackingNumber }}</strong></span
+                    >
                     <Button
                       label="Track Package"
                       icon="pi pi-external-link"
@@ -112,7 +118,9 @@
               <div class="summary-rows">
                 <div class="summary-row">
                   <span>{{ order.calendar?.name }} × {{ order.quantity }}</span>
-                  <span>{{ formatCurrency(order.unitPrice * order.quantity) }}</span>
+                  <span>{{
+                    formatCurrency(order.unitPrice * order.quantity)
+                  }}</span>
                 </div>
                 <div class="summary-row">
                   <span>Shipping</span>
@@ -120,7 +128,13 @@
                 </div>
                 <div class="summary-row">
                   <span>Tax</span>
-                  <span>{{ formatCurrency(order.totalPrice - (order.unitPrice * order.quantity) - 5.99) }}</span>
+                  <span>{{
+                    formatCurrency(
+                      order.totalPrice -
+                        order.unitPrice * order.quantity -
+                        5.99,
+                    )
+                  }}</span>
                 </div>
                 <Divider />
                 <div class="summary-row total">
@@ -136,33 +150,70 @@
             <div class="timeline-section">
               <h3>Delivery Status</h3>
               <div class="timeline">
-                <div class="timeline-item" :class="{ active: order.status !== 'PENDING' }">
+                <div
+                  class="timeline-item"
+                  :class="{ active: order.status !== 'PENDING' }"
+                >
                   <div class="timeline-marker"></div>
                   <div class="timeline-content">
                     <p class="timeline-title">Order Placed</p>
                     <p class="timeline-date">{{ formatDate(order.created) }}</p>
                   </div>
                 </div>
-                <div class="timeline-item" :class="{ active: order.status === 'PROCESSING' || order.status === 'SHIPPED' || order.status === 'DELIVERED' }">
+                <div
+                  class="timeline-item"
+                  :class="{
+                    active:
+                      order.status === 'PROCESSING' ||
+                      order.status === 'SHIPPED' ||
+                      order.status === 'DELIVERED',
+                  }"
+                >
                   <div class="timeline-marker"></div>
                   <div class="timeline-content">
                     <p class="timeline-title">Processing</p>
-                    <p class="timeline-date" v-if="order.status === 'PROCESSING' || order.status === 'SHIPPED' || order.status === 'DELIVERED'">In progress</p>
+                    <p
+                      v-if="
+                        order.status === 'PROCESSING' ||
+                        order.status === 'SHIPPED' ||
+                        order.status === 'DELIVERED'
+                      "
+                      class="timeline-date"
+                    >
+                      In progress
+                    </p>
                   </div>
                 </div>
-                <div class="timeline-item" :class="{ active: order.status === 'SHIPPED' || order.status === 'DELIVERED' }">
+                <div
+                  class="timeline-item"
+                  :class="{
+                    active:
+                      order.status === 'SHIPPED' ||
+                      order.status === 'DELIVERED',
+                  }"
+                >
                   <div class="timeline-marker"></div>
                   <div class="timeline-content">
                     <p class="timeline-title">Shipped</p>
-                    <p class="timeline-date" v-if="order.shippedAt">{{ formatDate(order.shippedAt) }}</p>
+                    <p v-if="order.shippedAt" class="timeline-date">
+                      {{ formatDate(order.shippedAt) }}
+                    </p>
                   </div>
                 </div>
-                <div class="timeline-item" :class="{ active: order.status === 'DELIVERED' }">
+                <div
+                  class="timeline-item"
+                  :class="{ active: order.status === 'DELIVERED' }"
+                >
                   <div class="timeline-marker"></div>
                   <div class="timeline-content">
                     <p class="timeline-title">Delivered</p>
-                    <p class="timeline-date" v-if="order.deliveredAt">{{ formatDate(order.deliveredAt) }}</p>
-                    <p class="timeline-date estimated" v-else-if="estimatedDelivery">
+                    <p v-if="order.deliveredAt" class="timeline-date">
+                      {{ formatDate(order.deliveredAt) }}
+                    </p>
+                    <p
+                      v-else-if="estimatedDelivery"
+                      class="timeline-date estimated"
+                    >
                       Estimated: {{ formatDate(estimatedDelivery) }}
                     </p>
                   </div>
@@ -191,13 +242,14 @@
       <!-- Error state -->
       <div v-else class="error-container">
         <Message severity="error" :closable="false">
-          Failed to load order details. Please check your email for order confirmation.
+          Failed to load order details. Please check your email for order
+          confirmation.
         </Message>
         <Button
           label="Go Home"
           icon="pi pi-home"
-          @click="router.push('/')"
           class="mt-4"
+          @click="router.push('/')"
         />
       </div>
     </div>
@@ -205,129 +257,139 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import { useAuthStore } from '../../stores/authStore'
-import { fetchOrderById, formatOrderStatus, getOrderStatusSeverity, formatCurrency } from '../../services/orderService'
-import { formatDate, formatDateTime, calculateEstimatedDelivery, downloadCalendarPDF } from '../../services/calendarService'
-import CalendarPreview from '../../components/CalendarPreview.vue'
-import Card from 'primevue/card'
-import Button from 'primevue/button'
-import Tag from 'primevue/tag'
-import ProgressSpinner from 'primevue/progressspinner'
-import Message from 'primevue/message'
-import Divider from 'primevue/divider'
+import { ref, computed, onMounted } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { useToast } from "primevue/usetoast";
+import { useAuthStore } from "../../stores/authStore";
+import {
+  fetchOrderById,
+  formatOrderStatus,
+  getOrderStatusSeverity,
+  formatCurrency,
+} from "../../services/orderService";
+import {
+  formatDate,
+  formatDateTime,
+  calculateEstimatedDelivery,
+  downloadCalendarPDF,
+} from "../../services/calendarService";
+import CalendarPreview from "../../components/CalendarPreview.vue";
+import Card from "primevue/card";
+import Button from "primevue/button";
+import Tag from "primevue/tag";
+import ProgressSpinner from "primevue/progressspinner";
+import Message from "primevue/message";
+import Divider from "primevue/divider";
 
 interface CalendarOrder {
-  id: string
-  quantity: number
-  unitPrice: number
-  totalPrice: number
-  status: string
-  shippingAddress: any
-  paidAt: string | null
-  shippedAt: string | null
-  deliveredAt: string | null
-  trackingNumber: string | null
-  created: string
-  updated: string
+  id: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  status: string;
+  shippingAddress: any;
+  paidAt: string | null;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+  trackingNumber: string | null;
+  created: string;
+  updated: string;
   calendar: {
-    id: string
-    name: string
-    year: number
-    generatedPdfUrl: string | null
+    id: string;
+    name: string;
+    year: number;
+    generatedPdfUrl: string | null;
     template: {
-      id: string
-      name: string
-    }
-  }
+      id: string;
+      name: string;
+    };
+  };
   user: {
-    id: string
-    email: string
-    displayName: string | null
-  }
+    id: string;
+    email: string;
+    displayName: string | null;
+  };
 }
 
-const router = useRouter()
-const route = useRoute()
-const toast = useToast()
-const authStore = useAuthStore()
+const router = useRouter();
+const route = useRoute();
+const toast = useToast();
+const authStore = useAuthStore();
 
 // State
-const loading = ref(true)
-const order = ref<CalendarOrder | null>(null)
+const loading = ref(true);
+const order = ref<CalendarOrder | null>(null);
 
 // Computed
 const estimatedDelivery = computed(() => {
-  if (!order.value || order.value.deliveredAt) return null
-  return calculateEstimatedDelivery(new Date(order.value.created))
-})
+  if (!order.value || order.value.deliveredAt) return null;
+  return calculateEstimatedDelivery(new Date(order.value.created));
+});
 
 // Methods
 const formatAddress = (address: any) => {
-  if (!address) return 'N/A'
+  if (!address) return "N/A";
   const parts = [
     address.street,
     address.street2,
     address.city,
     `${address.state} ${address.postalCode}`,
     address.country,
-  ].filter(Boolean)
-  return parts.join(', ')
-}
+  ].filter(Boolean);
+  return parts.join(", ");
+};
 
 const downloadPDF = () => {
-  if (!order.value?.calendar?.generatedPdfUrl) return
+  if (!order.value?.calendar?.generatedPdfUrl) return;
   downloadCalendarPDF(
     order.value.calendar.generatedPdfUrl,
-    order.value.calendar.name
-  )
-}
+    order.value.calendar.name,
+  );
+};
 
 const trackPackage = () => {
   // Open tracking URL (would need to be configured based on shipping provider)
-  const trackingUrl = `https://www.trackingservice.com/track/${order.value.trackingNumber}`
-  window.open(trackingUrl, '_blank')
-}
+  const trackingUrl = `https://www.trackingservice.com/track/${order.value.trackingNumber}`;
+  window.open(trackingUrl, "_blank");
+};
 
 const viewOrders = () => {
   // Navigate to orders page (would need to be created)
-  router.push('/orders')
-}
+  router.push("/orders");
+};
 
 // Initialize
 onMounted(async () => {
   try {
     if (!authStore.isAuthenticated) {
       toast.add({
-        severity: 'warn',
-        summary: 'Login Required',
-        detail: 'Please log in to view order details',
+        severity: "warn",
+        summary: "Login Required",
+        detail: "Please log in to view order details",
         life: 3000,
-      })
-      authStore.initiateLogin('google')
-      return
+      });
+      authStore.initiateLogin("google");
+      return;
     }
 
-    const orderId = route.params.orderId as string
-    order.value = await fetchOrderById(orderId, authStore.token)
+    const orderId = route.params.orderId as string;
+    order.value = await fetchOrderById(orderId, authStore.token);
 
     if (!order.value) {
-      throw new Error('Order not found')
+      throw new Error("Order not found");
     }
   } catch (error: any) {
-    console.error('Error loading order:', error)
+    console.error("Error loading order:", error);
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: error.message || 'Failed to load order',
+      severity: "error",
+      summary: "Error",
+      detail: error.message || "Failed to load order",
       life: 3000,
-    })
+    });
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-})
+});
 </script>
 
 <style scoped>
@@ -512,7 +574,7 @@ onMounted(async () => {
 }
 
 .timeline::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0.5rem;
   top: 0;

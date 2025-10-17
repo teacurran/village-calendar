@@ -9,21 +9,21 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useAuthStore } from '../../stores/authStore'
-import ProgressSpinner from 'primevue/progressspinner'
+import { onMounted } from "vue";
+import { useAuthStore } from "../../stores/authStore";
+import ProgressSpinner from "primevue/progressspinner";
 
-const authStore = useAuthStore()
+const authStore = useAuthStore();
 
 onMounted(() => {
   // Clear old token
-  authStore.logout()
+  authStore.logout();
 
   // Redirect to Google login after a short delay
   setTimeout(() => {
-    window.location.href = '/auth/login/google'
-  }, 1000)
-})
+    window.location.href = "/auth/login/google";
+  }, 1000);
+});
 </script>
 
 <style scoped>

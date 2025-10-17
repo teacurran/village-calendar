@@ -3,34 +3,34 @@
  * Handles order creation and payment processing with Stripe
  */
 
-import { loadStripe, Stripe, StripeElements } from '@stripe/stripe-js'
-import type { OrderUpdateInput } from '../types/order'
+import { loadStripe, Stripe, StripeElements } from "@stripe/stripe-js";
+import type { OrderUpdateInput } from "../types/order";
 
-let stripeInstance: Stripe | null = null
-let stripePublishableKey: string | null = null
+let stripeInstance: Stripe | null = null;
+let stripePublishableKey: string | null = null;
 
 export interface PaymentIntent {
-  id: string
-  clientSecret: string
-  amount: number
-  calendarId: string
-  quantity: number
-  status: string
+  id: string;
+  clientSecret: string;
+  amount: number;
+  calendarId: string;
+  quantity: number;
+  status: string;
 }
 
 export interface ShippingAddress {
-  street: string
-  street2?: string
-  city: string
-  state: string
-  postalCode: string
-  country: string
+  street: string;
+  street2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
 }
 
 export interface CreateOrderInput {
-  calendarId: string
-  quantity: number
-  shippingAddress: ShippingAddress
+  calendarId: string;
+  quantity: number;
+  shippingAddress: ShippingAddress;
 }
 
 /**
@@ -39,33 +39,33 @@ export interface CreateOrderInput {
  */
 export async function initializeStripe(): Promise<Stripe> {
   if (stripeInstance) {
-    return stripeInstance
+    return stripeInstance;
   }
 
   try {
     // Get Stripe publishable key from environment variable
-    const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
+    const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 
     if (!publishableKey) {
       throw new Error(
-        'Stripe publishable key not configured. ' +
-        'Please set VITE_STRIPE_PUBLISHABLE_KEY in your .env file.'
-      )
+        "Stripe publishable key not configured. " +
+          "Please set VITE_STRIPE_PUBLISHABLE_KEY in your .env file.",
+      );
     }
 
-    stripePublishableKey = publishableKey
+    stripePublishableKey = publishableKey;
 
     // Load Stripe.js
-    const stripe = await loadStripe(publishableKey)
+    const stripe = await loadStripe(publishableKey);
     if (!stripe) {
-      throw new Error('Failed to load Stripe')
+      throw new Error("Failed to load Stripe");
     }
 
-    stripeInstance = stripe
-    return stripe
+    stripeInstance = stripe;
+    return stripe;
   } catch (error) {
-    console.error('Error initializing Stripe:', error)
-    throw error
+    console.error("Error initializing Stripe:", error);
+    throw error;
   }
 }
 
@@ -75,14 +75,14 @@ export async function initializeStripe(): Promise<Stripe> {
  */
 export async function createOrder(
   input: CreateOrderInput,
-  authToken: string
+  authToken: string,
 ): Promise<PaymentIntent> {
   try {
-    const response = await fetch('/graphql', {
-      method: 'POST',
+    const response = await fetch("/graphql", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         query: `
@@ -111,26 +111,26 @@ export async function createOrder(
           shippingAddress: input.shippingAddress,
         },
       }),
-    })
+    });
 
     if (!response.ok) {
-      throw new Error('Failed to create order')
+      throw new Error("Failed to create order");
     }
 
-    const result = await response.json()
+    const result = await response.json();
 
     if (result.errors) {
-      throw new Error(result.errors[0]?.message || 'Failed to create order')
+      throw new Error(result.errors[0]?.message || "Failed to create order");
     }
 
     if (!result.data?.createOrder) {
-      throw new Error('No payment intent returned from server')
+      throw new Error("No payment intent returned from server");
     }
 
-    return result.data.createOrder
+    return result.data.createOrder;
   } catch (error) {
-    console.error('Error creating order:', error)
-    throw error
+    console.error("Error creating order:", error);
+    throw error;
   }
 }
 
@@ -141,7 +141,7 @@ export async function createOrder(
 export async function confirmPayment(
   stripe: Stripe,
   elements: StripeElements,
-  returnUrl: string
+  returnUrl: string,
 ): Promise<{ error?: { message: string } }> {
   try {
     const { error } = await stripe.confirmPayment({
@@ -149,29 +149,34 @@ export async function confirmPayment(
       confirmParams: {
         return_url: returnUrl,
       },
-    })
+    });
 
     if (error) {
-      return { error }
+      return { error };
     }
 
-    return {}
+    return {};
   } catch (error: any) {
-    console.error('Error confirming payment:', error)
-    return { error: { message: error.message || 'Payment confirmation failed' } }
+    console.error("Error confirming payment:", error);
+    return {
+      error: { message: error.message || "Payment confirmation failed" },
+    };
   }
 }
 
 /**
  * Fetch order details by ID
  */
-export async function fetchOrderById(orderId: string, authToken: string): Promise<any> {
+export async function fetchOrderById(
+  orderId: string,
+  authToken: string,
+): Promise<any> {
   try {
-    const response = await fetch('/graphql', {
-      method: 'POST',
+    const response = await fetch("/graphql", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         query: `
@@ -209,22 +214,22 @@ export async function fetchOrderById(orderId: string, authToken: string): Promis
         `,
         variables: { id: orderId },
       }),
-    })
+    });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch order')
+      throw new Error("Failed to fetch order");
     }
 
-    const result = await response.json()
+    const result = await response.json();
 
     if (result.errors) {
-      throw new Error(result.errors[0]?.message || 'Failed to fetch order')
+      throw new Error(result.errors[0]?.message || "Failed to fetch order");
     }
 
-    return result.data?.order || null
+    return result.data?.order || null;
   } catch (error) {
-    console.error('Error fetching order:', error)
-    throw error
+    console.error("Error fetching order:", error);
+    throw error;
   }
 }
 
@@ -233,11 +238,11 @@ export async function fetchOrderById(orderId: string, authToken: string): Promis
  */
 export async function fetchUserOrders(authToken: string): Promise<any[]> {
   try {
-    const response = await fetch('/graphql', {
-      method: 'POST',
+    const response = await fetch("/graphql", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         query: `
@@ -267,22 +272,22 @@ export async function fetchUserOrders(authToken: string): Promise<any[]> {
           }
         `,
       }),
-    })
+    });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch orders')
+      throw new Error("Failed to fetch orders");
     }
 
-    const result = await response.json()
+    const result = await response.json();
 
     if (result.errors) {
-      throw new Error(result.errors[0]?.message || 'Failed to fetch orders')
+      throw new Error(result.errors[0]?.message || "Failed to fetch orders");
     }
 
-    return result.data?.myOrders || []
+    return result.data?.myOrders || [];
   } catch (error) {
-    console.error('Error fetching orders:', error)
-    throw error
+    console.error("Error fetching orders:", error);
+    throw error;
   }
 }
 
@@ -291,50 +296,56 @@ export async function fetchUserOrders(authToken: string): Promise<any[]> {
  */
 export function formatOrderStatus(status: string): string {
   const statusMap: Record<string, string> = {
-    PENDING: 'Pending Payment',
-    PAID: 'Paid',
-    PROCESSING: 'Processing',
-    SHIPPED: 'Shipped',
-    DELIVERED: 'Delivered',
-    CANCELLED: 'Cancelled',
-    REFUNDED: 'Refunded',
-  }
-  return statusMap[status] || status
+    PENDING: "Pending Payment",
+    PAID: "Paid",
+    PROCESSING: "Processing",
+    SHIPPED: "Shipped",
+    DELIVERED: "Delivered",
+    CANCELLED: "Cancelled",
+    REFUNDED: "Refunded",
+  };
+  return statusMap[status] || status;
 }
 
 /**
  * Get order status severity for PrimeVue Tag component
  */
 export function getOrderStatusSeverity(
-  status: string
-): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
-  const severityMap: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'> = {
-    PENDING: 'warn',
-    PAID: 'info',
-    PROCESSING: 'info',
-    SHIPPED: 'success',
-    DELIVERED: 'success',
-    CANCELLED: 'danger',
-    REFUNDED: 'secondary',
-  }
-  return severityMap[status] || 'secondary'
+  status: string,
+): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" {
+  const severityMap: Record<
+    string,
+    "success" | "info" | "warn" | "danger" | "secondary" | "contrast"
+  > = {
+    PENDING: "warn",
+    PAID: "info",
+    PROCESSING: "info",
+    SHIPPED: "success",
+    DELIVERED: "success",
+    CANCELLED: "danger",
+    REFUNDED: "secondary",
+  };
+  return severityMap[status] || "secondary";
 }
 
 /**
  * Format currency amount
  */
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount)
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(amount);
 }
 
 /**
  * Calculate order total
  */
-export function calculateOrderTotal(unitPrice: number, quantity: number): number {
-  return unitPrice * quantity
+export function calculateOrderTotal(
+  unitPrice: number,
+  quantity: number,
+): number {
+  return unitPrice * quantity;
 }
 
 /**
@@ -344,14 +355,14 @@ export function calculateOrderTotal(unitPrice: number, quantity: number): number
  */
 export async function fetchOrderByPaymentIntent(
   paymentIntentId: string,
-  authToken: string
+  authToken: string,
 ): Promise<any | null> {
   try {
-    const response = await fetch('/graphql', {
-      method: 'POST',
+    const response = await fetch("/graphql", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         query: `
@@ -389,27 +400,29 @@ export async function fetchOrderByPaymentIntent(
           }
         `,
       }),
-    })
+    });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch orders')
+      throw new Error("Failed to fetch orders");
     }
 
-    const result = await response.json()
+    const result = await response.json();
 
     if (result.errors) {
-      throw new Error(result.errors[0]?.message || 'Failed to fetch orders')
+      throw new Error(result.errors[0]?.message || "Failed to fetch orders");
     }
 
-    const orders = result.data?.myOrders || []
+    const orders = result.data?.myOrders || [];
 
     // Find the order with matching payment intent ID
-    const order = orders.find((o: any) => o.stripePaymentIntentId === paymentIntentId)
+    const order = orders.find(
+      (o: any) => o.stripePaymentIntentId === paymentIntentId,
+    );
 
-    return order || null
+    return order || null;
   } catch (error) {
-    console.error('Error fetching order by payment intent:', error)
-    throw error
+    console.error("Error fetching order by payment intent:", error);
+    throw error;
   }
 }
 
@@ -423,14 +436,14 @@ export async function fetchOrderByPaymentIntent(
 export async function fetchAllOrdersAdmin(
   authToken: string,
   status?: string,
-  limit: number = 100
+  limit: number = 100,
 ): Promise<any[]> {
   try {
-    const response = await fetch('/graphql', {
-      method: 'POST',
+    const response = await fetch("/graphql", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         query: `
@@ -466,22 +479,22 @@ export async function fetchAllOrdersAdmin(
         `,
         variables: { status, limit },
       }),
-    })
+    });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch orders')
+      throw new Error("Failed to fetch orders");
     }
 
-    const result = await response.json()
+    const result = await response.json();
 
     if (result.errors) {
-      throw new Error(result.errors[0]?.message || 'Failed to fetch orders')
+      throw new Error(result.errors[0]?.message || "Failed to fetch orders");
     }
 
-    return result.data?.allOrders || []
+    return result.data?.allOrders || [];
   } catch (error) {
-    console.error('Error fetching all orders:', error)
-    throw error
+    console.error("Error fetching all orders:", error);
+    throw error;
   }
 }
 
@@ -491,14 +504,14 @@ export async function fetchAllOrdersAdmin(
 export async function updateOrderStatusAdmin(
   orderId: string,
   input: OrderUpdateInput,
-  authToken: string
+  authToken: string,
 ): Promise<any> {
   try {
-    const response = await fetch('/graphql', {
-      method: 'POST',
+    const response = await fetch("/graphql", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
       },
       body: JSON.stringify({
         query: `
@@ -534,21 +547,23 @@ export async function updateOrderStatusAdmin(
         `,
         variables: { id: orderId, input },
       }),
-    })
+    });
 
     if (!response.ok) {
-      throw new Error('Failed to update order status')
+      throw new Error("Failed to update order status");
     }
 
-    const result = await response.json()
+    const result = await response.json();
 
     if (result.errors) {
-      throw new Error(result.errors[0]?.message || 'Failed to update order status')
+      throw new Error(
+        result.errors[0]?.message || "Failed to update order status",
+      );
     }
 
-    return result.data?.updateOrderStatus || null
+    return result.data?.updateOrderStatus || null;
   } catch (error) {
-    console.error('Error updating order status:', error)
-    throw error
+    console.error("Error updating order status:", error);
+    throw error;
   }
 }

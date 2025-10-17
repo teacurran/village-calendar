@@ -1,132 +1,150 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { useCartStore } from '../stores/cart'
-import { useToast } from 'primevue/usetoast'
-import { homeBreadcrumb } from '../navigation/breadcrumbs'
-import Breadcrumb from 'primevue/breadcrumb'
-import Button from 'primevue/button'
-import Card from 'primevue/card'
-import InputNumber from 'primevue/inputnumber'
-import Divider from 'primevue/divider'
-import Dialog from 'primevue/dialog'
-import ProgressSpinner from 'primevue/progressspinner'
+import { ref, computed, onMounted, watch } from "vue";
+import { useRouter } from "vue-router";
+import { useCartStore } from "../stores/cart";
+import { useToast } from "primevue/usetoast";
+import { homeBreadcrumb } from "../navigation/breadcrumbs";
+import Breadcrumb from "primevue/breadcrumb";
+import Button from "primevue/button";
+import Card from "primevue/card";
+import InputNumber from "primevue/inputnumber";
+import Divider from "primevue/divider";
+import Dialog from "primevue/dialog";
+import ProgressSpinner from "primevue/progressspinner";
 
-const router = useRouter()
-const cartStore = useCartStore()
-const toast = useToast()
+const router = useRouter();
+const cartStore = useCartStore();
+const toast = useToast();
 
 // Calendar printing product ID
-const CALENDAR_PRODUCT_ID = 'ca1e0da2-0000-0000-0000-000000000001'
+const CALENDAR_PRODUCT_ID = "ca1e0da2-0000-0000-0000-000000000001";
 
 // Store for calendar SVGs
-const calendarSvgs = ref<Record<string, string>>({})
-const showPreviewModal = ref(false)
-const previewCalendarSvg = ref('')
-const previewCalendarName = ref('')
-const loading = ref(false)
+const calendarSvgs = ref<Record<string, string>>({});
+const showPreviewModal = ref(false);
+const previewCalendarSvg = ref("");
+const previewCalendarName = ref("");
+const loading = ref(false);
 
 // Breadcrumbs
 const breadcrumbItems = computed(() => [
-  { label: 'Store', url: '/store' },
-  { label: 'Cart' },
-])
+  { label: "Store", url: "/store" },
+  { label: "Cart" },
+]);
 
 // Cart items
-const cartItems = computed(() => cartStore.items || [])
-const cartSubtotal = computed(() => cartStore.subtotal || 0)
-const cartItemCount = computed(() => cartStore.itemCount || 0)
+const cartItems = computed(() => cartStore.items || []);
+const cartSubtotal = computed(() => cartStore.subtotal || 0);
+const cartItemCount = computed(() => cartStore.itemCount || 0);
 
 // Parse configuration and get calendar details
 const getCalendarConfig = (item: any) => {
   if (item.productId === CALENDAR_PRODUCT_ID && item.configuration) {
     try {
       // Configuration might already be parsed
-      if (typeof item.configuration === 'object') {
-        return item.configuration
+      if (typeof item.configuration === "object") {
+        return item.configuration;
       }
-      return JSON.parse(item.configuration)
+      return JSON.parse(item.configuration);
     } catch (e) {
-      console.error('Failed to parse calendar configuration:', e, item.configuration)
+      console.error(
+        "Failed to parse calendar configuration:",
+        e,
+        item.configuration,
+      );
     }
   }
-  return null
-}
+  return null;
+};
 
 // Check if item is a calendar
 const isCalendarItem = (item: any) => {
-  return item.productId === CALENDAR_PRODUCT_ID
-}
+  return item.productId === CALENDAR_PRODUCT_ID;
+};
 
 // Get month name from number
 const getMonthName = (month: number) => {
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ]
-  return months[month - 1] || 'Jan'
-}
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  return months[month - 1] || "Jan";
+};
 
 // Get calendar SVG for a specific calendar ID
 const fetchCalendarSvg = async (calendarId: string) => {
   if (calendarSvgs.value[calendarId]) {
-    return calendarSvgs.value[calendarId]
+    return calendarSvgs.value[calendarId];
   }
 
   try {
     // Fetch only the specific calendar's SVG
-    const response = await fetch(`/api/calendar-templates/user/calendars/${calendarId}/preview`)
+    const response = await fetch(
+      `/api/calendar-templates/user/calendars/${calendarId}/preview`,
+    );
     if (response.ok) {
-      const svg = await response.text()
-      calendarSvgs.value[calendarId] = svg
-      return svg
+      const svg = await response.text();
+      calendarSvgs.value[calendarId] = svg;
+      return svg;
     }
   } catch (error) {
-    console.error(`Failed to fetch calendar SVG for ${calendarId}:`, error)
+    console.error(`Failed to fetch calendar SVG for ${calendarId}:`, error);
   }
 
-  return null
-}
+  return null;
+};
 
 // Load calendar SVGs for cart items
 const loadCalendarSvgs = async () => {
-  if (!cartStore.items || cartStore.items.length === 0) return
+  if (!cartStore.items || cartStore.items.length === 0) return;
 
-  console.log('Loading calendar SVGs for cart items:', cartStore.items)
+  console.log("Loading calendar SVGs for cart items:", cartStore.items);
 
   for (const item of cartStore.items) {
-    const config = getCalendarConfig(item)
-    console.log('Item config:', item.id, config)
+    const config = getCalendarConfig(item);
+    console.log("Item config:", item.id, config);
 
     if (config) {
-      const calendarKey = item.id // Use item.id as consistent key
+      const calendarKey = item.id; // Use item.id as consistent key
 
       // Check for different possible SVG field names
       if (config.svgContent) {
-        console.log('Found svgContent for', calendarKey)
-        calendarSvgs.value[calendarKey] = config.svgContent
+        console.log("Found svgContent for", calendarKey);
+        calendarSvgs.value[calendarKey] = config.svgContent;
       } else if (config.generatedSvg) {
-        console.log('Found generatedSvg for', calendarKey)
-        calendarSvgs.value[calendarKey] = config.generatedSvg
+        console.log("Found generatedSvg for", calendarKey);
+        calendarSvgs.value[calendarKey] = config.generatedSvg;
       } else if (config.calendarId) {
         // Try to fetch the SVG using the calendar ID
-        const svg = await fetchCalendarSvg(config.calendarId)
+        const svg = await fetchCalendarSvg(config.calendarId);
         if (svg) {
-          console.log('Fetched SVG for calendar', config.calendarId)
-          calendarSvgs.value[calendarKey] = svg
+          console.log("Fetched SVG for calendar", config.calendarId);
+          calendarSvgs.value[calendarKey] = svg;
         } else {
           // Find the calendar in our cached list
-          const calendar = allUserCalendars.value.find(c => c.id === config.calendarId)
-          console.log('Found calendar by ID:', calendar)
+          const calendar = allUserCalendars.value.find(
+            (c) => c.id === config.calendarId,
+          );
+          console.log("Found calendar by ID:", calendar);
 
           if (calendar) {
             // Check different possible field names
             if (calendar.generatedSvg) {
-              console.log('Using generatedSvg from calendar')
-              calendarSvgs.value[calendarKey] = calendar.generatedSvg
+              console.log("Using generatedSvg from calendar");
+              calendarSvgs.value[calendarKey] = calendar.generatedSvg;
             } else if (calendar.svgContent) {
-              console.log('Using svgContent from calendar')
-              calendarSvgs.value[calendarKey] = calendar.svgContent
+              console.log("Using svgContent from calendar");
+              calendarSvgs.value[calendarKey] = calendar.svgContent;
             }
           }
         }
@@ -134,124 +152,126 @@ const loadCalendarSvgs = async () => {
     }
   }
 
-  console.log('Final calendarSvgs:', calendarSvgs.value)
-}
+  console.log("Final calendarSvgs:", calendarSvgs.value);
+};
 
 // Show calendar preview
 const showCalendarPreview = (item: any) => {
-  const config = getCalendarConfig(item)
+  const config = getCalendarConfig(item);
   if (config) {
-    const calendarKey = item.id
+    const calendarKey = item.id;
     if (calendarSvgs.value[calendarKey]) {
-      previewCalendarSvg.value = calendarSvgs.value[calendarKey]
-      previewCalendarName.value = config.title || `Calendar - ${getMonthName(config.month)} ${config.year}`
-      showPreviewModal.value = true
+      previewCalendarSvg.value = calendarSvgs.value[calendarKey];
+      previewCalendarName.value =
+        config.title ||
+        `Calendar - ${getMonthName(config.month)} ${config.year}`;
+      showPreviewModal.value = true;
     }
   }
-}
+};
 
 // Update item quantity
 async function updateQuantity(item: any, newQuantity: number) {
   if (newQuantity < 1) {
-    await removeItem(item)
-    return
+    await removeItem(item);
+    return;
   }
 
   try {
-    await cartStore.updateQuantity(item.id, newQuantity)
+    await cartStore.updateQuantity(item.id, newQuantity);
     toast.add({
-      severity: 'success',
-      summary: 'Cart Updated',
-      detail: 'Quantity updated',
+      severity: "success",
+      summary: "Cart Updated",
+      detail: "Quantity updated",
       life: 2000,
-    })
+    });
   } catch (error) {
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to update quantity',
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to update quantity",
       life: 3000,
-    })
+    });
   }
 }
 
 // Remove item from cart
 async function removeItem(item: any) {
   try {
-    await cartStore.removeItem(item.id)
+    await cartStore.removeItem(item.id);
 
     // Remove the SVG from cache
-    const calendarKey = item.id
+    const calendarKey = item.id;
     if (calendarSvgs.value[calendarKey]) {
-      delete calendarSvgs.value[calendarKey]
+      delete calendarSvgs.value[calendarKey];
     }
 
     toast.add({
-      severity: 'success',
-      summary: 'Item Removed',
-      detail: 'Item removed from cart',
+      severity: "success",
+      summary: "Item Removed",
+      detail: "Item removed from cart",
       life: 2000,
-    })
+    });
   } catch (error) {
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to remove item',
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to remove item",
       life: 3000,
-    })
+    });
   }
 }
 
 // Clear entire cart
 async function clearCart() {
   try {
-    await cartStore.clearCart()
-    calendarSvgs.value = {}
+    await cartStore.clearCart();
+    calendarSvgs.value = {};
     toast.add({
-      severity: 'success',
-      summary: 'Cart Cleared',
-      detail: 'All items removed from cart',
+      severity: "success",
+      summary: "Cart Cleared",
+      detail: "All items removed from cart",
       life: 2000,
-    })
+    });
   } catch (error) {
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to clear cart',
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to clear cart",
       life: 3000,
-    })
+    });
   }
 }
 
 // Continue shopping
 function continueShopping() {
-  router.push('/store')
+  router.push("/store");
 }
 
 // Proceed to checkout
 function proceedToCheckout() {
-  router.push('/store/checkout')
+  router.push("/store/checkout");
 }
 
 // Initialize
 onMounted(async () => {
-  loading.value = true
+  loading.value = true;
   try {
-    await cartStore.fetchCart()
-    await loadCalendarSvgs()
+    await cartStore.fetchCart();
+    await loadCalendarSvgs();
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-})
+});
 
 // Watch for cart changes and reload SVGs
 watch(
   () => cartStore.items,
   async () => {
-    await loadCalendarSvgs()
+    await loadCalendarSvgs();
   },
-  { deep: true }
-)
+  { deep: true },
+);
 </script>
 
 <template>
@@ -275,8 +295,8 @@ watch(
         <Button
           label="Continue Shopping"
           icon="pi pi-arrow-left"
-          @click="continueShopping"
           class="p-button-primary"
+          @click="continueShopping"
         />
       </template>
     </Card>
@@ -288,13 +308,15 @@ watch(
         <Card>
           <template #header>
             <div class="flex justify-between items-center p-4">
-              <h2 class="text-xl font-semibold">Cart Items ({{ cartItemCount }})</h2>
+              <h2 class="text-xl font-semibold">
+                Cart Items ({{ cartItemCount }})
+              </h2>
               <Button
                 label="Clear Cart"
                 icon="pi pi-trash"
-                @click="clearCart"
                 class="p-button-text p-button-danger"
                 size="small"
+                @click="clearCart"
               />
             </div>
           </template>
@@ -313,8 +335,8 @@ watch(
                     <!-- Calendar Preview -->
                     <div
                       v-if="isCalendarItem(item) && calendarSvgs[item.id]"
-                      @click="showCalendarPreview(item)"
                       class="calendar-thumbnail"
+                      @click="showCalendarPreview(item)"
                     >
                       <div
                         style="
@@ -338,59 +360,74 @@ watch(
                       class="product-thumbnail"
                     />
                     <!-- Placeholder -->
-                    <div
-                      v-else
-                      class="product-thumbnail-placeholder"
-                    >
+                    <div v-else class="product-thumbnail-placeholder">
                       <i class="pi pi-box text-gray-400"></i>
                     </div>
                   </div>
 
                   <!-- Item Details -->
                   <div class="flex-1">
-                    <h3 class="font-semibold text-lg mb-1">{{ item.productName }}</h3>
-                    <p v-if="item.description" class="text-sm text-surface-600 mb-2">
+                    <h3 class="font-semibold text-lg mb-1">
+                      {{ item.productName }}
+                    </h3>
+                    <p
+                      v-if="item.description"
+                      class="text-sm text-surface-600 mb-2"
+                    >
                       {{ item.description }}
                     </p>
 
                     <!-- Calendar Details -->
-                    <div v-if="isCalendarItem(item)" class="text-sm text-surface-600">
+                    <div
+                      v-if="isCalendarItem(item)"
+                      class="text-sm text-surface-600"
+                    >
                       <template v-if="getCalendarConfig(item)">
                         <p>{{ getCalendarConfig(item).title }}</p>
-                        <p>{{ getMonthName(getCalendarConfig(item).month) }} {{ getCalendarConfig(item).year }}</p>
+                        <p>
+                          {{ getMonthName(getCalendarConfig(item).month) }}
+                          {{ getCalendarConfig(item).year }}
+                        </p>
                       </template>
                     </div>
 
                     <!-- Product Options -->
-                    <div v-if="item.options" class="text-sm text-surface-600 mt-1">
+                    <div
+                      v-if="item.options"
+                      class="text-sm text-surface-600 mt-1"
+                    >
                       <span v-for="(value, key) in item.options" :key="key">
-                        {{ key }}: {{ value }}<br>
+                        {{ key }}: {{ value }}<br />
                       </span>
                     </div>
                   </div>
 
                   <!-- Price and Quantity -->
                   <div class="text-right">
-                    <p class="font-semibold text-lg mb-2">${{ (item.lineTotal || 0).toFixed(2) }}</p>
-                    <p class="text-sm text-surface-600 mb-2">${{ (item.unitPrice || 0).toFixed(2) }} each</p>
+                    <p class="font-semibold text-lg mb-2">
+                      ${{ (item.lineTotal || 0).toFixed(2) }}
+                    </p>
+                    <p class="text-sm text-surface-600 mb-2">
+                      ${{ (item.unitPrice || 0).toFixed(2) }} each
+                    </p>
 
                     <div class="flex items-center gap-2">
                       <InputNumber
                         v-model="item.quantity"
-                        @update:modelValue="(val) => updateQuantity(item, val)"
                         :min="1"
                         :max="99"
-                        showButtons
-                        buttonLayout="horizontal"
-                        :inputStyle="{ width: '3rem' }"
+                        show-buttons
+                        button-layout="horizontal"
+                        :input-style="{ width: '3rem' }"
                         size="small"
+                        @update:model-value="(val) => updateQuantity(item, val)"
                       />
                       <Button
+                        v-tooltip="'Remove'"
                         icon="pi pi-trash"
-                        @click="removeItem(item)"
                         class="p-button-text p-button-danger"
                         size="small"
-                        v-tooltip="'Remove'"
+                        @click="removeItem(item)"
                       />
                     </div>
                   </div>
@@ -412,7 +449,9 @@ watch(
             <div class="space-y-3">
               <div class="flex justify-between">
                 <span>Subtotal</span>
-                <span class="font-semibold">${{ cartSubtotal.toFixed(2) }}</span>
+                <span class="font-semibold"
+                  >${{ cartSubtotal.toFixed(2) }}</span
+                >
               </div>
 
               <div class="flex justify-between text-surface-600">
@@ -436,17 +475,17 @@ watch(
                 <Button
                   label="Proceed to Checkout"
                   icon="pi pi-arrow-right"
-                  iconPos="right"
-                  @click="proceedToCheckout"
+                  icon-pos="right"
                   class="w-full p-button-primary"
                   size="large"
+                  @click="proceedToCheckout"
                 />
 
                 <Button
                   label="Continue Shopping"
                   icon="pi pi-arrow-left"
-                  @click="continueShopping"
                   class="w-full p-button-text"
+                  @click="continueShopping"
                 />
               </div>
             </div>
@@ -460,7 +499,7 @@ watch(
       v-model:visible="showPreviewModal"
       :header="previewCalendarName"
       :modal="true"
-      :dismissableMask="true"
+      :dismissable-mask="true"
       :style="{ width: '90vw', maxWidth: '800px' }"
     >
       <div

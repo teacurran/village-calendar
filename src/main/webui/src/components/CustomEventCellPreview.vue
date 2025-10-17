@@ -76,12 +76,12 @@
           Emoji Size: {{ localSettings.emojiSize }}px
         </label>
         <input
+          v-model.number="localSettings.emojiSize"
           type="range"
           min="16"
           max="48"
-          v-model.number="localSettings.emojiSize"
-          @input="emitUpdate"
           class="w-full"
+          @input="emitUpdate"
         />
       </div>
 
@@ -92,22 +92,22 @@
             Title Size: {{ localSettings.titleSize }}px
           </label>
           <input
+            v-model.number="localSettings.titleSize"
             type="range"
             min="10"
             max="20"
-            v-model.number="localSettings.titleSize"
-            @input="emitUpdate"
             class="w-full"
+            @input="emitUpdate"
           />
         </div>
 
         <div>
           <label class="block text-sm mb-1">Title Color</label>
           <input
-            type="color"
             v-model="localSettings.titleColor"
-            @input="emitUpdate"
+            type="color"
             class="w-full h-8"
+            @input="emitUpdate"
           />
         </div>
 
@@ -158,41 +158,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch } from "vue";
 
 interface DisplaySettings {
-  layout: 'horizontal' | 'vertical'
-  emojiSize: number
-  titleSize: number
-  titleColor: string
-  titleAlign: 'left' | 'center' | 'right'
+  layout: "horizontal" | "vertical";
+  emojiSize: number;
+  titleSize: number;
+  titleColor: string;
+  titleAlign: "left" | "center" | "right";
 }
 
 const props = defineProps<{
-  emoji: string
-  title?: string
-  showTitle: boolean
-  initialSettings?: Partial<DisplaySettings>
-}>()
+  emoji: string;
+  title?: string;
+  showTitle: boolean;
+  initialSettings?: Partial<DisplaySettings>;
+}>();
 
 const emit = defineEmits<{
-  (e: 'update:settings', settings: DisplaySettings): void
-}>()
+  (e: "update:settings", settings: DisplaySettings): void;
+}>();
 
 // Default settings
 const defaultSettings: DisplaySettings = {
-  layout: 'horizontal',
+  layout: "horizontal",
   emojiSize: 24,
   titleSize: 14,
-  titleColor: '#000000',
-  titleAlign: 'left',
-}
+  titleColor: "#000000",
+  titleAlign: "left",
+};
 
 // Local settings (merged with initial settings)
 const localSettings = ref<DisplaySettings>({
   ...defaultSettings,
   ...props.initialSettings,
-})
+});
 
 // Watch for changes to initial settings
 watch(
@@ -202,32 +202,32 @@ watch(
       localSettings.value = {
         ...defaultSettings,
         ...newSettings,
-      }
+      };
     }
   },
-  { deep: true }
-)
+  { deep: true },
+);
 
 function updateSetting<K extends keyof DisplaySettings>(
   key: K,
-  value: DisplaySettings[K]
+  value: DisplaySettings[K],
 ) {
-  localSettings.value[key] = value
-  emitUpdate()
+  localSettings.value[key] = value;
+  emitUpdate();
 }
 
 function emitUpdate() {
-  emit('update:settings', { ...localSettings.value })
+  emit("update:settings", { ...localSettings.value });
 }
 </script>
 
 <style scoped>
 /* Ensure inputs are properly styled */
-input[type='range'] {
+input[type="range"] {
   cursor: pointer;
 }
 
-input[type='color'] {
+input[type="color"] {
   cursor: pointer;
   border-radius: 4px;
   border: 1px solid #d1d5db;

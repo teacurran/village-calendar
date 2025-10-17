@@ -3,42 +3,42 @@
  * Pinia store for managing order fulfillment (admin functions)
  */
 
-import { defineStore } from 'pinia'
+import { defineStore } from "pinia";
 import {
   fetchAllOrdersAdmin,
   updateOrderStatusAdmin,
-} from '../services/orderService'
-import type { OrderUpdateInput } from '../types/order'
+} from "../services/orderService";
+import type { OrderUpdateInput } from "../types/order";
 
 export interface CalendarOrder {
-  id: string
-  status: string
-  quantity: number
-  unitPrice: number
-  totalPrice: number
-  shippingAddress: any
-  notes?: string
-  trackingNumber?: string
-  stripePaymentIntentId?: string
-  stripeChargeId?: string
-  created: string
-  updated: string
-  paidAt?: string
-  shippedAt?: string
-  deliveredAt?: string
+  id: string;
+  status: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  shippingAddress: any;
+  notes?: string;
+  trackingNumber?: string;
+  stripePaymentIntentId?: string;
+  stripeChargeId?: string;
+  created: string;
+  updated: string;
+  paidAt?: string;
+  shippedAt?: string;
+  deliveredAt?: string;
   calendar: {
-    id: string
-    name: string
-    year: number
-  }
+    id: string;
+    name: string;
+    year: number;
+  };
   user: {
-    id: string
-    email: string
-    displayName?: string
-  }
+    id: string;
+    email: string;
+    displayName?: string;
+  };
 }
 
-export const useOrderStore = defineStore('order', {
+export const useOrderStore = defineStore("order", {
   state: () => ({
     orders: [] as CalendarOrder[],
     currentOrder: null as CalendarOrder | null,
@@ -52,19 +52,19 @@ export const useOrderStore = defineStore('order', {
      * Load all orders with optional status filter (admin only)
      */
     async loadOrders(authToken: string, status?: string, limit: number = 100) {
-      this.loading = true
-      this.error = null
-      this.statusFilter = status || null
+      this.loading = true;
+      this.error = null;
+      this.statusFilter = status || null;
 
       try {
-        const orders = await fetchAllOrdersAdmin(authToken, status, limit)
-        this.orders = orders
-        return true
+        const orders = await fetchAllOrdersAdmin(authToken, status, limit);
+        this.orders = orders;
+        return true;
       } catch (err: any) {
-        this.error = err.message || 'Failed to load orders'
-        return false
+        this.error = err.message || "Failed to load orders";
+        return false;
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
 
@@ -74,33 +74,37 @@ export const useOrderStore = defineStore('order', {
     async updateOrderStatus(
       orderId: string,
       input: OrderUpdateInput,
-      authToken: string
+      authToken: string,
     ) {
-      this.loading = true
-      this.error = null
+      this.loading = true;
+      this.error = null;
 
       try {
-        const updatedOrder = await updateOrderStatusAdmin(orderId, input, authToken)
+        const updatedOrder = await updateOrderStatusAdmin(
+          orderId,
+          input,
+          authToken,
+        );
 
         if (updatedOrder) {
           // Update in orders array
-          const index = this.orders.findIndex((o) => o.id === orderId)
+          const index = this.orders.findIndex((o) => o.id === orderId);
           if (index !== -1) {
-            this.orders[index] = updatedOrder
+            this.orders[index] = updatedOrder;
           }
 
           // Update current order if it matches
           if (this.currentOrder?.id === orderId) {
-            this.currentOrder = updatedOrder
+            this.currentOrder = updatedOrder;
           }
         }
 
-        return updatedOrder
+        return updatedOrder;
       } catch (err: any) {
-        this.error = err.message || 'Failed to update order status'
-        return null
+        this.error = err.message || "Failed to update order status";
+        return null;
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
 
@@ -108,22 +112,22 @@ export const useOrderStore = defineStore('order', {
      * Set current order
      */
     setCurrentOrder(order: CalendarOrder | null) {
-      this.currentOrder = order
+      this.currentOrder = order;
     },
 
     /**
      * Clear error message
      */
     clearError() {
-      this.error = null
+      this.error = null;
     },
 
     /**
      * Clear all orders
      */
     clearOrders() {
-      this.orders = []
-      this.currentOrder = null
+      this.orders = [];
+      this.currentOrder = null;
     },
   },
 
@@ -137,7 +141,8 @@ export const useOrderStore = defineStore('order', {
     /**
      * Get order by ID
      */
-    getOrderById: (state) => (id: string) => state.orders.find((o) => o.id === id),
+    getOrderById: (state) => (id: string) =>
+      state.orders.find((o) => o.id === id),
 
     /**
      * Check if orders are loaded
@@ -148,11 +153,11 @@ export const useOrderStore = defineStore('order', {
      * Get order counts by status
      */
     orderCounts: (state) => {
-      const counts: Record<string, number> = {}
+      const counts: Record<string, number> = {};
       state.orders.forEach((order) => {
-        counts[order.status] = (counts[order.status] || 0) + 1
-      })
-      return counts
+        counts[order.status] = (counts[order.status] || 0) + 1;
+      });
+      return counts;
     },
   },
-})
+});

@@ -38,7 +38,7 @@
                 v-model="quantity"
                 :min="1"
                 :max="100"
-                showButtons
+                show-buttons
                 class="w-full"
               />
             </div>
@@ -55,11 +55,15 @@
                 class="w-full"
                 :class="{ 'p-invalid': validationErrors.street }"
               />
-              <small v-if="validationErrors.street" class="p-error">{{ validationErrors.street }}</small>
+              <small v-if="validationErrors.street" class="p-error">{{
+                validationErrors.street
+              }}</small>
             </div>
 
             <div class="form-group">
-              <label for="street2" class="form-label">Apartment, Suite, etc. (optional)</label>
+              <label for="street2" class="form-label"
+                >Apartment, Suite, etc. (optional)</label
+              >
               <InputText
                 id="street2"
                 v-model="shippingAddress.street2"
@@ -78,7 +82,9 @@
                   class="w-full"
                   :class="{ 'p-invalid': validationErrors.city }"
                 />
-                <small v-if="validationErrors.city" class="p-error">{{ validationErrors.city }}</small>
+                <small v-if="validationErrors.city" class="p-error">{{
+                  validationErrors.city
+                }}</small>
               </div>
 
               <div class="form-group">
@@ -93,7 +99,9 @@
                   class="w-full"
                   :class="{ 'p-invalid': validationErrors.state }"
                 />
-                <small v-if="validationErrors.state" class="p-error">{{ validationErrors.state }}</small>
+                <small v-if="validationErrors.state" class="p-error">{{
+                  validationErrors.state
+                }}</small>
               </div>
             </div>
 
@@ -108,7 +116,9 @@
                   class="w-full"
                   :class="{ 'p-invalid': validationErrors.postalCode }"
                 />
-                <small v-if="validationErrors.postalCode" class="p-error">{{ validationErrors.postalCode }}</small>
+                <small v-if="validationErrors.postalCode" class="p-error">{{
+                  validationErrors.postalCode
+                }}</small>
               </div>
 
               <div class="form-group">
@@ -152,9 +162,9 @@
                 icon="pi pi-shopping-cart"
                 size="large"
                 class="w-full"
-                @click="placeOrder"
                 :loading="processing"
                 :disabled="!canPlaceOrder"
+                @click="placeOrder"
               />
               <p class="payment-security-note">
                 <i class="pi pi-lock mr-1"></i>
@@ -196,7 +206,11 @@
               </div>
               <div class="price-row">
                 <span>Shipping:</span>
-                <span>{{ shippingCost > 0 ? formatCurrency(shippingCost) : 'Calculated at next step' }}</span>
+                <span>{{
+                  shippingCost > 0
+                    ? formatCurrency(shippingCost)
+                    : "Calculated at next step"
+                }}</span>
               </div>
               <div class="price-row">
                 <span>Tax:</span>
@@ -220,8 +234,8 @@
         <Button
           label="Go Back"
           icon="pi pi-arrow-left"
-          @click="router.push('/')"
           class="mt-4"
+          @click="router.push('/')"
         />
       </div>
     </div>
@@ -229,118 +243,125 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import { useCalendarStore, type UserCalendar } from '../../stores/calendarStore'
-import { useAuthStore } from '../../stores/authStore'
-import { initializeStripe, createOrder, confirmPayment, formatCurrency, type PaymentIntent } from '../../services/orderService'
-import CalendarPreview from '../../components/CalendarPreview.vue'
-import Card from 'primevue/card'
-import Button from 'primevue/button'
-import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
-import InputMask from 'primevue/inputmask'
-import Dropdown from 'primevue/dropdown'
-import ProgressSpinner from 'primevue/progressspinner'
-import Message from 'primevue/message'
-import Divider from 'primevue/divider'
-import type { StripeElements } from '@stripe/stripe-js'
+import { ref, computed, onMounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { useToast } from "primevue/usetoast";
+import {
+  useCalendarStore,
+  type UserCalendar,
+} from "../../stores/calendarStore";
+import { useAuthStore } from "../../stores/authStore";
+import {
+  initializeStripe,
+  createOrder,
+  confirmPayment,
+  formatCurrency,
+  type PaymentIntent,
+} from "../../services/orderService";
+import CalendarPreview from "../../components/CalendarPreview.vue";
+import Card from "primevue/card";
+import Button from "primevue/button";
+import InputText from "primevue/inputtext";
+import InputNumber from "primevue/inputnumber";
+import InputMask from "primevue/inputmask";
+import Dropdown from "primevue/dropdown";
+import ProgressSpinner from "primevue/progressspinner";
+import Message from "primevue/message";
+import Divider from "primevue/divider";
+import type { StripeElements } from "@stripe/stripe-js";
 
-const router = useRouter()
-const route = useRoute()
-const toast = useToast()
-const calendarStore = useCalendarStore()
-const authStore = useAuthStore()
+const router = useRouter();
+const route = useRoute();
+const toast = useToast();
+const calendarStore = useCalendarStore();
+const authStore = useAuthStore();
 
 // State
-const pageLoading = ref(true)
-const calendar = ref<UserCalendar | null>(null)
-const quantity = ref(1)
+const pageLoading = ref(true);
+const calendar = ref<UserCalendar | null>(null);
+const quantity = ref(1);
 const shippingAddress = ref({
-  street: '',
-  street2: '',
-  city: '',
-  state: '',
-  postalCode: '',
-  country: 'US',
-})
-const validationErrors = ref<Record<string, string>>({})
-const paymentElement = ref<HTMLElement | null>(null)
-const stripeElements = ref<StripeElements | null>(null)
-const paymentIntent = ref<PaymentIntent | null>(null)
-const paymentError = ref<string | null>(null)
-const processing = ref(false)
+  street: "",
+  street2: "",
+  city: "",
+  state: "",
+  postalCode: "",
+  country: "US",
+});
+const validationErrors = ref<Record<string, string>>({});
+const paymentElement = ref<HTMLElement | null>(null);
+const stripeElements = ref<StripeElements | null>(null);
+const paymentIntent = ref<PaymentIntent | null>(null);
+const paymentError = ref<string | null>(null);
+const processing = ref(false);
 
 // Constants
-const unitPrice = 29.99 // Default price - should come from backend
-const shippingCost = ref(5.99)
+const unitPrice = 29.99; // Default price - should come from backend
+const shippingCost = ref(5.99);
 
-const countries = [
-  { code: 'US', name: 'United States' },
-]
+const countries = [{ code: "US", name: "United States" }];
 
 const usStates = [
-  { code: 'AL', name: 'Alabama' },
-  { code: 'AK', name: 'Alaska' },
-  { code: 'AZ', name: 'Arizona' },
-  { code: 'AR', name: 'Arkansas' },
-  { code: 'CA', name: 'California' },
-  { code: 'CO', name: 'Colorado' },
-  { code: 'CT', name: 'Connecticut' },
-  { code: 'DE', name: 'Delaware' },
-  { code: 'FL', name: 'Florida' },
-  { code: 'GA', name: 'Georgia' },
-  { code: 'HI', name: 'Hawaii' },
-  { code: 'ID', name: 'Idaho' },
-  { code: 'IL', name: 'Illinois' },
-  { code: 'IN', name: 'Indiana' },
-  { code: 'IA', name: 'Iowa' },
-  { code: 'KS', name: 'Kansas' },
-  { code: 'KY', name: 'Kentucky' },
-  { code: 'LA', name: 'Louisiana' },
-  { code: 'ME', name: 'Maine' },
-  { code: 'MD', name: 'Maryland' },
-  { code: 'MA', name: 'Massachusetts' },
-  { code: 'MI', name: 'Michigan' },
-  { code: 'MN', name: 'Minnesota' },
-  { code: 'MS', name: 'Mississippi' },
-  { code: 'MO', name: 'Missouri' },
-  { code: 'MT', name: 'Montana' },
-  { code: 'NE', name: 'Nebraska' },
-  { code: 'NV', name: 'Nevada' },
-  { code: 'NH', name: 'New Hampshire' },
-  { code: 'NJ', name: 'New Jersey' },
-  { code: 'NM', name: 'New Mexico' },
-  { code: 'NY', name: 'New York' },
-  { code: 'NC', name: 'North Carolina' },
-  { code: 'ND', name: 'North Dakota' },
-  { code: 'OH', name: 'Ohio' },
-  { code: 'OK', name: 'Oklahoma' },
-  { code: 'OR', name: 'Oregon' },
-  { code: 'PA', name: 'Pennsylvania' },
-  { code: 'RI', name: 'Rhode Island' },
-  { code: 'SC', name: 'South Carolina' },
-  { code: 'SD', name: 'South Dakota' },
-  { code: 'TN', name: 'Tennessee' },
-  { code: 'TX', name: 'Texas' },
-  { code: 'UT', name: 'Utah' },
-  { code: 'VT', name: 'Vermont' },
-  { code: 'VA', name: 'Virginia' },
-  { code: 'WA', name: 'Washington' },
-  { code: 'WV', name: 'West Virginia' },
-  { code: 'WI', name: 'Wisconsin' },
-  { code: 'WY', name: 'Wyoming' },
-]
+  { code: "AL", name: "Alabama" },
+  { code: "AK", name: "Alaska" },
+  { code: "AZ", name: "Arizona" },
+  { code: "AR", name: "Arkansas" },
+  { code: "CA", name: "California" },
+  { code: "CO", name: "Colorado" },
+  { code: "CT", name: "Connecticut" },
+  { code: "DE", name: "Delaware" },
+  { code: "FL", name: "Florida" },
+  { code: "GA", name: "Georgia" },
+  { code: "HI", name: "Hawaii" },
+  { code: "ID", name: "Idaho" },
+  { code: "IL", name: "Illinois" },
+  { code: "IN", name: "Indiana" },
+  { code: "IA", name: "Iowa" },
+  { code: "KS", name: "Kansas" },
+  { code: "KY", name: "Kentucky" },
+  { code: "LA", name: "Louisiana" },
+  { code: "ME", name: "Maine" },
+  { code: "MD", name: "Maryland" },
+  { code: "MA", name: "Massachusetts" },
+  { code: "MI", name: "Michigan" },
+  { code: "MN", name: "Minnesota" },
+  { code: "MS", name: "Mississippi" },
+  { code: "MO", name: "Missouri" },
+  { code: "MT", name: "Montana" },
+  { code: "NE", name: "Nebraska" },
+  { code: "NV", name: "Nevada" },
+  { code: "NH", name: "New Hampshire" },
+  { code: "NJ", name: "New Jersey" },
+  { code: "NM", name: "New Mexico" },
+  { code: "NY", name: "New York" },
+  { code: "NC", name: "North Carolina" },
+  { code: "ND", name: "North Dakota" },
+  { code: "OH", name: "Ohio" },
+  { code: "OK", name: "Oklahoma" },
+  { code: "OR", name: "Oregon" },
+  { code: "PA", name: "Pennsylvania" },
+  { code: "RI", name: "Rhode Island" },
+  { code: "SC", name: "South Carolina" },
+  { code: "SD", name: "South Dakota" },
+  { code: "TN", name: "Tennessee" },
+  { code: "TX", name: "Texas" },
+  { code: "UT", name: "Utah" },
+  { code: "VT", name: "Vermont" },
+  { code: "VA", name: "Virginia" },
+  { code: "WA", name: "Washington" },
+  { code: "WV", name: "West Virginia" },
+  { code: "WI", name: "Wisconsin" },
+  { code: "WY", name: "Wyoming" },
+];
 
 // Computed
-const subtotal = computed(() => unitPrice * quantity.value)
+const subtotal = computed(() => unitPrice * quantity.value);
 const tax = computed(() => {
   // Simple tax calculation - 6.25% for MA
-  const taxRate = shippingAddress.value.state === 'MA' ? 0.0625 : 0
-  return (subtotal.value + shippingCost.value) * taxRate
-})
-const total = computed(() => subtotal.value + shippingCost.value + tax.value)
+  const taxRate = shippingAddress.value.state === "MA" ? 0.0625 : 0;
+  return (subtotal.value + shippingCost.value) * taxRate;
+});
+const total = computed(() => subtotal.value + shippingCost.value + tax.value);
 
 const canPlaceOrder = computed(() => {
   return (
@@ -348,36 +369,36 @@ const canPlaceOrder = computed(() => {
     paymentIntent.value &&
     stripeElements.value &&
     validateForm()
-  )
-})
+  );
+});
 
 // Methods
 const validateForm = (): boolean => {
-  const errors: Record<string, string> = {}
+  const errors: Record<string, string> = {};
 
   if (!shippingAddress.value.street.trim()) {
-    errors.street = 'Street address is required'
+    errors.street = "Street address is required";
   }
   if (!shippingAddress.value.city.trim()) {
-    errors.city = 'City is required'
+    errors.city = "City is required";
   }
   if (!shippingAddress.value.state) {
-    errors.state = 'State is required'
+    errors.state = "State is required";
   }
   if (!shippingAddress.value.postalCode.trim()) {
-    errors.postalCode = 'ZIP code is required'
+    errors.postalCode = "ZIP code is required";
   }
 
-  validationErrors.value = errors
-  return Object.keys(errors).length === 0
-}
+  validationErrors.value = errors;
+  return Object.keys(errors).length === 0;
+};
 
 const initializePayment = async () => {
-  if (!authStore.token || !calendar.value) return
+  if (!authStore.token || !calendar.value) return;
 
   try {
     // Initialize Stripe
-    const stripe = await initializeStripe()
+    const stripe = await initializeStripe();
 
     // Create payment intent via GraphQL
     const intent = await createOrder(
@@ -386,46 +407,46 @@ const initializePayment = async () => {
         quantity: quantity.value,
         shippingAddress: shippingAddress.value,
       },
-      authStore.token
-    )
+      authStore.token,
+    );
 
-    paymentIntent.value = intent
+    paymentIntent.value = intent;
 
     // Create Stripe Elements
     stripeElements.value = stripe.elements({
       clientSecret: intent.clientSecret,
-    })
+    });
 
     // Create and mount Payment Element
-    const elements = stripeElements.value.create('payment', {
-      layout: 'tabs',
-    })
+    const elements = stripeElements.value.create("payment", {
+      layout: "tabs",
+    });
 
     if (paymentElement.value) {
-      elements.mount(paymentElement.value)
+      elements.mount(paymentElement.value);
     }
   } catch (error: any) {
-    console.error('Error initializing payment:', error)
-    paymentError.value = error.message || 'Failed to initialize payment'
+    console.error("Error initializing payment:", error);
+    paymentError.value = error.message || "Failed to initialize payment";
     toast.add({
-      severity: 'error',
-      summary: 'Payment Error',
-      detail: error.message || 'Failed to initialize payment',
+      severity: "error",
+      summary: "Payment Error",
+      detail: error.message || "Failed to initialize payment",
       life: 3000,
-    })
+    });
   }
-}
+};
 
 const placeOrder = async () => {
   if (!validateForm() || !stripeElements.value) {
-    return
+    return;
   }
 
-  processing.value = true
-  paymentError.value = null
+  processing.value = true;
+  paymentError.value = null;
 
   try {
-    const stripe = await initializeStripe()
+    const stripe = await initializeStripe();
 
     // Confirm payment with Stripe
     // Note: Stripe will redirect to the return_url with query parameters:
@@ -435,41 +456,41 @@ const placeOrder = async () => {
       confirmParams: {
         return_url: `${window.location.origin}/payment/callback`,
       },
-    })
+    });
 
     if (error) {
-      paymentError.value = error.message || 'Payment failed'
+      paymentError.value = error.message || "Payment failed";
       toast.add({
-        severity: 'error',
-        summary: 'Payment Failed',
+        severity: "error",
+        summary: "Payment Failed",
         detail: error.message,
         life: 5000,
-      })
-      return
+      });
+      return;
     }
 
     // Payment successful - Stripe will redirect to return_url
   } catch (error: any) {
-    console.error('Error placing order:', error)
-    paymentError.value = error.message || 'Failed to place order'
+    console.error("Error placing order:", error);
+    paymentError.value = error.message || "Failed to place order";
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: error.message || 'Failed to place order',
+      severity: "error",
+      summary: "Error",
+      detail: error.message || "Failed to place order",
       life: 3000,
-    })
+    });
   } finally {
-    processing.value = false
+    processing.value = false;
   }
-}
+};
 
 // Watch quantity changes to update payment intent
 watch(quantity, async () => {
   // Reinitialize payment with new amount
   if (paymentIntent.value) {
-    await initializePayment()
+    await initializePayment();
   }
-})
+});
 
 // Initialize
 onMounted(async () => {
@@ -477,47 +498,48 @@ onMounted(async () => {
     // Check authentication
     if (!authStore.isAuthenticated) {
       toast.add({
-        severity: 'warn',
-        summary: 'Login Required',
-        detail: 'Please log in to checkout',
+        severity: "warn",
+        summary: "Login Required",
+        detail: "Please log in to checkout",
         life: 3000,
-      })
-      authStore.initiateLogin('google')
-      return
+      });
+      authStore.initiateLogin("google");
+      return;
     }
 
-    const calendarId = route.params.calendarId as string
-    calendar.value = await calendarStore.fetchCalendar(calendarId)
+    const calendarId = route.params.calendarId as string;
+    calendar.value = await calendarStore.fetchCalendar(calendarId);
 
     if (!calendar.value) {
-      throw new Error('Calendar not found')
+      throw new Error("Calendar not found");
     }
 
-    if (calendar.value.status !== 'READY') {
+    if (calendar.value.status !== "READY") {
       toast.add({
-        severity: 'warn',
-        summary: 'Calendar Not Ready',
-        detail: 'Please wait for your calendar to finish generating before ordering',
+        severity: "warn",
+        summary: "Calendar Not Ready",
+        detail:
+          "Please wait for your calendar to finish generating before ordering",
         life: 5000,
-      })
-      router.push(`/editor/${calendar.value.template.id}`)
-      return
+      });
+      router.push(`/editor/${calendar.value.template.id}`);
+      return;
     }
 
     // Initialize payment
-    await initializePayment()
+    await initializePayment();
   } catch (error: any) {
-    console.error('Error loading checkout:', error)
+    console.error("Error loading checkout:", error);
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: error.message || 'Failed to load checkout',
+      severity: "error",
+      summary: "Error",
+      detail: error.message || "Failed to load checkout",
       life: 3000,
-    })
+    });
   } finally {
-    pageLoading.value = false
+    pageLoading.value = false;
   }
-})
+});
 </script>
 
 <style scoped>

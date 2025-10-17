@@ -16,8 +16,8 @@
               <Button
                 icon="pi pi-arrow-left"
                 text
-                @click="router.push('/')"
                 label="Back"
+                @click="router.push('/')"
               />
               <h2>Customize {{ template.name }}</h2>
             </div>
@@ -25,7 +25,9 @@
           <template #content>
             <!-- Calendar Name -->
             <div class="form-group">
-              <label for="calendar-name" class="form-label">Calendar Name</label>
+              <label for="calendar-name" class="form-label"
+                >Calendar Name</label
+              >
               <InputText
                 id="calendar-name"
                 v-model="calendarName"
@@ -54,8 +56,10 @@
                   label="Show Advanced"
                   text
                   size="small"
+                  :icon="
+                    showAdvanced ? 'pi pi-chevron-up' : 'pi pi-chevron-down'
+                  "
                   @click="showAdvanced = !showAdvanced"
-                  :icon="showAdvanced ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
                 />
               </div>
               <Textarea
@@ -65,7 +69,12 @@
                 class="w-full font-mono text-sm"
                 placeholder='{"customField": "value"}'
               />
-              <Message v-if="configError" severity="error" :closable="false" class="mt-2">
+              <Message
+                v-if="configError"
+                severity="error"
+                :closable="false"
+                class="mt-2"
+              >
                 Invalid JSON: {{ configError }}
               </Message>
             </div>
@@ -73,12 +82,10 @@
             <!-- Public/Private Toggle -->
             <div class="form-group">
               <div class="flex items-center gap-2">
-                <Checkbox
-                  v-model="isPublic"
-                  input-id="is-public"
-                  binary
-                />
-                <label for="is-public">Make this calendar public (shareable link)</label>
+                <Checkbox v-model="isPublic" input-id="is-public" binary />
+                <label for="is-public"
+                  >Make this calendar public (shareable link)</label
+                >
               </div>
             </div>
 
@@ -88,17 +95,17 @@
                 v-if="!currentCalendar"
                 label="Create Calendar"
                 icon="pi pi-plus"
-                @click="createNewCalendar"
                 :loading="calendarStore.loading"
                 :disabled="!isFormValid"
+                @click="createNewCalendar"
               />
               <Button
                 v-else
                 label="Save Changes"
                 icon="pi pi-save"
-                @click="saveCalendar"
                 :loading="calendarStore.loading"
                 :disabled="!isFormValid"
+                @click="saveCalendar"
               />
               <Button
                 v-if="currentCalendar && currentCalendar.status === 'READY'"
@@ -114,29 +121,45 @@
               <Divider />
               <div class="status-content">
                 <div class="flex items-center gap-2">
-                  <Tag :value="formatStatus(currentCalendar.status)" :severity="getStatusSeverity(currentCalendar.status)" />
+                  <Tag
+                    :value="formatStatus(currentCalendar.status)"
+                    :severity="getStatusSeverity(currentCalendar.status)"
+                  />
                   <ProgressSpinner
                     v-if="isPolling || currentCalendar.status === 'GENERATING'"
                     style="width: 20px; height: 20px"
                   />
                 </div>
-                <p v-if="currentCalendar.status === 'GENERATING'" class="status-message">
+                <p
+                  v-if="currentCalendar.status === 'GENERATING'"
+                  class="status-message"
+                >
                   PDF is being generated. This may take a minute...
                 </p>
-                <p v-else-if="currentCalendar.status === 'READY'" class="status-message success">
-                  Your calendar is ready! You can preview it on the right or order it now.
+                <p
+                  v-else-if="currentCalendar.status === 'READY'"
+                  class="status-message success"
+                >
+                  Your calendar is ready! You can preview it on the right or
+                  order it now.
                 </p>
-                <p v-else-if="currentCalendar.status === 'FAILED'" class="status-message error">
+                <p
+                  v-else-if="currentCalendar.status === 'FAILED'"
+                  class="status-message error"
+                >
                   PDF generation failed. Please try again or contact support.
                 </p>
                 <Button
-                  v-if="currentCalendar.status === 'READY' && currentCalendar.generatedPdfUrl"
+                  v-if="
+                    currentCalendar.status === 'READY' &&
+                    currentCalendar.generatedPdfUrl
+                  "
                   label="Download PDF"
                   icon="pi pi-download"
                   outlined
                   size="small"
-                  @click="downloadPDF"
                   class="mt-2"
+                  @click="downloadPDF"
                 />
               </div>
             </div>
@@ -154,8 +177,8 @@
                 icon="pi pi-refresh"
                 text
                 size="small"
-                @click="refreshPreview"
                 :loading="refreshing"
+                @click="refreshPreview"
               />
             </div>
           </template>
@@ -183,8 +206,8 @@
         <Button
           label="Go Back"
           icon="pi pi-arrow-left"
-          @click="router.push('/')"
           class="mt-4"
+          @click="router.push('/')"
         />
       </div>
     </div>
@@ -192,58 +215,69 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useToast } from 'primevue/usetoast'
-import { useCalendarStore, type CalendarTemplate, type UserCalendar } from '../../stores/calendarStore'
-import { useAuthStore } from '../../stores/authStore'
-import { getAvailableYears, formatCalendarStatus, getStatusSeverity, downloadCalendarPDF } from '../../services/calendarService'
-import CalendarPreview from '../../components/CalendarPreview.vue'
-import Card from 'primevue/card'
-import Button from 'primevue/button'
-import InputText from 'primevue/inputtext'
-import Dropdown from 'primevue/dropdown'
-import Textarea from 'primevue/textarea'
-import Checkbox from 'primevue/checkbox'
-import ProgressSpinner from 'primevue/progressspinner'
-import Tag from 'primevue/tag'
-import Message from 'primevue/message'
-import Divider from 'primevue/divider'
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { useToast } from "primevue/usetoast";
+import {
+  useCalendarStore,
+  type CalendarTemplate,
+  type UserCalendar,
+} from "../../stores/calendarStore";
+import { useAuthStore } from "../../stores/authStore";
+import {
+  getAvailableYears,
+  formatCalendarStatus,
+  getStatusSeverity,
+  downloadCalendarPDF,
+} from "../../services/calendarService";
+import CalendarPreview from "../../components/CalendarPreview.vue";
+import Card from "primevue/card";
+import Button from "primevue/button";
+import InputText from "primevue/inputtext";
+import Dropdown from "primevue/dropdown";
+import Textarea from "primevue/textarea";
+import Checkbox from "primevue/checkbox";
+import ProgressSpinner from "primevue/progressspinner";
+import Tag from "primevue/tag";
+import Message from "primevue/message";
+import Divider from "primevue/divider";
 
-const router = useRouter()
-const route = useRoute()
-const toast = useToast()
-const calendarStore = useCalendarStore()
-const authStore = useAuthStore()
+const router = useRouter();
+const route = useRoute();
+const toast = useToast();
+const calendarStore = useCalendarStore();
+const authStore = useAuthStore();
 
 // State
-const pageLoading = ref(true)
-const template = ref<CalendarTemplate | null>(null)
-const currentCalendar = ref<UserCalendar | null>(null)
-const calendarName = ref('')
-const selectedYear = ref(new Date().getFullYear())
-const configurationJson = ref('{}')
-const configError = ref<string | null>(null)
-const isPublic = ref(false)
-const showAdvanced = ref(false)
-const isPolling = ref(false)
-const refreshing = ref(false)
-const calendarPreviewRef = ref<InstanceType<typeof CalendarPreview> | null>(null)
-const pollingInterval = ref<number | null>(null)
+const pageLoading = ref(true);
+const template = ref<CalendarTemplate | null>(null);
+const currentCalendar = ref<UserCalendar | null>(null);
+const calendarName = ref("");
+const selectedYear = ref(new Date().getFullYear());
+const configurationJson = ref("{}");
+const configError = ref<string | null>(null);
+const isPublic = ref(false);
+const showAdvanced = ref(false);
+const isPolling = ref(false);
+const refreshing = ref(false);
+const calendarPreviewRef = ref<InstanceType<typeof CalendarPreview> | null>(
+  null,
+);
+const pollingInterval = ref<number | null>(null);
 
 // Computed
-const availableYears = computed(() => getAvailableYears())
+const availableYears = computed(() => getAvailableYears());
 
 const customConfiguration = computed(() => {
   try {
-    const parsed = JSON.parse(configurationJson.value)
-    configError.value = null
-    return parsed
+    const parsed = JSON.parse(configurationJson.value);
+    configError.value = null;
+    return parsed;
   } catch (err: any) {
-    configError.value = err.message
-    return null
+    configError.value = err.message;
+    return null;
   }
-})
+});
 
 const isFormValid = computed(() => {
   return (
@@ -251,22 +285,22 @@ const isFormValid = computed(() => {
     selectedYear.value &&
     !configError.value &&
     authStore.isAuthenticated
-  )
-})
+  );
+});
 
 // Methods
-const formatStatus = (status: string) => formatCalendarStatus(status)
+const formatStatus = (status: string) => formatCalendarStatus(status);
 
 const createNewCalendar = async () => {
   if (!authStore.isAuthenticated) {
     toast.add({
-      severity: 'warn',
-      summary: 'Authentication Required',
-      detail: 'Please log in to create a calendar',
+      severity: "warn",
+      summary: "Authentication Required",
+      detail: "Please log in to create a calendar",
       life: 3000,
-    })
-    authStore.initiateLogin('google')
-    return
+    });
+    authStore.initiateLogin("google");
+    return;
   }
 
   try {
@@ -276,144 +310,153 @@ const createNewCalendar = async () => {
       year: selectedYear.value,
       configuration: customConfiguration.value || undefined,
       isPublic: isPublic.value,
-    })
+    });
 
-    currentCalendar.value = calendar
+    currentCalendar.value = calendar;
     toast.add({
-      severity: 'success',
-      summary: 'Calendar Created',
-      detail: 'Your calendar is being generated',
+      severity: "success",
+      summary: "Calendar Created",
+      detail: "Your calendar is being generated",
       life: 3000,
-    })
+    });
 
     // Start polling for PDF generation
-    startPolling()
+    startPolling();
   } catch (error: any) {
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: error.message || 'Failed to create calendar',
+      severity: "error",
+      summary: "Error",
+      detail: error.message || "Failed to create calendar",
       life: 3000,
-    })
+    });
   }
-}
+};
 
 const saveCalendar = async () => {
-  if (!currentCalendar.value) return
+  if (!currentCalendar.value) return;
 
   try {
-    const updated = await calendarStore.updateCalendar(currentCalendar.value.id, {
-      name: calendarName.value,
-      configuration: customConfiguration.value || undefined,
-      isPublic: isPublic.value,
-    })
+    const updated = await calendarStore.updateCalendar(
+      currentCalendar.value.id,
+      {
+        name: calendarName.value,
+        configuration: customConfiguration.value || undefined,
+        isPublic: isPublic.value,
+      },
+    );
 
-    currentCalendar.value = updated
+    currentCalendar.value = updated;
     toast.add({
-      severity: 'success',
-      summary: 'Calendar Updated',
-      detail: 'Your changes have been saved',
+      severity: "success",
+      summary: "Calendar Updated",
+      detail: "Your changes have been saved",
       life: 3000,
-    })
+    });
 
     // Start polling if status changed to GENERATING
-    if (updated.status === 'GENERATING') {
-      startPolling()
+    if (updated.status === "GENERATING") {
+      startPolling();
     }
   } catch (error: any) {
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: error.message || 'Failed to save calendar',
+      severity: "error",
+      summary: "Error",
+      detail: error.message || "Failed to save calendar",
       life: 3000,
-    })
+    });
   }
-}
+};
 
 const startPolling = () => {
-  if (isPolling.value || !currentCalendar.value) return
+  if (isPolling.value || !currentCalendar.value) return;
 
-  isPolling.value = true
+  isPolling.value = true;
 
   // Poll every 2 seconds
   pollingInterval.value = window.setInterval(async () => {
     try {
-      const calendar = await calendarStore.fetchCalendar(currentCalendar.value.id)
-      currentCalendar.value = calendar
+      const calendar = await calendarStore.fetchCalendar(
+        currentCalendar.value.id,
+      );
+      currentCalendar.value = calendar;
 
       // Stop polling if status is READY or FAILED
-      if (calendar.status === 'READY') {
-        stopPolling()
+      if (calendar.status === "READY") {
+        stopPolling();
         toast.add({
-          severity: 'success',
-          summary: 'Calendar Ready',
-          detail: 'Your calendar PDF is ready!',
+          severity: "success",
+          summary: "Calendar Ready",
+          detail: "Your calendar PDF is ready!",
           life: 3000,
-        })
-        refreshPreview()
-      } else if (calendar.status === 'FAILED') {
-        stopPolling()
+        });
+        refreshPreview();
+      } else if (calendar.status === "FAILED") {
+        stopPolling();
         toast.add({
-          severity: 'error',
-          summary: 'Generation Failed',
-          detail: 'Failed to generate calendar PDF',
+          severity: "error",
+          summary: "Generation Failed",
+          detail: "Failed to generate calendar PDF",
           life: 3000,
-        })
+        });
       }
     } catch (error) {
-      console.error('Error polling calendar status:', error)
+      console.error("Error polling calendar status:", error);
     }
-  }, 2000)
+  }, 2000);
 
   // Set timeout to stop polling after 60 seconds
   setTimeout(() => {
     if (isPolling.value) {
-      stopPolling()
+      stopPolling();
       toast.add({
-        severity: 'warn',
-        summary: 'Generation Timeout',
-        detail: 'Calendar generation is taking longer than expected. Please check back later.',
+        severity: "warn",
+        summary: "Generation Timeout",
+        detail:
+          "Calendar generation is taking longer than expected. Please check back later.",
         life: 5000,
-      })
+      });
     }
-  }, 60000)
-}
+  }, 60000);
+};
 
 const stopPolling = () => {
   if (pollingInterval.value) {
-    clearInterval(pollingInterval.value)
-    pollingInterval.value = null
+    clearInterval(pollingInterval.value);
+    pollingInterval.value = null;
   }
-  isPolling.value = false
-}
+  isPolling.value = false;
+};
 
 const refreshPreview = async () => {
-  if (!currentCalendar.value || !calendarPreviewRef.value) return
+  if (!currentCalendar.value || !calendarPreviewRef.value) return;
 
-  refreshing.value = true
+  refreshing.value = true;
   try {
-    await calendarPreviewRef.value.fetchCalendarSvg(currentCalendar.value.id)
+    await calendarPreviewRef.value.fetchCalendarSvg(currentCalendar.value.id);
   } catch (error: any) {
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to refresh preview',
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to refresh preview",
       life: 3000,
-    })
+    });
   } finally {
-    refreshing.value = false
+    refreshing.value = false;
   }
-}
+};
 
 const downloadPDF = () => {
-  if (!currentCalendar.value?.generatedPdfUrl) return
-  downloadCalendarPDF(currentCalendar.value.generatedPdfUrl, calendarName.value)
-}
+  if (!currentCalendar.value?.generatedPdfUrl) return;
+  downloadCalendarPDF(
+    currentCalendar.value.generatedPdfUrl,
+    calendarName.value,
+  );
+};
 
 const orderCalendar = () => {
-  if (!currentCalendar.value) return
-  router.push(`/checkout/${currentCalendar.value.id}`)
-}
+  if (!currentCalendar.value) return;
+  router.push(`/checkout/${currentCalendar.value.id}`);
+};
 
 // Initialize
 onMounted(async () => {
@@ -421,43 +464,47 @@ onMounted(async () => {
     // Check authentication
     if (!authStore.isAuthenticated) {
       toast.add({
-        severity: 'info',
-        summary: 'Login Required',
-        detail: 'Please log in to customize a calendar',
+        severity: "info",
+        summary: "Login Required",
+        detail: "Please log in to customize a calendar",
         life: 3000,
-      })
+      });
       setTimeout(() => {
-        authStore.initiateLogin('google')
-      }, 1000)
-      return
+        authStore.initiateLogin("google");
+      }, 1000);
+      return;
     }
 
-    const templateId = route.params.templateId as string
-    template.value = await calendarStore.fetchTemplate(templateId)
+    const templateId = route.params.templateId as string;
+    template.value = await calendarStore.fetchTemplate(templateId);
 
     if (!template.value) {
-      throw new Error('Template not found')
+      throw new Error("Template not found");
     }
 
     // Set default values
-    calendarName.value = `${template.value.name} ${selectedYear.value}`
-    configurationJson.value = JSON.stringify(template.value.configuration || {}, null, 2)
+    calendarName.value = `${template.value.name} ${selectedYear.value}`;
+    configurationJson.value = JSON.stringify(
+      template.value.configuration || {},
+      null,
+      2,
+    );
   } catch (error: any) {
-    console.error('Error loading editor:', error)
+    console.error("Error loading editor:", error);
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: error.message || 'Failed to load editor',
+      severity: "error",
+      summary: "Error",
+      detail: error.message || "Failed to load editor",
       life: 3000,
-    })
+    });
   } finally {
-    pageLoading.value = false
+    pageLoading.value = false;
   }
-})
+});
 
 onUnmounted(() => {
-  stopPolling()
-})
+  stopPolling();
+});
 </script>
 
 <style scoped>
@@ -574,6 +621,6 @@ onUnmounted(() => {
 }
 
 .font-mono {
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-family: "Monaco", "Menlo", "Courier New", monospace;
 }
 </style>

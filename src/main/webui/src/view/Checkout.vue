@@ -1,173 +1,180 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
-import { useCartStore } from '../stores/cart'
-import { useUserStore } from '../stores/user'
-import { useToast } from 'primevue/usetoast'
-import { ROUTE_NAMES } from '../navigation/routes'
-import { paymentService } from '../services/payment'
-import { homeBreadcrumb } from '../navigation/breadcrumbs'
-import { Breadcrumb, Button, Card } from 'primevue'
-import InputText from 'primevue/inputtext'
-import InputMask from 'primevue/inputmask'
-import Dropdown from 'primevue/dropdown'
-import Checkbox from 'primevue/checkbox'
-import RadioButton from 'primevue/radiobutton'
-import Divider from 'primevue/divider'
-import Dialog from 'primevue/dialog'
-import { loadStripe, Stripe, StripeElements, StripeCardElement } from '@stripe/stripe-js'
+import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { useRouter } from "vue-router";
+import { useCartStore } from "../stores/cart";
+import { useUserStore } from "../stores/user";
+import { useToast } from "primevue/usetoast";
+import { ROUTE_NAMES } from "../navigation/routes";
+import { paymentService } from "../services/payment";
+import { homeBreadcrumb } from "../navigation/breadcrumbs";
+import { Breadcrumb, Button, Card } from "primevue";
+import InputText from "primevue/inputtext";
+import InputMask from "primevue/inputmask";
+import Dropdown from "primevue/dropdown";
+import Checkbox from "primevue/checkbox";
+import RadioButton from "primevue/radiobutton";
+import Divider from "primevue/divider";
+import Dialog from "primevue/dialog";
+import {
+  loadStripe,
+  Stripe,
+  StripeElements,
+  StripeCardElement,
+} from "@stripe/stripe-js";
 
 // const { t } = useI18n({ useScope: 'global' })
-const router = useRouter()
-const cartStore = useCartStore()
-const userStore = useUserStore()
-const toast = useToast()
+const router = useRouter();
+const cartStore = useCartStore();
+const userStore = useUserStore();
+const toast = useToast();
 
 // Calendar printing product ID
-const CALENDAR_PRODUCT_ID = 'ca1e0da2-0000-0000-0000-000000000001'
+const CALENDAR_PRODUCT_ID = "ca1e0da2-0000-0000-0000-000000000001";
 
 // Store for calendar SVGs
-const calendarSvgs = ref<Record<string, string>>({})
-const showPreviewModal = ref(false)
-const previewCalendarSvg = ref('')
-const previewCalendarName = ref('')
+const calendarSvgs = ref<Record<string, string>>({});
+const showPreviewModal = ref(false);
+const previewCalendarSvg = ref("");
+const previewCalendarName = ref("");
 
 // Parse configuration and get calendar details
 const getCalendarConfig = (item: any) => {
   if (item.productId === CALENDAR_PRODUCT_ID && item.configuration) {
     try {
-      return JSON.parse(item.configuration)
+      return JSON.parse(item.configuration);
     } catch (e) {
-      console.error('Failed to parse calendar configuration:', e)
+      console.error("Failed to parse calendar configuration:", e);
     }
   }
-  return null
-}
+  return null;
+};
 
 // Check if item is a calendar
 const isCalendarItem = (item: any) => {
-  return item.productId === CALENDAR_PRODUCT_ID
-}
+  return item.productId === CALENDAR_PRODUCT_ID;
+};
 
 // Get month name from number
 const getMonthName = (month: number) => {
   const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ]
-  return months[month - 1] || 'Jan'
-}
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  return months[month - 1] || "Jan";
+};
 
 // Get calendar SVG for a specific calendar ID
 const fetchCalendarSvg = async (calendarId: string) => {
   if (calendarSvgs.value[calendarId]) {
-    return calendarSvgs.value[calendarId]
+    return calendarSvgs.value[calendarId];
   }
 
   try {
     // Fetch only the specific calendar's SVG
-    const response = await fetch(`/api/calendar-templates/user/calendars/${calendarId}/preview`)
+    const response = await fetch(
+      `/api/calendar-templates/user/calendars/${calendarId}/preview`,
+    );
     if (response.ok) {
-      const svg = await response.text()
-      calendarSvgs.value[calendarId] = svg
-      return svg
+      const svg = await response.text();
+      calendarSvgs.value[calendarId] = svg;
+      return svg;
     }
   } catch (error) {
-    console.error(`Failed to fetch calendar SVG for ${calendarId}:`, error)
+    console.error(`Failed to fetch calendar SVG for ${calendarId}:`, error);
   }
-  
-  return null
-}
+
+  return null;
+};
 
 // Load calendar SVGs when cart items change
 const loadCalendarSvgs = async () => {
-  if (!cartStore.items || cartStore.items.length === 0) return
+  if (!cartStore.items || cartStore.items.length === 0) return;
 
   // Process each cart item
   for (const item of cartStore.items) {
-    const config = getCalendarConfig(item)
+    const config = getCalendarConfig(item);
     if (config && config.calendarId) {
       // This will now use the cached calendars
-      await fetchCalendarSvg(config.calendarId)
+      await fetchCalendarSvg(config.calendarId);
     }
   }
-}
+};
 
 // Show calendar preview
 const showCalendarPreview = (item: any) => {
-  const config = getCalendarConfig(item)
+  const config = getCalendarConfig(item);
   if (config && config.calendarId && calendarSvgs.value[config.calendarId]) {
-    previewCalendarSvg.value = calendarSvgs.value[config.calendarId]
-    previewCalendarName.value = config.name || `${config.year} Calendar`
-    showPreviewModal.value = true
+    previewCalendarSvg.value = calendarSvgs.value[config.calendarId];
+    previewCalendarName.value = config.name || `${config.year} Calendar`;
+    showPreviewModal.value = true;
   }
-}
+};
 
 // Current step (1: Information, 2: Shipping, 3: Payment)
-const currentStep = ref(1)
+const currentStep = ref(1);
 
 // Account section
 
 // Contact & Shipping address
 const contactAndShipping = ref({
-  email: '',
+  email: "",
   newsletter: false,
-  firstName: '',
-  lastName: '',
-  company: '',
-  address1: '',
-  address2: '',
-  city: '',
-  state: '',
-  postalCode: '',
-  country: 'US',
-  phone: '',
+  firstName: "",
+  lastName: "",
+  company: "",
+  address1: "",
+  address2: "",
+  city: "",
+  state: "",
+  postalCode: "",
+  country: "US",
+  phone: "",
   saveInfo: false,
-})
+});
 
 // Billing address
-const sameAsShipping = ref(true)
+const sameAsShipping = ref(true);
 const billingAddress = ref({
-  firstName: '',
-  lastName: '',
-  company: '',
-  address1: '',
-  address2: '',
-  city: '',
-  state: '',
-  postalCode: '',
-  country: 'US',
-})
+  firstName: "",
+  lastName: "",
+  company: "",
+  address1: "",
+  address2: "",
+  city: "",
+  state: "",
+  postalCode: "",
+  country: "US",
+});
 
 // Shipping options
 interface ShippingMethod {
-  id: string
-  name: string
-  description: string
-  price: number
+  id: string;
+  name: string;
+  description: string;
+  price: number;
 }
 
-const selectedShippingMethod = ref<ShippingMethod | null>(null)
-const shippingMethods = ref<ShippingMethod[]>([])
-const loadingShipping = ref(false)
+const selectedShippingMethod = ref<ShippingMethod | null>(null);
+const shippingMethods = ref<ShippingMethod[]>([]);
+const loadingShipping = ref(false);
 
 // Payment - Stripe
-const stripe = ref<Stripe | null>(null)
-const stripeElements = ref<StripeElements | null>(null)
-const stripeCardElement = ref<StripeCardElement | null>(null)
-const stripeElementsContainer = ref<HTMLElement | null>(null)
-const paymentIntentClientSecret = ref<string | null>(null)
-const stripePublishableKey = ref<string | null>(null)
+const stripe = ref<Stripe | null>(null);
+const stripeElements = ref<StripeElements | null>(null);
+const stripeCardElement = ref<StripeCardElement | null>(null);
+const stripeElementsContainer = ref<HTMLElement | null>(null);
+const paymentIntentClientSecret = ref<string | null>(null);
+const stripePublishableKey = ref<string | null>(null);
 
 // Payment - Express checkout
 const expressCheckoutAvailable = ref({
@@ -175,277 +182,279 @@ const expressCheckoutAvailable = ref({
   paypal: false,
   shopPay: false,
   affirm: false,
-})
-const paypalButtonContainer = ref(null)
-const googlePayButtonContainer = ref(null)
+});
+const paypalButtonContainer = ref(null);
+const googlePayButtonContainer = ref(null);
 
 // Countries list
 const countries = [
-  { code: 'US', name: 'United States' },
-  { code: 'CA', name: 'Canada' },
-  { code: 'MX', name: 'Mexico' },
-]
+  { code: "US", name: "United States" },
+  { code: "CA", name: "Canada" },
+  { code: "MX", name: "Mexico" },
+];
 
 // US States
 const usStates = [
-  { code: 'AL', name: 'Alabama' },
-  { code: 'AK', name: 'Alaska' },
-  { code: 'AZ', name: 'Arizona' },
-  { code: 'AR', name: 'Arkansas' },
-  { code: 'CA', name: 'California' },
-  { code: 'CO', name: 'Colorado' },
-  { code: 'CT', name: 'Connecticut' },
-  { code: 'DE', name: 'Delaware' },
-  { code: 'FL', name: 'Florida' },
-  { code: 'GA', name: 'Georgia' },
-  { code: 'HI', name: 'Hawaii' },
-  { code: 'ID', name: 'Idaho' },
-  { code: 'IL', name: 'Illinois' },
-  { code: 'IN', name: 'Indiana' },
-  { code: 'IA', name: 'Iowa' },
-  { code: 'KS', name: 'Kansas' },
-  { code: 'KY', name: 'Kentucky' },
-  { code: 'LA', name: 'Louisiana' },
-  { code: 'ME', name: 'Maine' },
-  { code: 'MD', name: 'Maryland' },
-  { code: 'MA', name: 'Massachusetts' },
-  { code: 'MI', name: 'Michigan' },
-  { code: 'MN', name: 'Minnesota' },
-  { code: 'MS', name: 'Mississippi' },
-  { code: 'MO', name: 'Missouri' },
-  { code: 'MT', name: 'Montana' },
-  { code: 'NE', name: 'Nebraska' },
-  { code: 'NV', name: 'Nevada' },
-  { code: 'NH', name: 'New Hampshire' },
-  { code: 'NJ', name: 'New Jersey' },
-  { code: 'NM', name: 'New Mexico' },
-  { code: 'NY', name: 'New York' },
-  { code: 'NC', name: 'North Carolina' },
-  { code: 'ND', name: 'North Dakota' },
-  { code: 'OH', name: 'Ohio' },
-  { code: 'OK', name: 'Oklahoma' },
-  { code: 'OR', name: 'Oregon' },
-  { code: 'PA', name: 'Pennsylvania' },
-  { code: 'RI', name: 'Rhode Island' },
-  { code: 'SC', name: 'South Carolina' },
-  { code: 'SD', name: 'South Dakota' },
-  { code: 'TN', name: 'Tennessee' },
-  { code: 'TX', name: 'Texas' },
-  { code: 'UT', name: 'Utah' },
-  { code: 'VT', name: 'Vermont' },
-  { code: 'VA', name: 'Virginia' },
-  { code: 'WA', name: 'Washington' },
-  { code: 'WV', name: 'West Virginia' },
-  { code: 'WI', name: 'Wisconsin' },
-  { code: 'WY', name: 'Wyoming' },
-]
+  { code: "AL", name: "Alabama" },
+  { code: "AK", name: "Alaska" },
+  { code: "AZ", name: "Arizona" },
+  { code: "AR", name: "Arkansas" },
+  { code: "CA", name: "California" },
+  { code: "CO", name: "Colorado" },
+  { code: "CT", name: "Connecticut" },
+  { code: "DE", name: "Delaware" },
+  { code: "FL", name: "Florida" },
+  { code: "GA", name: "Georgia" },
+  { code: "HI", name: "Hawaii" },
+  { code: "ID", name: "Idaho" },
+  { code: "IL", name: "Illinois" },
+  { code: "IN", name: "Indiana" },
+  { code: "IA", name: "Iowa" },
+  { code: "KS", name: "Kansas" },
+  { code: "KY", name: "Kentucky" },
+  { code: "LA", name: "Louisiana" },
+  { code: "ME", name: "Maine" },
+  { code: "MD", name: "Maryland" },
+  { code: "MA", name: "Massachusetts" },
+  { code: "MI", name: "Michigan" },
+  { code: "MN", name: "Minnesota" },
+  { code: "MS", name: "Mississippi" },
+  { code: "MO", name: "Missouri" },
+  { code: "MT", name: "Montana" },
+  { code: "NE", name: "Nebraska" },
+  { code: "NV", name: "Nevada" },
+  { code: "NH", name: "New Hampshire" },
+  { code: "NJ", name: "New Jersey" },
+  { code: "NM", name: "New Mexico" },
+  { code: "NY", name: "New York" },
+  { code: "NC", name: "North Carolina" },
+  { code: "ND", name: "North Dakota" },
+  { code: "OH", name: "Ohio" },
+  { code: "OK", name: "Oklahoma" },
+  { code: "OR", name: "Oregon" },
+  { code: "PA", name: "Pennsylvania" },
+  { code: "RI", name: "Rhode Island" },
+  { code: "SC", name: "South Carolina" },
+  { code: "SD", name: "South Dakota" },
+  { code: "TN", name: "Tennessee" },
+  { code: "TX", name: "Texas" },
+  { code: "UT", name: "Utah" },
+  { code: "VT", name: "Vermont" },
+  { code: "VA", name: "Virginia" },
+  { code: "WA", name: "Washington" },
+  { code: "WV", name: "West Virginia" },
+  { code: "WI", name: "Wisconsin" },
+  { code: "WY", name: "Wyoming" },
+];
 
 // Canadian Provinces
 const canadianProvinces = [
-  { code: 'AB', name: 'Alberta' },
-  { code: 'BC', name: 'British Columbia' },
-  { code: 'MB', name: 'Manitoba' },
-  { code: 'NB', name: 'New Brunswick' },
-  { code: 'NL', name: 'Newfoundland and Labrador' },
-  { code: 'NT', name: 'Northwest Territories' },
-  { code: 'NS', name: 'Nova Scotia' },
-  { code: 'NU', name: 'Nunavut' },
-  { code: 'ON', name: 'Ontario' },
-  { code: 'PE', name: 'Prince Edward Island' },
-  { code: 'QC', name: 'Quebec' },
-  { code: 'SK', name: 'Saskatchewan' },
-  { code: 'YT', name: 'Yukon' },
-]
+  { code: "AB", name: "Alberta" },
+  { code: "BC", name: "British Columbia" },
+  { code: "MB", name: "Manitoba" },
+  { code: "NB", name: "New Brunswick" },
+  { code: "NL", name: "Newfoundland and Labrador" },
+  { code: "NT", name: "Northwest Territories" },
+  { code: "NS", name: "Nova Scotia" },
+  { code: "NU", name: "Nunavut" },
+  { code: "ON", name: "Ontario" },
+  { code: "PE", name: "Prince Edward Island" },
+  { code: "QC", name: "Quebec" },
+  { code: "SK", name: "Saskatchewan" },
+  { code: "YT", name: "Yukon" },
+];
 
 // Mexican States
 const mexicanStates = [
-  { code: 'AGU', name: 'Aguascalientes' },
-  { code: 'BCN', name: 'Baja California' },
-  { code: 'BCS', name: 'Baja California Sur' },
-  { code: 'CAM', name: 'Campeche' },
-  { code: 'CHP', name: 'Chiapas' },
-  { code: 'CHH', name: 'Chihuahua' },
-  { code: 'CMX', name: 'Ciudad de México' },
-  { code: 'COA', name: 'Coahuila' },
-  { code: 'COL', name: 'Colima' },
-  { code: 'DUR', name: 'Durango' },
-  { code: 'GUA', name: 'Guanajuato' },
-  { code: 'GRO', name: 'Guerrero' },
-  { code: 'HID', name: 'Hidalgo' },
-  { code: 'JAL', name: 'Jalisco' },
-  { code: 'MEX', name: 'Estado de México' },
-  { code: 'MIC', name: 'Michoacán' },
-  { code: 'MOR', name: 'Morelos' },
-  { code: 'NAY', name: 'Nayarit' },
-  { code: 'NLE', name: 'Nuevo León' },
-  { code: 'OAX', name: 'Oaxaca' },
-  { code: 'PUE', name: 'Puebla' },
-  { code: 'QUE', name: 'Querétaro' },
-  { code: 'ROO', name: 'Quintana Roo' },
-  { code: 'SLP', name: 'San Luis Potosí' },
-  { code: 'SIN', name: 'Sinaloa' },
-  { code: 'SON', name: 'Sonora' },
-  { code: 'TAB', name: 'Tabasco' },
-  { code: 'TAM', name: 'Tamaulipas' },
-  { code: 'TLA', name: 'Tlaxcala' },
-  { code: 'VER', name: 'Veracruz' },
-  { code: 'YUC', name: 'Yucatán' },
-  { code: 'ZAC', name: 'Zacatecas' },
-]
+  { code: "AGU", name: "Aguascalientes" },
+  { code: "BCN", name: "Baja California" },
+  { code: "BCS", name: "Baja California Sur" },
+  { code: "CAM", name: "Campeche" },
+  { code: "CHP", name: "Chiapas" },
+  { code: "CHH", name: "Chihuahua" },
+  { code: "CMX", name: "Ciudad de México" },
+  { code: "COA", name: "Coahuila" },
+  { code: "COL", name: "Colima" },
+  { code: "DUR", name: "Durango" },
+  { code: "GUA", name: "Guanajuato" },
+  { code: "GRO", name: "Guerrero" },
+  { code: "HID", name: "Hidalgo" },
+  { code: "JAL", name: "Jalisco" },
+  { code: "MEX", name: "Estado de México" },
+  { code: "MIC", name: "Michoacán" },
+  { code: "MOR", name: "Morelos" },
+  { code: "NAY", name: "Nayarit" },
+  { code: "NLE", name: "Nuevo León" },
+  { code: "OAX", name: "Oaxaca" },
+  { code: "PUE", name: "Puebla" },
+  { code: "QUE", name: "Querétaro" },
+  { code: "ROO", name: "Quintana Roo" },
+  { code: "SLP", name: "San Luis Potosí" },
+  { code: "SIN", name: "Sinaloa" },
+  { code: "SON", name: "Sonora" },
+  { code: "TAB", name: "Tabasco" },
+  { code: "TAM", name: "Tamaulipas" },
+  { code: "TLA", name: "Tlaxcala" },
+  { code: "VER", name: "Veracruz" },
+  { code: "YUC", name: "Yucatán" },
+  { code: "ZAC", name: "Zacatecas" },
+];
 
 // Computed property for states/provinces based on country
 const states = computed(() => {
   switch (contactAndShipping.value.country) {
-    case 'CA':
-      return canadianProvinces
-    case 'MX':
-      return mexicanStates
+    case "CA":
+      return canadianProvinces;
+    case "MX":
+      return mexicanStates;
     default:
-      return usStates
+      return usStates;
   }
-})
+});
 
 // Processing state
-const processing = ref(false)
-const pageLoading = ref(true)
-const validationErrors = ref<Record<string, string>>({})
+const processing = ref(false);
+const pageLoading = ref(true);
+const validationErrors = ref<Record<string, string>>({});
 
 // Computed properties
-const isLoggedIn = computed(() => userStore.isLoggedIn)
-const cartItems = computed(() => cartStore.items)
-const cartSubtotal = computed(() => cartStore.subtotal || 0)
+const isLoggedIn = computed(() => userStore.isLoggedIn);
+const cartItems = computed(() => cartStore.items);
+const cartSubtotal = computed(() => cartStore.subtotal || 0);
 
 // Watch for cart changes to load calendar SVGs
 watch(
   cartItems,
   async () => {
-    await loadCalendarSvgs()
+    await loadCalendarSvgs();
   },
-  { immediate: false }
-)
+  { immediate: false },
+);
 const shippingCost = computed(
-  () => (selectedShippingMethod.value as ShippingMethod | null)?.price || 0
-)
+  () => (selectedShippingMethod.value as ShippingMethod | null)?.price || 0,
+);
 const taxAmount = computed(() => {
-  const taxRate = contactAndShipping.value.state === 'MA' ? 0.0625 : 0
-  return (cartSubtotal.value + shippingCost.value) * taxRate
-})
-const orderTotal = computed(() => cartSubtotal.value + shippingCost.value + taxAmount.value)
+  const taxRate = contactAndShipping.value.state === "MA" ? 0.0625 : 0;
+  return (cartSubtotal.value + shippingCost.value) * taxRate;
+});
+const orderTotal = computed(
+  () => cartSubtotal.value + shippingCost.value + taxAmount.value,
+);
 
 // Breadcrumbs
 const breadcrumbItems = computed(() => {
   const items = [
-    { label: 'Store', url: '/store' },
-    { label: 'Cart', url: '/store/cart' },
-  ]
+    { label: "Store", url: "/store" },
+    { label: "Cart", url: "/store/cart" },
+  ];
 
   if (currentStep.value === 1) {
-    items.push({ label: 'Information' })
+    items.push({ label: "Information" });
   } else if (currentStep.value === 2) {
-    items.push({ label: 'Information', url: '#', command: () => goToStep(1) })
-    items.push({ label: 'Shipping' })
+    items.push({ label: "Information", url: "#", command: () => goToStep(1) });
+    items.push({ label: "Shipping" });
   } else if (currentStep.value === 3) {
-    items.push({ label: 'Information', url: '#', command: () => goToStep(1) })
-    items.push({ label: 'Shipping', url: '#', command: () => goToStep(2) })
-    items.push({ label: 'Payment' })
+    items.push({ label: "Information", url: "#", command: () => goToStep(1) });
+    items.push({ label: "Shipping", url: "#", command: () => goToStep(2) });
+    items.push({ label: "Payment" });
   }
 
-  return items
-})
+  return items;
+});
 
 // Initialize
 onMounted(async () => {
   try {
-    await cartStore.fetchCart()
-    await loadCalendarSvgs()
+    await cartStore.fetchCart();
+    await loadCalendarSvgs();
 
     if (cartStore.isEmpty) {
-      router.push({ name: ROUTE_NAMES.STORE_PRODUCTS })
-      return
+      router.push({ name: ROUTE_NAMES.STORE_PRODUCTS });
+      return;
     }
 
     // Pre-select first shipping method
     if (shippingMethods.value.length > 0) {
-      selectedShippingMethod.value = shippingMethods.value[0] as ShippingMethod
+      selectedShippingMethod.value = shippingMethods.value[0] as ShippingMethod;
     }
 
     // Initialize express checkout methods
-    await initializeExpressCheckout()
+    await initializeExpressCheckout();
   } finally {
-    pageLoading.value = false
+    pageLoading.value = false;
   }
-})
+});
 
 // Fetch shipping options from backend
 async function fetchShippingOptions() {
   if (!contactAndShipping.value.country || !contactAndShipping.value.state) {
-    return
+    return;
   }
 
-  loadingShipping.value = true
+  loadingShipping.value = true;
   try {
     // Check if cart has calendars
     const hasCalendars = cartStore.items?.some(
-      item => item.productId === 'ca1e0da2-0000-0000-0000-000000000001'
-    )
+      (item) => item.productId === "ca1e0da2-0000-0000-0000-000000000001",
+    );
 
     if (hasCalendars) {
       // Use calendar-specific shipping endpoint
-      const response = await fetch('/api/shipping/calculate-calendar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/shipping/calculate-calendar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           country: contactAndShipping.value.country,
           state: contactAndShipping.value.state,
           postalCode: contactAndShipping.value.postalCode,
         }),
-      })
+      });
 
       if (response.ok) {
-        const data = await response.json()
+        const data = await response.json();
         shippingMethods.value = data.options.map((opt: any) => ({
           id: opt.id,
           name: opt.name,
           description: opt.description,
           price: opt.price,
-        }))
+        }));
 
         // Pre-select first option
         if (shippingMethods.value.length > 0) {
-          selectedShippingMethod.value = shippingMethods.value[0]
+          selectedShippingMethod.value = shippingMethods.value[0];
         }
       } else if (response.status === 400) {
-        const error = await response.text()
+        const error = await response.text();
         toast.add({
-          severity: 'error',
-          summary: 'Shipping Not Available',
+          severity: "error",
+          summary: "Shipping Not Available",
           detail: error,
           life: 5000,
-        })
+        });
       }
     } else {
       // Use regular shipping calculation for other products
       // For now, use hardcoded standard shipping
       shippingMethods.value = [
         {
-          id: 'standard',
-          name: 'Standard Shipping',
-          description: '5-7 business days',
+          id: "standard",
+          name: "Standard Shipping",
+          description: "5-7 business days",
           price: 5.99,
         },
-      ]
-      selectedShippingMethod.value = shippingMethods.value[0]
+      ];
+      selectedShippingMethod.value = shippingMethods.value[0];
     }
   } catch (error) {
-    console.error('Error fetching shipping options:', error)
+    console.error("Error fetching shipping options:", error);
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load shipping options',
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to load shipping options",
       life: 3000,
-    })
+    });
   } finally {
-    loadingShipping.value = false
+    loadingShipping.value = false;
   }
 }
 
@@ -453,60 +462,62 @@ async function fetchShippingOptions() {
 async function initializeExpressCheckout() {
   // Check Google Pay availability
   try {
-    const isGooglePayReady = await paymentService.isGooglePayReady(orderTotal.value)
-    expressCheckoutAvailable.value.googlePay = isGooglePayReady
+    const isGooglePayReady = await paymentService.isGooglePayReady(
+      orderTotal.value,
+    );
+    expressCheckoutAvailable.value.googlePay = isGooglePayReady;
   } catch (err) {
-    console.log('Google Pay not available:', err)
+    console.log("Google Pay not available:", err);
   }
 
   // Initialize PayPal
   try {
-    await paymentService.initializePayPal()
-    expressCheckoutAvailable.value.paypal = true
+    await paymentService.initializePayPal();
+    expressCheckoutAvailable.value.paypal = true;
   } catch (err) {
-    console.log('PayPal not available:', err)
+    console.log("PayPal not available:", err);
   }
 
   // Initialize Shop Pay (may not be available in all regions)
   try {
-    const shopPay = await paymentService.initializeShopPay()
-    expressCheckoutAvailable.value.shopPay = !!shopPay
+    const shopPay = await paymentService.initializeShopPay();
+    expressCheckoutAvailable.value.shopPay = !!shopPay;
   } catch (err) {
-    console.log('Shop Pay not available:', err)
+    console.log("Shop Pay not available:", err);
   }
 
   // Initialize Affirm
   try {
-    await paymentService.initializeAffirm()
-    expressCheckoutAvailable.value.affirm = true
+    await paymentService.initializeAffirm();
+    expressCheckoutAvailable.value.affirm = true;
   } catch (err) {
-    console.log('Affirm not available:', err)
+    console.log("Affirm not available:", err);
   }
 }
 
 // Navigation
 function goToStep(step: number) {
   if (step < currentStep.value) {
-    currentStep.value = step
+    currentStep.value = step;
   } else if (step === currentStep.value + 1) {
     if (validateCurrentStep()) {
-      currentStep.value = step
+      currentStep.value = step;
     }
   }
 }
 
 async function continueToShipping() {
   if (validateInformation()) {
-    await fetchShippingOptions()
-    currentStep.value = 2
+    await fetchShippingOptions();
+    currentStep.value = 2;
   }
 }
 
 function continueToPayment() {
   if (validateShipping()) {
-    currentStep.value = 3
+    currentStep.value = 3;
     // Initialize Stripe when entering payment step
-    setTimeout(() => initializeStripe(), 100)
+    setTimeout(() => initializeStripe(), 100);
   }
 }
 
@@ -514,161 +525,168 @@ function continueToPayment() {
 function validateCurrentStep() {
   switch (currentStep.value) {
     case 1:
-      return validateInformation()
+      return validateInformation();
     case 2:
-      return validateShipping()
+      return validateShipping();
     case 3:
-      return validatePayment()
+      return validatePayment();
     default:
-      return true
+      return true;
   }
 }
 
 function validateInformation() {
-  const errors: Record<string, string> = {}
+  const errors: Record<string, string> = {};
   if (!contactAndShipping.value.email) {
-    errors.email = 'Email is required'
+    errors.email = "Email is required";
   }
   if (!contactAndShipping.value.firstName) {
-    errors.firstName = 'First name is required'
+    errors.firstName = "First name is required";
   }
   if (!contactAndShipping.value.lastName) {
-    errors.lastName = 'Last name is required'
+    errors.lastName = "Last name is required";
   }
   if (!contactAndShipping.value.address1) {
-    errors.address1 = 'Address is required'
+    errors.address1 = "Address is required";
   }
   if (!contactAndShipping.value.city) {
-    errors.city = 'City is required'
+    errors.city = "City is required";
   }
   if (!contactAndShipping.value.state) {
-    errors.state = 'State is required'
+    errors.state = "State is required";
   }
   if (!contactAndShipping.value.postalCode) {
-    errors.postalCode = 'ZIP code is required'
+    errors.postalCode = "ZIP code is required";
   }
   if (!contactAndShipping.value.phone) {
-    errors.phone = 'Phone is required for delivery'
+    errors.phone = "Phone is required for delivery";
   }
 
-  validationErrors.value = errors
-  return Object.keys(errors).length === 0
+  validationErrors.value = errors;
+  return Object.keys(errors).length === 0;
 }
 
 function validateShipping() {
   if (!selectedShippingMethod.value) {
     toast.add({
-      severity: 'error',
-      summary: 'Shipping Required',
-      detail: 'Please select a shipping method',
+      severity: "error",
+      summary: "Shipping Required",
+      detail: "Please select a shipping method",
       life: 3000,
-    })
-    return false
+    });
+    return false;
   }
-  return true
+  return true;
 }
 
 function validatePayment() {
   // Stripe will handle validation
-  return true
+  return true;
 }
 
 // Initialize Stripe
 async function initializeStripe() {
   try {
     // Fetch Stripe configuration from backend
-    const configResponse = await fetch('/api/payment/config')
+    const configResponse = await fetch("/api/payment/config");
     if (!configResponse.ok) {
-      throw new Error('Failed to fetch payment configuration')
+      throw new Error("Failed to fetch payment configuration");
     }
-    const config = await configResponse.json()
-    
+    const config = await configResponse.json();
+
     // Store the publishable key
-    stripePublishableKey.value = config.publishableKey
-    
+    stripePublishableKey.value = config.publishableKey;
+
     // Load Stripe.js
-    stripe.value = await loadStripe(config.publishableKey)
+    stripe.value = await loadStripe(config.publishableKey);
     if (!stripe.value) {
-      throw new Error('Failed to load Stripe')
+      throw new Error("Failed to load Stripe");
     }
-    
+
     // Create Elements instance
-    stripeElements.value = stripe.value.elements()
-    
+    stripeElements.value = stripe.value.elements();
+
     // Create a Payment Intent
-    const intentResponse = await fetch('/api/payment/create-payment-intent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const intentResponse = await fetch("/api/payment/create-payment-intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         amount: orderTotal.value,
-        currency: 'usd'
-      })
-    })
-    
+        currency: "usd",
+      }),
+    });
+
     if (!intentResponse.ok) {
-      throw new Error('Failed to create payment intent')
+      throw new Error("Failed to create payment intent");
     }
-    
-    const intentData = await intentResponse.json()
-    paymentIntentClientSecret.value = intentData.clientSecret
-    
+
+    const intentData = await intentResponse.json();
+    paymentIntentClientSecret.value = intentData.clientSecret;
+
     // Create and mount the Card Element
-    await nextTick()
+    await nextTick();
     if (stripeElementsContainer.value && stripeElements.value) {
       const cardElementOptions = {
         style: {
           base: {
-            fontSize: '16px',
-            color: '#374151',
-            '::placeholder': {
-              color: '#9CA3AF',
+            fontSize: "16px",
+            color: "#374151",
+            "::placeholder": {
+              color: "#9CA3AF",
             },
           },
           invalid: {
-            color: '#EF4444',
-            iconColor: '#EF4444',
+            color: "#EF4444",
+            iconColor: "#EF4444",
           },
         },
-      }
-      
-      stripeCardElement.value = stripeElements.value.create('card', cardElementOptions)
-      stripeCardElement.value.mount(stripeElementsContainer.value)
-      
+      };
+
+      stripeCardElement.value = stripeElements.value.create(
+        "card",
+        cardElementOptions,
+      );
+      stripeCardElement.value.mount(stripeElementsContainer.value);
+
       // Add event listener for errors
-      stripeCardElement.value.on('change', (event) => {
-        const displayError = document.getElementById('card-errors')
+      stripeCardElement.value.on("change", (event) => {
+        const displayError = document.getElementById("card-errors");
         if (displayError) {
           if (event.error) {
-            displayError.textContent = event.error.message
+            displayError.textContent = event.error.message;
           } else {
-            displayError.textContent = ''
+            displayError.textContent = "";
           }
         }
-      })
+      });
     }
   } catch (error) {
-    console.error('Error initializing Stripe:', error)
+    console.error("Error initializing Stripe:", error);
     toast.add({
-      severity: 'error',
-      summary: 'Payment Error',
-      detail: 'Failed to initialize payment system',
+      severity: "error",
+      summary: "Payment Error",
+      detail: "Failed to initialize payment system",
       life: 3000,
-    })
+    });
   }
 }
 
 // Process order
 async function submitOrder() {
   if (!validatePayment()) {
-    return
+    return;
   }
 
-  processing.value = true
+  processing.value = true;
 
   try {
     // Check if Stripe is initialized
-    if (!stripe.value || !stripeCardElement.value || !paymentIntentClientSecret.value) {
-      throw new Error('Payment system not initialized')
+    if (
+      !stripe.value ||
+      !stripeCardElement.value ||
+      !paymentIntentClientSecret.value
+    ) {
+      throw new Error("Payment system not initialized");
     }
 
     // Confirm the payment with Stripe
@@ -691,30 +709,32 @@ async function submitOrder() {
             },
           },
         },
-      }
-    )
+      },
+    );
 
     if (error) {
       // Show error to customer
       toast.add({
-        severity: 'error',
-        summary: 'Payment Failed',
+        severity: "error",
+        summary: "Payment Failed",
         detail: error.message,
         life: 5000,
-      })
-      return
+      });
+      return;
     }
 
     // Payment succeeded, create order in backend
-    const orderResponse = await fetch('/api/payment/confirm-payment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const orderResponse = await fetch("/api/payment/confirm-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         paymentIntentId: paymentIntent.id,
         orderDetails: {
           email: contactAndShipping.value.email,
           shippingAddress: contactAndShipping.value,
-          billingAddress: sameAsShipping.value ? contactAndShipping.value : billingAddress.value,
+          billingAddress: sameAsShipping.value
+            ? contactAndShipping.value
+            : billingAddress.value,
           shippingMethod: selectedShippingMethod.value,
           items: cartItems.value,
           subtotal: cartSubtotal.value,
@@ -723,60 +743,62 @@ async function submitOrder() {
           totalAmount: orderTotal.value,
         },
       }),
-    })
+    });
 
     if (!orderResponse.ok) {
-      throw new Error('Failed to create order')
+      throw new Error("Failed to create order");
     }
 
-    const orderData = await orderResponse.json()
+    const orderData = await orderResponse.json();
 
     // Store order info for confirmation page
     sessionStorage.setItem(
-      'lastOrder',
+      "lastOrder",
       JSON.stringify({
-        orderNumber: orderData.orderNumber || 'VC-' + Date.now(),
+        orderNumber: orderData.orderNumber || "VC-" + Date.now(),
         email: contactAndShipping.value.email,
         shippingAddress: contactAndShipping.value,
-        billingAddress: sameAsShipping.value ? contactAndShipping.value : billingAddress.value,
+        billingAddress: sameAsShipping.value
+          ? contactAndShipping.value
+          : billingAddress.value,
         shippingMethod: selectedShippingMethod.value,
         items: cartItems.value,
         subtotal: cartSubtotal.value,
         shippingCost: shippingCost.value,
         taxAmount: taxAmount.value,
         totalAmount: orderTotal.value,
-      })
-    )
+      }),
+    );
 
     // Clear cart and redirect to confirmation
-    await cartStore.clearCart()
-    router.push({ name: ROUTE_NAMES.ORDER_CONFIRMATION })
-    
+    await cartStore.clearCart();
+    router.push({ name: ROUTE_NAMES.ORDER_CONFIRMATION });
   } catch (error: any) {
-    console.error('Order submission error:', error)
+    console.error("Order submission error:", error);
     toast.add({
-      severity: 'error',
-      summary: 'Order Failed',
-      detail: error.message || 'Failed to process your order. Please try again.',
+      severity: "error",
+      summary: "Order Failed",
+      detail:
+        error.message || "Failed to process your order. Please try again.",
       life: 5000,
-    })
+    });
   } finally {
-    processing.value = false
+    processing.value = false;
   }
 }
 
 // Format currency
 function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount)
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(amount);
 }
 
 // Express Checkout Handlers
 async function handleGooglePay() {
   try {
-    processing.value = true
+    processing.value = true;
 
     const cartData = {
       total: orderTotal.value,
@@ -784,36 +806,39 @@ async function handleGooglePay() {
       subtotal: cartSubtotal.value,
       shipping: shippingCost.value,
       tax: taxAmount.value,
-    }
+    };
 
-    const paymentData = await paymentService.processGooglePayPayment(cartData)
+    const paymentData = await paymentService.processGooglePayPayment(cartData);
 
     // Process the payment token with your backend
-    const response = await fetch('/api/checkout/google-pay', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await fetch("/api/checkout/google-pay", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         paymentData,
         cartData,
         shippingAddress: contactAndShipping.value,
       }),
-    })
+    });
 
-    if (!response.ok) throw new Error('Payment failed')
+    if (!response.ok) throw new Error("Payment failed");
 
-    const order = await response.json()
-    await cartStore.clearCart()
-    router.push({ name: ROUTE_NAMES.ORDER_CONFIRMATION, params: { orderId: order.id } })
+    const order = await response.json();
+    await cartStore.clearCart();
+    router.push({
+      name: ROUTE_NAMES.ORDER_CONFIRMATION,
+      params: { orderId: order.id },
+    });
   } catch (error: any) {
-    console.error('Google Pay error:', error)
+    console.error("Google Pay error:", error);
     toast.add({
-      severity: 'error',
-      summary: 'Payment Failed',
-      detail: error.message || 'Unable to process Google Pay payment',
+      severity: "error",
+      summary: "Payment Failed",
+      detail: error.message || "Unable to process Google Pay payment",
       life: 5000,
-    })
+    });
   } finally {
-    processing.value = false
+    processing.value = false;
   }
 }
 
@@ -821,9 +846,9 @@ async function handlePayPal() {
   try {
     const buttons = await paymentService.createPayPalButtons({
       createOrder: async () => {
-        const response = await fetch('/api/checkout/paypal/create-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/api/checkout/paypal/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             items: cartItems.value,
             subtotal: cartSubtotal.value,
@@ -831,54 +856,57 @@ async function handlePayPal() {
             tax: taxAmount.value,
             total: orderTotal.value,
           }),
-        })
-        const data = await response.json()
-        return data.orderId
+        });
+        const data = await response.json();
+        return data.orderId;
       },
       onApprove: async (data: any) => {
-        processing.value = true
-        const response = await fetch('/api/checkout/paypal/capture-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        processing.value = true;
+        const response = await fetch("/api/checkout/paypal/capture-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             orderId: data.orderID,
             shippingAddress: contactAndShipping.value,
           }),
-        })
+        });
 
-        if (!response.ok) throw new Error('Payment capture failed')
+        if (!response.ok) throw new Error("Payment capture failed");
 
-        const order = await response.json()
-        await cartStore.clearCart()
-        router.push({ name: ROUTE_NAMES.ORDER_CONFIRMATION, params: { orderId: order.id } })
+        const order = await response.json();
+        await cartStore.clearCart();
+        router.push({
+          name: ROUTE_NAMES.ORDER_CONFIRMATION,
+          params: { orderId: order.id },
+        });
       },
       onError: (err: any) => {
-        console.error('PayPal error:', err)
+        console.error("PayPal error:", err);
         toast.add({
-          severity: 'error',
-          summary: 'Payment Failed',
-          detail: 'Unable to process PayPal payment',
+          severity: "error",
+          summary: "Payment Failed",
+          detail: "Unable to process PayPal payment",
           life: 5000,
-        })
-        processing.value = false
+        });
+        processing.value = false;
       },
       onCancel: () => {
-        processing.value = false
+        processing.value = false;
       },
-    })
+    });
 
     // Render PayPal button in a modal or inline
     if (paypalButtonContainer.value) {
-      buttons.render(paypalButtonContainer.value)
+      buttons.render(paypalButtonContainer.value);
     }
   } catch (error: any) {
-    console.error('PayPal initialization error:', error)
+    console.error("PayPal initialization error:", error);
     toast.add({
-      severity: 'error',
-      summary: 'PayPal Error',
-      detail: 'Unable to initialize PayPal',
+      severity: "error",
+      summary: "PayPal Error",
+      detail: "Unable to initialize PayPal",
       life: 5000,
-    })
+    });
   }
 }
 
@@ -886,57 +914,62 @@ async function handleShopPay() {
   // Shop Pay requires Shopify Plus integration
   // This is a placeholder for the Shop Pay accelerated checkout
   toast.add({
-    severity: 'info',
-    summary: 'Shop Pay',
-    detail: 'Shop Pay integration requires additional merchant setup',
+    severity: "info",
+    summary: "Shop Pay",
+    detail: "Shop Pay integration requires additional merchant setup",
     life: 5000,
-  })
+  });
 }
 
 async function handleAffirm() {
   try {
-    processing.value = true
+    processing.value = true;
 
     const checkoutData = {
       shippingAddress: contactAndShipping.value,
-      billingAddress: sameAsShipping.value ? contactAndShipping.value : billingAddress.value,
+      billingAddress: sameAsShipping.value
+        ? contactAndShipping.value
+        : billingAddress.value,
       items: cartItems.value,
       shippingMethod: selectedShippingMethod.value,
       total: orderTotal.value,
       subtotal: cartSubtotal.value,
       shipping: shippingCost.value,
       tax: taxAmount.value,
-    }
+    };
 
     // Open Affirm checkout modal
-    await paymentService.openAffirmCheckout(checkoutData)
+    await paymentService.openAffirmCheckout(checkoutData);
 
     // Affirm will redirect back to your site with a checkout token
     // Handle the response in a separate route or modal callback
   } catch (error: any) {
-    console.error('Affirm error:', error)
+    console.error("Affirm error:", error);
     toast.add({
-      severity: 'error',
-      summary: 'Affirm Error',
-      detail: 'Unable to open Affirm checkout',
+      severity: "error",
+      summary: "Affirm Error",
+      detail: "Unable to open Affirm checkout",
       life: 5000,
-    })
+    });
   } finally {
-    processing.value = false
+    processing.value = false;
   }
 }
 
 // Watch for billing address changes
 watch(sameAsShipping, (newVal) => {
   if (newVal) {
-    billingAddress.value = { ...contactAndShipping.value }
+    billingAddress.value = { ...contactAndShipping.value };
   }
-})
+});
 
 // Clear state when country changes
-watch(() => contactAndShipping.value.country, () => {
-  contactAndShipping.value.state = ''
-})
+watch(
+  () => contactAndShipping.value.country,
+  () => {
+    contactAndShipping.value.state = "";
+  },
+);
 </script>
 
 <template>
@@ -954,7 +987,10 @@ watch(() => contactAndShipping.value.country, () => {
       <template #content>
         <!-- Express checkout -->
         <div
-          v-if="currentStep === 1 && Object.values(expressCheckoutAvailable).some((v) => v)"
+          v-if="
+            currentStep === 1 &&
+            Object.values(expressCheckoutAvailable).some((v) => v)
+          "
           class="express-checkout"
         >
           <div class="express-title">Express checkout</div>
@@ -1020,8 +1056,14 @@ watch(() => contactAndShipping.value.country, () => {
           </div>
 
           <div class="form-group">
-            <Checkbox v-model="contactAndShipping.newsletter" input-id="newsletter" binary />
-            <label for="newsletter" class="ml-2">Email me with news and offers</label>
+            <Checkbox
+              v-model="contactAndShipping.newsletter"
+              input-id="newsletter"
+              binary
+            />
+            <label for="newsletter" class="ml-2"
+              >Email me with news and offers</label
+            >
           </div>
 
           <h2 class="mt-5">Shipping address</h2>
@@ -1112,7 +1154,13 @@ watch(() => contactAndShipping.value.country, () => {
                 :options="states"
                 option-label="name"
                 option-value="code"
-                :placeholder="contactAndShipping.country === 'CA' ? 'Province' : contactAndShipping.country === 'MX' ? 'State' : 'State'"
+                :placeholder="
+                  contactAndShipping.country === 'CA'
+                    ? 'Province'
+                    : contactAndShipping.country === 'MX'
+                      ? 'State'
+                      : 'State'
+                "
                 class="w-full"
                 :class="{ 'p-invalid': validationErrors.state }"
               />
@@ -1164,8 +1212,14 @@ watch(() => contactAndShipping.value.country, () => {
           </div>
 
           <div class="form-group">
-            <Checkbox v-model="contactAndShipping.saveInfo" input-id="save-info" binary />
-            <label for="save-info" class="ml-2">Save this information for next time</label>
+            <Checkbox
+              v-model="contactAndShipping.saveInfo"
+              input-id="save-info"
+              binary
+            />
+            <label for="save-info" class="ml-2"
+              >Save this information for next time</label
+            >
           </div>
 
           <div class="form-actions">
@@ -1191,8 +1245,9 @@ watch(() => contactAndShipping.value.country, () => {
             <div class="summary-row">
               <span class="summary-label">Ship to</span>
               <span class="summary-value">
-                {{ contactAndShipping.address1 }}, {{ contactAndShipping.city }},
-                {{ contactAndShipping.state }} {{ contactAndShipping.postalCode }}
+                {{ contactAndShipping.address1 }},
+                {{ contactAndShipping.city }}, {{ contactAndShipping.state }}
+                {{ contactAndShipping.postalCode }}
               </span>
               <a class="summary-change" @click="currentStep = 1">Change</a>
             </div>
@@ -1217,7 +1272,9 @@ watch(() => contactAndShipping.value.country, () => {
                 <div class="shipping-name">{{ method.name }}</div>
                 <div class="shipping-desc">{{ method.description }}</div>
               </div>
-              <div class="shipping-price">{{ formatCurrency(method.price) }}</div>
+              <div class="shipping-price">
+                {{ formatCurrency(method.price) }}
+              </div>
             </div>
           </div>
 
@@ -1251,8 +1308,9 @@ watch(() => contactAndShipping.value.country, () => {
             <div class="summary-row">
               <span class="summary-label">Ship to</span>
               <span class="summary-value">
-                {{ contactAndShipping.address1 }}, {{ contactAndShipping.city }},
-                {{ contactAndShipping.state }} {{ contactAndShipping.postalCode }}
+                {{ contactAndShipping.address1 }},
+                {{ contactAndShipping.city }}, {{ contactAndShipping.state }}
+                {{ contactAndShipping.postalCode }}
               </span>
               <a class="summary-change" @click="currentStep = 1">Change</a>
             </div>
@@ -1271,7 +1329,12 @@ watch(() => contactAndShipping.value.country, () => {
 
           <div class="payment-method">
             <div class="payment-option selected">
-              <RadioButton model-value="card" value="card" input-id="pay-card" checked />
+              <RadioButton
+                model-value="card"
+                value="card"
+                input-id="pay-card"
+                checked
+              />
               <label for="pay-card" class="ml-2">Credit card</label>
               <div class="payment-icons">
                 <i class="pi pi-credit-card"></i>
@@ -1291,12 +1354,22 @@ watch(() => contactAndShipping.value.country, () => {
 
           <h2 class="mt-4">Billing address</h2>
           <div class="billing-option">
-            <RadioButton v-model="sameAsShipping" :value="true" input-id="same-addr" />
+            <RadioButton
+              v-model="sameAsShipping"
+              :value="true"
+              input-id="same-addr"
+            />
             <label for="same-addr" class="ml-2">Same as shipping address</label>
           </div>
           <div class="billing-option">
-            <RadioButton v-model="sameAsShipping" :value="false" input-id="diff-addr" />
-            <label for="diff-addr" class="ml-2">Use a different billing address</label>
+            <RadioButton
+              v-model="sameAsShipping"
+              :value="false"
+              input-id="diff-addr"
+            />
+            <label for="diff-addr" class="ml-2"
+              >Use a different billing address</label
+            >
           </div>
 
           <div class="form-actions">
@@ -1374,7 +1447,9 @@ watch(() => contactAndShipping.value.country, () => {
                       justify-content: center;
                     "
                   >
-                    <div class="calendar-year">{{ getCalendarConfig(item).year }}</div>
+                    <div class="calendar-year">
+                      {{ getCalendarConfig(item).year }}
+                    </div>
                     <i class="pi pi-calendar"></i>
                   </div>
                 </div>
@@ -1388,14 +1463,27 @@ watch(() => contactAndShipping.value.country, () => {
             <div class="item-details">
               <div class="item-name">
                 {{ item.productName }}
-                <span v-if="isCalendarItem(item) && getCalendarConfig(item)" class="calendar-name">
-                  - {{ getCalendarConfig(item).name || getCalendarConfig(item).year }}
+                <span
+                  v-if="isCalendarItem(item) && getCalendarConfig(item)"
+                  class="calendar-name"
+                >
+                  -
+                  {{
+                    getCalendarConfig(item).name || getCalendarConfig(item).year
+                  }}
                 </span>
               </div>
-              <div v-if="isCalendarItem(item) && getCalendarConfig(item)" class="item-variant">
-                <i class="pi pi-calendar mr-1"></i>{{ getCalendarConfig(item).year }} Calendar
+              <div
+                v-if="isCalendarItem(item) && getCalendarConfig(item)"
+                class="item-variant"
+              >
+                <i class="pi pi-calendar mr-1"></i
+                >{{ getCalendarConfig(item).year }} Calendar
               </div>
-              <div v-else-if="item.configuration && !isCalendarItem(item)" class="item-variant">
+              <div
+                v-else-if="item.configuration && !isCalendarItem(item)"
+                class="item-variant"
+              >
                 {{ item.configuration }}
               </div>
             </div>
@@ -1423,7 +1511,9 @@ watch(() => contactAndShipping.value.country, () => {
           </div>
           <div class="total-row">
             <span>Shipping</span>
-            <span>{{ shippingCost > 0 ? formatCurrency(shippingCost) : '—' }}</span>
+            <span>{{
+              shippingCost > 0 ? formatCurrency(shippingCost) : "—"
+            }}</span>
           </div>
           <div class="total-row">
             <span>Taxes</span>
@@ -1433,7 +1523,8 @@ watch(() => contactAndShipping.value.country, () => {
           <div class="total-row total-final">
             <span>Total</span>
             <span class="total-amount">
-              <small class="currency">USD</small> {{ formatCurrency(orderTotal) }}
+              <small class="currency">USD</small>
+              {{ formatCurrency(orderTotal) }}
             </span>
           </div>
         </div>
@@ -1460,7 +1551,10 @@ watch(() => contactAndShipping.value.country, () => {
         justify-content: center;
       "
     >
-      <div style="max-width: 100%; height: auto" v-html="previewCalendarSvg"></div>
+      <div
+        style="max-width: 100%; height: auto"
+        v-html="previewCalendarSvg"
+      ></div>
     </div>
   </Dialog>
 </template>
@@ -1554,7 +1648,7 @@ watch(() => contactAndShipping.value.country, () => {
 }
 
 .divider-or::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 0;

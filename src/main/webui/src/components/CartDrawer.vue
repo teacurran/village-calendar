@@ -1,221 +1,232 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
-import Drawer from 'primevue/drawer'
-import Button from 'primevue/button'
-import Divider from 'primevue/divider'
-import Dialog from 'primevue/dialog'
-import { useCartStore } from '../stores/cart'
-import { useToast } from 'primevue/usetoast'
-import { useRouter } from 'vue-router'
-import { ROUTE_NAMES } from '../navigation/routes'
+import { computed, onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
+import Drawer from "primevue/drawer";
+import Button from "primevue/button";
+import Divider from "primevue/divider";
+import Dialog from "primevue/dialog";
+import { useCartStore } from "../stores/cart";
+import { useToast } from "primevue/usetoast";
+import { useRouter } from "vue-router";
+import { ROUTE_NAMES } from "../navigation/routes";
 
-const { t } = useI18n({ useScope: 'global' })
-const cartStore = useCartStore()
-const toast = useToast()
-const router = useRouter()
+const { t } = useI18n({ useScope: "global" });
+const cartStore = useCartStore();
+const toast = useToast();
+const router = useRouter();
 
 // Calendar printing product ID
-const CALENDAR_PRODUCT_ID = 'ca1e0da2-0000-0000-0000-000000000001'
+const CALENDAR_PRODUCT_ID = "ca1e0da2-0000-0000-0000-000000000001";
 
 // Store for calendar SVGs
-const calendarSvgs = ref<Record<string, string>>({})
-const showPreviewModal = ref(false)
-const previewCalendarSvg = ref('')
-const previewCalendarName = ref('')
+const calendarSvgs = ref<Record<string, string>>({});
+const showPreviewModal = ref(false);
+const previewCalendarSvg = ref("");
+const previewCalendarName = ref("");
 
 // Parse configuration and get calendar details
 const getCalendarConfig = (item: any) => {
   if (item.productId === CALENDAR_PRODUCT_ID && item.configuration) {
     try {
-      return JSON.parse(item.configuration)
+      return JSON.parse(item.configuration);
     } catch (e) {
-      console.error('Failed to parse calendar configuration for item:', item.id, e)
+      console.error(
+        "Failed to parse calendar configuration for item:",
+        item.id,
+        e,
+      );
     }
   }
-  return null
-}
+  return null;
+};
 
 // Check if item is a calendar
 const isCalendarItem = (item: any) => {
-  return item.productId === CALENDAR_PRODUCT_ID
-}
+  return item.productId === CALENDAR_PRODUCT_ID;
+};
 
 // Get month name from number
 const getMonthName = (month: number) => {
   const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ]
-  return months[month - 1] || 'Jan'
-}
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  return months[month - 1] || "Jan";
+};
 
 // Get calendar SVG for a specific calendar ID
 const fetchCalendarSvg = async (calendarId: string) => {
   if (calendarSvgs.value[calendarId]) {
-    return calendarSvgs.value[calendarId]
+    return calendarSvgs.value[calendarId];
   }
 
   try {
     // Fetch only the specific calendar's SVG
-    const response = await fetch(`/api/calendar-templates/user/calendars/${calendarId}/preview`)
+    const response = await fetch(
+      `/api/calendar-templates/user/calendars/${calendarId}/preview`,
+    );
     if (response.ok) {
-      const svg = await response.text()
-      calendarSvgs.value[calendarId] = svg
-      return svg
+      const svg = await response.text();
+      calendarSvgs.value[calendarId] = svg;
+      return svg;
     }
   } catch (error) {
-    console.error(`Failed to fetch calendar SVG for ${calendarId}:`, error)
+    console.error(`Failed to fetch calendar SVG for ${calendarId}:`, error);
   }
 
-  return null
-}
+  return null;
+};
 
 // Load calendar SVGs when cart items change
 const loadCalendarSvgs = async () => {
-  if (!cartStore.items || cartStore.items.length === 0) return
+  if (!cartStore.items || cartStore.items.length === 0) return;
 
   // Process each cart item
   for (const item of cartStore.items) {
-    const config = getCalendarConfig(item)
-    
+    const config = getCalendarConfig(item);
+
     if (config) {
       // Use item.id as the primary key for lookups - this ensures consistency
-      const calendarKey = item.id
-      
+      const calendarKey = item.id;
+
       // First check if SVG content is already in the configuration
       if (config.svgContent) {
-        calendarSvgs.value[calendarKey] = config.svgContent
+        calendarSvgs.value[calendarKey] = config.svgContent;
       } else if (config.calendarId) {
         // Otherwise try to fetch from API if there's a calendarId
-        const svg = await fetchCalendarSvg(config.calendarId)
+        const svg = await fetchCalendarSvg(config.calendarId);
         if (svg) {
-          calendarSvgs.value[calendarKey] = svg
+          calendarSvgs.value[calendarKey] = svg;
         }
       }
     }
   }
-}
+};
 
 // Show calendar preview
 const showCalendarPreview = (item: any) => {
-  const config = getCalendarConfig(item)
+  const config = getCalendarConfig(item);
   if (config) {
     // Use item.id as the key, same as in loadCalendarSvgs
-    const calendarKey = item.id
+    const calendarKey = item.id;
     if (calendarSvgs.value[calendarKey]) {
-      previewCalendarSvg.value = calendarSvgs.value[calendarKey]
-      previewCalendarName.value = config.name || `${config.year} Calendar`
-      showPreviewModal.value = true
+      previewCalendarSvg.value = calendarSvgs.value[calendarKey];
+      previewCalendarName.value = config.name || `${config.year} Calendar`;
+      showPreviewModal.value = true;
     }
   }
-}
+};
 
 // Fetch cart on component mount
 onMounted(async () => {
-  console.log('CartDrawer mounted, fetching cart...')
+  console.log("CartDrawer mounted, fetching cart...");
   // Force fetch when opening cart drawer to get full cart with items
-  await cartStore.fetchCart(true)
-  console.log('Cart fetched, cart data:', cartStore.cart)
-  await loadCalendarSvgs()
-})
+  await cartStore.fetchCart(true);
+  console.log("Cart fetched, cart data:", cartStore.cart);
+  await loadCalendarSvgs();
+});
 
 // Watch for cart changes
 watch(
   () => cartStore.items,
   async () => {
-    await loadCalendarSvgs()
-  }
-)
+    await loadCalendarSvgs();
+  },
+);
 
 const isOpen = computed({
   get: () => {
-    console.log('CartDrawer isOpen getter:', cartStore.isOpen)
-    return cartStore.isOpen
+    console.log("CartDrawer isOpen getter:", cartStore.isOpen);
+    return cartStore.isOpen;
   },
   set: (value) => {
-    console.log('CartDrawer isOpen setter:', value)
+    console.log("CartDrawer isOpen setter:", value);
     if (value) {
-      cartStore.openCart()
+      cartStore.openCart();
       // Load calendar SVGs when opening the drawer
-      loadCalendarSvgs()
+      loadCalendarSvgs();
     } else {
-      cartStore.closeCart()
+      cartStore.closeCart();
     }
   },
-})
+});
 
 const updateQuantity = async (itemId: string, quantity: number) => {
   try {
-    await cartStore.updateQuantity(itemId, quantity)
+    await cartStore.updateQuantity(itemId, quantity);
   } catch (error) {
     toast.add({
-      severity: 'error',
-      summary: t('cart.error.title'),
-      detail: t('cart.error.updateQuantity'),
+      severity: "error",
+      summary: t("cart.error.title"),
+      detail: t("cart.error.updateQuantity"),
       life: 3000,
-    })
+    });
   }
-}
+};
 
 const removeItem = async (itemId: string) => {
   try {
-    await cartStore.removeFromCart(itemId)
+    await cartStore.removeFromCart(itemId);
   } catch (error) {
     toast.add({
-      severity: 'error',
-      summary: t('cart.error.title'),
-      detail: t('cart.error.removeItem'),
+      severity: "error",
+      summary: t("cart.error.title"),
+      detail: t("cart.error.removeItem"),
       life: 3000,
-    })
+    });
   }
-}
+};
 
 const clearCart = async () => {
-  if (confirm(t('cart.clearCartConfirm'))) {
+  if (confirm(t("cart.clearCartConfirm"))) {
     try {
-      await cartStore.clearCart()
+      await cartStore.clearCart();
     } catch (error) {
       toast.add({
-        severity: 'error',
-        summary: t('cart.error.title'),
-        detail: t('cart.error.clearCart'),
+        severity: "error",
+        summary: t("cart.error.title"),
+        detail: t("cart.error.clearCart"),
         life: 3000,
-      })
+      });
     }
   }
-}
+};
 
 const proceedToCheckout = () => {
-  cartStore.closeCart()
-  router.push({ name: ROUTE_NAMES.CHECKOUT })
-}
+  cartStore.closeCart();
+  router.push({ name: ROUTE_NAMES.CHECKOUT });
+};
 
 const viewFullCart = () => {
-  cartStore.closeCart()
-  router.push({ name: ROUTE_NAMES.CART })
-}
+  cartStore.closeCart();
+  router.push({ name: ROUTE_NAMES.CART });
+};
 </script>
 
 <template>
-  <Drawer v-model:visible="isOpen" position="right" class="cart-drawer" :style="{ width: '400px' }">
+  <Drawer
+    v-model:visible="isOpen"
+    position="right"
+    class="cart-drawer"
+    :style="{ width: '400px' }"
+  >
     <template #header>
       <div class="flex align-items-center gap-2">
         <i class="pi pi-shopping-cart"></i>
-        <span class="font-semibold">{{ $t('cart.title') }}</span>
+        <span class="font-semibold">{{ $t("cart.title") }}</span>
         <span v-if="cartStore.itemCount > 0" class="text-sm text-gray-600">
           ({{ cartStore.itemCount }}
-          {{ cartStore.itemCount === 1 ? $t('cart.item') : $t('cart.items') }})
+          {{ cartStore.itemCount === 1 ? $t("cart.item") : $t("cart.items") }})
         </span>
       </div>
     </template>
@@ -224,8 +235,8 @@ const viewFullCart = () => {
       <!-- Empty Cart State -->
       <div v-if="cartStore.isEmpty" class="empty-cart text-center py-8">
         <i class="pi pi-shopping-cart text-6xl text-gray-300 mb-4"></i>
-        <h3 class="text-xl mb-2">{{ $t('cart.empty.title') }}</h3>
-        <p class="text-gray-600 mb-4">{{ $t('cart.empty.description') }}</p>
+        <h3 class="text-xl mb-2">{{ $t("cart.empty.title") }}</h3>
+        <p class="text-gray-600 mb-4">{{ $t("cart.empty.description") }}</p>
         <Button
           :label="$t('cart.empty.continueShopping')"
           class="p-button-outlined"
@@ -261,7 +272,9 @@ const viewFullCart = () => {
                   v-html="calendarSvgs[item.id]"
                 ></div>
                 <div v-else class="calendar-icon">
-                  <div class="calendar-year">{{ getCalendarConfig(item).year }}</div>
+                  <div class="calendar-year">
+                    {{ getCalendarConfig(item).year }}
+                  </div>
                   <i class="pi pi-calendar"></i>
                 </div>
               </div>
@@ -275,12 +288,22 @@ const viewFullCart = () => {
             <div class="item-details">
               <div class="item-name">
                 {{ item.productName }}
-                <span v-if="isCalendarItem(item) && getCalendarConfig(item)" class="calendar-name">
-                  - {{ getCalendarConfig(item).name || getCalendarConfig(item).year }}
+                <span
+                  v-if="isCalendarItem(item) && getCalendarConfig(item)"
+                  class="calendar-name"
+                >
+                  -
+                  {{
+                    getCalendarConfig(item).name || getCalendarConfig(item).year
+                  }}
                 </span>
               </div>
-              <div v-if="isCalendarItem(item) && getCalendarConfig(item)" class="item-variant">
-                <i class="pi pi-calendar mr-1"></i>{{ getCalendarConfig(item).year }} Calendar
+              <div
+                v-if="isCalendarItem(item) && getCalendarConfig(item)"
+                class="item-variant"
+              >
+                <i class="pi pi-calendar mr-1"></i
+                >{{ getCalendarConfig(item).year }} Calendar
               </div>
               <div v-else-if="item.notes" class="item-variant">
                 {{ item.notes }}
@@ -308,9 +331,9 @@ const viewFullCart = () => {
                 <!-- Price -->
                 <div class="item-price">
                   {{
-                    new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
+                    new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: "USD",
                     }).format(item.lineTotal)
                   }}
                 </div>
@@ -333,8 +356,10 @@ const viewFullCart = () => {
         <!-- Cart Summary -->
         <div class="cart-summary">
           <div class="flex justify-content-between align-items-center mb-3">
-            <span class="font-semibold">{{ $t('cart.total') }}:</span>
-            <span class="font-bold text-xl">{{ cartStore.totalDisplayAmount }}</span>
+            <span class="font-semibold">{{ $t("cart.total") }}:</span>
+            <span class="font-bold text-xl">{{
+              cartStore.totalDisplayAmount
+            }}</span>
           </div>
 
           <div class="cart-actions">
@@ -386,7 +411,10 @@ const viewFullCart = () => {
         justify-content: center;
       "
     >
-      <div style="max-width: 100%; height: auto" v-html="previewCalendarSvg"></div>
+      <div
+        style="max-width: 100%; height: auto"
+        v-html="previewCalendarSvg"
+      ></div>
     </div>
   </Dialog>
 </template>

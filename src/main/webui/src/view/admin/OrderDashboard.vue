@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed } from "vue";
 import {
   Breadcrumb,
   Button,
@@ -11,65 +11,69 @@ import {
   Dropdown,
   Message,
   Tag,
-} from 'primevue'
-import { useToast } from 'primevue/usetoast'
-import { useOrderStore } from '../../stores/orderStore'
-import { useAuthStore } from '../../stores/authStore'
-import type { CalendarOrder } from '../../stores/orderStore'
-import { formatCurrency, getOrderStatusSeverity, formatOrderStatus } from '../../services/orderService'
+} from "primevue";
+import { useToast } from "primevue/usetoast";
+import { useOrderStore } from "../../stores/orderStore";
+import { useAuthStore } from "../../stores/authStore";
+import type { CalendarOrder } from "../../stores/orderStore";
+import {
+  formatCurrency,
+  getOrderStatusSeverity,
+  formatOrderStatus,
+} from "../../services/orderService";
 
-const toast = useToast()
-const orderStore = useOrderStore()
-const authStore = useAuthStore()
+const toast = useToast();
+const orderStore = useOrderStore();
+const authStore = useAuthStore();
 
 // Breadcrumb
 const homeBreadcrumb = ref({
-  icon: 'pi pi-home',
-  url: '/',
-})
+  icon: "pi pi-home",
+  url: "/",
+});
 
-const breadCrumbs = ref([{ label: 'Admin' }, { label: 'Order Dashboard' }])
+const breadCrumbs = ref([{ label: "Admin" }, { label: "Order Dashboard" }]);
 
 // Loading state
-const loading = computed(() => orderStore.loading)
-const error = computed(() => orderStore.error)
-const orders = computed(() => orderStore.orders)
+const loading = computed(() => orderStore.loading);
+const error = computed(() => orderStore.error);
+const orders = computed(() => orderStore.orders);
 
 // Status filter
-const statusFilter = ref<string | null>(null)
+const statusFilter = ref<string | null>(null);
 const statusOptions = [
-  { label: 'All Orders', value: null },
-  { label: 'Pending', value: 'PENDING' },
-  { label: 'Paid', value: 'PAID' },
-  { label: 'Processing', value: 'PROCESSING' },
-  { label: 'Shipped', value: 'SHIPPED' },
-  { label: 'Delivered', value: 'DELIVERED' },
-  { label: 'Cancelled', value: 'CANCELLED' },
-  { label: 'Refunded', value: 'REFUNDED' },
-]
+  { label: "All Orders", value: null },
+  { label: "Pending", value: "PENDING" },
+  { label: "Paid", value: "PAID" },
+  { label: "Processing", value: "PROCESSING" },
+  { label: "Shipped", value: "SHIPPED" },
+  { label: "Delivered", value: "DELIVERED" },
+  { label: "Cancelled", value: "CANCELLED" },
+  { label: "Refunded", value: "REFUNDED" },
+];
 
 // Update status dialog
-const updateStatusDialog = ref(false)
-const editingOrder = ref<CalendarOrder | null>(null)
+const updateStatusDialog = ref(false);
+const editingOrder = ref<CalendarOrder | null>(null);
 const statusForm = ref({
-  status: '',
-  notes: '',
-  trackingNumber: '',
-})
+  status: "",
+  notes: "",
+  trackingNumber: "",
+});
 
 // Available status transitions
 const statusTransitions = [
-  { label: 'Pending', value: 'PENDING' },
-  { label: 'Paid', value: 'PAID' },
-  { label: 'Processing', value: 'PROCESSING' },
-  { label: 'Shipped', value: 'SHIPPED' },
-  { label: 'Delivered', value: 'DELIVERED' },
-  { label: 'Cancelled', value: 'CANCELLED' },
-  { label: 'Refunded', value: 'REFUNDED' },
-]
+  { label: "Pending", value: "PENDING" },
+  { label: "Paid", value: "PAID" },
+  { label: "Processing", value: "PROCESSING" },
+  { label: "Shipped", value: "SHIPPED" },
+  { label: "Delivered", value: "DELIVERED" },
+  { label: "Cancelled", value: "CANCELLED" },
+  { label: "Refunded", value: "REFUNDED" },
+];
 
 // Validation errors
-const validationErrors = ref<string[]>([])
+const validationErrors = ref<string[]>([]);
 
 /**
  * Load orders with status filter
@@ -77,47 +81,52 @@ const validationErrors = ref<string[]>([])
 async function loadOrders() {
   if (!authStore.token) {
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Not authenticated',
+      severity: "error",
+      summary: "Error",
+      detail: "Not authenticated",
       life: 5000,
-    })
-    return
+    });
+    return;
   }
 
-  await orderStore.loadOrders(authStore.token, statusFilter.value || undefined)
+  await orderStore.loadOrders(authStore.token, statusFilter.value || undefined);
 }
 
 /**
  * Open dialog to update order status
  */
 function openUpdateStatus(order: CalendarOrder) {
-  editingOrder.value = order
+  editingOrder.value = order;
   statusForm.value = {
     status: order.status,
-    notes: '',
-    trackingNumber: order.trackingNumber || '',
-  }
-  validationErrors.value = []
-  updateStatusDialog.value = true
+    notes: "",
+    trackingNumber: order.trackingNumber || "",
+  };
+  validationErrors.value = [];
+  updateStatusDialog.value = true;
 }
 
 /**
  * Validate status update form
  */
 function validateStatusForm(): boolean {
-  validationErrors.value = []
+  validationErrors.value = [];
 
   if (!statusForm.value.status) {
-    validationErrors.value.push('Status is required')
+    validationErrors.value.push("Status is required");
   }
 
   // Tracking number required for SHIPPED status
-  if (statusForm.value.status === 'SHIPPED' && !statusForm.value.trackingNumber) {
-    validationErrors.value.push('Tracking number is required when status is SHIPPED')
+  if (
+    statusForm.value.status === "SHIPPED" &&
+    !statusForm.value.trackingNumber
+  ) {
+    validationErrors.value.push(
+      "Tracking number is required when status is SHIPPED",
+    );
   }
 
-  return validationErrors.value.length === 0
+  return validationErrors.value.length === 0;
 }
 
 /**
@@ -125,36 +134,36 @@ function validateStatusForm(): boolean {
  */
 async function updateStatus() {
   if (!validateStatusForm() || !editingOrder.value || !authStore.token) {
-    return
+    return;
   }
 
   const input = {
     status: statusForm.value.status,
     notes: statusForm.value.notes || undefined,
     trackingNumber: statusForm.value.trackingNumber || undefined,
-  }
+  };
 
   const result = await orderStore.updateOrderStatus(
     editingOrder.value.id,
     input,
-    authStore.token
-  )
+    authStore.token,
+  );
 
   if (result) {
     toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Order status updated successfully',
+      severity: "success",
+      summary: "Success",
+      detail: "Order status updated successfully",
       life: 3000,
-    })
-    updateStatusDialog.value = false
+    });
+    updateStatusDialog.value = false;
   } else {
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: orderStore.error || 'Failed to update order status',
+      severity: "error",
+      summary: "Error",
+      detail: orderStore.error || "Failed to update order status",
       life: 5000,
-    })
+    });
   }
 }
 
@@ -162,23 +171,23 @@ async function updateStatus() {
  * Format date for display
  */
 function formatDate(date: string | undefined): string {
-  if (!date) return '-'
-  return new Date(date).toLocaleDateString()
+  if (!date) return "-";
+  return new Date(date).toLocaleDateString();
 }
 
 /**
  * Format datetime for display
  */
 function formatDateTime(date: string | undefined): string {
-  if (!date) return '-'
-  return new Date(date).toLocaleString()
+  if (!date) return "-";
+  return new Date(date).toLocaleString();
 }
 
 /**
  * Format shipping address
  */
 function formatAddress(address: any): string {
-  if (!address) return '-'
+  if (!address) return "-";
   const parts = [
     address.street,
     address.street2,
@@ -186,27 +195,27 @@ function formatAddress(address: any): string {
     address.state,
     address.postalCode,
     address.country,
-  ].filter(Boolean)
-  return parts.join(', ')
+  ].filter(Boolean);
+  return parts.join(", ");
 }
 
 /**
  * Get order count for current filter
  */
 const orderCount = computed(() => {
-  return orders.value.length
-})
+  return orders.value.length;
+});
 
 /**
  * Watch status filter changes
  */
 async function onStatusFilterChange() {
-  await loadOrders()
+  await loadOrders();
 }
 
 onMounted(async () => {
-  await loadOrders()
-})
+  await loadOrders();
+});
 </script>
 
 <template>
@@ -252,14 +261,18 @@ onMounted(async () => {
 
       <Column field="id" header="Order ID" style="width: 10%">
         <template #body="{ data }">
-          <span class="font-mono text-sm">{{ data.id.substring(0, 8) }}...</span>
+          <span class="font-mono text-sm"
+            >{{ data.id.substring(0, 8) }}...</span
+          >
         </template>
       </Column>
 
       <Column field="user.email" header="Customer" sortable style="width: 15%">
         <template #body="{ data }">
           <div>
-            <div class="font-semibold">{{ data.user.displayName || 'Unknown' }}</div>
+            <div class="font-semibold">
+              {{ data.user.displayName || "Unknown" }}
+            </div>
             <div class="text-sm text-surface-600">{{ data.user.email }}</div>
           </div>
         </template>
@@ -269,7 +282,9 @@ onMounted(async () => {
         <template #body="{ data }">
           <div>
             <div>{{ data.calendar.name }}</div>
-            <div class="text-sm text-surface-600">Year: {{ data.calendar.year }}</div>
+            <div class="text-sm text-surface-600">
+              Year: {{ data.calendar.year }}
+            </div>
           </div>
         </template>
       </Column>
@@ -288,13 +303,16 @@ onMounted(async () => {
 
       <Column field="status" header="Status" sortable style="width: 10%">
         <template #body="{ data }">
-          <Tag :severity="getOrderStatusSeverity(data.status)" :value="formatOrderStatus(data.status)" />
+          <Tag
+            :severity="getOrderStatusSeverity(data.status)"
+            :value="formatOrderStatus(data.status)"
+          />
         </template>
       </Column>
 
       <Column field="trackingNumber" header="Tracking" style="width: 10%">
         <template #body="{ data }">
-          {{ data.trackingNumber || '-' }}
+          {{ data.trackingNumber || "-" }}
         </template>
       </Column>
 
@@ -349,27 +367,39 @@ onMounted(async () => {
           <div class="grid grid-cols-2 gap-2 text-sm">
             <div>
               <span class="text-surface-600">Customer:</span>
-              <span class="font-semibold ml-2">{{ editingOrder.user.email }}</span>
+              <span class="font-semibold ml-2">{{
+                editingOrder.user.email
+              }}</span>
             </div>
             <div>
               <span class="text-surface-600">Calendar:</span>
-              <span class="font-semibold ml-2">{{ editingOrder.calendar.name }}</span>
+              <span class="font-semibold ml-2">{{
+                editingOrder.calendar.name
+              }}</span>
             </div>
             <div>
               <span class="text-surface-600">Quantity:</span>
-              <span class="font-semibold ml-2">{{ editingOrder.quantity }}</span>
+              <span class="font-semibold ml-2">{{
+                editingOrder.quantity
+              }}</span>
             </div>
             <div>
               <span class="text-surface-600">Total:</span>
-              <span class="font-semibold ml-2">{{ formatCurrency(editingOrder.totalPrice) }}</span>
+              <span class="font-semibold ml-2">{{
+                formatCurrency(editingOrder.totalPrice)
+              }}</span>
             </div>
             <div class="col-span-2">
               <span class="text-surface-600">Shipping Address:</span>
-              <div class="font-semibold ml-2">{{ formatAddress(editingOrder.shippingAddress) }}</div>
+              <div class="font-semibold ml-2">
+                {{ formatAddress(editingOrder.shippingAddress) }}
+              </div>
             </div>
             <div>
               <span class="text-surface-600">Paid At:</span>
-              <span class="ml-2">{{ formatDateTime(editingOrder.paidAt) }}</span>
+              <span class="ml-2">{{
+                formatDateTime(editingOrder.paidAt)
+              }}</span>
             </div>
             <div>
               <span class="text-surface-600">Current Status:</span>
@@ -404,14 +434,18 @@ onMounted(async () => {
 
         <!-- Tracking Number (conditional) -->
         <div v-if="statusForm.status === 'SHIPPED'" class="field">
-          <label for="order-tracking" class="font-semibold">Tracking Number *</label>
+          <label for="order-tracking" class="font-semibold"
+            >Tracking Number *</label
+          >
           <InputText
             id="order-tracking"
             v-model="statusForm.trackingNumber"
             class="w-full"
             placeholder="Enter tracking number"
           />
-          <small class="text-surface-500">Required when marking as SHIPPED</small>
+          <small class="text-surface-500"
+            >Required when marking as SHIPPED</small
+          >
         </div>
 
         <!-- Admin Notes -->
@@ -424,7 +458,9 @@ onMounted(async () => {
             rows="4"
             placeholder="Add notes about this status update (optional)"
           />
-          <small class="text-surface-500">These notes will be appended to order history</small>
+          <small class="text-surface-500"
+            >These notes will be appended to order history</small
+          >
         </div>
       </div>
 
@@ -435,7 +471,11 @@ onMounted(async () => {
           class="p-button-text"
           @click="updateStatusDialog = false"
         />
-        <Button label="Update Status" icon="pi pi-check" @click="updateStatus" />
+        <Button
+          label="Update Status"
+          icon="pi pi-check"
+          @click="updateStatus"
+        />
       </template>
     </Dialog>
   </div>

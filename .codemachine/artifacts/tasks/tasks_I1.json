@@ -12,7 +12,7 @@
     "acceptance_criteria": "./mvnw quarkus:dev starts Quarkus in dev mode, serves Vue app at http://localhost:8080, Vue app displays PrimeVue-styled \"Hello Village Calendar\" placeholder page, Maven build produces executable JAR (target/village-calendar-1.0.0-runner.jar), Dockerfile builds successfully (docker build -t village-calendar:latest .)",
     "dependencies": [],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I1.T2",

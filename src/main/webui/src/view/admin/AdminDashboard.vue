@@ -18,7 +18,12 @@
       <!-- Template Manager Card -->
       <Card class="dashboard-card" @click="navigateTo('/admin/templates')">
         <template #header>
-          <div class="card-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+          <div
+            class="card-icon"
+            style="
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            "
+          >
             <i class="pi pi-palette" style="font-size: 2.5rem"></i>
           </div>
         </template>
@@ -26,7 +31,10 @@
           <h2>Template Manager</h2>
         </template>
         <template #content>
-          <p>Create, edit, and manage calendar templates. Configure themes, layouts, and default settings for user calendars.</p>
+          <p>
+            Create, edit, and manage calendar templates. Configure themes,
+            layouts, and default settings for user calendars.
+          </p>
           <div class="card-actions">
             <Button label="Manage Templates" icon="pi pi-arrow-right" text />
           </div>
@@ -36,7 +44,12 @@
       <!-- Order Dashboard Card -->
       <Card class="dashboard-card" @click="navigateTo('/admin/orders')">
         <template #header>
-          <div class="card-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)">
+          <div
+            class="card-icon"
+            style="
+              background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            "
+          >
             <i class="pi pi-shopping-cart" style="font-size: 2.5rem"></i>
           </div>
         </template>
@@ -44,7 +57,10 @@
           <h2>Order Management</h2>
         </template>
         <template #content>
-          <p>View and manage customer orders. Update order statuses, add tracking numbers, and handle fulfillment.</p>
+          <p>
+            View and manage customer orders. Update order statuses, add tracking
+            numbers, and handle fulfillment.
+          </p>
           <div class="card-actions">
             <Button label="View Orders" icon="pi pi-arrow-right" text />
           </div>
@@ -54,7 +70,12 @@
       <!-- User Management Card (Future) -->
       <Card class="dashboard-card disabled-card">
         <template #header>
-          <div class="card-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%)">
+          <div
+            class="card-icon"
+            style="
+              background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            "
+          >
             <i class="pi pi-users" style="font-size: 2.5rem"></i>
           </div>
         </template>
@@ -70,7 +91,12 @@
       <!-- Analytics Card (Future) -->
       <Card class="dashboard-card disabled-card">
         <template #header>
-          <div class="card-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)">
+          <div
+            class="card-icon"
+            style="
+              background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            "
+          >
             <i class="pi pi-chart-bar" style="font-size: 2.5rem"></i>
           </div>
         </template>
@@ -78,7 +104,9 @@
           <h2>Analytics</h2>
         </template>
         <template #content>
-          <p>View sales statistics, popular templates, and customer insights.</p>
+          <p>
+            View sales statistics, popular templates, and customer insights.
+          </p>
           <Tag severity="info" value="Coming Soon" class="mt-2" />
         </template>
       </Card>
@@ -88,31 +116,46 @@
     <div class="quick-actions">
       <h2>Quick Actions</h2>
       <div class="action-buttons">
-        <Button label="Create New Template" icon="pi pi-plus" @click="navigateTo('/admin/templates')" />
-        <Button label="View Recent Orders" icon="pi pi-list" severity="secondary" @click="navigateTo('/admin/orders')" />
-        <Button label="Go to Homepage" icon="pi pi-home" severity="secondary" outlined @click="navigateTo('/')" />
+        <Button
+          label="Create New Template"
+          icon="pi pi-plus"
+          @click="navigateTo('/admin/templates')"
+        />
+        <Button
+          label="View Recent Orders"
+          icon="pi pi-list"
+          severity="secondary"
+          @click="navigateTo('/admin/orders')"
+        />
+        <Button
+          label="Go to Homepage"
+          icon="pi pi-home"
+          severity="secondary"
+          outlined
+          @click="navigateTo('/')"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../../stores/authStore'
-import Card from 'primevue/card'
-import Button from 'primevue/button'
-import Tag from 'primevue/tag'
+import { computed } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "../../stores/authStore";
+import Card from "primevue/card";
+import Button from "primevue/button";
+import Tag from "primevue/tag";
 
-const router = useRouter()
-const authStore = useAuthStore()
+const router = useRouter();
+const authStore = useAuthStore();
 
 const userName = computed(() => {
-  return authStore.user?.displayName || authStore.user?.email || 'Admin'
-})
+  return authStore.user?.displayName || authStore.user?.email || "Admin";
+});
 
 function navigateTo(path: string) {
-  router.push(path)
+  router.push(path);
 }
 </script>
 
