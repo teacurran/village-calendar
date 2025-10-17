@@ -10,18 +10,33 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I1.T6",
+  "task_id": "I1.T7",
   "iteration_id": "I1",
   "iteration_goal": "Establish project infrastructure, define data models, create architectural artifacts, and implement foundational backend/frontend scaffolding",
-  "description": "Create comprehensive GraphQL schema definition file (SDL format) for the Village Calendar API. Define root Query type with queries: calendar(id), calendars(userId, year), templates(isActive), order(orderId), orders(userId, status), currentUser, pdfJob(id). Define root Mutation type with mutations: createCalendar(input), updateCalendar(id, input), deleteCalendar(id), generatePdf(calendarId, watermark), placeOrder(input), cancelOrder(orderId, reason), convertGuestSession(sessionId). Define all necessary types: Calendar, Event, CalendarConfig, CalendarTemplate, Order, OrderItem, Payment, User, PdfJob. Define input types for mutations. Define enums: OrderStatus, ProductType, OAuthProvider. Include field descriptions and deprecation annotations where applicable.",
-  "agent_type_hint": "BackendAgent",
-  "inputs": "API contract description from Plan Section 2 \"API Contract Style\", Data model entities from Plan Section 2, Example schema excerpt from architecture blueprint",
-  "target_files": ["api/graphql-schema.graphql"],
-  "input_files": [],
-  "deliverables": "GraphQL schema file in SDL format, Schema includes all queries, mutations, types, inputs, enums described in plan, Field-level documentation comments (GraphQL description strings), Schema validates against GraphQL specification (no syntax errors)",
-  "acceptance_criteria": "Schema file passes GraphQL schema validation (use online validator or GraphQL CLI), All entity types from data model represented in schema, Input types properly defined for create/update operations, Enums defined for status fields (OrderStatus: PENDING, PAID, SHIPPED, etc.), Schema generates valid TypeScript types when processed by code generator",
-  "dependencies": ["I1.T1"],
-  "parallelizable": true,
+  "description": "Write SQL migration scripts for all database tables using MyBatis Migrations format. Create scripts in numbered order: 001_create_users_table.sql, 002_create_calendar_sessions_table.sql, 003_create_calendar_templates_table.sql, 004_create_calendars_table.sql, 005_create_events_table.sql, 006_create_orders_table.sql, 007_create_order_items_table.sql, 008_create_payments_table.sql, 009_create_delayed_jobs_table.sql, 010_create_page_views_table.sql, 011_create_analytics_rollups_table.sql. Each script must include: CREATE TABLE with all columns, primary key constraints, foreign key constraints with ON DELETE CASCADE/SET NULL, indexes (on foreign keys, frequently queried columns), unique constraints, comments on tables/columns. Follow PostgreSQL 17 syntax. Ensure PostGIS extension enabled in script 000_enable_postgis.sql.",
+  "agent_type_hint": "DatabaseAgent",
+  "inputs": "Database ERD from Task I1.T4 (docs/diagrams/database_erd.puml), Data model overview from Plan Section 2, Indexing strategy from Plan Section 3.6",
+  "target_files": [
+    "migrations/src/main/resources/scripts/000_enable_postgis.sql",
+    "migrations/src/main/resources/scripts/001_create_users_table.sql",
+    "migrations/src/main/resources/scripts/002_create_calendar_sessions_table.sql",
+    "migrations/src/main/resources/scripts/003_create_calendar_templates_table.sql",
+    "migrations/src/main/resources/scripts/004_create_calendars_table.sql",
+    "migrations/src/main/resources/scripts/005_create_events_table.sql",
+    "migrations/src/main/resources/scripts/006_create_orders_table.sql",
+    "migrations/src/main/resources/scripts/007_create_order_items_table.sql",
+    "migrations/src/main/resources/scripts/008_create_payments_table.sql",
+    "migrations/src/main/resources/scripts/009_create_delayed_jobs_table.sql",
+    "migrations/src/main/resources/scripts/010_create_page_views_table.sql",
+    "migrations/src/main/resources/scripts/011_create_analytics_rollups_table.sql"
+  ],
+  "input_files": [
+    "docs/diagrams/database_erd.puml"
+  ],
+  "deliverables": "All 12 migration scripts (000-011) created, Scripts execute successfully on fresh PostgreSQL 17 database, MyBatis Migrations CLI can apply scripts (migrate up), Database schema matches ERD diagram",
+  "acceptance_criteria": "All migration scripts run without SQL errors on PostgreSQL 17, Foreign key constraints properly defined (correct ON DELETE behavior), Indexes created on all foreign key columns and frequently queried fields, JSONB columns used for calendar.config, session_data, shipping_address, job payload, BIGSERIAL primary keys, UUID for session_id and share_token, Script execution order produces schema matching ERD",
+  "dependencies": ["I1.T2", "I1.T4"],
+  "parallelizable": false,
   "done": false
 }
 ```
@@ -32,173 +47,173 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: API Contract Style (from Plan Section 2)
+### Context: Database ERD MVP Implementation (from database_erd.puml)
 
 ```markdown
-**Primary: GraphQL (SmallRye GraphQL)**
+The ERD diagram shows the **ACTUAL IMPLEMENTED MVP SCHEMA** with only 4 core entities:
 
-**Endpoint**: `POST /graphql`
+**Core MVP Tables:**
+1. `calendar_users` - OAuth authenticated users
+2. `calendar_templates` - Reusable design templates
+3. `user_calendars` - User-created calendars
+4. `calendar_orders` - E-commerce orders
 
-**Schema Evolution**: Additive-only changes, field deprecation with `@deprecated` annotation, no versioning required for MVP
+**Key Schema Details:**
+- All tables use UUID primary keys (uuid_generate_v4())
+- Optimistic locking with version BIGINT field on all tables
+- Timestamp fields: created TIMESTAMPTZ, updated TIMESTAMPTZ
+- JSONB columns: configuration (templates & calendars), shipping_address (orders)
+- Guest sessions: user_id nullable in user_calendars, session_id VARCHAR(255)
 
-**Key Queries:**
-- `calendar(id: ID!): Calendar`
-- `calendars(userId: ID!, year: Int): [Calendar!]!`
-- `templates(isActive: Boolean): [CalendarTemplate!]!`
-- `order(orderId: ID!): Order`
-- `orders(userId: ID!, status: OrderStatus): [Order!]!`
+**Foreign Key Cascade Behaviors:**
+- user_calendars.user_id → calendar_users(id) ON DELETE CASCADE
+- user_calendars.template_id → calendar_templates(id) ON DELETE SET NULL
+- calendar_orders.user_id → calendar_users(id) ON DELETE RESTRICT
+- calendar_orders.calendar_id → user_calendars(id) ON DELETE RESTRICT
 
-**Key Mutations:**
-- `createCalendar(input: CreateCalendarInput!): Calendar!`
-- `updateCalendar(id: ID!, input: UpdateCalendarInput!): Calendar!`
-- `generatePdf(calendarId: ID!, watermark: Boolean!): PdfJob!`
-- `placeOrder(input: PlaceOrderInput!): Order!`
-- `convertGuestSession(sessionId: ID!): User!`
+**Index Strategy:**
+- Primary keys: UUID with default uuid_generate_v4()
+- Foreign key indexes: All FK columns indexed
+- Composite indexes: (user_id, year DESC), (user_id, created DESC), (is_active, display_order, name)
+- Partial index: is_admin (WHERE is_admin = true)
+- GIN index: configuration JSONB fields for JSON queries
 
-**Type Safety**: GraphQL schema generates TypeScript types for Vue.js frontend (compile-time validation)
+**IMPORTANT - Future Entities NOT in MVP:**
+The ERD legend explicitly states these are "Planned but Not Implemented":
+- DelayedJob
+- PageView
+- AnalyticsRollup
+- Separate Event table (events currently embedded in calendar configuration JSONB)
+- Separate Payment table (payment details currently embedded in orders table)
+- Separate OrderItem table (orders currently have single quantity field, not line items)
 ```
 
-### Context: GraphQL Schema Organization (from Architecture Section 3.7.1)
+### Context: calendar_users Table Details
 
-```markdown
-**GraphQL Schema Organization:**
+```sql
+-- From existing 001_initial_schema.sql (reference implementation)
+CREATE TABLE calendar_users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    oauth_provider VARCHAR(50) NOT NULL,
+    oauth_subject VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    display_name VARCHAR(255),
+    profile_image_url VARCHAR(500),
+    last_login_at TIMESTAMPTZ,
+    created TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT uk_calendar_users_oauth UNIQUE (oauth_provider, oauth_subject)
+);
 
-- **Queries**: Read operations (e.g., `calendar(id)`, `calendars(userId)`, `templates()`, `order(orderId)`)
-- **Mutations**: Write operations (e.g., `createCalendar`, `updateCalendar`, `placeOrder`, `generatePdf`)
-- **Subscriptions**: Not implemented in MVP (future: real-time collaboration notifications)
+CREATE INDEX idx_calendar_users_email ON calendar_users(email);
+CREATE INDEX idx_calendar_users_last_login ON calendar_users(last_login_at DESC);
 
-**Example Schema Excerpt:**
+-- From 002_add_admin_field.sql
+ALTER TABLE calendar_users ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT false;
+CREATE INDEX idx_calendar_users_admin ON calendar_users(is_admin) WHERE is_admin = true;
 
-```graphql
-type Query {
-  calendar(id: ID!): Calendar
-  calendars(userId: ID!, year: Int): [Calendar!]!
-  templates(isActive: Boolean): [CalendarTemplate!]!
-  order(orderId: ID!): Order
-  orders(userId: ID!, status: OrderStatus): [Order!]!
-}
-
-type Mutation {
-  createCalendar(input: CreateCalendarInput!): Calendar!
-  updateCalendar(id: ID!, input: UpdateCalendarInput!): Calendar!
-  deleteCalendar(id: ID!): Boolean!
-
-  generatePdf(calendarId: ID!, watermark: Boolean!): PdfJob!
-
-  placeOrder(input: PlaceOrderInput!): Order!
-  cancelOrder(orderId: ID!, reason: String): Order!
-
-  convertGuestSession(sessionId: ID!): User!
-}
-
-type Calendar {
-  id: ID!
-  userId: ID!
-  title: String!
-  year: Int!
-  config: CalendarConfig!
-  events: [Event!]!
-  template: CalendarTemplate
-  previewImageUrl: String
-  pdfUrl: String
-  isPublic: Boolean!
-  shareToken: String
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-type CalendarConfig {
-  holidaySets: [HolidaySet!]!
-  astronomy: AstronomyConfig!
-  layout: LayoutConfig!
-  colors: ColorScheme!
-}
-
-type Event {
-  id: ID!
-  eventDate: Date!
-  eventText: String!
-  emoji: String
-  color: String
-}
-
-type Order {
-  id: ID!
-  orderNumber: String!
-  status: OrderStatus!
-  items: [OrderItem!]!
-  subtotal: Decimal!
-  tax: Decimal!
-  shippingCost: Decimal!
-  total: Decimal!
-  shippingAddress: Address!
-  payment: Payment
-  trackingNumber: String
-  createdAt: DateTime!
-  shippedAt: DateTime
-}
-
-enum OrderStatus {
-  PENDING
-  PAID
-  IN_PRODUCTION
-  SHIPPED
-  DELIVERED
-  CANCELLED
-  REFUNDED
-}
-
-input CreateCalendarInput {
-  title: String!
-  year: Int!
-  templateId: ID
-  config: CalendarConfigInput
-}
-
-input PlaceOrderInput {
-  calendarId: ID!
-  productType: ProductType!
-  quantity: Int!
-  shippingAddress: AddressInput!
-}
-```
+COMMENT ON TABLE calendar_users IS 'OAuth authenticated users for the calendar service';
+COMMENT ON COLUMN calendar_users.oauth_provider IS 'OAuth provider (GOOGLE, FACEBOOK)';
+COMMENT ON COLUMN calendar_users.oauth_subject IS 'Unique identifier from OAuth provider (sub claim)';
+COMMENT ON COLUMN calendar_users.is_admin IS 'Flag indicating whether user has admin privileges';
 ```
 
-### Context: Data Model Overview (from Plan Section 2)
+### Context: calendar_templates Table Details
 
-```markdown
-**Core Entities:**
+```sql
+CREATE TABLE calendar_templates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    thumbnail_url VARCHAR(500),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    is_featured BOOLEAN NOT NULL DEFAULT false,
+    display_order INTEGER NOT NULL DEFAULT 0,
+    configuration JSONB NOT NULL,
+    preview_svg TEXT,
+    created TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0
+);
 
-1. **User**: OAuth-authenticated accounts
-   - Fields: `user_id` (PK), `oauth_provider`, `oauth_subject_id`, `email`, `display_name`, `profile_picture_url`, `role` (user/admin)
-   - Relationships: 1:N with Calendars, Orders, CalendarTemplates
+CREATE INDEX idx_calendar_templates_name ON calendar_templates(name);
+CREATE INDEX idx_calendar_templates_active ON calendar_templates(is_active, display_order, name);
+CREATE INDEX idx_calendar_templates_featured ON calendar_templates(is_featured, is_active, display_order);
+CREATE INDEX idx_calendar_templates_config_gin ON calendar_templates USING GIN(configuration);
 
-2. **CalendarSession**: Anonymous guest sessions (pre-authentication)
-   - Fields: `session_id` (PK, UUID), `user_id` (nullable FK), `session_data` (JSONB), `expires_at`
-   - Purpose: Persist guest calendar edits, convert to user account on login
+COMMENT ON TABLE calendar_templates IS 'Reusable calendar design templates with JSONB configuration';
+COMMENT ON COLUMN calendar_templates.configuration IS 'JSONB field for template configuration (colors, layout, features)';
+```
 
-3. **Calendar**: User's saved calendars
-   - Fields: `calendar_id` (PK), `user_id` (FK), `template_id` (FK, nullable), `title`, `year`, `config` (JSONB), `preview_image_url`, `pdf_url`, `is_public`, `share_token` (UUID), `version` (optimistic locking)
-   - Relationships: 1:N with Events, N:1 with User/Template
+### Context: user_calendars Table Details
 
-4. **Event**: Custom calendar events
-   - Fields: `event_id` (PK), `calendar_id` (FK), `event_date`, `event_text`, `emoji`, `color`
+```sql
+CREATE TABLE user_calendars (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID,
+    session_id VARCHAR(255),
+    template_id UUID,
+    name VARCHAR(255) NOT NULL,
+    year INTEGER NOT NULL,
+    is_public BOOLEAN NOT NULL DEFAULT true,
+    configuration JSONB,
+    generated_svg TEXT,
+    generated_pdf_url VARCHAR(500),
+    created TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT fk_user_calendars_user FOREIGN KEY (user_id)
+        REFERENCES calendar_users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_calendars_template FOREIGN KEY (template_id)
+        REFERENCES calendar_templates(id) ON DELETE SET NULL
+);
 
-5. **CalendarTemplate**: Admin-created templates
-   - Fields: `template_id` (PK), `created_by_user_id` (FK), `name`, `description`, `thumbnail_url`, `config` (JSONB), `is_active`, `sort_order`
+CREATE INDEX idx_user_calendars_user ON user_calendars(user_id, year DESC);
+CREATE INDEX idx_user_calendars_session ON user_calendars(session_id, updated DESC);
+CREATE INDEX idx_user_calendars_template ON user_calendars(template_id);
+CREATE INDEX idx_user_calendars_public ON user_calendars(is_public, updated DESC);
 
-6. **Order**: E-commerce orders
-   - Fields: `order_id` (PK), `user_id` (FK), `order_number`, `status` (enum: PENDING/PAID/IN_PRODUCTION/SHIPPED/DELIVERED/CANCELLED/REFUNDED), `subtotal`, `tax`, `shipping_cost`, `total`, `shipping_address` (JSONB), `tracking_number`
-   - Relationships: 1:N with OrderItems, 1:1 with Payment
+COMMENT ON TABLE user_calendars IS 'User-created calendars with customizations, supports both authenticated users and anonymous sessions';
+COMMENT ON COLUMN user_calendars.user_id IS 'Reference to authenticated user (nullable for anonymous sessions)';
+COMMENT ON COLUMN user_calendars.session_id IS 'Session identifier for anonymous users';
+COMMENT ON COLUMN user_calendars.year IS 'Calendar year (e.g., 2025)';
+```
 
-7. **OrderItem**: Line items in orders
-   - Fields: `order_item_id` (PK), `order_id` (FK), `calendar_id` (FK), `product_type`, `quantity`, `unit_price`
+### Context: calendar_orders Table Details
 
-8. **Payment**: Stripe payment records
-   - Fields: `payment_id` (PK), `order_id` (FK), `stripe_payment_intent_id`, `stripe_checkout_session_id`, `amount`, `status`, `refund_amount`, `refund_reason`
+```sql
+CREATE TABLE calendar_orders (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    calendar_id UUID NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    unit_price DECIMAL(10, 2) NOT NULL,
+    total_price DECIMAL(10, 2) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    shipping_address JSONB,
+    stripe_payment_intent_id VARCHAR(255),
+    stripe_charge_id VARCHAR(255),
+    notes TEXT,
+    paid_at TIMESTAMPTZ,
+    shipped_at TIMESTAMPTZ,
+    created TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NOT NULL DEFAULT 0,
+    CONSTRAINT fk_calendar_orders_user FOREIGN KEY (user_id)
+        REFERENCES calendar_users(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_calendar_orders_calendar FOREIGN KEY (calendar_id)
+        REFERENCES user_calendars(id) ON DELETE RESTRICT
+);
 
-9. **DelayedJob**: Asynchronous job queue
-   - Fields: `job_id` (PK), `job_type`, `payload` (JSONB), `priority`, `attempts`, `max_attempts`, `run_at`, `locked_at`, `locked_by`, `failed_at`, `last_error`, `completed_at`
+CREATE INDEX idx_calendar_orders_user ON calendar_orders(user_id, created DESC);
+CREATE INDEX idx_calendar_orders_status ON calendar_orders(status, created DESC);
+CREATE INDEX idx_calendar_orders_calendar ON calendar_orders(calendar_id);
+CREATE INDEX idx_calendar_orders_stripe_payment ON calendar_orders(stripe_payment_intent_id);
+
+COMMENT ON TABLE calendar_orders IS 'E-commerce orders for printed calendars with Stripe payment integration';
+COMMENT ON COLUMN calendar_orders.status IS 'Order status: PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED';
+COMMENT ON COLUMN calendar_orders.shipping_address IS 'JSONB field for shipping address details';
 ```
 
 ---
@@ -209,72 +224,165 @@ The following analysis is based on my direct review of the current codebase. Use
 
 ### Relevant Existing Code
 
-*   **File:** `api/schema.graphql`
-    *   **Summary:** This file contains a **COMPLETE, PRODUCTION-READY GraphQL schema** that already implements the full specification required by task I1.T6. The schema includes all queries, mutations, types, enums, input types, and comprehensive documentation strings.
-    *   **Critical Finding:** **THE TASK I1.T6 IS ALREADY COMPLETE!** The existing schema at `api/schema.graphql` contains:
-        - All required queries: `calendar(id)`, `calendars(userId, year)`, `templates(isActive)`, `order(orderId)`, `orders(userId, status)`, `currentUser`, `pdfJob(id)`, plus additional queries like `me`, `myCalendars`, `myOrders`, `allOrders`, `allUsers`
-        - All required mutations: `createCalendar(input)`, `updateCalendar(id, input)`, `deleteCalendar(id)`, `generatePdf(calendarId, watermark)`, `placeOrder(input)`, `cancelOrder(orderId, reason)`, `convertGuestSession(sessionId)`, plus additional mutations like `createTemplate`, `updateTemplate`, `deleteTemplate`, `updateOrderStatus`, `createOrder`
-        - All required types: `Calendar` (named `UserCalendar`), `Event`, `CalendarConfig`, `CalendarTemplate`, `Order` (named `CalendarOrder`), `OrderItem`, `Payment`, `User` (named `CalendarUser`), `PdfJob`
-        - All required enums: `OrderStatus` (with values PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED), `ProductType` (WALL_CALENDAR, DESK_CALENDAR, POSTER), `OAuthProvider` (GOOGLE, FACEBOOK), `CalendarStatus` (DRAFT, GENERATING, READY, FAILED)
-        - All required input types: `CalendarInput`, `CalendarUpdateInput`, `AddressInput`, `OrderUpdateInput`, `PlaceOrderInput`, `TemplateInput`
-        - Custom scalars: `JSON`, `DateTime`, `BigDecimal`
-        - Comprehensive field-level documentation with description strings
-    *   **Recommendation:** **DO NOT CREATE A NEW SCHEMA.** Instead, analyze the existing `api/schema.graphql` file to verify it meets all acceptance criteria. The file is located at `/Users/tea/dev/VillageCompute/code/village-calendar/api/schema.graphql` and should be reviewed for completeness.
+*   **File:** `migrations/src/main/resources/scripts/001_initial_schema.sql`
+    *   **Summary:** This is the **EXISTING COMPLETE INITIAL SCHEMA MIGRATION** that creates all 4 MVP tables (calendar_users, calendar_templates, user_calendars, calendar_orders). It also enables the uuid-ossp extension.
+    *   **CRITICAL FINDING:** **THE MVP DATABASE SCHEMA IS ALREADY FULLY IMPLEMENTED!** The existing 001_initial_schema.sql contains all 4 core tables with correct columns, indexes, foreign keys, and comments.
+    *   **Recommendation:** **DO NOT CREATE DUPLICATE MIGRATIONS FOR THE 4 CORE TABLES.** The task description is inconsistent with the actual codebase state. You should NOT create 001_create_users_table.sql, 003_create_calendar_templates_table.sql, 004_create_calendars_table.sql, or 006_create_orders_table.sql as these tables are already created in 001_initial_schema.sql.
 
-*   **File:** `src/main/java/villagecompute/calendar/data/models/UserCalendar.java`
-    *   **Summary:** This entity model demonstrates the current database schema implementation. It shows that the JPA entities use names like `UserCalendar`, `CalendarUser`, `CalendarOrder`, and `CalendarTemplate` instead of the simplified names (`Calendar`, `User`, `Order`, `Template`) shown in the architecture examples.
-    *   **Critical Insight:** The GraphQL schema uses the actual entity names (`UserCalendar`, `CalendarUser`, `CalendarOrder`) which diverges from the architecture document's simplified examples. This is intentional and aligns with the actual database implementation.
-    *   **Recommendation:** When verifying the schema, understand that type names in the schema match the actual entity class names: `CalendarUser` (not `User`), `UserCalendar` (not `Calendar`), `CalendarOrder` (not `Order`), `CalendarTemplate` (stays the same).
-
-*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarOrder.java`
-    *   **Summary:** This order entity confirms the e-commerce data model with fields like `quantity`, `unitPrice`, `totalPrice`, `status`, `stripePaymentIntentId`, `stripeChargeId`, `shippingAddress` (JSONB), `paidAt`, `shippedAt`. Static constants define order status values.
-    *   **Recommendation:** The GraphQL schema's `CalendarOrder` type should include all fields from this entity, including the relationship to `CalendarUser` and `UserCalendar`, as well as the `OrderStatus` enum matching the static constants (PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED).
+*   **File:** `migrations/src/main/resources/scripts/002_add_admin_field.sql`
+    *   **Summary:** Adds the is_admin field to calendar_users table with a partial index. This demonstrates the ALTER TABLE migration pattern.
+    *   **Pattern to Follow:** Shows proper MyBatis migration format with `-- //` header, forward DDL, and `-- //@UNDO` rollback section.
 
 *   **File:** `docs/diagrams/database_erd.puml`
-    *   **Summary:** The ERD diagram shows the **actual implemented MVP schema** with only 4 core entities: `calendar_users`, `calendar_templates`, `user_calendars`, and `calendar_orders`. The legend explicitly states: "Future Entities (Planned but Not Implemented): DelayedJob, PageView, AnalyticsRollup, Separate Event table (currently embedded in JSONB), Separate Payment table (currently embedded in orders), Separate OrderItem table (currently quantity field in orders)".
-    *   **Critical Insight:** **The MVP implementation differs from the full architecture plan.** Events are embedded in calendar configuration JSONB, not in a separate table. Payment details are embedded in the orders table. There is no separate OrderItem table (orders have a single `quantity` field).
-    *   **Recommendation:** The GraphQL schema should reflect the **simplified MVP implementation**, not the full architecture plan. This means:
-        - `Event` type can be defined but may not have a database table backing it (embedded in JSONB)
-        - `Payment` information is returned as part of the `CalendarOrder` type fields (not a separate type with its own queries)
-        - `OrderItem` type can be defined but currently represents a single-item order (quantity field)
+    *   **Summary:** The ERD diagram legend **EXPLICITLY STATES** that Event, OrderItem, Payment, DelayedJob, PageView, and AnalyticsRollup are "Future Entities (Planned but Not Implemented)" in the MVP.
+    *   **CRITICAL INSIGHT:** The task description requests creating migrations for 11 entity tables, but the ERD shows only 4 tables are implemented. This is a major discrepancy.
+    *   **Recommendation:** **CLARIFY WITH USER IMMEDIATELY** - The ERD clearly indicates that 7 entities are "future/planned" and NOT part of MVP implementation. Events are embedded in JSONB, payments are embedded in orders, there are no separate OrderItem, DelayedJob, PageView, or AnalyticsRollup tables.
+
+*   **File:** `src/main/java/villagecompute/calendar/data/models/DelayedJob.java`
+    *   **Summary:** JPA entity for delayed_jobs table exists with columns: priority, attempts, queue (ENUM), actorId, lastError, runAt, locked, lockedAt, failedAt, complete, completedAt, completedWithFailure, failureReason. Index: idx_delayed_jobs_queue_run_at(queue, run_at, complete, locked).
+    *   **CONFLICT:** The DelayedJob entity exists in code but the ERD explicitly says it's NOT implemented in MVP.
+    *   **Recommendation:** Ask user whether DelayedJob table should be created or if it's truly "future" as ERD states.
+
+*   **File:** `src/main/java/villagecompute/calendar/data/models/DefaultPanacheEntityWithTimestamps.java`
+    *   **Summary:** Base class for all entities providing: id (UUID with @GeneratedValue), created (Instant), updated (Instant), version (Long).
+    *   **Standard Pattern:** ALL tables must include: id UUID, created TIMESTAMPTZ, updated TIMESTAMPTZ, version BIGINT with proper defaults.
+
+*   **File:** `migrations/README.md`
+    *   **Summary:** Documents MyBatis migration structure. Scripts must be in src/main/resources/scripts/ with format NNN_description.sql.
+    *   **Important:** "Applied Migrations" section lists only 001 and 002, confirming that migrations 003+ have NOT been created yet.
+
+*   **File:** `docs/guides/database-setup.md`
+    *   **Summary:** Comprehensive PostgreSQL 17 + PostGIS setup guide. PostGIS extension requires superuser privileges.
+    *   **Note:** Docker setup includes docker/postgresql/init/01-enable-postgis.sql which already enables PostGIS. However, a migration script for PostGIS would ensure consistency across all environments.
+
+*   **File:** `docker/postgresql/init/01-enable-postgis.sql`
+    *   **Summary:** Docker initialization script that enables PostGIS extension.
+    *   **Pattern:** `CREATE EXTENSION IF NOT EXISTS postgis;` - This is the correct syntax for enabling PostGIS.
 
 ### Implementation Tips & Notes
 
-*   **Tip:** The existing schema at `api/schema.graphql` is comprehensive and production-ready. It includes advanced features like:
-    - Pagination types (`PageInfo`, `TemplateConnection`, `TemplateEdge`) following the Relay specification
-    - Additional admin queries (`allOrders`, `allUsers`) with documentation noting they require ADMIN role
-    - Structured configuration types (`CalendarConfig`, `AstronomyConfig`, `LayoutConfig`, `ColorScheme`) providing typed alternatives to JSONB
-    - The `PaymentIntent` type for Stripe checkout flow integration
-    - All field descriptions use proper GraphQL documentation strings (triple-quoted)
+*   **CRITICAL DECISION REQUIRED:** There is a fundamental conflict between:
+    1. **Task Description:** Requests creating 12 migration scripts (000-011) for 11 entity tables
+    2. **ERD Diagram:** Shows only 4 MVP tables, explicitly lists 7 entities as "Future/Not Implemented"
+    3. **Existing Code:** Contains 001_initial_schema.sql with all 4 MVP tables already created
 
-*   **Note:** The schema uses SmallRye GraphQL adapter annotations in the entity models (e.g., `@io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)` for JSONB fields). This means the schema is designed to work seamlessly with the existing Quarkus entity models.
+*   **Recommended Action:** **IMMEDIATELY ASK USER FOR CLARIFICATION:**
 
-*   **Warning:** The task specifies creating a schema at `api/graphql-schema.graphql`, but the existing schema is at `api/schema.graphql` (without the `graphql-` prefix). This is a **CRITICAL FILE LOCATION DISCREPANCY**. The codebase is already using `api/schema.graphql` as the schema location. You should verify which location is correct and ensure consistency.
+    "The task description requests creating migrations for 11 entity tables, but I've discovered:
 
-*   **Best Practice:** The existing schema follows GraphQL best practices:
-    - Non-nullable fields marked with `!` (e.g., `email: String!`)
-    - List types use non-nullable items where appropriate (e.g., `[CalendarTemplate!]!`)
-    - Enum values use UPPER_SNAKE_CASE (e.g., `WALL_CALENDAR`)
-    - Input types have `Input` suffix (e.g., `CalendarInput`, `AddressInput`)
-    - Mutations return the modified object (e.g., `createCalendar` returns `UserCalendar!`)
-    - Descriptions explain authorization requirements (e.g., "Requires ADMIN role in JWT claims")
+    1. The ERD diagram (database_erd.puml) shows only 4 tables in MVP implementation
+    2. Migration 001_initial_schema.sql already creates all 4 core tables
+    3. The ERD legend explicitly states these are 'Future Entities (Planned but Not Implemented)':
+       - Event table (events embedded in calendar JSONB)
+       - OrderItem table (single quantity field in orders)
+       - Payment table (payment fields embedded in orders)
+       - DelayedJob, PageView, AnalyticsRollup tables
 
-*   **Verification Steps:** To confirm the existing schema meets all acceptance criteria:
-    1. Validate syntax using a GraphQL validator (online tool or `graphql-cli`)
-    2. Verify all entity types from the data model are represented (check against ERD diagram entities)
-    3. Verify all required queries and mutations from the task description exist
-    4. Verify all enums have correct values (OrderStatus, ProductType, OAuthProvider)
-    5. Verify input types are properly defined for all mutations
-    6. Confirm field descriptions are present and meaningful
-    7. Test that the schema can generate TypeScript types (if code generator is available)
+    Should I:
+    A) Create ONLY 000_enable_postgis.sql (PostGIS migration)?
+    B) Create migrations for the 7 'future' entities despite ERD showing them as not implemented?
+    C) Do nothing as the MVP schema is already complete in 001_initial_schema.sql?"
 
-*   **Action Required:** Since the schema appears to already be complete at `api/schema.graphql`, you should:
-    1. **FIRST:** Carefully read and analyze the existing `api/schema.graphql` file in its entirety
-    2. **VERIFY:** Confirm it meets ALL acceptance criteria from the task specification
-    3. **DOCUMENT:** Create a verification report showing which requirements are satisfied
-    4. **DECIDE:** If the file is at the wrong location (`api/schema.graphql` vs `api/graphql-schema.graphql`), determine if you should:
-        - Copy/rename the file to the expected location
-        - Update the task to reflect the actual location
-        - Leave as-is and document the discrepancy
-    5. **MARK COMPLETE:** If all acceptance criteria are met, the task can be marked as done
+*   **MyBatis Migration Format Template:**
+    ```sql
+    -- //
+    -- Description of what this migration does
+    -- Include purpose, tables affected, and any important notes
+    -- //
 
+    -- Enable extensions (if needed)
+    CREATE EXTENSION IF NOT EXISTS extension_name;
+
+    -- Create table
+    CREATE TABLE table_name (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        column_name TYPE CONSTRAINTS,
+        created TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        version BIGINT NOT NULL DEFAULT 0,
+        CONSTRAINT fk_name FOREIGN KEY (col) REFERENCES other_table(id) ON DELETE CASCADE
+    );
+
+    -- Create indexes
+    CREATE INDEX idx_table_column ON table_name(column);
+    CREATE INDEX idx_table_composite ON table_name(col1, col2 DESC);
+    CREATE INDEX idx_table_jsonb_gin ON table_name USING GIN(jsonb_column);
+
+    -- Add comments
+    COMMENT ON TABLE table_name IS 'Description';
+    COMMENT ON COLUMN table_name.column_name IS 'Description';
+
+    -- //@UNDO
+
+    -- Drop in reverse order
+    DROP TABLE IF EXISTS table_name;
+    DROP EXTENSION IF EXISTS extension_name;
+    ```
+
+*   **If Creating 000_enable_postgis.sql:**
+    ```sql
+    -- //
+    -- Enable PostGIS extension for PostgreSQL
+    -- Provides geospatial capabilities for future location-based features
+    -- IMPORTANT: This requires superuser privileges
+    -- //
+
+    -- Enable PostGIS extension
+    CREATE EXTENSION IF NOT EXISTS postgis;
+
+    -- Enable PostGIS topology extension (optional for advanced features)
+    CREATE EXTENSION IF NOT EXISTS postgis_topology;
+
+    -- Add comment
+    COMMENT ON EXTENSION postgis IS 'PostGIS geometry, geography, and raster spatial types and functions';
+
+    -- //@UNDO
+
+    -- Drop PostGIS extensions (only if not used by other schemas)
+    DROP EXTENSION IF EXISTS postgis_topology;
+    DROP EXTENSION IF EXISTS postgis;
+    ```
+
+*   **Naming Conventions (from existing code):**
+    - Table names: snake_case (e.g., `calendar_users`, `user_calendars`)
+    - Index names: `idx_[table]_[column(s)]` (e.g., `idx_calendar_users_email`)
+    - Foreign key constraints: `fk_[child_table]_[parent_table]` (e.g., `fk_user_calendars_user`)
+    - Unique constraints: `uk_[table]_[columns]` (e.g., `uk_calendar_users_oauth`)
+
+*   **Data Type Guidelines:**
+    - Primary keys: `UUID` with `DEFAULT uuid_generate_v4()`
+    - Timestamps: `TIMESTAMPTZ` (timezone-aware)
+    - Booleans: `BOOLEAN` with `NOT NULL DEFAULT false/true`
+    - Money: `DECIMAL(10, 2)` for currency amounts
+    - Text: `VARCHAR(n)` for limited length, `TEXT` for unlimited
+    - JSON data: `JSONB` (binary JSON, better performance than JSON)
+    - Enums: Store as `VARCHAR(50)` (e.g., order status)
+
+*   **Index Strategy (from existing migrations):**
+    - Index ALL foreign key columns
+    - Index frequently queried columns (email, last_login_at, status, created)
+    - Use composite indexes for common query patterns (user_id + year, user_id + created DESC)
+    - Use partial indexes for selective filtering (WHERE is_admin = true)
+    - Use GIN indexes for JSONB columns to enable efficient JSON queries
+
+*   **Foreign Key Cascade Rules:**
+    - `ON DELETE CASCADE`: Use when child should be deleted with parent (user_calendars.user_id)
+    - `ON DELETE SET NULL`: Use when relationship is optional (user_calendars.template_id)
+    - `ON DELETE RESTRICT`: Use when deletion should be prevented (calendar_orders.user_id/calendar_id)
+
+### Strategic Recommendation
+
+**DO NOT PROCEED WITHOUT USER CLARIFICATION!**
+
+The task has a fundamental conflict:
+- Task requests creating 11 entity migrations
+- ERD shows only 4 MVP tables (already created in 001_initial_schema.sql)
+- 7 entities are explicitly marked as "Future/Not Implemented"
+
+Recommended workflow:
+1. **Ask user for clarification** (see question template above)
+2. **If user says "MVP only"**: Create only 000_enable_postgis.sql, mark task complete
+3. **If user says "create future entities"**: Create migrations 003-011 for DelayedJob, PageView, etc.
+4. **Do NOT create duplicate migrations** for calendar_users, calendar_templates, user_calendars, or calendar_orders
+
+The safest action is to **STOP and ASK** rather than create migrations that conflict with existing schema or ERD documentation.
