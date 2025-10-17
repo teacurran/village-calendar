@@ -146,20 +146,20 @@ public class AuthResource {
             // Issue JWT token for the user
             String jwtToken = authenticationService.issueJWT(user);
 
-            // Create response with token and user info
-            AuthResponse response = AuthResponse.of(
-                jwtToken,
-                UserInfo.fromEntity(user)
-            );
-
             LOG.infof("Successfully authenticated user: %s", user.email);
-            return Response.ok(response).build();
+
+            // Redirect to frontend OAuth callback page with token
+            String redirectUrl = "/auth/callback?token=" + jwtToken;
+            return Response.seeOther(URI.create(redirectUrl)).build();
 
         } catch (Exception e) {
             LOG.errorf(e, "Error handling Google OAuth callback");
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(new ErrorResponse("Authentication failed: " + e.getMessage()))
-                .build();
+            // Redirect to home with error
+            String errorUrl = "/?error=" + java.net.URLEncoder.encode(
+                "Authentication failed: " + e.getMessage(),
+                java.nio.charset.StandardCharsets.UTF_8
+            );
+            return Response.seeOther(URI.create(errorUrl)).build();
         }
     }
 
@@ -251,20 +251,20 @@ public class AuthResource {
             // Issue JWT token for the user
             String jwtToken = authenticationService.issueJWT(user);
 
-            // Create response with token and user info
-            AuthResponse response = AuthResponse.of(
-                jwtToken,
-                UserInfo.fromEntity(user)
-            );
-
             LOG.infof("Successfully authenticated user: %s", user.email);
-            return Response.ok(response).build();
+
+            // Redirect to frontend OAuth callback page with token
+            String redirectUrl = "/auth/callback?token=" + jwtToken;
+            return Response.seeOther(URI.create(redirectUrl)).build();
 
         } catch (Exception e) {
             LOG.errorf(e, "Error handling Facebook OAuth callback");
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(new ErrorResponse("Authentication failed: " + e.getMessage()))
-                .build();
+            // Redirect to home with error
+            String errorUrl = "/?error=" + java.net.URLEncoder.encode(
+                "Authentication failed: " + e.getMessage(),
+                java.nio.charset.StandardCharsets.UTF_8
+            );
+            return Response.seeOther(URI.create(errorUrl)).build();
         }
     }
 

@@ -41,6 +41,12 @@ const router = createRouter({
       component: () => import('./view/public/PaymentCallback.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/bootstrap',
+      name: 'bootstrap',
+      component: () => import('./view/public/Bootstrap.vue'),
+      meta: { requiresAuth: false },
+    },
     // Admin routes
     ...adminRoutes,
     // Legacy routes - keep for backward compatibility

@@ -1,5 +1,6 @@
 package villagecompute.calendar.services;
 
+import io.quarkus.oidc.UserInfo;
 import io.quarkus.security.identity.SecurityIdentity;
 import io.smallrye.jwt.build.Jwt;
 import io.smallrye.jwt.build.JwtClaimsBuilder;
@@ -42,13 +43,29 @@ public class AuthenticationService {
     public CalendarUser handleOAuthCallback(String provider, SecurityIdentity identity) {
         LOG.infof("Handling OAuth callback for provider: %s", provider);
 
-        // Extract user information from the OIDC identity
+        // Extract user information from the OIDC UserInfo
+        UserInfo userInfo = identity.getAttribute("userinfo");
+
         String oauthSubject = identity.getPrincipal().getName(); // This is the 'sub' claim
-        String email = identity.getAttribute("email");
-        String displayName = identity.getAttribute("name");
-        String profileImageUrl = identity.getAttribute("picture");
+        String email = null;
+        String displayName = null;
+        String profileImageUrl = null;
+
+        if (userInfo != null) {
+            email = userInfo.getString("email");
+            displayName = userInfo.getString("name");
+            profileImageUrl = userInfo.getString("picture");
+            LOG.infof("Extracted from UserInfo - email: %s, name: %s", email, displayName);
+        } else {
+            // Fallback to SecurityIdentity attributes
+            email = identity.getAttribute("email");
+            displayName = identity.getAttribute("name");
+            profileImageUrl = identity.getAttribute("picture");
+            LOG.warnf("UserInfo not available, using SecurityIdentity attributes");
+        }
 
         if (email == null || email.isBlank()) {
+            LOG.errorf("Email not found in UserInfo or SecurityIdentity. UserInfo available: %s", userInfo != null);
             throw new IllegalArgumentException("Email is required from OAuth provider");
         }
 
@@ -100,10 +117,14 @@ public class AuthenticationService {
     public String issueJWT(CalendarUser user) {
         LOG.infof("Issuing JWT for user: %s (ID: %s)", user.email, user.id);
 
-        // Determine user roles (for now, all authenticated users get "USER" role)
-        // In the future, this could check user.isAdmin or similar fields
+        // Determine user roles
         Set<String> roles = new HashSet<>();
         roles.add("USER");
+
+        // Add ADMIN role if user is an admin
+        if (user.isAdmin != null && user.isAdmin) {
+            roles.add("ADMIN");
+        }
 
         // Build JWT with required claims
         JwtClaimsBuilder claimsBuilder = Jwt.claims()

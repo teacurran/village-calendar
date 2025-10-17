@@ -54,6 +54,10 @@ public class CalendarUser extends DefaultPanacheEntityWithTimestamps {
     @Column(name = "last_login_at")
     public Instant lastLoginAt;
 
+    @NotNull
+    @Column(name = "is_admin", nullable = false)
+    public Boolean isAdmin = false;
+
     // Relationships
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     public List<UserCalendar> calendars;
@@ -100,5 +104,23 @@ public class CalendarUser extends DefaultPanacheEntityWithTimestamps {
     public void updateLastLogin() {
         this.lastLoginAt = Instant.now();
         persist();
+    }
+
+    /**
+     * Check if any admin users exist in the system.
+     *
+     * @return true if at least one admin user exists
+     */
+    public static boolean hasAdminUsers() {
+        return count("isAdmin = true") > 0;
+    }
+
+    /**
+     * Find all admin users.
+     *
+     * @return Query of admin users
+     */
+    public static PanacheQuery<CalendarUser> findAdminUsers() {
+        return find("isAdmin = true ORDER BY createdAt ASC");
     }
 }
