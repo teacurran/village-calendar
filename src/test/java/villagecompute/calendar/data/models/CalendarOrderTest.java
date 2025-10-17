@@ -329,8 +329,16 @@ class CalendarOrderTest {
 
         CalendarOrder oldOrder = createValidOrder();
         oldOrder.persist();
-        // Manually set old created date (normally not allowed, but for test)
-        oldOrder.created = yesterday.minus(1, ChronoUnit.DAYS);
+        entityManager.flush(); // Flush to persist first
+
+        // Manually set old created date using native SQL
+        entityManager.createNativeQuery(
+            "UPDATE calendar_orders SET created = :newCreated WHERE id = :id"
+        ).setParameter("newCreated", yesterday.minus(1, ChronoUnit.DAYS))
+         .setParameter("id", oldOrder.id)
+         .executeUpdate();
+        entityManager.flush();
+        entityManager.clear(); // Clear persistence context to force reload
 
         // When
         List<CalendarOrder> recentOrders = CalendarOrder.findRecentOrders(yesterday).list();

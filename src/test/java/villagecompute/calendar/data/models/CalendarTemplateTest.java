@@ -28,6 +28,9 @@ class CalendarTemplateTest {
     @Inject
     ObjectMapper objectMapper;
 
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
+
     @BeforeEach
     @Transactional
     void setUp() {
@@ -42,6 +45,7 @@ class CalendarTemplateTest {
 
         // When
         template.persist();
+        entityManager.flush(); // Flush to generate ID and timestamps
 
         // Then
         assertNotNull(template.id);
@@ -283,12 +287,17 @@ class CalendarTemplateTest {
         calendar2.template = template;
         calendar2.persist();
 
+        entityManager.flush(); // Flush to ensure all entities are persisted
+        entityManager.clear(); // Clear to force reload
+
         // When
         CalendarTemplate found = CalendarTemplate.findById(template.id);
+        // Access the collection size to trigger lazy loading
+        int size = found.userCalendars.size();
 
         // Then
         assertNotNull(found.userCalendars);
-        assertEquals(2, found.userCalendars.size());
+        assertEquals(2, size);
     }
 
     private CalendarTemplate createValidTemplate(String name) {

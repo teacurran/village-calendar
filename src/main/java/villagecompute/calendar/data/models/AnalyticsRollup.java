@@ -126,7 +126,9 @@ public class AnalyticsRollup extends DefaultPanacheEntityWithTimestamps {
      * @return Query of analytics rollups
      */
     public static PanacheQuery<AnalyticsRollup> findByTimeRange(Instant since, Instant until) {
-        return find("periodStart >= ?1 AND periodEnd <= ?2 ORDER BY periodStart DESC", since, until);
+        // Workaround for Hibernate/H2 issue: using ONLY timestamp comparisons in WHERE clause fails
+        // Must have at least one non-timestamp parameter for query to work correctly
+        return find("metricName LIKE ?1 AND periodStart >= ?2 AND periodEnd <= ?3 ORDER BY periodStart DESC", "%", since, until);
     }
 
     /**

@@ -19,6 +19,9 @@ class DelayedJobTest {
     @Inject
     TestDataCleaner testDataCleaner;
 
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
+
     @BeforeEach
     @Transactional
     void setUp() {
@@ -33,6 +36,7 @@ class DelayedJobTest {
 
         // When
         job.persist();
+        entityManager.flush(); // Flush to generate ID and timestamps
 
         // Then
         assertNotNull(job.id);

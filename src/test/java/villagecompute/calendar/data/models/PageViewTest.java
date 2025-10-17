@@ -220,8 +220,16 @@ class PageViewTest {
 
         PageView oldView = createValidPageView();
         oldView.persist();
-        // Manually set created date (normally not allowed, but for test)
-        oldView.created = yesterday.minus(1, ChronoUnit.DAYS);
+        entityManager.flush(); // Flush to persist first
+
+        // Manually set created date using native SQL
+        entityManager.createNativeQuery(
+            "UPDATE page_views SET created = :newCreated WHERE id = :id"
+        ).setParameter("newCreated", yesterday.minus(1, ChronoUnit.DAYS))
+         .setParameter("id", oldView.id)
+         .executeUpdate();
+        entityManager.flush();
+        entityManager.clear(); // Clear persistence context to force reload
 
         PageView recentView1 = createValidPageView();
         recentView1.persist();
@@ -286,7 +294,16 @@ class PageViewTest {
         PageView oldView = createValidPageView();
         oldView.path = "/templates";
         oldView.persist();
-        oldView.created = yesterday.minus(2, ChronoUnit.DAYS);
+        entityManager.flush(); // Flush to persist first
+
+        // Manually set old created date using native SQL
+        entityManager.createNativeQuery(
+            "UPDATE page_views SET created = :newCreated WHERE id = :id"
+        ).setParameter("newCreated", yesterday.minus(2, ChronoUnit.DAYS))
+         .setParameter("id", oldView.id)
+         .executeUpdate();
+        entityManager.flush();
+        entityManager.clear(); // Clear persistence context to force reload
 
         // When
         long count = PageView.countByPathAndTimeRange("/templates", yesterday, tomorrow);

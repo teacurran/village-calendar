@@ -334,14 +334,17 @@ class CalendarUserTest {
 
         // Flush to ensure all entities are persisted
         entityManager.flush();
+        entityManager.clear(); // Clear to force reload
 
         // When
         CalendarUser foundUser = CalendarUser.findById(user.id);
+        // Access the collection size to trigger lazy loading
+        int size = foundUser.calendars.size();
 
         // Then
         assertNotNull(foundUser);
         assertNotNull(foundUser.calendars);
-        assertEquals(1, foundUser.calendars.size());
+        assertEquals(1, size);
         assertEquals("Test Calendar", foundUser.calendars.get(0).name);
     }
 
@@ -371,9 +374,12 @@ class CalendarUserTest {
 
         // Flush to ensure all entities are in managed state
         entityManager.flush();
+        entityManager.clear(); // Clear persistence context to reload fresh
 
-        // When
-        user.delete();
+        // When - Reload user to ensure it's in managed state with proper relationships
+        CalendarUser managedUser = CalendarUser.findById(user.id);
+        managedUser.delete();
+        entityManager.flush();
 
         // Then
         assertEquals(0, UserCalendar.count());

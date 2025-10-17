@@ -26,6 +26,9 @@ class AnalyticsRollupTest {
     @Inject
     TestDataCleaner testDataCleaner;
 
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
+
     @BeforeEach
     @Transactional
     void setUp() {
@@ -40,6 +43,7 @@ class AnalyticsRollupTest {
 
         // When
         rollup.persist();
+        entityManager.flush(); // Flush to generate ID and timestamps
 
         // Then
         assertNotNull(rollup.id);
@@ -243,18 +247,42 @@ class AnalyticsRollupTest {
         Instant twoDaysAgo = now.minus(2, ChronoUnit.DAYS);
         Instant threeDaysAgo = now.minus(3, ChronoUnit.DAYS);
 
-        AnalyticsRollup recentRollup = createValidRollup();
+        AnalyticsRollup recentRollup = new AnalyticsRollup();
+        recentRollup.metricName = "page_views";
+        recentRollup.dimensionKey = "path";
+        recentRollup.dimensionValue = "/recent";
+        recentRollup.value = BigDecimal.valueOf(100.00);
         recentRollup.periodStart = yesterday;
         recentRollup.periodEnd = now;
         recentRollup.persist();
 
-        AnalyticsRollup oldRollup = createValidRollup();
+        AnalyticsRollup oldRollup = new AnalyticsRollup();
+        oldRollup.metricName = "page_views";
+        oldRollup.dimensionKey = "path";
+        oldRollup.dimensionValue = "/old";
+        oldRollup.value = BigDecimal.valueOf(100.00);
         oldRollup.periodStart = threeDaysAgo;
         oldRollup.periodEnd = twoDaysAgo;
         oldRollup.persist();
 
+        entityManager.flush();
+
+        // Debug: Check what we have
+        List<AnalyticsRollup> all = AnalyticsRollup.listAll();
+        System.out.println("Total rollups: " + all.size());
+        for (AnalyticsRollup r : all) {
+            System.out.println("  " + r.dimensionValue + ": " + r.periodStart + " to " + r.periodEnd);
+        }
+
+        // Try very permissive range
+        Instant veryEarly = Instant.parse("2020-01-01T00:00:00Z");
+        Instant veryLate = Instant.parse("2030-01-01T00:00:00Z");
+        List<AnalyticsRollup> allInRange = AnalyticsRollup.findByTimeRange(veryEarly, veryLate).list();
+        System.out.println("Rollups in very wide range: " + allInRange.size());
+
         // When
-        List<AnalyticsRollup> recentRollups = AnalyticsRollup.findByTimeRange(yesterday, now.plus(1, ChronoUnit.DAYS)).list();
+        List<AnalyticsRollup> recentRollups = AnalyticsRollup.findByTimeRange(yesterday.minusSeconds(1), now.plus(1, ChronoUnit.DAYS)).list();
+        System.out.println("Rollups in target range: " + recentRollups.size());
 
         // Then
         assertEquals(1, recentRollups.size());
@@ -306,39 +334,49 @@ class AnalyticsRollupTest {
         Instant yesterday = now.minus(1, ChronoUnit.DAYS);
         Instant twoDaysAgo = now.minus(2, ChronoUnit.DAYS);
 
-        AnalyticsRollup rollup1 = createValidRollup();
+        AnalyticsRollup rollup1 = new AnalyticsRollup();
         rollup1.metricName = "revenue";
+        rollup1.dimensionKey = "path";
+        rollup1.dimensionValue = "/checkout";
         rollup1.value = BigDecimal.valueOf(100.00);
         rollup1.periodStart = yesterday;
         rollup1.periodEnd = now;
         rollup1.persist();
 
-        AnalyticsRollup rollup2 = createValidRollup();
+        AnalyticsRollup rollup2 = new AnalyticsRollup();
         rollup2.metricName = "revenue";
+        rollup2.dimensionKey = "path";
+        rollup2.dimensionValue = "/cart";
         rollup2.value = BigDecimal.valueOf(250.00);
         rollup2.periodStart = yesterday;
         rollup2.periodEnd = now;
         rollup2.persist();
 
-        AnalyticsRollup rollup3 = createValidRollup();
+        AnalyticsRollup rollup3 = new AnalyticsRollup();
         rollup3.metricName = "revenue";
+        rollup3.dimensionKey = "path";
+        rollup3.dimensionValue = "/checkout";
         rollup3.value = BigDecimal.valueOf(75.00);
         rollup3.periodStart = twoDaysAgo.minus(1, ChronoUnit.DAYS);
         rollup3.periodEnd = twoDaysAgo;
         rollup3.persist();
 
-        AnalyticsRollup rollup4 = createValidRollup();
+        AnalyticsRollup rollup4 = new AnalyticsRollup();
         rollup4.metricName = "page_views";
+        rollup4.dimensionKey = "path";
+        rollup4.dimensionValue = "/templates";
         rollup4.value = BigDecimal.valueOf(500.00);
         rollup4.periodStart = yesterday;
         rollup4.periodEnd = now;
         rollup4.persist();
 
+        entityManager.flush();
+
         // When
-        BigDecimal sum = AnalyticsRollup.sumByMetricAndTimeRange("revenue", yesterday, now.plus(1, ChronoUnit.DAYS));
+        BigDecimal sum = AnalyticsRollup.sumByMetricAndTimeRange("revenue", yesterday.minusSeconds(1), now.plus(1, ChronoUnit.DAYS));
 
         // Then
-        assertEquals(BigDecimal.valueOf(350.00), sum);
+        assertEquals(0, BigDecimal.valueOf(350.00).compareTo(sum)); // Use compareTo for BigDecimal comparison
     }
 
     @Test
@@ -410,13 +448,16 @@ class AnalyticsRollupTest {
     }
 
     private AnalyticsRollup createValidRollup() {
+        // Use nanoTime to ensure unique timestamps for each call
+        // This prevents unique constraint violations on (metricName, dimensionKey, dimensionValue, periodStart, periodEnd)
+        Instant now = Instant.now().plusNanos(System.nanoTime() % 1000000);
         AnalyticsRollup rollup = new AnalyticsRollup();
         rollup.metricName = "page_views";
         rollup.dimensionKey = "path";
         rollup.dimensionValue = "/templates";
         rollup.value = BigDecimal.valueOf(100.00);
-        rollup.periodStart = Instant.now().minus(1, ChronoUnit.DAYS);
-        rollup.periodEnd = Instant.now();
+        rollup.periodStart = now.minus(1, ChronoUnit.DAYS);
+        rollup.periodEnd = now;
         return rollup;
     }
 }

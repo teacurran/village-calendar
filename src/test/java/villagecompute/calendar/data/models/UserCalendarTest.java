@@ -361,12 +361,17 @@ class UserCalendarTest {
         order.status = "PENDING";
         order.persist();
 
+        entityManager.flush(); // Flush to ensure all entities are persisted
+        entityManager.clear(); // Clear to force reload
+
         // When
         UserCalendar found = UserCalendar.findById(calendar.id);
+        // Access the collection size to trigger lazy loading
+        int size = found.orders.size();
 
         // Then
         assertNotNull(found.orders);
-        assertEquals(1, found.orders.size());
+        assertEquals(1, size);
         assertEquals(1, found.orders.get(0).quantity);
     }
 
@@ -388,9 +393,12 @@ class UserCalendarTest {
 
         // Flush to ensure all entities are in managed state
         entityManager.flush();
+        entityManager.clear(); // Clear persistence context to reload fresh
 
-        // When
-        calendar.delete();
+        // When - Reload calendar to ensure it's in managed state with proper relationships
+        UserCalendar managedCalendar = UserCalendar.findById(calendar.id);
+        managedCalendar.delete();
+        entityManager.flush();
 
         // Then
         assertEquals(0, CalendarOrder.count());
