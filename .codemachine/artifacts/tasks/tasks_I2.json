@@ -42,7 +42,7 @@
     "acceptance_criteria": "EventService.addEvent() validates event date is within calendar year, EventService.addEvent() rejects events with text >500 characters, EventRepository.findByDateRange() returns events within specified date range, Emoji validation accepts valid Unicode emoji sequences, Unit tests cover all validation scenarios and edge cases",
     "dependencies": ["I2.T2"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I2.T4",
