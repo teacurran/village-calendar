@@ -1,0 +1,68 @@
+ORDER CANCELLATION CONFIRMATION
+====================================
+
+Hi {order.user.displayName ?: order.user.email},
+
+This email confirms that your order has been cancelled as requested.
+
+CANCELLATION DETAILS
+------------------------------------
+Order Number: {order.orderNumber}
+Order ID: {order.id}
+Status: CANCELLED
+Cancelled Date: {order.cancelledAt.toString()}
+
+ORDER DETAILS
+------------------------------------
+Calendar: {order.calendar.name} ({order.calendar.year})
+Quantity: {order.quantity} {#if order.quantity > 1}calendars{#else}calendar{/if}
+Order Total: ${order.totalPrice}
+
+{#if order.notes}
+CANCELLATION REASON
+------------------------------------
+{order.notes}
+
+{/if}
+{#if order.paidAt != null}
+REFUND INFORMATION
+------------------------------------
+Your refund is being processed.
+
+Since your order was paid, a full refund of ${order.totalPrice} will be issued
+to your original payment method.
+
+Expected timeframe: 5-10 business days
+
+The exact timing depends on your bank or credit card issuer.
+
+WHAT'S NEXT
+------------------------------------
+• Refund Processing: We'll process your refund within 1-2 business days
+• Payment Method: The refund will be credited to your original payment method
+• Confirmation: You'll receive a separate email when the refund is processed
+• Bank Processing: Allow 5-10 business days for the refund to appear in your account
+
+{#else}
+PAYMENT STATUS
+------------------------------------
+Since no payment was processed for this order, no refund is necessary.
+
+{/if}
+WE'D LOVE TO SEE YOU AGAIN
+------------------------------------
+We're sorry this order didn't work out, but we hope you'll consider ordering
+a custom calendar in the future.
+
+Browse calendar templates:
+https://calendar.villagecompute.com
+
+If you have any questions about this cancellation or your refund, please don't
+hesitate to reach out to our support team.
+
+Questions?
+------------------------------------
+Contact us at support@villagecompute.com
+
+Village Compute Calendar
+https://calendar.villagecompute.com

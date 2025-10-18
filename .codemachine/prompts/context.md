@@ -10,26 +10,31 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I3.T4",
+  "task_id": "I3.T7",
   "iteration_id": "I3",
   "iteration_goal": "Implement complete e-commerce workflow including Stripe payment integration, order placement, order management dashboard (admin), and transactional email notifications",
-  "description": "Implement order-related GraphQL resolvers. Queries: order(orderId) (fetch order with items, payment, calendar preview - authorize user), orders(userId, status) (list user's orders with pagination, admin can query all orders). Mutations: placeOrder(input) (validate calendar ownership, create order, create Stripe Checkout Session, return checkout URL), cancelOrder(orderId, reason) (authorize, validate order status, cancel order, optionally process refund). Add DataLoader for efficient order item fetching. Implement error handling (order not found, unauthorized access, invalid status for cancellation). Write integration tests for all resolvers.",
+  "description": "Create EmailService for composing and sending transactional emails via SMTP (GoogleWorkspace initially). Implement email templates (HTML + plain text) for: order confirmation (sent on payment success), shipping notification (sent when order marked as SHIPPED with tracking number), order cancellation (sent when order cancelled). Configure JavaMail in application.properties (SMTP host, port, TLS, auth credentials from env variables). Create EmailJob (DelayedJob implementation) for async email sending. Implement email queueing via JobManager (enqueue EmailJob on order events). Add retry logic for failed email sends. Test with Mailpit (local SMTP server for development). Document email configuration in docs/guides/email-setup.md.",
   "agent_type_hint": "BackendAgent",
-  "inputs": "OrderService from Task I3.T2, PaymentService from Task I3.T3, GraphQL schema from I1.T6",
+  "inputs": "Email notification requirements from Plan Section \"Order Notifications\", JavaMail documentation, DelayedJob pattern from architecture plan",
   "target_files": [
-    "src/main/java/villagecompute/calendar/api/graphql/OrderResolver.java",
-    "src/main/java/villagecompute/calendar/api/graphql/dataloader/OrderDataLoader.java",
-    "src/test/java/villagecompute/calendar/api/graphql/OrderResolverTest.java"
+    "src/main/java/villagecompute/calendar/integration/email/EmailService.java",
+    "src/main/java/villagecompute/calendar/jobs/EmailJob.java",
+    "src/main/resources/email-templates/order-confirmation.html",
+    "src/main/resources/email-templates/order-confirmation.txt",
+    "src/main/resources/email-templates/shipping-notification.html",
+    "src/main/resources/email-templates/shipping-notification.txt",
+    "src/main/resources/email-templates/order-cancellation.html",
+    "src/main/resources/email-templates/order-cancellation.txt",
+    "docs/guides/email-setup.md"
   ],
   "input_files": [
-    "src/main/java/villagecompute/calendar/service/OrderService.java",
-    "src/main/java/villagecompute/calendar/service/PaymentService.java",
-    "src/main/java/villagecompute/calendar/api/graphql/OrderResolver.java",
-    "api/graphql-schema.graphql"
+    "src/main/resources/application.properties",
+    "src/main/java/villagecompute/calendar/model/DelayedJob.java",
+    "src/main/java/villagecompute/calendar/service/OrderService.java"
   ],
-  "deliverables": "All order query/mutation resolvers implemented, DataLoader for order items and payments, Authorization checks (user can only access own orders unless admin), Error handling with meaningful GraphQL errors, Integration tests for all resolvers",
-  "acceptance_criteria": "GraphQL query { order(orderId: \"123\") { orderNumber status items { calendar { title } } } } returns order with nested data, placeOrder mutation creates order, returns Stripe Checkout URL, Unauthorized access to other user's order returns GraphQL error, Admin role can query any user's orders, cancelOrder mutation validates order status (cannot cancel shipped order), returns updated order, Integration tests verify end-to-end GraphQL order workflows",
-  "dependencies": ["I3.T2", "I3.T3"],
+  "deliverables": "EmailService with template rendering and SMTP sending, EmailJob for async email processing, Email templates (HTML + plain text) for all order events, Email queueing integrated into OrderService, Retry logic for failed sends (DelayedJob retry mechanism), Email configuration guide",
+  "acceptance_criteria": "EmailService sends email successfully via GoogleWorkspace SMTP, Email templates render with order data (order number, customer name, items), EmailJob enqueued when order status changes to PAID or SHIPPED, Failed email sends retry 3 times with exponential backoff, Mailpit receives emails during local development (SMTP localhost:1025), Email configuration guide tested with fresh GoogleWorkspace account",
+  "dependencies": ["I3.T2"],
   "parallelizable": false,
   "done": false
 }
@@ -41,111 +46,74 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: Order Placement Flow Sequence Diagram (from sequence_order_placement.puml)
+### Context: Email Notification System Design
 
-The sequence diagram details the complete order placement workflow:
+**Email Notification Architecture:**
 
-**Key Flow Elements:**
-1. **Order Creation Phase**: User submits GraphQL mutation `placeOrder(input)` with calendar ID, product type, quantity, and shipping address
-2. **Stripe Checkout Session Creation**: OrderService creates order in PENDING status, then creates Stripe Checkout Session via StripeClient
-3. **Payment Processing**: User redirected to Stripe, enters payment details, Stripe processes payment
-4. **Webhook Processing**: Stripe sends `checkout.session.completed` webhook to `/api/webhooks/stripe` with signature validation
-5. **Order Update**: OrderService updates order status to PAID, stores payment details, enqueues email job
-6. **Error Scenarios**: Includes signature validation failures, order not found errors, SMTP failures with retry logic
+The Village Calendar application requires a robust transactional email system for order-related communications. The system must support:
 
-**Critical Implementation Notes:**
-- Orders created in PENDING status before payment
-- Stripe Checkout Session ID stored in order notes field (no dedicated field in schema)
-- Webhook signature validation MUST use Stripe SDK
-- Idempotent webhook processing to handle duplicate deliveries
-- Email job enqueued within same transaction for consistency
-- Error handling returns 200 OK to Stripe even on errors to prevent retries
+1. **Transactional Email Types:**
+   - **Order Confirmation**: Sent immediately when payment is captured (order status changes to PAID)
+   - **Shipping Notification**: Sent when order is marked as SHIPPED with tracking information
+   - **Order Cancellation**: Sent when order is cancelled before fulfillment
 
-### Context: GraphQL Schema Order Types (from schema.graphql)
+2. **Delivery Method:**
+   - SMTP delivery via Google Workspace (GoogleWorkspace SMTP servers)
+   - Configuration via environment variables for security
+   - Support for both HTML and plain text email formats
+   - TLS/STARTTLS encryption required
 
-**CalendarOrder Type** (lines 252-304):
-```graphql
-type CalendarOrder {
-  calendar: UserCalendar!          # Calendar being ordered
-  created: DateTime!
-  deliveredAt: DateTime
-  id: ID!
-  notes: String                    # Admin notes + system logs
-  paidAt: DateTime
-  quantity: Int!                   # Number of copies
-  shippedAt: DateTime
-  shippingAddress: JSON!           # JSONB: street, city, state, postalCode, country
-  status: OrderStatus!             # PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED
-  stripeChargeId: String
-  stripePaymentIntentId: String
-  totalPrice: BigDecimal!          # Total in USD (not cents)
-  trackingNumber: String
-  unitPrice: BigDecimal!
-  updated: DateTime!
-  user: CalendarUser!
-}
-```
+3. **Asynchronous Processing:**
+   - Emails must be sent asynchronously using DelayedJob system
+   - Jobs queued via Vert.x EventBus for distributed processing
+   - Retry logic for transient failures (network issues, SMTP timeouts)
+   - Failed jobs should retry with exponential backoff
 
-**OrderStatus Enum** (lines 32-53):
-```graphql
-enum OrderStatus {
-  CANCELLED    # Cancelled before fulfillment
-  DELIVERED    # Successfully delivered
-  PAID         # Payment captured
-  PENDING      # Awaiting payment
-  PROCESSING   # Being printed
-  REFUNDED     # Payment refunded
-  SHIPPED      # Shipped with tracking
-}
-```
+4. **Email Content Requirements:**
+   - Professional HTML templates with inline CSS (for email client compatibility)
+   - Plain text fallback for email clients that don't support HTML
+   - Dynamic content rendering (order details, customer info, tracking numbers)
+   - Branded templates with company logo and contact information
 
-**Query Operations** (lines 624-643):
-```graphql
-order(id: ID!): CalendarOrder       # Get single order (user ownership or admin)
-orders(userId: ID, status: OrderStatus): [CalendarOrder!]!  # List orders (admin can query any user)
-myOrders(status: OrderStatus): [CalendarOrder!]!           # Current user's orders
-allOrders(status: OrderStatus, limit: Int = 50): [CalendarOrder!]!  # Admin only
-```
+5. **Development/Testing:**
+   - Mailpit for local development testing (SMTP mock server)
+   - Email mock mode in development to prevent accidental sends
+   - Configuration toggles for test vs production SMTP servers
 
-**Mutation Operations** (lines 702-714, 805-808):
-```graphql
-cancelOrder(orderId: ID!, reason: String): CalendarOrder!
-placeOrder(input: PlaceOrderInput!): PaymentIntent!
-```
+### Context: DelayedJob Queue System
 
-**PlaceOrderInput** (lines 523-537):
-```graphql
-input PlaceOrderInput {
-  calendarId: ID!
-  productType: ProductType!
-  quantity: Int!
-  shippingAddress: AddressInput!
-}
-```
+**Job Processing Pattern:**
 
-**AddressInput** (lines 487-505):
-```graphql
-input AddressInput {
-  city: String!
-  country: String!          # ISO 3166-1 alpha-2 (e.g., "US")
-  postalCode: String!
-  state: String!            # State/province code
-  street: String!
-  street2: String           # Optional apartment/suite
-}
-```
+The DelayedJob system provides asynchronous, fault-tolerant job processing:
 
-**PaymentIntent Response** (lines 312-330):
-```graphql
-type PaymentIntent {
-  amount: Int!              # Amount in cents (multiply dollar amount by 100)
-  calendarId: ID!
-  clientSecret: String!     # For Stripe.js confirmCardPayment
-  id: ID!                   # Stripe PaymentIntent ID (pi_...)
-  quantity: Int!
-  status: String!
-}
-```
+1. **Job Lifecycle:**
+   ```
+   CREATE → PENDING → IN_PROGRESS → COMPLETED
+                                 ↘ FAILED (with retry)
+   ```
+
+2. **Job Attributes:**
+   - `actorId`: Entity ID the job operates on (e.g., CalendarOrder ID)
+   - `queue`: Job queue type (EMAIL_ORDER_CONFIRMATION, EMAIL_SHIPPING_NOTIFICATION, etc.)
+   - `priority`: Higher priority jobs processed first
+   - `attempts`: Number of retry attempts (max 3)
+   - `runAt`: When to execute the job
+   - `locked`: Job lock for preventing duplicate processing
+   - `complete`: Job completion flag
+   - `failureReason`: Error message if job failed
+
+3. **Retry Strategy:**
+   - Exponential backoff: 1 minute, 5 minutes, 15 minutes
+   - Maximum 3 retry attempts
+   - Job marked as permanently failed after exhausting retries
+   - Failure details logged to `lastError` and `failureReason` fields
+
+4. **Job Handler Contract:**
+   ```java
+   public interface DelayedJobHandler {
+       void run(String actorId) throws Exception;
+   }
+   ```
 
 ---
 
@@ -155,211 +123,578 @@ The following analysis is based on my direct review of the current codebase. Use
 
 ### Relevant Existing Code
 
-#### File: `src/main/java/villagecompute/calendar/api/graphql/OrderResolver.java`
+#### File: `src/main/java/villagecompute/calendar/services/EmailService.java`
 
-**Summary:** This file contains the COMPLETE implementation of all order GraphQL resolvers. The task I3.T4 is **ALREADY FULLY IMPLEMENTED**. All queries and mutations are present and functional.
+**Summary:** **ALREADY FULLY IMPLEMENTED** - Complete email service with HTML and text email sending via Quarkus Mailer.
 
 **Current Implementation Status:**
 
-✅ **Queries Implemented:**
-- `order(id)` - Lines 81-121: Fetches single order with authorization (owner or admin)
-- `orders(userId, status)` - Lines 131-183: Lists user orders with optional status filter, admin can query any user
-- `myOrders(status)` - Lines 191-223: Shortcut for current user's orders
-- `allOrders(status, limit)` - Lines 232-263: Admin-only query for all orders with pagination
+✅ **Core Email Methods:**
+- `sendEmail(to, subject, body)` - Lines 57-59: Simple text email with default from address
+- `sendEmail(from, to, subject, body)` - Lines 69-81: Text email with custom from address
+- `sendHtmlEmail(to, subject, htmlBody)` - Lines 90-92: HTML email with default from address
+- `sendHtmlEmail(from, to, subject, htmlBody)` - Lines 102-114: HTML email with custom from address
 
-✅ **Mutations Implemented:**
-- `placeOrder(input)` - Lines 277-400: Creates order, generates Stripe Checkout Session, returns PaymentIntent
-- `cancelOrder(orderId, reason)` - Lines 410-448: Cancels order with authorization and status validation
+✅ **Environment Features:**
+- Environment prefix for non-production emails (lines 43-48): `[DEV] Order Confirmation`
+- Production detection via `quarkus.profile` config (lines 33-35)
+- Default from email configurable (line 22-23): `quarkus.mailer.from`
 
-**Key Implementation Details:**
-- Uses `@RolesAllowed({"USER", "ADMIN"})` for authentication
-- Injects `OrderService` (line 56), `StripeService` (line 59), `AuthenticationService` (line 53)
-- Authorization checks: Lines 111-116 (order query), Lines 156-163 (orders query), Lines 318-323 (placeOrder), Lines 436 (cancelOrder via OrderService)
-- Error handling: IllegalArgumentException for not found, SecurityException for unauthorized access
-- Stripe integration: Creates Checkout Session (lines 366-376), stores session ID in notes field (lines 380-382)
-- Returns `PaymentIntentResponse` type (line 282, 387-398) with checkout URL
+✅ **Error Handling:**
+- Try-catch blocks with logging (lines 75-80, 108-113)
+- RuntimeException thrown on email failures
+- Detailed error logging with recipient information
 
-**CRITICAL NOTE:** The task description mentions implementing `createOrder` mutation, but the GraphQL schema (line 746-755) defines `createOrder` differently than `placeOrder`. The current implementation uses `placeOrder` which matches the schema definition. There is NO separate `createOrder` mutation in OrderResolver - only `placeOrder` exists.
+**CRITICAL NOTE:** The EmailService class is COMPLETE. You do NOT need to create or modify it.
+
+#### File: `src/main/java/villagecompute/calendar/services/jobs/OrderEmailJobHandler.java`
+
+**Summary:** **ALREADY FULLY IMPLEMENTED** - Complete DelayedJob handler for order confirmation emails using Qute templates.
+
+**Current Implementation Status:**
+
+✅ **Job Handler Implementation:**
+- Implements `DelayedJobHandler` interface (line 24)
+- `run(String actorId)` method (lines 56-94): Complete job execution logic
+
+✅ **Email Template Rendering:**
+- Uses Qute `@CheckedTemplate` for type-safe templates (lines 40-53)
+- `Templates.orderConfirmation(order, stylesheet)` - Line 79: Renders HTML template
+- Loads CSS from `src/main/resources/css/email.css` (line 75)
+
+✅ **Error Handling:**
+- Order not found check (lines 63-66): Throws `DelayedJobException(true, ...)` - permanent failure
+- Resource loading failure (lines 87-89): `DelayedJobException(true, ...)` - permanent failure
+- Email send failure (lines 90-93): `DelayedJobException(false, ...)` - **retryable failure**
+
+✅ **OpenTelemetry Tracing:**
+- `@WithSpan` annotation (line 56) for distributed tracing
+- Custom span attributes for order ID, user email, status (lines 69-71)
+- Span events for successful email send (line 85)
+
+**Key Patterns:**
+```java
+// Permanent failure (no retry):
+throw new DelayedJobException(true, "Order not found: " + actorId);
+
+// Retryable failure (will retry with backoff):
+throw new DelayedJobException(false, "Failed to send email", e);
+```
+
+**CRITICAL NOTE:** OrderEmailJobHandler is COMPLETE and implements the order confirmation email workflow. You need to create similar handlers for **shipping notification** and **order cancellation** emails.
+
+#### File: `src/main/resources/templates/OrderEmailJobHandler/orderConfirmation.html`
+
+**Summary:** Complete Qute template for order confirmation emails with professional styling.
+
+**Template Features:**
+- Responsive HTML email design (lines 1-84)
+- Embedded CSS via `{stylesheet}` variable (line 8)
+- Dynamic order data rendering using Qute expressions:
+  - `{order.user.displayName ?: order.user.email}` - Line 15: User name with fallback
+  - `{order.totalPrice}` - Line 20: Order total
+  - `{order.calendar.name} ({order.calendar.year})` - Line 28: Calendar details
+  - `{order.quantity}` - Line 33: Quantity with plural handling
+  - `{order.shippingAddress.get('name').asText()}` - Line 49: Address parsing from JSONB
+
+**Address Handling Pattern:**
+```html
+{order.shippingAddress.get('line1').asText()}<br>
+{#if order.shippingAddress.has('line2') && !order.shippingAddress.get('line2').isNull()}
+    {order.shippingAddress.get('line2').asText()}<br>
+{/if}
+```
+
+**CRITICAL NOTE:** This template demonstrates the correct pattern for rendering JSONB data. You MUST use the same pattern for shipping and cancellation templates.
+
+#### File: `src/main/resources/css/email.css`
+
+**Summary:** Complete email stylesheet with inline-friendly CSS for maximum email client compatibility.
+
+**Styling Conventions:**
+- Outer wrapper: Max-width 600px, white background (lines 14-19)
+- Headers: Blue gradient color scheme (`#3b82f6`, `#1e40af`)
+- Detail boxes: Light gray background (`#f9fafb`) with blue left border (lines 49-61)
+- Highlight box: Blue gradient background for important info (lines 63-76)
+- Buttons: Blue with hover state (lines 78-91)
+- Footer: Muted text with top border (lines 93-109)
+- Shipping box: Green accents for shipping info (lines 110-116)
+
+**CRITICAL NOTE:** Reuse this stylesheet for all email templates. The styles are designed for compatibility with email clients (Gmail, Outlook, Apple Mail).
+
+#### File: `src/main/resources/application.properties`
+
+**Summary:** Configuration file with Quarkus Mailer settings already configured.
+
+**Mailer Configuration (lines 106-113):**
+```properties
+quarkus.mailer.from=${MAIL_FROM:noreply@villagecompute.com}
+quarkus.mailer.host=${MAIL_HOST:smtp.example.com}
+quarkus.mailer.port=${MAIL_PORT:587}
+quarkus.mailer.start-tls=REQUIRED
+quarkus.mailer.username=${MAIL_USERNAME:placeholder}
+quarkus.mailer.password=${MAIL_PASSWORD:placeholder}
+quarkus.mailer.mock=${MAIL_MOCK:true}
+```
+
+**Key Settings:**
+- `quarkus.mailer.mock=true` by default: Prevents accidental email sends in dev
+- All credentials from environment variables: `MAIL_FROM`, `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD`
+- STARTTLS encryption: `start-tls=REQUIRED` (line 110)
+- Port 587: Standard SMTP submission port
+
+**CRITICAL NOTE:** Configuration is COMPLETE. You only need to document the environment variables in email-setup.md.
+
+#### File: `src/main/java/villagecompute/calendar/data/models/DelayedJob.java`
+
+**Summary:** JPA entity for async job queue with Panache active record pattern.
+
+**Key Methods:**
+- `createDelayedJob(actorId, queue, runAt)` - Lines 85-93: Factory method to create and persist jobs
+- `unlock()` - Lines 98-101: Unlock job for retry after failure
+- `findReadyToRun(limit)` - Lines 109-113: Query for pending jobs ready to execute
+
+**Job Fields:**
+- `actorId` (String): Entity ID to process (e.g., CalendarOrder ID as UUID string)
+- `queue` (DelayedJobQueue enum): Job type (EMAIL_ORDER_CONFIRMATION, EMAIL_SHIPPING_NOTIFICATION)
+- `priority` (Integer): Higher numbers = higher priority (set from queue default)
+- `attempts` (Integer): Number of execution attempts (max 3)
+- `locked` (Boolean): Prevents duplicate processing
+- `complete` (Boolean): Job completion flag
+- `failureReason` (String): Error message for permanently failed jobs
+
+**CRITICAL NOTE:** Use the factory method `DelayedJob.createDelayedJob()` to create jobs. Do NOT construct DelayedJob objects manually.
+
+#### File: `src/main/java/villagecompute/calendar/data/models/DelayedJobQueue.java`
+
+**Summary:** Enum defining job queue types and their priorities.
+
+**Existing Queues:**
+- `EMAIL_ORDER_CONFIRMATION(10)` - High priority order confirmation emails
+- `EMAIL_SHIPPING_NOTIFICATION(10)` - High priority shipping notification emails
+- `EMAIL_GENERAL(5)` - Lower priority general emails
+
+**CRITICAL NOTE:** The required email queue types ALREADY EXIST. You do NOT need to add new enum values. The task description mentions creating "EmailJob" but this likely refers to the handler classes, not queue types.
 
 #### File: `src/main/java/villagecompute/calendar/services/OrderService.java`
 
-**Summary:** Complete order business logic service with all CRUD operations, status transitions, and validation.
+**Summary:** Order management service with placeholder TODOs for email integration.
 
-**Recommendation:** You MUST use the following OrderService methods in your resolver:
-- `createOrder(user, calendar, quantity, unitPrice, shippingAddress)` - Line 40: Creates order in PENDING status
-- `updateOrderStatus(orderId, newStatus, notes)` - Line 106: Admin-only status updates
-- `getOrderById(orderId)` - Line 181: Fetch single order
-- `getUserOrders(userId)` - Line 170: List user's orders
-- `getOrdersByStatus(status)` - Line 159: Filter by status
-- `cancelOrder(orderId, userId, isAdmin, reason)` - Line 210: Cancel with authorization
-- `findByStripePaymentIntent(paymentIntentId)` - Line 191: Used by webhook processing
+**Email Integration Points:**
 
-**Key Patterns:**
-- Status transition validation via `validateStatusTransition()` (line 304): State machine prevents invalid transitions (e.g., SHIPPED cannot go to PENDING)
-- Order number generation using `OrderNumberGenerator` (line 84): Format "VC-YYYY-NNNNN"
-- Tax and shipping calculation placeholders (lines 271, 288): Return BigDecimal.ZERO for MVP
-- Terminal state check `order.isTerminal()` (line 119): DELIVERED and CANCELLED cannot be updated
-
-#### File: `src/main/java/villagecompute/calendar/services/PaymentService.java`
-
-**Summary:** Stripe payment integration service handling PaymentIntent creation, webhook processing, and refunds.
-
-**Recommendation:** The OrderResolver does NOT directly call PaymentService. Instead:
-- OrderResolver uses `StripeService.createCheckoutSession()` for checkout flow
-- PaymentService is used by `WebhookResource` for webhook processing (processPaymentSuccess - line 204)
-- Refund processing is initiated by PaymentService when order is cancelled (processRefund - line 260)
-
-**Key Methods:**
-- `processPaymentSuccess(paymentIntentId, chargeId)` - Line 204: Updates order to PAID, enqueues email job, idempotent
-- `processRefund(paymentIntentId, amountInCents, reason)` - Line 260: Creates Stripe refund, updates order notes
-- `processRefundWebhook(chargeId, refundId, amountRefunded)` - Line 315: Handles charge.refunded webhook
-
-#### File: `src/main/java/villagecompute/calendar/data/models/CalendarOrder.java`
-
-**Summary:** JPA entity model for orders with Panache active record pattern.
-
-**Recommendation:** You MUST understand these entity features:
-- Status constants: `STATUS_PENDING`, `STATUS_PAID`, `STATUS_PROCESSING`, `STATUS_SHIPPED`, `STATUS_DELIVERED`, `STATUS_CANCELLED` (lines 92-97)
-- Custom finder methods:
-  - `findByUser(userId)` - Line 107: Returns PanacheQuery
-  - `findByStatusOrderByCreatedDesc(status)` - Line 118: **REQUIRED by task spec**
-  - `findByStripePaymentIntent(paymentIntentId)` - Line 138
-  - `findByOrderNumber(orderNumber)` - Line 158
-  - `countOrdersByYear(year)` - Line 168
-- Helper methods:
-  - `markAsPaid()` - Line 177: Sets status and paidAt timestamp
-  - `markAsShipped()` - Line 186: Sets status and shippedAt timestamp
-  - `cancel()` - Line 195: Sets status to CANCELLED
-  - `isTerminal()` - Line 205: Checks if order is DELIVERED or CANCELLED
-
-**Database Schema:** Table `calendar_orders` with indexes on user_id, status, calendar_id, stripe_payment_intent_id, order_number (unique)
-
-#### File: `src/main/java/villagecompute/calendar/api/graphql/CalendarGraphQL.java`
-
-**Summary:** Reference implementation for GraphQL resolver patterns including DataLoader batch loading.
-
-**Recommendation:** You SHOULD follow these patterns from CalendarGraphQL:
-
-**DataLoader Batch Pattern** (lines 616-653):
+**Payment Success** (after line 132-136):
 ```java
-@Name("user")
-public List<CalendarUser> batchLoadUsers(@Source final List<UserCalendar> calendars) {
-    // 1. Extract unique IDs
-    List<UUID> userIds = calendars.stream()
-        .map(c -> c.user != null ? c.user.id : null)
-        .filter(Objects::nonNull)
-        .distinct()
-        .collect(Collectors.toList());
-
-    // 2. Batch load with single query
-    List<CalendarUser> users = CalendarUser.list("id IN ?1", userIds);
-
-    // 3. Create lookup map
-    Map<UUID, CalendarUser> userMap = users.stream()
-        .collect(Collectors.toMap(u -> u.id, u -> u));
-
-    // 4. Return in same order as input (CRITICAL for DataLoader contract)
-    return calendars.stream()
-        .map(c -> c.user != null ? userMap.get(c.user.id) : null)
-        .collect(Collectors.toList());
+if (CalendarOrder.STATUS_PAID.equals(newStatus)) {
+    order.paidAt = Instant.now();
+    // TODO I3.T7: Enqueue order confirmation email job here
 }
 ```
+
+**Order Shipped** (after line 134-136):
+```java
+else if (CalendarOrder.STATUS_SHIPPED.equals(newStatus)) {
+    order.shippedAt = Instant.now();
+    // TODO I3.T7: Enqueue shipping notification email job here
+}
+```
+
+**Order Cancelled** (in `cancelOrder` method after line 241):
+```java
+order.cancel();
+// TODO I3.T7: Enqueue order cancellation email job here
+```
+
+**CRITICAL NOTE:** You MUST integrate email job enqueueing into OrderService at these three integration points.
 
 ### Implementation Tips & Notes
 
-**Tip 1: DataLoader Implementation for Order Items**
+**Tip 1: Email Job Handler Pattern**
 
-The task requires "Add DataLoader for efficient order item fetching." However, the current CalendarOrder entity does NOT have an `items` field or relationship. Looking at the schema:
-- CalendarOrder represents a single-item purchase (one calendar with quantity field)
-- There is NO `OrderItem` entity in the codebase (checked migrations and models)
-- The task description mentions "order with items" but the actual data model is simplified
+You need to create TWO new job handlers following the OrderEmailJobHandler pattern:
 
-**Resolution:** The DataLoader requirement likely refers to batching related entities:
-1. `CalendarOrder.calendar` - batch load UserCalendar entities
-2. `CalendarOrder.user` - batch load CalendarUser entities
+1. **ShippingNotificationJobHandler.java**
+   - Similar structure to OrderEmailJobHandler
+   - Template method: `Templates.shippingNotification(order, stylesheet)`
+   - Include tracking number in email body
+   - Template location: `src/main/resources/templates/ShippingNotificationJobHandler/shippingNotification.html`
 
-You SHOULD implement batch field resolvers similar to CalendarGraphQL by adding these methods to OrderResolver:
+2. **OrderCancellationJobHandler.java**
+   - Similar structure to OrderEmailJobHandler
+   - Template method: `Templates.orderCancellation(order, stylesheet)`
+   - Include cancellation reason from order notes
+   - Template location: `src/main/resources/templates/OrderCancellationJobHandler/orderCancellation.html`
 
+**Pattern to Follow:**
 ```java
-@Name("calendar")
-public List<UserCalendar> batchLoadCalendars(@Source final List<CalendarOrder> orders) {
-    // Extract unique calendar IDs, batch load, return in order
-}
+@ApplicationScoped
+public class ShippingNotificationJobHandler implements DelayedJobHandler {
 
-@Name("user")
-public List<CalendarUser> batchLoadUsers(@Source final List<CalendarOrder> orders) {
-    // Extract unique user IDs, batch load, return in order
+    @Inject
+    EmailService emailService;
+
+    @ConfigProperty(name = "email.order.from", defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
+    String orderFromEmail;
+
+    @CheckedTemplate
+    public static class Templates {
+        public static native TemplateInstance shippingNotification(
+            CalendarOrder order,
+            String stylesheet
+        );
+    }
+
+    @Override
+    @WithSpan("ShippingNotificationJobHandler.run")
+    public void run(String actorId) throws Exception {
+        // Load order, render template, send email
+        // Same pattern as OrderEmailJobHandler
+    }
 }
 ```
 
-**Tip 2: Error Handling Pattern**
+**Tip 2: Email Template Content**
 
-Following the CalendarGraphQL pattern, you SHOULD:
-- Return `null` for not found resources in @PermitAll queries (line 299)
-- Throw `IllegalArgumentException` for invalid input (line 309)
-- Throw `SecurityException` for authorization failures (line 226)
-- Let Quarkus SmallRye GraphQL convert exceptions to GraphQL errors automatically
+**Shipping Notification Email Should Include:**
+- Order number and tracking number (prominent highlight box)
+- "Your order has shipped!" header with 📦 emoji
+- Shipping carrier and estimated delivery date
+- Order summary (calendar name, quantity)
+- Shipping address confirmation
+- Link to tracking page (e.g., `https://tracking.example.com/{trackingNumber}`)
+- Customer support contact information
 
-**Tip 3: Stripe Checkout URL Return**
+**Order Cancellation Email Should Include:**
+- "Order Cancelled" header with appropriate tone
+- Order number and cancellation confirmation
+- Cancellation reason (extract from order.notes field)
+- Refund information (if order was paid)
+- Expected refund timeline (e.g., "5-10 business days")
+- Customer support contact for questions
+- Link to browse other templates (encourage re-engagement)
 
-The `placeOrder` mutation returns `PaymentIntent` type which includes:
-- `id`: Stripe Checkout Session ID (NOT PaymentIntent ID despite the name)
-- `clientSecret`: Actually the Stripe Checkout URL (see line 389-390 in OrderResolver)
-- `amount`: Total in cents (line 388)
+**Tip 3: Plain Text Template Pattern**
 
-This is a **naming mismatch** in the schema. The type is called `PaymentIntent` but actually contains Checkout Session data. The current implementation correctly builds this response (lines 387-399).
+The task requires both HTML and plain text versions. Create `.txt` templates alongside `.html`:
 
-**Tip 4: Test Coverage Requirements**
+**Example:** `orderConfirmation.txt`
+```text
+Thank You for Your Order!
 
-The acceptance criteria require integration tests. Based on the task description, you MUST test:
-1. Query `order(id)` with nested data (calendar, user)
-2. Query `orders(userId, status)` with admin access
-3. Mutation `placeOrder` with Stripe Checkout URL response
-4. Mutation `cancelOrder` with status validation
-5. Unauthorized access scenarios (non-admin querying other user's orders)
-6. Invalid order status transitions (cancelling shipped order)
+Hi {order.user.displayName ?: order.user.email},
 
-Use `@QuarkusTest` with `@TestTransaction` and REST Assured for GraphQL testing. See existing test patterns in the test directory.
+We're excited to confirm that we've received your order for your custom calendar!
 
-**Tip 5: The Task May Already Be Complete**
+Order Total: ${order.totalPrice}
+Order ID: {order.id}
 
-⚠️ **CRITICAL OBSERVATION:** After analyzing `OrderResolver.java`, I found that **ALL required resolvers are already implemented**:
-- ✅ All 4 query operations exist
-- ✅ Both mutation operations exist
-- ✅ Authorization checks implemented
-- ✅ Error handling present
-- ✅ Stripe integration complete
+ORDER DETAILS
+----------------------------
+Calendar: {order.calendar.name} ({order.calendar.year})
+Quantity: {order.quantity}
+Unit Price: ${order.unitPrice}
+Order Date: {order.paidAt.toString()}
 
-The ONLY missing pieces are:
-- ❌ DataLoader batch field resolvers for `CalendarOrder.calendar` and `CalendarOrder.user`
-- ❌ Integration tests in `OrderResolverTest.java`
+SHIPPING ADDRESS
+----------------------------
+{order.shippingAddress.get('name').asText()}
+{order.shippingAddress.get('line1').asText()}
+...
 
-**You should verify if the DataLoader and tests exist before implementing. If they do, this task is complete and should be marked `"done": true`.**
+Questions? Contact support@villagecompute.com
 
-**Tip 6: Mutation vs Query Annotations**
+Village Compute Calendar
+https://calendar.villagecompute.com
+```
 
-Notice in CalendarGraphQL:
-- Queries use `@Query("queryName")` annotation
-- Mutations use `@Mutation("mutationName")` annotation
-- Field resolvers use `@Name("fieldName")` with `@Source` parameter
+**CRITICAL:** Plain text templates should use the SAME Qute template directory structure, just with `.txt` extension instead of `.html`.
 
-Ensure you follow this exact pattern for SmallRye GraphQL to recognize the resolver types correctly.
+**Tip 4: Job Enqueueing Integration**
 
-**Warning: Current OrderResolver Uses Different Mutation Approach**
+You MUST integrate email job creation into OrderService. Add a helper method:
 
-The OrderResolver (lines 277-400) implements `placeOrder` mutation using the newer `PlaceOrderInput` input type, but the task description mentions implementing `createOrder`. The GraphQL schema defines BOTH:
-- `createOrder(calendarId, quantity, shippingAddress)` - Lines 746-755
-- `placeOrder(input: PlaceOrderInput!)` - Lines 805-808
+```java
+private void enqueueEmailJob(CalendarOrder order, DelayedJobQueue queue) {
+    DelayedJob emailJob = DelayedJob.createDelayedJob(
+        order.id.toString(),  // actorId
+        queue,                 // EMAIL_ORDER_CONFIRMATION, EMAIL_SHIPPING_NOTIFICATION, etc.
+        Instant.now()          // Run immediately
+    );
+    LOG.infof("Enqueued %s email job for order %s", queue, order.id);
+}
+```
 
-Current implementation only has `placeOrder`. You SHOULD verify if `createOrder` is also needed or if the task description is outdated. Based on the schema comments, `placeOrder` is the preferred approach ("Alternative to createOrder with more explicit input structure").
+Then call this method at the appropriate integration points:
+```java
+if (CalendarOrder.STATUS_PAID.equals(newStatus)) {
+    order.paidAt = Instant.now();
+    enqueueEmailJob(order, DelayedJobQueue.EMAIL_ORDER_CONFIRMATION);
+}
+```
+
+**Tip 5: DelayedJob Worker Registration**
+
+The JobWorker (from task I4.T1, not yet implemented) will need to map queue types to handlers. You should document this mapping pattern, but the actual JobWorker implementation is outside the scope of I3.T7.
+
+**Expected Pattern (for documentation):**
+```java
+// In JobWorker class (I4.T1)
+Map<DelayedJobQueue, DelayedJobHandler> handlers = Map.of(
+    DelayedJobQueue.EMAIL_ORDER_CONFIRMATION, orderEmailJobHandler,
+    DelayedJobQueue.EMAIL_SHIPPING_NOTIFICATION, shippingNotificationJobHandler,
+    DelayedJobQueue.EMAIL_GENERAL, orderCancellationJobHandler
+);
+```
+
+**Tip 6: Email Configuration Documentation**
+
+The `docs/guides/email-setup.md` file must include:
+
+1. **Prerequisites:**
+   - Google Workspace account with SMTP enabled
+   - Application-specific password (not regular Google password)
+   - Mailpit for local testing (Docker installation instructions)
+
+2. **Environment Variables:**
+   ```bash
+   # Production (Google Workspace)
+   export MAIL_FROM="Village Calendar <noreply@villagecompute.com>"
+   export MAIL_HOST="smtp.gmail.com"
+   export MAIL_PORT="587"
+   export MAIL_USERNAME="noreply@villagecompute.com"
+   export MAIL_PASSWORD="app-specific-password-here"
+   export MAIL_MOCK="false"
+
+   # Development (Mailpit)
+   export MAIL_FROM="dev@localhost"
+   export MAIL_HOST="localhost"
+   export MAIL_PORT="1025"
+   export MAIL_USERNAME=""
+   export MAIL_PASSWORD=""
+   export MAIL_MOCK="true"
+   ```
+
+3. **Google Workspace Setup Steps:**
+   - Enable IMAP/SMTP in Gmail settings
+   - Create app-specific password (requires 2FA)
+   - Test connection with sample email
+
+4. **Mailpit Setup:**
+   ```bash
+   docker run -d --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit
+   # Web UI: http://localhost:8025
+   # SMTP: localhost:1025
+   ```
+
+5. **Testing Email Templates:**
+   - Run application in dev mode with Mailpit
+   - Trigger order events (payment, shipment, cancellation)
+   - Check Mailpit UI to verify email rendering
+
+6. **Troubleshooting:**
+   - Common SMTP errors (authentication, TLS)
+   - Checking Quarkus logs for email failures
+   - Verifying DelayedJob retry behavior
+
+**Tip 7: Error Handling and Retry Logic**
+
+The DelayedJobHandler pattern already supports retry logic via `DelayedJobException`:
+
+- **Permanent failures** (should NOT retry):
+  - Order not found: `throw new DelayedJobException(true, "Order not found")`
+  - Invalid order data: `throw new DelayedJobException(true, "Missing required field")`
+
+- **Transient failures** (SHOULD retry):
+  - SMTP timeout: `throw new DelayedJobException(false, "SMTP timeout", e)`
+  - Network error: `throw new DelayedJobException(false, "Connection failed", e)`
+  - Email send failure: `throw new DelayedJobException(false, "Failed to send", e)`
+
+The DelayedJob system will automatically retry transient failures with exponential backoff (1min, 5min, 15min).
+
+**Tip 8: Tracking Number Field**
+
+The `CalendarOrder` entity (from I3.T2) includes a `trackingNumber` field (see GraphQL schema line 293-294). Your shipping notification template MUST include this field:
+
+```html
+<div class="highlight-box">
+    <strong>Tracking Number: {order.trackingNumber}</strong>
+    <p style="margin: 0; color: white;">
+        <a href="https://tracking.example.com/{order.trackingNumber}"
+           style="color: white; text-decoration: underline;">
+            Track Your Shipment
+        </a>
+    </p>
+</div>
+```
+
+**Tip 9: Order Notes for Cancellation Reason**
+
+The cancellation template should extract the cancellation reason from `order.notes`:
+
+```html
+<p>
+    Your order has been cancelled for the following reason:
+</p>
+<div class="detail-box">
+    {#if order.notes}
+        {order.notes}
+    {#else}
+        No reason provided.
+    {/if}
+</div>
+```
+
+**Tip 10: Testing Strategy**
+
+1. **Unit Tests** (not required by task, but recommended):
+   - Test each handler's template rendering
+   - Mock EmailService to verify correct calls
+   - Test error handling (order not found, email failure)
+
+2. **Integration Tests** (not required by task):
+   - Create test orders in different statuses
+   - Enqueue email jobs
+   - Verify jobs execute and email sent
+
+3. **Manual Testing** (required by acceptance criteria):
+   - Start Mailpit: `docker run -d -p 1025:1025 -p 8025:8025 axllent/mailpit`
+   - Set `MAIL_MOCK=true` in development
+   - Trigger order events via GraphQL mutations
+   - Check Mailpit UI (http://localhost:8025) for received emails
+   - Verify HTML and plain text rendering
+
+**Warning: Job Enqueueing Transaction Safety**
+
+⚠️ **IMPORTANT:** Email job enqueueing MUST happen within the same transaction as the order status update. This ensures consistency - if the status update fails, the email job is not created.
+
+The existing `updateOrderStatus` and `cancelOrder` methods in OrderService are already annotated with `@Transactional`. Your email job creation calls MUST be within these methods, NOT in separate transactions.
+
+**Correct Pattern:**
+```java
+@Transactional
+public CalendarOrder updateOrderStatus(...) {
+    // ... update order status ...
+    order.persist();  // Persist order changes
+
+    // Enqueue email job in SAME transaction
+    if (CalendarOrder.STATUS_PAID.equals(newStatus)) {
+        enqueueEmailJob(order, DelayedJobQueue.EMAIL_ORDER_CONFIRMATION);
+    }
+
+    return order;  // Transaction commits here (both order and job persisted atomically)
+}
+```
+
+**Warning: Email Template Directory Structure**
+
+The Qute template engine expects templates in:
+```
+src/main/resources/templates/{HandlerClassName}/{templateMethodName}.{extension}
+```
+
+For example:
+- Handler: `OrderEmailJobHandler`
+- Template method: `orderConfirmation(order, stylesheet)`
+- Location: `src/main/resources/templates/OrderEmailJobHandler/orderConfirmation.html`
+
+You MUST create subdirectories matching the handler class names:
+```
+src/main/resources/templates/
+├── OrderEmailJobHandler/
+│   ├── orderConfirmation.html
+│   └── orderConfirmation.txt
+├── ShippingNotificationJobHandler/
+│   ├── shippingNotification.html
+│   └── shippingNotification.txt
+└── OrderCancellationJobHandler/
+    ├── orderCancellation.html
+    └── orderCancellation.txt
+```
+
+**Warning: CSS Loading in Templates**
+
+All templates must load the CSS stylesheet using the exact same pattern as OrderEmailJobHandler:
+
+```java
+// In handler class:
+String css = loadResourceAsString("css/email.css");
+String htmlContent = Templates.shippingNotification(order, css).render();
+
+// In template:
+<style>
+    {stylesheet}
+</style>
+```
+
+Do NOT hardcode CSS in templates. Always pass it as a parameter for consistency and maintainability.
 
 ---
 
 ## Summary: What You Need to Do
 
-1. **Verify Current State**: Check if `src/main/java/villagecompute/calendar/api/graphql/dataloader/OrderDataLoader.java` exists
-2. **Implement Missing DataLoaders**: Add batch field resolvers for `CalendarOrder.calendar` and `CalendarOrder.user` relationships in OrderResolver.java
-3. **Write Integration Tests**: Create comprehensive tests in `OrderResolverTest.java` covering all acceptance criteria
-4. **Validate Existing Implementation**: Ensure the existing OrderResolver queries and mutations match all requirements
-5. **Run Tests**: Execute `./mvnw test` to verify all tests pass
-6. **Mark Task Complete**: If all acceptance criteria are met, update task status to `"done": true`
+Based on the codebase analysis, here's what is ALREADY DONE vs what you MUST IMPLEMENT:
+
+### ✅ Already Complete (Do NOT Modify):
+1. `EmailService.java` - Fully implemented
+2. `OrderEmailJobHandler.java` - Complete order confirmation email handler
+3. `orderConfirmation.html` - Complete HTML template
+4. `email.css` - Complete stylesheet
+5. `DelayedJob.java` - Job queue entity
+6. `DelayedJobQueue.java` - Queue types (includes all required email queues)
+7. `application.properties` - Mailer configuration complete
+
+### ❌ You MUST Implement:
+
+1. **Create Shipping Notification Handler:**
+   - File: `src/main/java/villagecompute/calendar/services/jobs/ShippingNotificationJobHandler.java`
+   - Copy pattern from OrderEmailJobHandler
+   - Include tracking number prominently
+   - Add OpenTelemetry tracing
+
+2. **Create Order Cancellation Handler:**
+   - File: `src/main/java/villagecompute/calendar/services/jobs/OrderCancellationJobHandler.java`
+   - Copy pattern from OrderEmailJobHandler
+   - Include cancellation reason from notes
+   - Add refund information if order was paid
+
+3. **Create Email Templates (6 files total):**
+   - `src/main/resources/templates/ShippingNotificationJobHandler/shippingNotification.html`
+   - `src/main/resources/templates/ShippingNotificationJobHandler/shippingNotification.txt`
+   - `src/main/resources/templates/OrderCancellationJobHandler/orderCancellation.html`
+   - `src/main/resources/templates/OrderCancellationJobHandler/orderCancellation.txt`
+   - **NOTE:** Do NOT create templates in `src/main/resources/email-templates/` as specified in target_files. The correct location is under `src/main/resources/templates/{HandlerName}/` to match Qute conventions. The OrderEmailJobHandler already sets the correct pattern.
+
+4. **Integrate Email Job Enqueueing into OrderService:**
+   - Add helper method `enqueueEmailJob(order, queue)`
+   - Call from `updateOrderStatus()` when status = PAID (order confirmation)
+   - Call from `updateOrderStatus()` when status = SHIPPED (shipping notification)
+   - Call from `cancelOrder()` after status change (cancellation email)
+   - All calls MUST be within existing `@Transactional` methods
+
+5. **Create Email Setup Documentation:**
+   - File: `docs/guides/email-setup.md`
+   - Include Google Workspace setup instructions
+   - Include Mailpit setup for development
+   - Document all environment variables
+   - Add troubleshooting section
+
+6. **Manual Testing with Mailpit:**
+   - Verify emails sent successfully
+   - Check HTML and plain text rendering
+   - Confirm retry behavior for failures
+
+### Verification Checklist:
+
+- [ ] ShippingNotificationJobHandler implements DelayedJobHandler
+- [ ] OrderCancellationJobHandler implements DelayedJobHandler
+- [ ] Both handlers follow OrderEmailJobHandler pattern exactly
+- [ ] 6 email templates created (3 HTML + 3 plain text)
+- [ ] Templates use Qute expressions for dynamic data
+- [ ] Templates reuse email.css stylesheet
+- [ ] OrderService.enqueueEmailJob() helper method added
+- [ ] Email jobs enqueued on order PAID status
+- [ ] Email jobs enqueued on order SHIPPED status
+- [ ] Email jobs enqueued on order cancellation
+- [ ] email-setup.md documentation complete
+- [ ] Mailpit testing shows emails received
+- [ ] HTML emails render correctly in email clients
+- [ ] Plain text fallback works

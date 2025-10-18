@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Order Has Shipped</title>
+    <style>
+        {stylesheet}
+    </style>
+</head>
+<body>
+    <div class="outer-wrapper">
+        <h1>📦 Your Order Has Shipped!</h1>
+
+        <p>Hi {order.user.displayName ?: order.user.email},</p>
+
+        <p>Great news! Your custom calendar order has been shipped and is on its way to you.</p>
+
+        <div class="highlight-box">
+            <strong>Tracking Number: {order.trackingNumber}</strong>
+            <p style="margin: 10px 0 0 0; color: white; font-size: 14px;">
+                Order #{order.orderNumber}
+            </p>
+        </div>
+
+        <h2>📋 Order Summary</h2>
+
+        <div class="detail-box">
+            <strong>Calendar:</strong>
+            {order.calendar.name} ({order.calendar.year})
+        </div>
+
+        <div class="detail-box">
+            <strong>Quantity:</strong>
+            {order.quantity} {#if order.quantity > 1}calendars{#else}calendar{/if}
+        </div>
+
+        <div class="detail-box">
+            <strong>Shipped Date:</strong>
+            {order.shippedAt.toString()}
+        </div>
+
+        <h2>📍 Shipping Address</h2>
+
+        <div class="shipping-box">
+            <strong>{order.shippingAddress.get('name').asText()}</strong><br>
+            {order.shippingAddress.get('line1').asText()}<br>
+            {#if order.shippingAddress.has('line2') && !order.shippingAddress.get('line2').isNull()}
+                {order.shippingAddress.get('line2').asText()}<br>
+            {/if}
+            {order.shippingAddress.get('city').asText()}, {order.shippingAddress.get('state').asText()} {order.shippingAddress.get('postalCode').asText()}<br>
+            {order.shippingAddress.get('country').asText()}
+        </div>
+
+        <h2>📦 Tracking Your Package</h2>
+
+        <p>You can track your shipment using the tracking number above. Most carriers update tracking information within 24 hours of shipment.</p>
+
+        <p><strong>Estimated Delivery:</strong> 3-7 business days from shipment date</p>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="https://calendar.villagecompute.com/orders/{order.id}" class="button">View Order Details</a>
+        </div>
+
+        <h2>📅 What to Expect</h2>
+
+        <ul style="color: #374151; font-size: 16px; line-height: 1.8;">
+            <li><strong>Delivery:</strong> Your package should arrive within 3-7 business days</li>
+            <li><strong>Packaging:</strong> Your calendar is carefully wrapped to ensure it arrives in perfect condition</li>
+            <li><strong>Quality Check:</strong> Each calendar is inspected before shipping to ensure the highest quality</li>
+        </ul>
+
+        <p>If you have any questions about your shipment or need assistance, please don't hesitate to reach out.</p>
+
+        <div class="footer">
+            <p><strong>Questions?</strong></p>
+            <p>Contact us at <a href="mailto:support@villagecompute.com">support@villagecompute.com</a></p>
+            <p style="margin-top: 20px;">
+                Village Compute Calendar<br>
+                <a href="https://calendar.villagecompute.com">calendar.villagecompute.com</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

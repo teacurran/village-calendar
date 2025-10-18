@@ -1,0 +1,53 @@
+YOUR ORDER HAS SHIPPED!
+====================================
+
+Hi {order.user.displayName ?: order.user.email},
+
+Great news! Your custom calendar order has been shipped and is on its way to you.
+
+TRACKING INFORMATION
+------------------------------------
+Tracking Number: {order.trackingNumber}
+Order Number: {order.orderNumber}
+
+ORDER SUMMARY
+------------------------------------
+Calendar: {order.calendar.name} ({order.calendar.year})
+Quantity: {order.quantity} {#if order.quantity > 1}calendars{#else}calendar{/if}
+Shipped Date: {order.shippedAt.toString()}
+
+SHIPPING ADDRESS
+------------------------------------
+{order.shippingAddress.get('name').asText()}
+{order.shippingAddress.get('line1').asText()}
+{#if order.shippingAddress.has('line2') && !order.shippingAddress.get('line2').isNull()}
+{order.shippingAddress.get('line2').asText()}
+{/if}
+{order.shippingAddress.get('city').asText()}, {order.shippingAddress.get('state').asText()} {order.shippingAddress.get('postalCode').asText()}
+{order.shippingAddress.get('country').asText()}
+
+TRACKING YOUR PACKAGE
+------------------------------------
+You can track your shipment using the tracking number above. Most carriers
+update tracking information within 24 hours of shipment.
+
+Estimated Delivery: 3-7 business days from shipment date
+
+WHAT TO EXPECT
+------------------------------------
+• Delivery: Your package should arrive within 3-7 business days
+• Packaging: Your calendar is carefully wrapped to ensure it arrives in perfect condition
+• Quality Check: Each calendar is inspected before shipping to ensure the highest quality
+
+If you have any questions about your shipment or need assistance, please don't
+hesitate to reach out.
+
+View your order online:
+https://calendar.villagecompute.com/orders/{order.id}
+
+Questions?
+------------------------------------
+Contact us at support@villagecompute.com
+
+Village Compute Calendar
+https://calendar.villagecompute.com

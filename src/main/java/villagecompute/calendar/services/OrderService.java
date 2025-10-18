@@ -6,6 +6,8 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarUser;
+import villagecompute.calendar.data.models.DelayedJob;
+import villagecompute.calendar.data.models.DelayedJobQueue;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.util.OrderNumberGenerator;
 
@@ -135,6 +137,13 @@ public class OrderService {
             order.shippedAt = Instant.now();
         }
 
+        // Enqueue email notifications based on status changes
+        if (CalendarOrder.STATUS_PAID.equals(newStatus)) {
+            enqueueEmailJob(order, DelayedJobQueue.EMAIL_ORDER_CONFIRMATION);
+        } else if (CalendarOrder.STATUS_SHIPPED.equals(newStatus)) {
+            enqueueEmailJob(order, DelayedJobQueue.EMAIL_SHIPPING_NOTIFICATION);
+        }
+
         // Append notes
         if (notes != null && !notes.isBlank()) {
             String timestamp = Instant.now().toString();
@@ -240,6 +249,9 @@ public class OrderService {
         String oldStatus = order.status;
         order.cancel();
 
+        // Enqueue cancellation email notification
+        enqueueEmailJob(order, DelayedJobQueue.EMAIL_GENERAL);
+
         // Add cancellation note
         String timestamp = Instant.now().toString();
         String noteEntry = String.format("[%s] Order cancelled from status %s. Reason: %s\n",
@@ -292,6 +304,22 @@ public class OrderService {
         // - Quantity and weight
         // - Shipping method (standard, express, etc.)
         return BigDecimal.ZERO;
+    }
+
+    /**
+     * Enqueue an email job for the specified order.
+     * The job will be processed asynchronously by the DelayedJob worker.
+     *
+     * @param order Order to send email for
+     * @param queue Email job queue type
+     */
+    private void enqueueEmailJob(CalendarOrder order, DelayedJobQueue queue) {
+        DelayedJob emailJob = DelayedJob.createDelayedJob(
+            order.id.toString(),
+            queue,
+            Instant.now()  // Run immediately
+        );
+        LOG.infof("Enqueued %s email job (ID: %s) for order %s", queue, emailJob.id, order.id);
     }
 
     /**
