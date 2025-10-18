@@ -87,7 +87,7 @@
     "acceptance_criteria": "Order dashboard displays all orders in DataTable (paginated, 25 per page), Filtering by status updates table (e.g., show only SHIPPED orders), Clicking order row opens OrderDetailsPanel with full order info, Admin can mark order as SHIPPED, enter tracking number, save changes, Non-admin users redirected from /admin routes (route guard check), GraphQL query uses admin context (orders query without userId filter), Status update mutation persists changes to database",
     "dependencies": ["I3.T4"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I3.T7",

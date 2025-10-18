@@ -55,3 +55,55 @@ export interface OrderUpdateInput {
   notes?: string;
   trackingNumber?: string;
 }
+
+/**
+ * Order filter options for admin dashboard
+ */
+export interface OrderFilters {
+  status: OrderStatus | string | null;
+  dateRange: Date[] | null;
+  search: string;
+}
+
+/**
+ * Status transition validation
+ * Defines which status transitions are valid from each current status
+ */
+export const VALID_STATUS_TRANSITIONS: Record<
+  OrderStatus | string,
+  (OrderStatus | string)[]
+> = {
+  PENDING: ["PAID", "CANCELLED"],
+  PAID: ["PROCESSING", "CANCELLED", "REFUNDED"],
+  PROCESSING: ["SHIPPED", "CANCELLED"],
+  SHIPPED: ["DELIVERED"],
+  DELIVERED: [],
+  CANCELLED: ["REFUNDED"],
+  REFUNDED: [],
+};
+
+/**
+ * Check if a status transition is valid
+ * @param currentStatus Current order status
+ * @param newStatus Proposed new status
+ * @returns true if transition is allowed
+ */
+export function isValidStatusTransition(
+  currentStatus: OrderStatus | string,
+  newStatus: OrderStatus | string,
+): boolean {
+  if (currentStatus === newStatus) return true;
+  const allowedTransitions = VALID_STATUS_TRANSITIONS[currentStatus] || [];
+  return allowedTransitions.includes(newStatus);
+}
+
+/**
+ * Get allowed status transitions for current status
+ * @param currentStatus Current order status
+ * @returns Array of valid next statuses
+ */
+export function getAllowedStatusTransitions(
+  currentStatus: OrderStatus | string,
+): (OrderStatus | string)[] {
+  return VALID_STATUS_TRANSITIONS[currentStatus] || [];
+}

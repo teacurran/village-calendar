@@ -11,6 +11,9 @@ import {
   Dropdown,
   Message,
   Tag,
+  Calendar,
+  IconField,
+  InputIcon,
 } from "primevue";
 import { useToast } from "primevue/usetoast";
 import { useOrderStore } from "../../stores/orderStore";
@@ -39,8 +42,11 @@ const loading = computed(() => orderStore.loading);
 const error = computed(() => orderStore.error);
 const orders = computed(() => orderStore.orders);
 
-// Status filter
+// Filters
 const statusFilter = ref<string | null>(null);
+const dateRangeFilter = ref<Date[] | null>(null);
+const searchQuery = ref<string>("");
+
 const statusOptions = [
   { label: "All Orders", value: null },
   { label: "Pending", value: "PENDING" },
@@ -200,10 +206,43 @@ function formatAddress(address: any): string {
 }
 
 /**
+ * Filtered orders based on all active filters
+ */
+const filteredOrders = computed(() => {
+  let result = orders.value;
+
+  // Apply search filter (order ID or customer email)
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    result = result.filter(
+      (order) =>
+        order.id.toLowerCase().includes(query) ||
+        order.user.email.toLowerCase().includes(query) ||
+        order.user.displayName?.toLowerCase().includes(query) ||
+        (order.trackingNumber &&
+          order.trackingNumber.toLowerCase().includes(query)),
+    );
+  }
+
+  // Apply date range filter
+  if (dateRangeFilter.value && dateRangeFilter.value.length === 2) {
+    const [startDate, endDate] = dateRangeFilter.value;
+    if (startDate && endDate) {
+      result = result.filter((order) => {
+        const orderDate = new Date(order.created);
+        return orderDate >= startDate && orderDate <= endDate;
+      });
+    }
+  }
+
+  return result;
+});
+
+/**
  * Get order count for current filter
  */
 const orderCount = computed(() => {
-  return orders.value.length;
+  return filteredOrders.value.length;
 });
 
 /**
@@ -211,6 +250,16 @@ const orderCount = computed(() => {
  */
 async function onStatusFilterChange() {
   await loadOrders();
+}
+
+/**
+ * Clear all filters
+ */
+function clearFilters() {
+  statusFilter.value = null;
+  dateRangeFilter.value = null;
+  searchQuery.value = "";
+  loadOrders();
 }
 
 onMounted(async () => {
@@ -230,29 +279,80 @@ onMounted(async () => {
     <!-- Error Display -->
     <Message v-if="error" severity="error" class="mb-4">{{ error }}</Message>
 
-    <!-- Status Filter -->
-    <div class="mb-4 flex items-center gap-4">
-      <label for="status-filter" class="font-semibold">Filter by Status:</label>
-      <Dropdown
-        id="status-filter"
-        v-model="statusFilter"
-        :options="statusOptions"
-        option-label="label"
-        option-value="value"
-        placeholder="Select status"
-        class="w-64"
-        @change="onStatusFilterChange"
-      />
-      <span class="text-surface-600">{{ orderCount }} orders</span>
+    <!-- Filters Section -->
+    <div class="mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Status Filter -->
+      <div>
+        <label for="status-filter" class="block font-semibold mb-2"
+          >Status</label
+        >
+        <Dropdown
+          id="status-filter"
+          v-model="statusFilter"
+          :options="statusOptions"
+          option-label="label"
+          option-value="value"
+          placeholder="All Orders"
+          class="w-full"
+          @change="onStatusFilterChange"
+        />
+      </div>
+
+      <!-- Date Range Filter -->
+      <div>
+        <label for="date-range" class="block font-semibold mb-2"
+          >Date Range</label
+        >
+        <Calendar
+          id="date-range"
+          v-model="dateRangeFilter"
+          selection-mode="range"
+          :manual-input="false"
+          date-format="mm/dd/yy"
+          placeholder="Select date range"
+          class="w-full"
+          show-icon
+          icon-display="input"
+        />
+      </div>
+
+      <!-- Search Filter -->
+      <div>
+        <label for="search" class="block font-semibold mb-2">Search</label>
+        <IconField>
+          <InputIcon class="pi pi-search" />
+          <InputText
+            id="search"
+            v-model="searchQuery"
+            placeholder="Order ID, email, tracking..."
+            class="w-full"
+          />
+        </IconField>
+      </div>
+
+      <!-- Filter Actions -->
+      <div class="flex items-end gap-2">
+        <Button
+          label="Clear Filters"
+          icon="pi pi-filter-slash"
+          severity="secondary"
+          outlined
+          @click="clearFilters"
+        />
+        <span class="text-surface-600 ml-2 self-center"
+          >{{ orderCount }} orders</span
+        >
+      </div>
     </div>
 
     <!-- Orders DataTable -->
     <DataTable
-      :value="orders"
+      :value="filteredOrders"
       :loading="loading"
       striped-rows
       paginator
-      :rows="20"
+      :rows="25"
+      :rows-per-page-options="[10, 25, 50, 100]"
       table-style="min-width: 50rem"
     >
       <template #empty>
