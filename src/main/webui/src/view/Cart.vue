@@ -25,6 +25,7 @@ const showPreviewModal = ref(false);
 const previewCalendarSvg = ref("");
 const previewCalendarName = ref("");
 const loading = ref(false);
+const allUserCalendars = ref<any[]>([]); // Add missing ref
 
 // Breadcrumbs
 const breadcrumbItems = computed(() => [
@@ -39,7 +40,9 @@ const cartItemCount = computed(() => cartStore.itemCount || 0);
 
 // Parse configuration and get calendar details
 const getCalendarConfig = (item: any) => {
-  if (item.productId === CALENDAR_PRODUCT_ID && item.configuration) {
+  // Check if this is a calendar item (either by productId or templateId)
+  const isCalendar = item.productId === CALENDAR_PRODUCT_ID || item.templateId === CALENDAR_PRODUCT_ID;
+  if (isCalendar && item.configuration) {
     try {
       // Configuration might already be parsed
       if (typeof item.configuration === "object") {
@@ -59,7 +62,7 @@ const getCalendarConfig = (item: any) => {
 
 // Check if item is a calendar
 const isCalendarItem = (item: any) => {
-  return item.productId === CALENDAR_PRODUCT_ID;
+  return item.productId === CALENDAR_PRODUCT_ID || item.templateId === CALENDAR_PRODUCT_ID;
 };
 
 // Get month name from number
@@ -163,8 +166,9 @@ const showCalendarPreview = (item: any) => {
     if (calendarSvgs.value[calendarKey]) {
       previewCalendarSvg.value = calendarSvgs.value[calendarKey];
       previewCalendarName.value =
-        config.title ||
-        `Calendar - ${getMonthName(config.month)} ${config.year}`;
+        config.name ||
+        item.templateName ||
+        `Calendar ${item.year || config.year}`;
       showPreviewModal.value = true;
     }
   }
@@ -368,7 +372,7 @@ watch(
                   <!-- Item Details -->
                   <div class="flex-1">
                     <h3 class="font-semibold text-lg mb-1">
-                      {{ item.productName }}
+                      {{ item.templateName || item.productName }}
                     </h3>
                     <p
                       v-if="item.description"
@@ -383,11 +387,11 @@ watch(
                       class="text-sm text-surface-600"
                     >
                       <template v-if="getCalendarConfig(item)">
-                        <p>{{ getCalendarConfig(item).title }}</p>
-                        <p>
-                          {{ getMonthName(getCalendarConfig(item).month) }}
-                          {{ getCalendarConfig(item).year }}
-                        </p>
+                        <p v-if="getCalendarConfig(item).name">{{ getCalendarConfig(item).name }}</p>
+                        <p>Year: {{ item.year || getCalendarConfig(item).year }}</p>
+                      </template>
+                      <template v-else>
+                        <p>Year: {{ item.year }}</p>
                       </template>
                     </div>
 

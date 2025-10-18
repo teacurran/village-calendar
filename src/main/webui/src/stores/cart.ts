@@ -1,6 +1,7 @@
 // ./stores/cart.ts
 import { defineStore } from "pinia";
 import { useUserStore } from "./user";
+import { getSessionId } from "@/services/sessionService";
 
 export interface CartItem {
   id: string;
@@ -49,6 +50,7 @@ export const useCartStore = defineStore("cart", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-Session-ID": getSessionId(),
           },
           body: JSON.stringify({
             query: `
@@ -130,6 +132,7 @@ export const useCartStore = defineStore("cart", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-Session-ID": getSessionId(),
           },
           body: JSON.stringify({
             query: `
@@ -200,6 +203,7 @@ export const useCartStore = defineStore("cart", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-Session-ID": getSessionId(),
           },
           body: JSON.stringify({
             query: `
@@ -260,6 +264,7 @@ export const useCartStore = defineStore("cart", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-Session-ID": getSessionId(),
           },
           body: JSON.stringify({
             query: `
@@ -319,6 +324,7 @@ export const useCartStore = defineStore("cart", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-Session-ID": getSessionId(),
           },
           body: JSON.stringify({
             query: `
