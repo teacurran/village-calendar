@@ -70,14 +70,13 @@ class OrderServiceTest {
         testCalendar.isPublic = false;
         testCalendar.persist();
 
-        // Create test shipping address
+        // Create test shipping address (using ISO 3166-1 alpha-2 country code)
         testShippingAddress = objectMapper.createObjectNode();
-        testShippingAddress.put("name", "Test User");
-        testShippingAddress.put("line1", "123 Test St");
+        testShippingAddress.put("street", "123 Test St");
         testShippingAddress.put("city", "Test City");
-        testShippingAddress.put("state", "TC");
+        testShippingAddress.put("state", "CA");
         testShippingAddress.put("postalCode", "12345");
-        testShippingAddress.put("country", "USA");
+        testShippingAddress.put("country", "US");
     }
 
     @Test
@@ -103,7 +102,8 @@ class OrderServiceTest {
         assertEquals(testCalendar.id, order.calendar.id);
         assertEquals(quantity, order.quantity);
         assertEquals(unitPrice, order.unitPrice);
-        assertEquals(new BigDecimal("59.98"), order.totalPrice);
+        // Total: (2 × $29.99) + $5.99 shipping + $0 tax = $65.97
+        assertEquals(new BigDecimal("65.97"), order.totalPrice);
         assertEquals(CalendarOrder.STATUS_PENDING, order.status);
         assertNotNull(order.shippingAddress);
         assertNull(order.paidAt);
@@ -541,7 +541,7 @@ class OrderServiceTest {
     @Test
     @Transactional
     void testOrderTotalCalculation() {
-        // Given - Tax and shipping are currently zero (placeholders)
+        // Given - Tax is zero (placeholder), shipping is $5.99
         Integer quantity = 3;
         BigDecimal unitPrice = new BigDecimal("25.00");
 
@@ -554,10 +554,11 @@ class OrderServiceTest {
             testShippingAddress
         );
 
-        // Then - Total should be subtotal + tax (0) + shipping (0)
-        BigDecimal expectedTotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
+        // Then - Total should be subtotal + tax (0) + shipping ($5.99)
+        BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity)); // $75.00
+        BigDecimal expectedTotal = subtotal.add(new BigDecimal("5.99")); // $80.99
         assertEquals(expectedTotal, order.totalPrice);
-        assertEquals(new BigDecimal("75.00"), order.totalPrice);
+        assertEquals(new BigDecimal("80.99"), order.totalPrice);
     }
 
     @Test

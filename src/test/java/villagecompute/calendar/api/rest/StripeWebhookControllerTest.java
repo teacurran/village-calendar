@@ -416,12 +416,21 @@ public class StripeWebhookControllerTest {
         // Use programmatic transaction to ensure data is committed before HTTP call
         UUID orderId = QuarkusTransaction.requiringNew().call(() -> {
             try {
+                JsonNode testAddress = objectMapper.readTree("""
+                    {
+                        "street": "123 Test St",
+                        "city": "Test City",
+                        "state": "CA",
+                        "postalCode": "12345",
+                        "country": "US"
+                    }
+                    """);
                 CalendarOrder order = orderService.createOrder(
                     testUser,
                     testCalendar,
                     1,
                     new BigDecimal("29.99"),
-                    objectMapper.readTree("{\"city\": \"Test\"}")
+                    testAddress
                 );
                 order.stripePaymentIntentId = "pi_test_direct_flow";
                 order.persist();

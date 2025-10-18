@@ -10,30 +10,35 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I3.T7",
+  "task_id": "I3.T8",
   "iteration_id": "I3",
   "iteration_goal": "Implement complete e-commerce workflow including Stripe payment integration, order placement, order management dashboard (admin), and transactional email notifications",
-  "description": "Create EmailService for composing and sending transactional emails via SMTP (GoogleWorkspace initially). Implement email templates (HTML + plain text) for: order confirmation (sent on payment success), shipping notification (sent when order marked as SHIPPED with tracking number), order cancellation (sent when order cancelled). Configure JavaMail in application.properties (SMTP host, port, TLS, auth credentials from env variables). Create EmailJob (DelayedJob implementation) for async email sending. Implement email queueing via JobManager (enqueue EmailJob on order events). Add retry logic for failed email sends. Test with Mailpit (local SMTP server for development). Document email configuration in docs/guides/email-setup.md.",
+  "description": "Create ShippingService for calculating shipping costs based on destination address. Implement simple shipping rate table (configurable in database or properties): domestic (US) shipping tiers (standard, priority, express with fixed rates), international shipping (fixed rate by region or disable for MVP). Add shipping cost calculation to OrderService.createOrder (parse shipping address, determine rate, add to order total). Create shipping_rates configuration table or use application.properties. Handle tax calculation (placeholder for Stripe Tax integration in future - for MVP, use simple state sales tax table or skip). Add shipping cost display in checkout UI (update OrderSummary component).",
   "agent_type_hint": "BackendAgent",
-  "inputs": "Email notification requirements from Plan Section \"Order Notifications\", JavaMail documentation, DelayedJob pattern from architecture plan",
+  "inputs": "Shipping requirements from Plan Section 'Shipping Options', Order and shipping address structure from Order entity",
   "target_files": [
-    "src/main/java/com/villagecompute/calendar/integration/email/EmailService.java",
-    "src/main/java/com/villagecompute/calendar/jobs/EmailJob.java",
-    "src/main/resources/email-templates/order-confirmation.html",
-    "src/main/resources/email-templates/order-confirmation.txt",
-    "src/main/resources/email-templates/shipping-notification.html",
-    "src/main/resources/email-templates/shipping-notification.txt",
-    "src/main/resources/email-templates/order-cancellation.html",
-    "src/main/resources/email-templates/order-cancellation.txt",
-    "docs/guides/email-setup.md"
+    "src/main/java/villagecompute/calendar/services/ShippingService.java",
+    "src/main/resources/application.properties",
+    "src/test/java/villagecompute/calendar/services/ShippingServiceTest.java"
   ],
   "input_files": [
-    "src/main/resources/application.properties",
-    "src/main/java/com/villagecompute/calendar/model/DelayedJob.java",
-    "src/main/java/com/villagecompute/calendar/service/OrderService.java"
+    "src/main/java/villagecompute/calendar/services/OrderService.java",
+    "src/main/java/villagecompute/calendar/data/models/CalendarOrder.java"
   ],
-  "deliverables": "EmailService with template rendering and SMTP sending, EmailJob for async email processing, Email templates (HTML + plain text) for all order events, Email queueing integrated into OrderService, Retry logic for failed sends (DelayedJob retry mechanism), Email configuration guide",
-  "acceptance_criteria": "EmailService sends email successfully via GoogleWorkspace SMTP, Email templates render with order data (order number, customer name, items), EmailJob enqueued when order status changes to PAID or SHIPPED, Failed email sends retry 3 times with exponential backoff, Mailpit receives emails during local development (SMTP localhost:1025), Email configuration guide tested with fresh GoogleWorkspace account",
+  "deliverables": [
+    "ShippingService with rate calculation logic",
+    "Shipping rates configured (standard: $5.99, priority: $9.99, express: $14.99 for MVP)",
+    "Integration into OrderService (shipping cost added to order total)",
+    "Unit tests for rate calculation (domestic, international)"
+  ],
+  "acceptance_criteria": [
+    "ShippingService.calculateRate(address) returns correct rate based on address",
+    "Domestic US addresses charged standard rate ($5.99)",
+    "International addresses charged higher rate or rejected (for MVP)",
+    "OrderService.createOrder includes shipping cost in total",
+    "Unit tests verify rate calculation for various address scenarios",
+    "Shipping cost displayed in checkout UI OrderSummary component"
+  ],
   "dependencies": ["I3.T2"],
   "parallelizable": true,
   "done": false
@@ -46,98 +51,79 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: Logging & Monitoring (from 05_Operational_Architecture.md)
+### Context: Task I3.T8 Detailed Specification (from 02_Iteration_I3.md)
 
 ```markdown
-<!-- anchor: logging-monitoring -->
-#### 3.8.2. Logging & Monitoring
+### Task 3.8: Implement Shipping Cost Calculation
 
-**Logging Strategy:**
-
-**Structured Logging (JSON Format):**
-
-All application logs are emitted as structured JSON to enable efficient parsing, filtering, and aggregation by observability tools.
-
-**Example Log Entry:**
-```json
-{
-  "timestamp": "2025-10-16T14:32:15.123Z",
-  "level": "INFO",
-  "logger": "com.villagecompute.calendar.service.OrderService",
-  "message": "Order placed successfully",
-  "context": {
-    "userId": 12345,
-    "orderId": 67890,
-    "total": 29.99,
-    "paymentMethod": "card"
-  },
-  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
-  "spanId": "00f067aa0ba902b7"
-}
-```
-
-**Log Levels:**
-- **ERROR**: Application errors requiring immediate attention (payment failures, database connection loss, job crashes)
-- **WARN**: Degraded operation or unexpected behavior (high retry count, deprecated API usage, slow queries >1s)
-- **INFO**: Significant business events (order placed, user registered, PDF generated, email sent)
-- **DEBUG**: Detailed troubleshooting information (GraphQL query details, external API request/response, job queue polling)
-- **TRACE**: Very verbose (SQL queries, method entry/exit) - enabled only in development
-```
-
-### Context: Task 3.7 - Email Notification System (from 02_Iteration_I3.md)
-
-```markdown
-<!-- anchor: task-i3-t7 -->
-### Task 3.7: Implement Email Notification System
-
-**Task ID:** `I3.T7`
+**Task ID:** `I3.T8`
 
 **Description:**
-Create EmailService for composing and sending transactional emails via SMTP (GoogleWorkspace initially). Implement email templates (HTML + plain text) for: order confirmation (sent on payment success), shipping notification (sent when order marked as SHIPPED with tracking number), order cancellation (sent when order cancelled). Configure JavaMail in application.properties (SMTP host, port, TLS, auth credentials from env variables). Create EmailJob (DelayedJob implementation) for async email sending. Implement email queueing via JobManager (enqueue EmailJob on order events). Add retry logic for failed email sends. Test with Mailpit (local SMTP server for development). Document email configuration in docs/guides/email-setup.md.
+Create ShippingService for calculating shipping costs based on destination address. Implement simple shipping rate table (configurable in database or properties): domestic (US) shipping tiers (standard, priority, express with fixed rates), international shipping (fixed rate by region or disable for MVP). Add shipping cost calculation to OrderService.createOrder (parse shipping address, determine rate, add to order total). Create shipping_rates configuration table or use application.properties. Handle tax calculation (placeholder for Stripe Tax integration in future - for MVP, use simple state sales tax table or skip). Add shipping cost display in checkout UI (update OrderSummary component).
 
 **Agent Type Hint:** `BackendAgent`
 
 **Inputs:**
-- Email notification requirements from Plan Section "Order Notifications"
-- JavaMail documentation
-- DelayedJob pattern from architecture plan
+- Shipping requirements from Plan Section "Shipping Options"
+- Order and shipping address structure from Order entity
 
 **Input Files:**
-- `src/main/resources/application.properties`
-- `src/main/java/com/villagecompute/calendar/model/DelayedJob.java`
-- `src/main/java/com/villagecompute/calendar/service/OrderService.java`
+- `src/main/java/villagecompute/calendar/service/OrderService.java`
+- `src/main/java/villagecompute/calendar/model/Order.java`
 
 **Target Files:**
-- `src/main/java/com/villagecompute/calendar/integration/email/EmailService.java`
-- `src/main/java/com/villagecompute/calendar/jobs/EmailJob.java`
-- `src/main/resources/email-templates/order-confirmation.html`
-- `src/main/resources/email-templates/order-confirmation.txt`
-- `src/main/resources/email-templates/shipping-notification.html`
-- `src/main/resources/email-templates/shipping-notification.txt`
-- `src/main/resources/email-templates/order-cancellation.html`
-- `src/main/resources/email-templates/order-cancellation.txt`
-- `docs/guides/email-setup.md`
+- `src/main/java/villagecompute/calendar/service/ShippingService.java`
+- `src/main/resources/application.properties` (add shipping rate config)
+- `src/test/java/villagecompute/calendar/service/ShippingServiceTest.java`
 
 **Deliverables:**
-- EmailService with template rendering and SMTP sending
-- EmailJob for async email processing
-- Email templates (HTML + plain text) for all order events
-- Email queueing integrated into OrderService
-- Retry logic for failed sends (DelayedJob retry mechanism)
-- Email configuration guide
+- ShippingService with rate calculation logic
+- Shipping rates configured (standard: $5.99, priority: $9.99, express: $14.99 for MVP)
+- Integration into OrderService (shipping cost added to order total)
+- Unit tests for rate calculation (domestic, international)
 
 **Acceptance Criteria:**
-- EmailService sends email successfully via GoogleWorkspace SMTP
-- Email templates render with order data (order number, customer name, items)
-- EmailJob enqueued when order status changes to PAID or SHIPPED
-- Failed email sends retry 3 times with exponential backoff
-- Mailpit receives emails during local development (SMTP localhost:1025)
-- Email configuration guide tested with fresh GoogleWorkspace account
+- `ShippingService.calculateRate(address)` returns correct rate based on address
+- Domestic US addresses charged standard rate ($5.99)
+- International addresses charged higher rate or rejected (for MVP)
+- OrderService.createOrder includes shipping cost in total
+- Unit tests verify rate calculation for various address scenarios
+- Shipping cost displayed in checkout UI OrderSummary component
 
-**Dependencies:** `I3.T2` (OrderService for integration points)
+**Dependencies:** `I3.T2` (OrderService)
 
-**Parallelizable:** Yes (can develop concurrently with order workflow)
+**Parallelizable:** Yes (can develop concurrently with email system)
 ```
+
+### Context: Shipping Address Structure (from api/schema.graphql)
+
+```graphql
+input AddressInput {
+  """City"""
+  city: String!
+
+  """Country code (ISO 3166-1 alpha-2, e.g., "US")"""
+  country: String!
+
+  """Postal/ZIP code"""
+  postalCode: String!
+
+  """State/province code (e.g., "TN", "CA")"""
+  state: String!
+
+  """Street address"""
+  street: String!
+
+  """Apartment, suite, etc. (optional)"""
+  street2: String
+}
+```
+
+### Context: Order Data Model (from database ERD references)
+
+The Order entity (CalendarOrder) includes:
+- `shipping_address` field stored as JSONB containing the address structure above
+- `total_price` calculation that should include: subtotal + tax + shipping
 
 ---
 
@@ -145,253 +131,188 @@ Create EmailService for composing and sending transactional emails via SMTP (Goo
 
 The following analysis is based on my direct review of the current codebase. Use these notes and tips to guide your implementation.
 
-### ⚠️ CRITICAL DISCOVERY: This Task is ~80% Complete!
+### Relevant Existing Code
 
-**Investigation Summary:** Upon examining the codebase, I discovered that the email notification system has already been substantially implemented. Here's the actual status:
+*   **File:** `src/main/java/villagecompute/calendar/services/OrderService.java`
+    *   **Summary:** This is the main order management service. It already has placeholder methods `calculateTax()` (lines 283-290) and `calculateShipping()` (lines 300-307) that both return `BigDecimal.ZERO`. These methods are called during `createOrder()` at lines 73-74.
+    *   **Recommendation:** You MUST inject ShippingService via `@Inject` and call it from the `calculateShipping()` method. Replace the current `return BigDecimal.ZERO;` with a call like `return shippingService.calculateShippingCost(order);`
+    *   **Critical Note:** The `calculateShipping()` method receives a `CalendarOrder` parameter that already has the `shippingAddress` field populated (see line 70 where it's set before calculation). Your service can extract the JsonNode address from `order.shippingAddress`.
+    *   **Integration Point:** Lines 73-74 show how calculateShipping is called: `BigDecimal shipping = calculateShipping(order);` The result is added to the total at line 77.
 
-### ✅ COMPLETED Components (Already Exist):
+*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarOrder.java`
+    *   **Summary:** This entity defines the order data model. The shipping address is stored as a `JsonNode` field at line 71 (`public JsonNode shippingAddress;`) with JSONB column type.
+    *   **Recommendation:** Your ShippingService MUST be able to parse a `JsonNode` to extract address fields. Use Jackson's `JsonNode.get("field")` methods to extract `country`, `state`, etc.
+    *   **Key Fields:** Lines 49-66 define the order structure. Note `quantity` (line 50), `unitPrice` (line 55), `totalPrice` (line 60), and `shippingAddress` (line 69).
+    *   **Address Format:** The JsonNode will contain fields matching the GraphQL AddressInput: `country`, `state`, `city`, `street`, `postalCode`, `street2` (optional).
 
-*   **File:** `src/main/java/villagecompute/calendar/services/EmailService.java` - **FULLY IMPLEMENTED**
-    *   **Summary:** Complete email service using Quarkus Mailer (NOT JavaMail directly). Supports both text and HTML emails with environment-aware subject prefixes.
-    *   **Methods:** `sendEmail()`, `sendHtmlEmail()` with from/to/subject/body parameters
-    *   **Features:** Environment prefix for non-prod emails (e.g., "[DEV] Order Confirmation")
-    *   **Recommendation:** DO NOT create a new EmailService. This implementation is production-ready. Quarkus Mailer handles SMTP configuration automatically.
+*   **File:** `src/main/java/villagecompute/calendar/services/EmailService.java`
+    *   **Summary:** This is an example of a well-structured Quarkus service using `@ApplicationScoped` (line 14), dependency injection, and configuration properties with `@ConfigProperty`.
+    *   **Recommendation:** You SHOULD follow this exact pattern for your ShippingService:
+        - Use `@ApplicationScoped` annotation on the class
+        - Use `@ConfigProperty` to inject shipping rates from application.properties (see lines 22-23 for the pattern)
+        - Use `Logger.getLogger(ShippingService.class)` for logging (line 17)
+        - Follow the method documentation style (Javadoc comments)
 
-*   **File:** `src/main/java/villagecompute/calendar/data/models/DelayedJob.java` - **COMPLETE**
-    *   **Summary:** Job entity with retry logic, priority queuing, and factory methods
-    *   **Key Method:** `createDelayedJob(actorId, queue, runAt)` - Creates and persists jobs
-    *   **Recommendation:** Use this entity exactly as-is for email job creation
-
-*   **File:** `src/main/java/villagecompute/calendar/data/models/DelayedJobQueue.java` - **COMPLETE**
-    *   **Summary:** Enum with all required email queues already defined:
-        - `EMAIL_ORDER_CONFIRMATION(10)` - High priority
-        - `EMAIL_SHIPPING_NOTIFICATION(10)` - High priority
-        - `EMAIL_GENERAL(5)` - Medium priority (for cancellations)
-    *   **Recommendation:** NO changes needed. All email queues exist.
-
-*   **File:** `src/main/java/villagecompute/calendar/services/jobs/OrderEmailJobHandler.java` - **FULLY IMPLEMENTED**
-    *   **Summary:** Complete job handler for order confirmation emails using Qute templates
-    *   **Pattern:** Uses @CheckedTemplate for type-safe templates, loads CSS from resources, sends HTML email via EmailService
-    *   **Location:** Templates in `src/main/resources/templates/OrderEmailJobHandler/`
-    *   **Recommendation:** Use this as the exact pattern for implementing OrderCancellationJobHandler
-
-*   **File:** `src/main/java/villagecompute/calendar/services/jobs/ShippingNotificationJobHandler.java` - **FULLY IMPLEMENTED**
-    *   **Summary:** Complete job handler for shipping notifications with tracking number validation
-    *   **Location:** Templates in `src/main/resources/templates/ShippingNotificationJobHandler/`
-    *   **Recommendation:** Reference this for cancellation handler implementation
-
-*   **Email Templates - Order Confirmation** - **BOTH HTML AND TEXT EXIST**
-    *   **Files:**
-        - `src/main/resources/templates/OrderEmailJobHandler/orderConfirmation.html`
-        - `src/main/resources/templates/OrderEmailJobHandler/orderConfirmation.txt`
-    *   **Summary:** Professional HTML email with inline CSS, order details, shipping address, next steps
-    *   **Recommendation:** These are production-ready. Do not modify unless improving design.
-
-*   **Email Templates - Shipping Notification** - **BOTH HTML AND TEXT EXIST**
-    *   **Files:**
-        - `src/main/resources/templates/ShippingNotificationJobHandler/shippingNotification.html`
-        - `src/main/resources/templates/ShippingNotificationJobHandler/shippingNotification.txt`
-    *   **Recommendation:** Production-ready shipping notification templates exist.
-
-*   **OrderService Integration** - **FULLY IMPLEMENTED**
-    *   **File:** `src/main/java/villagecompute/calendar/services/OrderService.java`
-    *   **Methods:**
-        - `enqueueEmailJob(order, queue)` (lines 316-323) - Creates DelayedJob for emails
-        - `updateOrderStatus()` (lines 141-145) - Enqueues EMAIL_ORDER_CONFIRMATION on PAID
-        - `updateOrderStatus()` (lines 143-145) - Enqueues EMAIL_SHIPPING_NOTIFICATION on SHIPPED
-    *   **Recommendation:** Email job enqueueing is COMPLETE. Only cancellation email needs to be added (line 253).
-
-*   **SMTP Configuration** - **COMPLETE**
-    *   **File:** `src/main/resources/application.properties`
-    *   **Config:**
+*   **File:** `src/main/resources/application.properties`
+    *   **Summary:** Main configuration file. Lines 116-120 show the R2 configuration pattern, lines 133-135 show Stripe configuration pattern.
+    *   **Recommendation:** You MUST add shipping rate configuration following this pattern:
         ```properties
-        quarkus.mailer.from=${MAIL_FROM:noreply@villagecompute.com}
-        quarkus.mailer.host=${MAIL_HOST:smtp.example.com}
-        quarkus.mailer.port=${MAIL_PORT:587}
-        quarkus.mailer.start-tls=REQUIRED
-        quarkus.mailer.username=${MAIL_USERNAME:placeholder}
-        quarkus.mailer.password=${MAIL_PASSWORD:placeholder}
-        quarkus.mailer.mock=${MAIL_MOCK:true}
+        # Shipping Rate Configuration
+        calendar.shipping.domestic.standard=${SHIPPING_STANDARD:5.99}
+        calendar.shipping.domestic.priority=${SHIPPING_PRIORITY:9.99}
+        calendar.shipping.domestic.express=${SHIPPING_EXPRESS:14.99}
+        calendar.shipping.international=${SHIPPING_INTERNATIONAL:19.99}
         ```
-    *   **Recommendation:** SMTP configuration is complete with environment variable support. No changes needed.
-
-*   **CSS Stylesheet** - **EXISTS**
-    *   **File:** `src/main/resources/css/email.css`
-    *   **Summary:** Common email styles loaded by all handlers via `loadResourceAsString()`
-    *   **Recommendation:** Reuse this CSS for cancellation emails
-
-### ❌ MISSING Components (To Be Implemented):
-
-1. **OrderCancellationJobHandler** - **NOT IMPLEMENTED**
-    *   **Required:** `src/main/java/villagecompute/calendar/services/jobs/OrderCancellationJobHandler.java`
-    *   **Pattern:** Copy OrderEmailJobHandler.java, modify for cancellation logic
-    *   **Key Differences:**
-        - Template name: `orderCancellation` instead of `orderConfirmation`
-        - Subject: "Order Cancelled - Village Compute Calendar"
-        - Add cancellation reason to template data
-        - Include refund processing note (if order was PAID)
-
-2. **Order Cancellation Email Templates** - **NOT IMPLEMENTED**
-    *   **Required:**
-        - `src/main/resources/templates/OrderCancellationJobHandler/orderCancellation.html`
-        - `src/main/resources/templates/OrderCancellationJobHandler/orderCancellation.txt`
-    *   **Content:** Order details, cancellation reason, refund info (if applicable), support contact
-
-3. **OrderService.cancelOrder() Email Integration** - **PARTIALLY IMPLEMENTED**
-    *   **Current:** Line 253 enqueues EMAIL_GENERAL queue
-    *   **Required:** Change to specific cancellation queue or handler
-    *   **Fix:** Update to use EMAIL_GENERAL with OrderCancellationJobHandler
-
-4. **Email Setup Documentation** - **NOT IMPLEMENTED**
-    *   **Required:** `docs/guides/email-setup.md`
-    *   **Content:**
-        - How to configure GoogleWorkspace SMTP
-        - Environment variables required (MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD)
-        - Mailpit setup for local testing (Docker compose example)
-        - Testing email templates locally
-        - Troubleshooting common SMTP issues
-
-### Implementation Recommendations
-
-**RECOMMENDED APPROACH: Minimal Implementation**
-
-Since 80% of the work is done, you should:
-
-1. **Create OrderCancellationJobHandler** (30 minutes)
-   - Copy OrderEmailJobHandler.java
-   - Change class name, template references
-   - Modify subject and logging messages
-   - Handle cancellation-specific data
-
-2. **Create Cancellation Email Templates** (45 minutes)
-   - HTML template following orderConfirmation.html pattern
-   - Plain text version
-   - Include: order details, cancellation reason, refund note, support info
-
-3. **Update Email Queue Mapping** (15 minutes)
-   - Verify EMAIL_GENERAL queue routes to OrderCancellationJobHandler
-   - Or add EMAIL_ORDER_CANCELLATION queue if preferred
-
-4. **Write Email Setup Guide** (60 minutes)
-   - Document GoogleWorkspace SMTP setup
-   - Mailpit Docker configuration
-   - Testing procedures
-   - Environment variable reference
-
-**Total Estimated Time: 2-3 hours** (not days!)
-
-### Key Existing Files YOU MUST Review:
-
-*   **`src/main/java/villagecompute/calendar/services/EmailService.java`**
-    *   **Purpose:** Core email sending service using Quarkus Mailer
-    *   **DO NOT MODIFY:** This service is complete and working
-    *   **Usage:** Import and inject this service in your job handlers
-
-*   **`src/main/java/villagecompute/calendar/services/jobs/OrderEmailJobHandler.java`**
-    *   **Purpose:** Reference implementation for email job handlers
-    *   **Pattern to Copy:**
-        - @ApplicationScoped class implementing DelayedJobHandler
-        - @CheckedTemplate inner class for type-safe templates
-        - @WithSpan for distributed tracing
-        - loadResourceAsString() for CSS injection
-        - DelayedJobException with permanent/transient flag
-
-*   **`src/main/resources/templates/OrderEmailJobHandler/orderConfirmation.html`**
-    *   **Purpose:** HTML email template example
-    *   **Pattern to Copy:**
-        - DOCTYPE and responsive HTML structure
-        - Qute template syntax: {order.user.displayName}, {order.totalPrice}
-        - CSS injection: {stylesheet} placeholder
-        - Brand styling: colors, buttons, footer
-
-*   **`src/main/java/villagecompute/calendar/services/OrderService.java`**
-    *   **Purpose:** Order business logic with email enqueueing
-    *   **Line 253:** Currently enqueues EMAIL_GENERAL for cancellations
-    *   **DO MODIFY:** Ensure cancellation emails use correct queue
+    *   **Convention:** Use the `calendar.shipping.*` prefix to match other calendar-specific configs. Include environment variable fallback with default values.
 
 ### Implementation Tips & Notes
 
-*   **Tip 1: Handler Registration**
-    - Quarkus CDI automatically discovers @ApplicationScoped job handlers
-    - No manual registration needed
-    - Handler must implement DelayedJobHandler interface
+*   **Tip 1: JSON Address Parsing**
+    The shipping address is stored as a Jackson `JsonNode`. To extract the country:
+    ```java
+    JsonNode address = order.shippingAddress;
+    String country = address.get("country").asText();
+    ```
+    Use `asText()` to safely convert to String (returns empty string if field is missing).
 
-*   **Tip 2: Template Directory Structure**
-    - Templates MUST be in `src/main/resources/templates/{HandlerClassName}/`
-    - Example: `templates/OrderCancellationJobHandler/orderCancellation.html`
-    - Qute @CheckedTemplate matches handler class name automatically
+*   **Tip 2: Configuration Injection Pattern**
+    Inject shipping rates using `@ConfigProperty` with BigDecimal type:
+    ```java
+    @ConfigProperty(name = "calendar.shipping.domestic.standard", defaultValue = "5.99")
+    BigDecimal domesticStandardRate;
+    ```
+    Quarkus will automatically convert the string to BigDecimal.
 
-*   **Tip 3: Error Handling**
-    - Permanent failures: `throw new DelayedJobException(true, "Order not found")`
-    - Transient failures: `throw new DelayedJobException(false, "SMTP timeout")`
-    - Permanent failures won't retry (e.g., order doesn't exist)
-    - Transient failures retry with exponential backoff
+*   **Tip 3: MVP Simplification**
+    For MVP, the task says to reject international orders. Implement this by:
+    ```java
+    if (!"US".equals(country)) {
+        throw new IllegalArgumentException("International shipping not supported in MVP");
+    }
+    ```
+    Later, you can return a higher rate instead of throwing an exception.
 
-*   **Tip 4: Testing with Mailpit**
-    - Run Mailpit: `docker run -d -p 1025:1025 -p 8025:8025 mailpit/mailpit`
-    - Configure: `MAIL_HOST=localhost MAIL_PORT=1025 MAIL_MOCK=false`
-    - View emails: http://localhost:8025
-    - No authentication needed for Mailpit
+*   **Tip 4: Tax Calculation**
+    The task mentions "Handle tax calculation" but says to "skip for MVP". The OrderService.calculateTax() method already returns zero with a TODO comment. You should:
+    - Leave calculateTax() as-is (returning BigDecimal.ZERO)
+    - Update the TODO comment to reference future Stripe Tax integration
+    - Do NOT implement tax logic in this task
 
-*   **Tip 5: CSS Loading**
-    - CSS file: `src/main/resources/css/email.css`
-    - Load via: `loadResourceAsString("css/email.css")`
-    - Inject into template: `Templates.orderCancellation(order, css)`
-    - Template uses: `<style>{stylesheet}</style>`
+*   **Tip 5: Unit Testing with JsonNode**
+    For unit tests, create sample addresses using Jackson ObjectMapper:
+    ```java
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode usAddress = mapper.readTree("{\"country\":\"US\",\"state\":\"TN\",\"city\":\"Nashville\"}");
+    ```
 
-*   **Tip 6: Qute Template Syntax**
-    - Variables: `{order.user.email}`
-    - Conditionals: `{#if order.quantity > 1}calendars{#else}calendar{/if}`
-    - JSON fields: `{order.shippingAddress.get('name').asText()}`
-    - Null safety: `{order.user.displayName ?: order.user.email}` (Elvis operator)
+*   **Tip 6: Method Signature**
+    The OrderService expects to call `calculateShipping(CalendarOrder order)`, so your service method should be:
+    ```java
+    public BigDecimal calculateShippingCost(CalendarOrder order)
+    ```
+    This maintains consistency with the existing `calculateTax(CalendarOrder order)` pattern.
 
-*   **Warning 1: Package Name Mismatch**
-    - Task spec says: `com.villagecompute.calendar`
-    - Actual package: `villagecompute.calendar` (no "com.")
-    - Use actual package names from existing code
+*   **Tip 7: Null Safety**
+    Add validation for null or missing address fields:
+    ```java
+    if (order.shippingAddress == null) {
+        throw new IllegalArgumentException("Shipping address is required");
+    }
+    if (!order.shippingAddress.has("country")) {
+        throw new IllegalArgumentException("Country is required in shipping address");
+    }
+    ```
 
-*   **Warning 2: Template Path Mismatch**
-    - Task spec says: `src/main/resources/email-templates/`
-    - Actual path: `src/main/resources/templates/`
-    - Follow existing convention: `templates/{HandlerClassName}/`
+*   **Tip 8: Logging Best Practices**
+    Follow the existing logging pattern:
+    - Use `LOG.infof()` for significant events (e.g., "Calculated shipping cost $%.2f for order %s", cost, orderId)
+    - Use `LOG.debugf()` for detailed parsing steps (e.g., "Parsed address: country=%s, state=%s")
+    - Use `LOG.errorf()` for validation failures before throwing exceptions
 
-*   **Warning 3: Retry Configuration**
-    - DelayedJob retry logic is database-driven
-    - Default: 3 attempts with exponential backoff
-    - Backoff: ~1 minute, 5 minutes, 15 minutes
-    - Configured in job processor, not in individual handlers
+*   **Warning 1: Package Name**
+    The task specification uses incorrect package names (com.villagecompute.calendar). The actual package structure is:
+    - `villagecompute.calendar.services` (NOT com.villagecompute.calendar.service)
+    - `villagecompute.calendar.data.models` (NOT com.villagecompute.calendar.model)
+    Use the actual package names from the existing codebase.
 
-### Code Quality Standards
+*   **Warning 2: BigDecimal Scale**
+    Always use proper scale for money calculations:
+    ```java
+    BigDecimal rate = new BigDecimal("5.99").setScale(2, RoundingMode.HALF_UP);
+    ```
+    However, since you're using @ConfigProperty, Quarkus handles the scale automatically.
 
-*   **Use @WithSpan:** Add OpenTelemetry tracing to all job handlers
-*   **Add Span Attributes:** `Span.current().setAttribute("order.id", orderId)`
-*   **Log Events:** Use `LOG.infof()` for significant events (INFO level)
-*   **Error Logging:** Use `LOG.error()` for exceptions with full stack trace
-*   **Environment Awareness:** EmailService automatically prefixes subjects in non-prod
-*   **Type Safety:** Use @CheckedTemplate for compile-time template validation
+*   **Warning 3: Transactional Context**
+    The OrderService.createOrder() method is already `@Transactional` (line 41). Your ShippingService.calculateShippingCost() should be a pure calculation method (no database writes, no side effects) so it's safe to call within the transaction.
+
+### Architecture Constraints
+
+*   **Quarkus Best Practices:**
+    - Use `@ApplicationScoped` for stateless singleton services
+    - Use `@ConfigProperty` for configuration injection (NOT @Value like Spring)
+    - Follow CDI bean lifecycle patterns
+
+*   **BigDecimal for Money:**
+    - Always use `BigDecimal` for monetary amounts (NEVER double or float)
+    - Use scale of 2 for USD currency
+    - Use `RoundingMode.HALF_UP` for rounding when necessary
+
+*   **Exception Handling:**
+    - Throw `IllegalArgumentException` for invalid/missing address data
+    - Throw `IllegalStateException` for unsupported shipping scenarios (international)
+    - Use clear, descriptive error messages
+    - Log exceptions before throwing
+
+*   **Code Organization:**
+    - Place ShippingService in `villagecompute.calendar.services` package
+    - Place ShippingServiceTest in `villagecompute/calendar/services` test directory
+    - Follow existing naming conventions (Service suffix, Test suffix)
 
 ### Suggested Implementation Order
 
-1. **Create OrderCancellationJobHandler.java** (copy OrderEmailJobHandler.java)
-2. **Create orderCancellation.html template** (copy orderConfirmation.html pattern)
-3. **Create orderCancellation.txt template** (plain text version)
-4. **Test with Mailpit** (verify emails send correctly)
-5. **Write email-setup.md guide** (document configuration and testing)
-6. **Update OrderService** (if needed - current EMAIL_GENERAL may work)
-7. **Mark task complete**
+1. **Add configuration to application.properties** (5 minutes)
+   - Add shipping rate properties with environment variable fallback
+   - Add comments explaining each rate tier
 
-### Final Recommendation
+2. **Create ShippingService.java** (30 minutes)
+   - Create class with @ApplicationScoped annotation
+   - Inject configuration properties for rates
+   - Implement calculateShippingCost(CalendarOrder order) method
+   - Add address parsing and validation logic
+   - Add country-based rate selection (US = domestic, else reject)
+   - Add comprehensive logging
 
-**This task requires minimal effort** because the infrastructure is complete. Focus on:
-1. Creating the cancellation job handler (one class, ~100 lines)
-2. Creating cancellation email templates (two files, ~100 lines each)
-3. Writing comprehensive documentation (email-setup.md)
-4. Testing with Mailpit to verify emails work
+3. **Update OrderService.java** (10 minutes)
+   - Inject ShippingService via @Inject
+   - Update calculateShipping() method to call shippingService.calculateShippingCost(order)
+   - Verify logging shows correct shipping amounts
 
-**DO NOT:**
-- Modify EmailService (it's perfect as-is)
-- Change DelayedJob system (it works)
-- Reconfigure SMTP (configuration is complete)
-- Rewrite existing handlers (they're production-ready)
+4. **Create ShippingServiceTest.java** (45 minutes)
+   - Test domestic US address returns standard rate ($5.99)
+   - Test international address throws exception
+   - Test null address throws exception
+   - Test missing country field throws exception
+   - Test edge cases (empty strings, special characters in address)
+   - Use ObjectMapper to create test JsonNode addresses
 
-**Total Implementation Time: 2-3 hours** for a skilled developer.
+5. **Manual Testing** (15 minutes)
+   - Run the application
+   - Create a test order via GraphQL or REST
+   - Verify shipping cost is added to total
+   - Check logs for shipping calculation messages
+
+### Expected File Changes
+
+**New Files:**
+- `src/main/java/villagecompute/calendar/services/ShippingService.java` (~100 lines)
+- `src/test/java/villagecompute/calendar/services/ShippingServiceTest.java` (~150 lines)
+
+**Modified Files:**
+- `src/main/resources/application.properties` (+4 lines for shipping config)
+- `src/main/java/villagecompute/calendar/services/OrderService.java` (+2 lines: inject ShippingService, call it in calculateShipping())
+
+**Total Implementation Time:** ~2 hours for a skilled Java developer
+
+---
+
+**End of Task Briefing Package**

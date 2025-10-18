@@ -27,6 +27,9 @@ public class OrderService {
 
     private static final Logger LOG = Logger.getLogger(OrderService.class);
 
+    @Inject
+    ShippingService shippingService;
+
     /**
      * Create a new order for a calendar.
      * The order is created in PENDING status and needs payment confirmation.
@@ -274,36 +277,31 @@ public class OrderService {
 
     /**
      * Calculate tax for an order.
-     * TODO: Implement actual tax calculation in task I3.T8.
-     * For now, returns zero as a placeholder.
+     * TODO: Integrate with Stripe Tax API for automated tax calculation.
+     * For MVP, returns zero as a placeholder.
      *
      * @param order Order to calculate tax for
      * @return Tax amount (currently always zero)
      */
     private BigDecimal calculateTax(CalendarOrder order) {
-        // TODO: Implement tax calculation based on shipping address in I3.T8
-        // Tax calculation will depend on:
+        // TODO: Future enhancement - integrate with Stripe Tax API
+        // This will provide automated tax calculation based on:
         // - Shipping address (state/country)
-        // - Tax rates configuration
-        // - Taxable amount (subtotal)
+        // - Product tax codes
+        // - Real-time tax rate updates
+        // - Automatic tax filing support
         return BigDecimal.ZERO;
     }
 
     /**
      * Calculate shipping cost for an order.
-     * TODO: Implement actual shipping calculation in task I3.T8.
-     * For now, returns zero as a placeholder.
+     * Delegates to ShippingService for actual rate calculation.
      *
      * @param order Order to calculate shipping for
-     * @return Shipping cost (currently always zero)
+     * @return Shipping cost
      */
     private BigDecimal calculateShipping(CalendarOrder order) {
-        // TODO: Implement shipping calculation based on order details in I3.T8
-        // Shipping calculation will depend on:
-        // - Shipping address (domestic vs international)
-        // - Quantity and weight
-        // - Shipping method (standard, express, etc.)
-        return BigDecimal.ZERO;
+        return shippingService.calculateShippingCost(order);
     }
 
     /**
