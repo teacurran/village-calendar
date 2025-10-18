@@ -60,6 +60,18 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: "/order/success",
+      name: "order-success",
+      component: () => import("./views/OrderSuccess.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/order/cancelled",
+      name: "order-cancelled",
+      component: () => import("./views/OrderCancelled.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
       path: "/bootstrap",
       name: "bootstrap",
       component: () => import("./view/public/Bootstrap.vue"),
