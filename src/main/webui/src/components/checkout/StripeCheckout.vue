@@ -85,28 +85,34 @@ const initiateCheckout = async () => {
       throw new Error("No payment intent returned from server");
     }
 
-    // Note: The GraphQL schema returns PaymentIntent type, but for Stripe Checkout Sessions,
-    // we need to check if there's a checkout URL in the response.
-    // For now, we'll use the clientSecret to redirect (this may need backend adjustment)
+    // The backend returns the Stripe Checkout Session URL in the clientSecret field
+    // (see PaymentIntentResponse.fromCheckoutSession in the backend)
+    const checkoutUrl = paymentIntent.clientSecret;
 
-    // TODO: Backend should return checkoutUrl for Stripe Checkout Sessions
-    // For MVP, display a message that payment processing is being set up
+    if (!checkoutUrl) {
+      throw new Error(
+        "No checkout URL returned from server. Please contact support.",
+      );
+    }
+
+    // Validate that it's a URL (basic check)
+    if (!checkoutUrl.startsWith("http")) {
+      throw new Error("Invalid checkout URL received from server.");
+    }
+
+    // Display a brief message before redirecting
     toast.add({
       severity: "info",
-      summary: "Payment Processing",
-      detail: "Redirecting to payment processor...",
-      life: 3000,
+      summary: "Redirecting to Payment",
+      detail: "Taking you to Stripe checkout...",
+      life: 2000,
     });
 
-    // In a real implementation with Checkout Sessions, you would do:
-    // window.location.href = paymentIntent.checkoutUrl;
+    // Small delay to allow the toast to be visible
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // For now, since the backend returns PaymentIntent (for Stripe Elements),
-    // we'll show an error asking to use the main checkout page
-    throw new Error(
-      "Payment processing is currently handled through the main checkout page. " +
-        "Please use the existing checkout flow.",
-    );
+    // Redirect to Stripe Checkout Session
+    window.location.href = checkoutUrl;
   } catch (error: any) {
     console.error("Checkout error:", error);
 

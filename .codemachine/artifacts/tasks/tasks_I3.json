@@ -72,7 +72,7 @@
     "acceptance_criteria": "Checkout page loads cart from Pinia store, displays order summary, Shipping form validates required fields (shows error messages), Clicking \"Pay with Stripe\" calls placeOrder mutation, redirects to Stripe URL, After Stripe payment, user redirected to OrderSuccess page with order number, If user cancels at Stripe, redirected to OrderCancelled page, Loading spinner shown during placeOrder mutation, Error messages displayed if mutation fails (calendar not found, etc.)",
     "dependencies": ["I3.T4"],
     "parallelizable": true,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I3.T6",

@@ -38,7 +38,7 @@ const router = createRouter({
     {
       path: "/checkout/:calendarId",
       name: "checkout",
-      component: () => import("./view/public/Checkout.vue"),
+      component: () => import("./views/Checkout.vue"),
       meta: { requiresAuth: true },
     },
     {
