@@ -87,9 +87,16 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
     @Column(name = "shipped_at")
     public Instant shippedAt;
 
+    @Column(name = "cancelled_at")
+    public Instant cancelledAt;
+
     @Size(max = 50)
     @Column(name = "order_number", unique = true, length = 50)
     public String orderNumber;
+
+    @Size(max = 255)
+    @Column(name = "tracking_number", length = 255)
+    public String trackingNumber;
 
     // Order status constants
     public static final String STATUS_PENDING = "PENDING";
@@ -197,6 +204,7 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
      */
     public void cancel() {
         this.status = STATUS_CANCELLED;
+        this.cancelledAt = Instant.now();
         persist();
     }
 

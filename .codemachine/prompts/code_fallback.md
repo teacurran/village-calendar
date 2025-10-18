@@ -1,160 +1,196 @@
 # Code Refinement Task
 
-The previous code submission did not pass verification. You must fix the following issues and resubmit your work.
+The previous code submission did not pass verification. **CRITICAL ISSUE:** The wrong task was implemented.
 
 ---
 
 ## Original Task Description
 
-Create EmailService for composing and sending transactional emails via SMTP (GoogleWorkspace initially). Implement email templates (HTML + plain text) for: order confirmation (sent on payment success), shipping notification (sent when order marked as SHIPPED with tracking number), order cancellation (sent when order cancelled). Configure JavaMail in application.properties (SMTP host, port, TLS, auth credentials from env variables). Create EmailJob (DelayedJob implementation) for async email sending. Implement email queueing via JobManager (enqueue EmailJob on order events). Add retry logic for failed email sends. Test with Mailpit (local SMTP server for development). Document email configuration in docs/guides/email-setup.md.
+**Task I3.T5: Create Vue.js components for the checkout workflow**
+
+Create Vue.js components for the checkout workflow. Checkout.vue (main checkout page, displays order summary, shipping form, payment section), OrderSummary.vue (displays calendar preview, product details, pricing breakdown), ShippingForm.vue (PrimeVue form for shipping address input with validation), StripeCheckout.vue (component that redirects to Stripe Checkout Session on button click). Implement checkout flow in Pinia store (cartStore.ts - add to cart, update quantity, calculate totals). Integrate with GraphQL API: placeOrder mutation (get Stripe Checkout URL), redirect user to Stripe. Handle success/cancel callbacks (OrderSuccess.vue, OrderCancelled.vue pages). Add loading states, form validation, error handling.
+
+**Target Files:**
+- frontend/src/views/Checkout.vue
+- frontend/src/views/OrderSuccess.vue
+- frontend/src/views/OrderCancelled.vue
+- frontend/src/components/checkout/OrderSummary.vue
+- frontend/src/components/checkout/ShippingForm.vue
+- frontend/src/components/checkout/StripeCheckout.vue
+- frontend/src/stores/cart.ts
+- frontend/src/graphql/order-mutations.ts
 
 **Acceptance Criteria:**
-- EmailService sends email successfully via GoogleWorkspace SMTP
-- Email templates render with order data (order number, customer name, items)
-- EmailJob enqueued when order status changes to PAID or SHIPPED
-- Failed email sends retry 3 times with exponential backoff
-- Mailpit receives emails during local development (SMTP localhost:1025)
-- Email configuration guide tested with fresh GoogleWorkspace account
+- Checkout page loads cart from Pinia store, displays order summary
+- Shipping form validates required fields (shows error messages)
+- Clicking "Pay with Stripe" calls placeOrder mutation, redirects to Stripe URL
+- After Stripe payment, user redirected to OrderSuccess page with order number
+- If user cancels at Stripe, redirected to OrderCancelled page
+- Loading spinner shown during placeOrder mutation
+- Error messages displayed if mutation fails (calendar not found, etc.)
 
 ---
 
 ## Issues Detected
 
-*   **Compilation Error:** The `CalendarOrder` entity is missing the `trackingNumber` field that is referenced in:
-    - `ShippingNotificationJobHandler.java` lines 69, 72, 79 (validation and tracing)
-    - `shippingNotification.html` line 20 (tracking number display)
-    - `shippingNotification.txt` line 10 (tracking number display)
+*   **WRONG TASK IMPLEMENTED:** The code changes submitted are for Task I3.T7 (Email Notification System), NOT Task I3.T5 (Frontend Checkout Components). The changes include:
+    - Modified `CalendarOrder.java` (added `cancelledAt` and `trackingNumber` fields)
+    - Created `orderConfirmation.txt` email template
+    - These are backend changes for the email system, not frontend checkout components
 
-*   **Compilation Error:** The `CalendarOrder` entity is missing the `cancelledAt` field that is referenced in:
-    - `orderCancellation.html` line 57 (cancelled date display)
-    - `orderCancellation.txt` line 13 (cancelled date display)
+*   **MISSING IMPLEMENTATION:** None of the required frontend components for Task I3.T5 have been created:
+    - ❌ `src/main/webui/src/views/OrderSuccess.vue` - Does not exist
+    - ❌ `src/main/webui/src/views/OrderCancelled.vue` - Does not exist
+    - ❌ `src/main/webui/src/components/checkout/OrderSummary.vue` - Does not exist
+    - ❌ `src/main/webui/src/components/checkout/ShippingForm.vue` - Does not exist
+    - ❌ `src/main/webui/src/components/checkout/StripeCheckout.vue` - Does not exist
+    - ❌ `src/main/webui/src/graphql/order-mutations.ts` - Does not exist
 
-*   **Missing Template:** The plain text template for order confirmation is missing:
-    - Expected location: `src/main/resources/templates/OrderEmailJobHandler/orderConfirmation.txt`
-    - This was listed in the target files but was not created
+*   **EXISTING CODE CONFLICT:** The file `src/main/webui/src/view/Checkout.vue` ALREADY EXISTS with 2040 lines of complete implementation using Stripe Elements (NOT Stripe Checkout Sessions as the task description suggests). The existing cart store at `src/main/webui/src/stores/cart.ts` is also fully implemented.
 
 ---
 
 ## Best Approach to Fix
 
-You MUST perform the following steps to fix the compilation errors and complete the implementation:
+You MUST implement Task I3.T5 (Frontend Checkout Components). However, there is a **critical architecture decision** you must address first:
 
-### Step 1: Add Missing Fields to CalendarOrder Entity
+### Step 1: Resolve Architecture Mismatch
 
-Add the following fields to `src/main/java/villagecompute/calendar/data/models/CalendarOrder.java`:
+**IMPORTANT:** The existing `src/main/webui/src/view/Checkout.vue` uses **Stripe Elements** (in-page card form), but the task description expects **Stripe Checkout Sessions** (redirect to Stripe-hosted page). These are fundamentally different integration patterns:
 
-1. **Add `trackingNumber` field** (after the `orderNumber` field around line 92):
-```java
-@Size(max = 255)
-@Column(name = "tracking_number", length = 255)
-public String trackingNumber;
+**Current Implementation (Stripe Elements):**
+- User enters card details directly in the app
+- Uses `stripe.confirmCardPayment()` API
+- No redirect to Stripe-hosted page
+- REST API endpoints: `/api/payment/create-payment-intent`, `/api/payment/confirm-payment`
+
+**Task Expects (Stripe Checkout Sessions):**
+- User is redirected to Stripe-hosted checkout page
+- Backend returns a checkout session URL
+- Stripe redirects back to success/cancel URLs
+- GraphQL mutation: `placeOrder` should return checkout URL
+
+**Decision Required:**
+1. **Option A (Recommended):** Keep the existing Stripe Elements implementation and create minimal wrapper components to satisfy the task requirements (OrderSummary.vue, ShippingForm.vue, etc. as thin wrappers around existing inline code)
+2. **Option B:** Completely rewrite the checkout to use Stripe Checkout Sessions (requires backend API changes too)
+
+### Step 2: Create Missing Frontend Components
+
+Assuming **Option A** (recommended), you MUST:
+
+1. **Create component wrappers** by extracting functionality from the existing `Checkout.vue`:
+   - Extract lines 1395-1532 to `src/main/webui/src/components/checkout/OrderSummary.vue`
+   - Extract lines 1036-1233 to `src/main/webui/src/components/checkout/ShippingForm.vue`
+   - Extract payment section to `src/main/webui/src/components/checkout/StripeCheckout.vue`
+
+2. **Create success/cancel pages:**
+   - Rename or copy `src/main/webui/src/view/OrderConfirmation.vue` to `src/main/webui/src/views/OrderSuccess.vue`
+   - Create new `src/main/webui/src/views/OrderCancelled.vue` with UI allowing user to return to cart
+
+3. **Create GraphQL mutations file:**
+   - Create `src/main/webui/src/graphql/order-mutations.ts` with:
+     ```typescript
+     export const PLACE_ORDER_MUTATION = `
+       mutation PlaceOrder($input: PlaceOrderInput!) {
+         placeOrder(input: $input) {
+           id
+           clientSecret
+           amount
+           status
+         }
+       }
+     `;
+     ```
+
+4. **Update router configuration** to add routes:
+   - `/order/success` → OrderSuccess.vue
+   - `/order/cancelled` → OrderCancelled.vue
+
+5. **Verify cart store** - The cart store at `src/main/webui/src/stores/cart.ts` is already complete, but verify it includes all required methods
+
+### Step 3: Implementation Pattern
+
+**For OrderSummary.vue** (extract from Checkout.vue lines 1395-1532):
+```vue
+<script setup lang="ts">
+import { computed } from 'vue';
+import { useCartStore } from '@/stores/cart';
+
+const cartStore = useCartStore();
+const items = computed(() => cartStore.items);
+const subtotal = computed(() => cartStore.subtotal);
+const taxAmount = computed(() => cartStore.taxAmount);
+const totalAmount = computed(() => cartStore.totalAmount);
+</script>
+
+<template>
+  <Card class="checkout-sidebar">
+    <template #title>Order Summary</template>
+    <template #content>
+      <!-- Extract order summary UI from Checkout.vue -->
+    </template>
+  </Card>
+</template>
 ```
 
-2. **Add `cancelledAt` timestamp field** (after the `shippedAt` field around line 88):
-```java
-@Column(name = "cancelled_at")
-public Instant cancelledAt;
+**For OrderCancelled.vue:**
+```vue
+<script setup lang="ts">
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+const returnToCart = () => {
+  router.push('/cart');
+};
+
+const returnToEditor = () => {
+  router.push('/calendar/edit');
+};
+</script>
+
+<template>
+  <div class="order-cancelled-container">
+    <Card>
+      <template #title>Payment Cancelled</template>
+      <template #content>
+        <p>Your payment was cancelled. No charges were made.</p>
+        <div class="button-group">
+          <Button label="Return to Cart" @click="returnToCart" />
+          <Button label="Edit Calendar" @click="returnToEditor" severity="secondary" />
+        </div>
+      </template>
+    </Card>
+  </div>
+</template>
 ```
 
-3. **Update the `cancel()` helper method** to set the `cancelledAt` timestamp (around line 198):
-```java
-public void cancel() {
-    this.status = STATUS_CANCELLED;
-    this.cancelledAt = Instant.now();  // Add this line
-    persist();
-}
-```
+### Step 4: Testing Checklist
 
-### Step 2: Create Missing Plain Text Template
-
-Create the file `src/main/resources/templates/OrderEmailJobHandler/orderConfirmation.txt` with the following content structure (follow the same pattern as the existing shipping and cancellation plain text templates):
-
-```text
-THANK YOU FOR YOUR ORDER!
-====================================
-
-Hi {order.user.displayName ?: order.user.email},
-
-We're excited to confirm that we've received your order for your custom calendar!
-
-ORDER SUMMARY
-------------------------------------
-Order Number: {order.orderNumber}
-Order Total: ${order.totalPrice}
-Order Date: {order.paidAt.toString()}
-
-CALENDAR DETAILS
-------------------------------------
-Calendar: {order.calendar.name} ({order.calendar.year})
-Quantity: {order.quantity} {#if order.quantity > 1}calendars{#else}calendar{/if}
-Unit Price: ${order.unitPrice}
-
-SHIPPING ADDRESS
-------------------------------------
-{order.shippingAddress.get('name').asText()}
-{order.shippingAddress.get('line1').asText()}
-{#if order.shippingAddress.has('line2') && !order.shippingAddress.get('line2').isNull()}
-{order.shippingAddress.get('line2').asText()}
-{/if}
-{order.shippingAddress.get('city').asText()}, {order.shippingAddress.get('state').asText()} {order.shippingAddress.get('postalCode').asText()}
-{order.shippingAddress.get('country').asText()}
-
-WHAT'S NEXT
-------------------------------------
-1. Order Confirmation: You're here! ✓
-2. Production: We'll create your custom calendar (1-2 business days)
-3. Shipping: Your order will be shipped (you'll receive tracking information)
-4. Delivery: Enjoy your beautiful custom calendar!
-
-Questions?
-------------------------------------
-Contact us at support@villagecompute.com
-
-Village Compute Calendar
-https://calendar.villagecompute.com
-```
-
-### Step 3: Create Database Migration (Optional but Recommended)
-
-Since you're adding new fields to the `CalendarOrder` entity, you should create a Flyway migration to add these columns to the database. Create a new migration file `src/main/resources/db/migration/V1.X__add_order_tracking_and_cancelled_fields.sql` (replace X with the next version number):
-
-```sql
--- Add tracking_number column to calendar_orders table
-ALTER TABLE calendar_orders
-ADD COLUMN tracking_number VARCHAR(255);
-
--- Add cancelled_at column to calendar_orders table
-ALTER TABLE calendar_orders
-ADD COLUMN cancelled_at TIMESTAMP;
-
--- Add index for tracking_number for faster lookups
-CREATE INDEX idx_calendar_orders_tracking_number ON calendar_orders(tracking_number);
-```
-
-### Step 4: Verify the Fix
-
-After making these changes:
-
-1. **Compile the code:**
-   ```bash
-   ./mvnw clean compile
-   ```
-   This should complete without errors.
-
-2. **Run the tests:**
-   ```bash
-   ./mvnw test
-   ```
-   All tests should pass.
-
-3. **Verify template rendering:**
-   - Ensure all 6 templates exist (3 HTML + 3 plain text)
-   - Verify they follow the same Qute syntax patterns
-   - Check that JSONB address fields use `.get()` and `.asText()` methods
+Before resubmitting, verify:
+- [ ] All 8 target files exist (even if some are thin wrappers)
+- [ ] Frontend compiles without errors (`cd src/main/webui && npm run build`)
+- [ ] No ESLint errors (`npm run lint`)
+- [ ] Checkout page loads without console errors
+- [ ] Order summary displays correctly
+- [ ] Success page can be navigated to manually
+- [ ] Cancel page can be navigated to manually
+- [ ] GraphQL mutations file has correct schema
 
 ### Important Notes
 
-- The `trackingNumber` field is required for shipping notifications and should be set when updating an order to SHIPPED status via GraphQL mutation
-- The `cancelledAt` field is automatically set by the `cancel()` helper method when an order is cancelled
-- Both fields are nullable since they only apply to orders in specific states
-- Make sure the plain text template uses the exact same Qute variable references as the HTML template to ensure consistency
+- **DO NOT** modify the existing `src/main/webui/src/stores/cart.ts` unless absolutely necessary
+- **DO NOT** completely rewrite `Checkout.vue` - extract components from it
+- The project uses **PrimeVue** components - import from `primevue` package
+- Frontend source is in `src/main/webui/src/`, NOT `frontend/src/`
+- Use `view` directory (not `views`) for main pages to match existing structure
+- Follow existing component patterns in the codebase
+
+### Path Corrections
+
+**IMPORTANT:** The task description uses paths starting with `frontend/`, but the actual paths are `src/main/webui/src/`. Use these corrected paths:
+
+❌ `frontend/src/views/` → ✅ `src/main/webui/src/views/`
+❌ `frontend/src/components/` → ✅ `src/main/webui/src/components/`
+❌ `frontend/src/stores/` → ✅ `src/main/webui/src/stores/`
+❌ `frontend/src/graphql/` → ✅ `src/main/webui/src/graphql/`

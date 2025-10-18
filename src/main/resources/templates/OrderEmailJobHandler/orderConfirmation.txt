@@ -1,0 +1,48 @@
+THANK YOU FOR YOUR ORDER!
+====================================
+
+Hi {order.user.displayName ?: order.user.email},
+
+We're excited to confirm that we've received your order for your custom calendar!
+
+ORDER SUMMARY
+------------------------------------
+Order Number: {order.orderNumber}
+Order Total: ${order.totalPrice}
+Order Date: {order.paidAt.toString()}
+
+CALENDAR DETAILS
+------------------------------------
+Calendar: {order.calendar.name} ({order.calendar.year})
+Quantity: {order.quantity} {#if order.quantity > 1}calendars{#else}calendar{/if}
+Unit Price: ${order.unitPrice}
+
+SHIPPING ADDRESS
+------------------------------------
+{order.shippingAddress.get('name').asText()}
+{order.shippingAddress.get('line1').asText()}
+{#if order.shippingAddress.has('line2') && !order.shippingAddress.get('line2').isNull()}
+{order.shippingAddress.get('line2').asText()}
+{/if}
+{order.shippingAddress.get('city').asText()}, {order.shippingAddress.get('state').asText()} {order.shippingAddress.get('postalCode').asText()}
+{order.shippingAddress.get('country').asText()}
+
+WHAT'S NEXT
+------------------------------------
+Your custom calendar is now in production! Here's what to expect:
+
+1. Processing: We'll prepare your calendar for printing (1-2 business days)
+2. Printing: High-quality printing of your custom design (3-5 business days)
+3. Shipping: Your calendar will be carefully packaged and shipped to you
+
+We'll send you another email with tracking information once your order ships.
+
+View your order online:
+https://calendar.villagecompute.com/orders
+
+Questions?
+------------------------------------
+Contact us at support@villagecompute.com
+
+Village Compute Calendar
+https://calendar.villagecompute.com

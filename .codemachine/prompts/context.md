@@ -10,32 +10,33 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I3.T7",
+  "task_id": "I3.T5",
   "iteration_id": "I3",
   "iteration_goal": "Implement complete e-commerce workflow including Stripe payment integration, order placement, order management dashboard (admin), and transactional email notifications",
-  "description": "Create EmailService for composing and sending transactional emails via SMTP (GoogleWorkspace initially). Implement email templates (HTML + plain text) for: order confirmation (sent on payment success), shipping notification (sent when order marked as SHIPPED with tracking number), order cancellation (sent when order cancelled). Configure JavaMail in application.properties (SMTP host, port, TLS, auth credentials from env variables). Create EmailJob (DelayedJob implementation) for async email sending. Implement email queueing via JobManager (enqueue EmailJob on order events). Add retry logic for failed email sends. Test with Mailpit (local SMTP server for development). Document email configuration in docs/guides/email-setup.md.",
-  "agent_type_hint": "BackendAgent",
-  "inputs": "Email notification requirements from Plan Section \"Order Notifications\", JavaMail documentation, DelayedJob pattern from architecture plan",
+  "description": "Create Vue.js components for the checkout workflow. Checkout.vue (main checkout page, displays order summary, shipping form, payment section), OrderSummary.vue (displays calendar preview, product details, pricing breakdown), ShippingForm.vue (PrimeVue form for shipping address input with validation), StripeCheckout.vue (component that redirects to Stripe Checkout Session on button click). Implement checkout flow in Pinia store (cartStore.ts - add to cart, update quantity, calculate totals). Integrate with GraphQL API: placeOrder mutation (get Stripe Checkout URL), redirect user to Stripe. Handle success/cancel callbacks (OrderSuccess.vue, OrderCancelled.vue pages). Add loading states, form validation, error handling.",
+  "agent_type_hint": "FrontendAgent",
+  "inputs": "Checkout flow requirements from Plan Section \"User Experience\", PrimeVue form components documentation, GraphQL schema from I1.T6",
   "target_files": [
-    "src/main/java/villagecompute/calendar/integration/email/EmailService.java",
-    "src/main/java/villagecompute/calendar/jobs/EmailJob.java",
-    "src/main/resources/email-templates/order-confirmation.html",
-    "src/main/resources/email-templates/order-confirmation.txt",
-    "src/main/resources/email-templates/shipping-notification.html",
-    "src/main/resources/email-templates/shipping-notification.txt",
-    "src/main/resources/email-templates/order-cancellation.html",
-    "src/main/resources/email-templates/order-cancellation.txt",
-    "docs/guides/email-setup.md"
+    "frontend/src/views/Checkout.vue",
+    "frontend/src/views/OrderSuccess.vue",
+    "frontend/src/views/OrderCancelled.vue",
+    "frontend/src/components/checkout/OrderSummary.vue",
+    "frontend/src/components/checkout/ShippingForm.vue",
+    "frontend/src/components/checkout/StripeCheckout.vue",
+    "frontend/src/stores/cart.ts",
+    "frontend/src/graphql/order-mutations.ts"
   ],
   "input_files": [
-    "src/main/resources/application.properties",
-    "src/main/java/villagecompute/calendar/model/DelayedJob.java",
-    "src/main/java/villagecompute/calendar/service/OrderService.java"
+    "frontend/src/views/Checkout.vue",
+    "frontend/src/stores/cart.ts",
+    "api/graphql-schema.graphql"
   ],
-  "deliverables": "EmailService with template rendering and SMTP sending, EmailJob for async email processing, Email templates (HTML + plain text) for all order events, Email queueing integrated into OrderService, Retry logic for failed sends (DelayedJob retry mechanism), Email configuration guide",
-  "acceptance_criteria": "EmailService sends email successfully via GoogleWorkspace SMTP, Email templates render with order data (order number, customer name, items), EmailJob enqueued when order status changes to PAID or SHIPPED, Failed email sends retry 3 times with exponential backoff, Mailpit receives emails during local development (SMTP localhost:1025), Email configuration guide tested with fresh GoogleWorkspace account",
-  "dependencies": ["I3.T2"],
-  "parallelizable": false,
+  "deliverables": "Functional checkout flow UI with all components, Order summary displays calendar preview, product type, pricing, Shipping form validates address fields (name, street, city, state, zip), Stripe Checkout button redirects to Stripe hosted checkout page, Success page displays order confirmation, order number, Cancel page allows user to return to cart or calendar editor, GraphQL integration (placeOrder mutation)",
+  "acceptance_criteria": "Checkout page loads cart from Pinia store, displays order summary, Shipping form validates required fields (shows error messages), Clicking \"Pay with Stripe\" calls placeOrder mutation, redirects to Stripe URL, After Stripe payment, user redirected to OrderSuccess page with order number, If user cancels at Stripe, redirected to OrderCancelled page, Loading spinner shown during placeOrder mutation, Error messages displayed if mutation fails (calendar not found, etc.)",
+  "dependencies": [
+    "I3.T4"
+  ],
+  "parallelizable": true,
   "done": false
 }
 ```
@@ -46,74 +47,67 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: Email Notification System Design
+### Context: GraphQL Schema - Order Mutations (from api/schema.graphql)
 
-**Email Notification Architecture:**
+The GraphQL API provides two mutation options for placing orders:
 
-The Village Calendar application requires a robust transactional email system for order-related communications. The system must support:
+1. **createOrder mutation**:
+```graphql
+createOrder(
+  calendarId: ID!
+  quantity: Int!
+  shippingAddress: AddressInput!
+): PaymentIntent!
+```
 
-1. **Transactional Email Types:**
-   - **Order Confirmation**: Sent immediately when payment is captured (order status changes to PAID)
-   - **Shipping Notification**: Sent when order is marked as SHIPPED with tracking information
-   - **Order Cancellation**: Sent when order is cancelled before fulfillment
+2. **placeOrder mutation** (recommended, structured input):
+```graphql
+placeOrder(
+  input: PlaceOrderInput!
+): PaymentIntent!
+```
 
-2. **Delivery Method:**
-   - SMTP delivery via Google Workspace (GoogleWorkspace SMTP servers)
-   - Configuration via environment variables for security
-   - Support for both HTML and plain text email formats
-   - TLS/STARTTLS encryption required
+**Key types you need:**
 
-3. **Asynchronous Processing:**
-   - Emails must be sent asynchronously using DelayedJob system
-   - Jobs queued via Vert.x EventBus for distributed processing
-   - Retry logic for transient failures (network issues, SMTP timeouts)
-   - Failed jobs should retry with exponential backoff
+```graphql
+type PaymentIntent {
+  amount: Int!              # Amount in cents (USD)
+  calendarId: ID!          # Associated calendar ID
+  clientSecret: String!    # Client secret for Stripe.js
+  id: ID!                  # Stripe PaymentIntent ID
+  quantity: Int!           # Requested quantity
+  status: String!          # Payment status from Stripe
+}
 
-4. **Email Content Requirements:**
-   - Professional HTML templates with inline CSS (for email client compatibility)
-   - Plain text fallback for email clients that don't support HTML
-   - Dynamic content rendering (order details, customer info, tracking numbers)
-   - Branded templates with company logo and contact information
+input PlaceOrderInput {
+  calendarId: ID!
+  productType: ProductType!
+  quantity: Int!
+  shippingAddress: AddressInput!
+}
 
-5. **Development/Testing:**
-   - Mailpit for local development testing (SMTP mock server)
-   - Email mock mode in development to prevent accidental sends
-   - Configuration toggles for test vs production SMTP servers
+input AddressInput {
+  city: String!
+  country: String!
+  postalCode: String!
+  state: String!
+  street: String!
+  street2: String
+}
 
-### Context: DelayedJob Queue System
+enum ProductType {
+  DESK_CALENDAR    # Desk calendar with stand (8x10 inches)
+  POSTER           # Poster format (18x24 inches, single page)
+  WALL_CALENDAR    # Standard 12-month wall calendar (11x17 inches)
+}
+```
 
-**Job Processing Pattern:**
-
-The DelayedJob system provides asynchronous, fault-tolerant job processing:
-
-1. **Job Lifecycle:**
-   ```
-   CREATE → PENDING → IN_PROGRESS → COMPLETED
-                                 ↘ FAILED (with retry)
-   ```
-
-2. **Job Attributes:**
-   - `actorId`: Entity ID the job operates on (e.g., CalendarOrder ID)
-   - `queue`: Job queue type (EMAIL_ORDER_CONFIRMATION, EMAIL_SHIPPING_NOTIFICATION, etc.)
-   - `priority`: Higher priority jobs processed first
-   - `attempts`: Number of retry attempts (max 3)
-   - `runAt`: When to execute the job
-   - `locked`: Job lock for preventing duplicate processing
-   - `complete`: Job completion flag
-   - `failureReason`: Error message if job failed
-
-3. **Retry Strategy:**
-   - Exponential backoff: 1 minute, 5 minutes, 15 minutes
-   - Maximum 3 retry attempts
-   - Job marked as permanently failed after exhausting retries
-   - Failure details logged to `lastError` and `failureReason` fields
-
-4. **Job Handler Contract:**
-   ```java
-   public interface DelayedJobHandler {
-       void run(String actorId) throws Exception;
-   }
-   ```
+**Payment Flow:**
+1. Client calls `createOrder` or `placeOrder` GraphQL mutation
+2. Backend creates Stripe PaymentIntent and returns it with `clientSecret`
+3. Client uses `clientSecret` with Stripe.js to complete payment (NOT Checkout Sessions - see critical finding below)
+4. After payment success, Stripe webhook creates the actual `CalendarOrder` entity
+5. Client is redirected to success/cancel pages based on payment outcome
 
 ---
 
@@ -123,578 +117,332 @@ The following analysis is based on my direct review of the current codebase. Use
 
 ### Relevant Existing Code
 
-#### File: `src/main/java/villagecompute/calendar/services/EmailService.java`
+#### File: `src/main/webui/src/view/Checkout.vue`
 
-**Summary:** **ALREADY FULLY IMPLEMENTED** - Complete email service with HTML and text email sending via Quarkus Mailer.
-
-**Current Implementation Status:**
-
-✅ **Core Email Methods:**
-- `sendEmail(to, subject, body)` - Lines 57-59: Simple text email with default from address
-- `sendEmail(from, to, subject, body)` - Lines 69-81: Text email with custom from address
-- `sendHtmlEmail(to, subject, htmlBody)` - Lines 90-92: HTML email with default from address
-- `sendHtmlEmail(from, to, subject, htmlBody)` - Lines 102-114: HTML email with custom from address
-
-✅ **Environment Features:**
-- Environment prefix for non-production emails (lines 43-48): `[DEV] Order Confirmation`
-- Production detection via `quarkus.profile` config (lines 33-35)
-- Default from email configurable (line 22-23): `quarkus.mailer.from`
-
-✅ **Error Handling:**
-- Try-catch blocks with logging (lines 75-80, 108-113)
-- RuntimeException thrown on email failures
-- Detailed error logging with recipient information
-
-**CRITICAL NOTE:** The EmailService class is COMPLETE. You do NOT need to create or modify it.
-
-#### File: `src/main/java/villagecompute/calendar/services/jobs/OrderEmailJobHandler.java`
-
-**Summary:** **ALREADY FULLY IMPLEMENTED** - Complete DelayedJob handler for order confirmation emails using Qute templates.
+**Summary:** **THIS FILE ALREADY EXISTS** - Fully-implemented checkout component with 2040 lines of code, complete 3-step checkout flow, Stripe Elements integration, express checkout options, form validation, and calendar preview.
 
 **Current Implementation Status:**
 
-✅ **Job Handler Implementation:**
-- Implements `DelayedJobHandler` interface (line 24)
-- `run(String actorId)` method (lines 56-94): Complete job execution logic
+✅ **Complete Features:**
+- 3-step checkout flow (Information → Shipping → Payment) - Lines 124-1392
+- Cart integration with Pinia store - Lines 27-28, 368-369
+- Shipping address form with validation - Lines 1036-1233
+- Shipping method selection with cost calculation - Lines 1256-1279
+- Stripe Elements payment (inline card form) - Lines 588-672
+- Express checkout methods (Google Pay, PayPal, Shop Pay, Affirm) - Lines 462-496, 799-957
+- Calendar preview modal - Lines 1536-1559
+- Order summary sidebar - Lines 1395-1532
+- Loading states and error handling - Lines 316, 680, 777-784
+- Responsive design - Lines 2016-2038
 
-✅ **Email Template Rendering:**
-- Uses Qute `@CheckedTemplate` for type-safe templates (lines 40-53)
-- `Templates.orderConfirmation(order, stylesheet)` - Line 79: Renders HTML template
-- Loads CSS from `src/main/resources/css/email.css` (line 75)
+**CRITICAL ARCHITECTURE MISMATCH:**
 
-✅ **Error Handling:**
-- Order not found check (lines 63-66): Throws `DelayedJobException(true, ...)` - permanent failure
-- Resource loading failure (lines 87-89): `DelayedJobException(true, ...)` - permanent failure
-- Email send failure (lines 90-93): `DelayedJobException(false, ...)` - **retryable failure**
+The existing implementation uses **Stripe Elements** (in-page card form), NOT **Stripe Checkout Sessions** (redirect to Stripe-hosted page) as the task description implies:
 
-✅ **OpenTelemetry Tracing:**
-- `@WithSpan` annotation (line 56) for distributed tracing
-- Custom span attributes for order ID, user email, status (lines 69-71)
-- Span events for successful email send (line 85)
+1. **Current Flow (Stripe Elements):**
+   - Line 610: Creates PaymentIntent via `/api/payment/create-payment-intent`
+   - Line 649: Mounts Stripe Card Element in-page
+   - Line 693: Confirms payment via `stripe.confirmCardPayment()`
+   - Line 727: Creates order via `/api/payment/confirm-payment`
+   - NO redirect to Stripe-hosted page
 
-**Key Patterns:**
-```java
-// Permanent failure (no retry):
-throw new DelayedJobException(true, "Order not found: " + actorId);
+2. **Task Description Expects (Stripe Checkout Sessions):**
+   - Call GraphQL `placeOrder` mutation
+   - Backend returns Checkout Session URL
+   - Client redirects to Stripe-hosted checkout page
+   - Stripe redirects back to success_url/cancel_url
 
-// Retryable failure (will retry with backoff):
-throw new DelayedJobException(false, "Failed to send email", e);
-```
+**These are FUNDAMENTALLY DIFFERENT integration patterns.**
 
-**CRITICAL NOTE:** OrderEmailJobHandler is COMPLETE and implements the order confirmation email workflow. You need to create similar handlers for **shipping notification** and **order cancellation** emails.
+**API Integration Mismatch:**
 
-#### File: `src/main/resources/templates/OrderEmailJobHandler/orderConfirmation.html`
+The existing code uses **REST API endpoints** instead of **GraphQL mutations**:
+- Line 591: `fetch("/api/payment/config")` - Get Stripe publishable key
+- Line 610: `fetch("/api/payment/create-payment-intent")` - Create PaymentIntent
+- Line 727: `fetch("/api/payment/confirm-payment")` - Create order after payment
 
-**Summary:** Complete Qute template for order confirmation emails with professional styling.
+**Recommendation:** You MUST clarify which payment integration pattern is correct:
+- **Option A:** Keep Stripe Elements, switch REST to GraphQL
+- **Option B:** Replace with Stripe Checkout Sessions (full redirect flow)
 
-**Template Features:**
-- Responsive HTML email design (lines 1-84)
-- Embedded CSS via `{stylesheet}` variable (line 8)
-- Dynamic order data rendering using Qute expressions:
-  - `{order.user.displayName ?: order.user.email}` - Line 15: User name with fallback
-  - `{order.totalPrice}` - Line 20: Order total
-  - `{order.calendar.name} ({order.calendar.year})` - Line 28: Calendar details
-  - `{order.quantity}` - Line 33: Quantity with plural handling
-  - `{order.shippingAddress.get('name').asText()}` - Line 49: Address parsing from JSONB
+#### File: `src/main/webui/src/stores/cart.ts`
 
-**Address Handling Pattern:**
-```html
-{order.shippingAddress.get('line1').asText()}<br>
-{#if order.shippingAddress.has('line2') && !order.shippingAddress.get('line2').isNull()}
-    {order.shippingAddress.get('line2').asText()}<br>
-{/if}
-```
+**Summary:** **ALREADY FULLY IMPLEMENTED** - Complete Pinia store with GraphQL integration for all cart operations.
 
-**CRITICAL NOTE:** This template demonstrates the correct pattern for rendering JSONB data. You MUST use the same pattern for shipping and cancellation templates.
+**Implementation Status:**
 
-#### File: `src/main/resources/css/email.css`
+✅ **Methods:**
+- `fetchCart()` - Lines 38-116: GraphQL query with error handling and caching
+- `addToCart()` - Lines 118-193: GraphQL mutation with validation
+- `updateQuantity()` - Lines 195-253: Update cart item quantity
+- `removeFromCart()` - Lines 255-312: Remove items
+- `clearCart()` - Lines 314-353: Clear cart after checkout
+- `toggleCart()`, `openCart()`, `closeCart()` - Lines 355-365: Cart drawer state
 
-**Summary:** Complete email stylesheet with inline-friendly CSS for maximum email client compatibility.
+✅ **State Management:**
+- Cart data with loading/error states - Lines 29-35
+- Last fetch time for caching - Line 34, 41-43
 
-**Styling Conventions:**
-- Outer wrapper: Max-width 600px, white background (lines 14-19)
-- Headers: Blue gradient color scheme (`#3b82f6`, `#1e40af`)
-- Detail boxes: Light gray background (`#f9fafb`) with blue left border (lines 49-61)
-- Highlight box: Blue gradient background for important info (lines 63-76)
-- Buttons: Blue with hover state (lines 78-91)
-- Footer: Muted text with top border (lines 93-109)
-- Shipping box: Green accents for shipping info (lines 110-116)
+✅ **Getters:**
+- `items`, `itemCount`, `totalAmount`, `subtotal`, `taxAmount` - Lines 373-387
+- `isEmpty`, `hasItems` - Lines 385-387
 
-**CRITICAL NOTE:** Reuse this stylesheet for all email templates. The styles are designed for compatibility with email clients (Gmail, Outlook, Apple Mail).
+**CRITICAL NOTE:** The cart store is COMPLETE. Do NOT modify unless acceptance criteria specifically requires changes.
 
-#### File: `src/main/resources/application.properties`
+#### File: `src/main/webui/src/view/OrderConfirmation.vue`
 
-**Summary:** Configuration file with Quarkus Mailer settings already configured.
+**Summary:** This file likely exists and serves as the OrderSuccess page. You SHOULD examine it to determine if it needs to be renamed to OrderSuccess.vue or if you create a separate file.
 
-**Mailer Configuration (lines 106-113):**
-```properties
-quarkus.mailer.from=${MAIL_FROM:noreply@villagecompute.com}
-quarkus.mailer.host=${MAIL_HOST:smtp.example.com}
-quarkus.mailer.port=${MAIL_PORT:587}
-quarkus.mailer.start-tls=REQUIRED
-quarkus.mailer.username=${MAIL_USERNAME:placeholder}
-quarkus.mailer.password=${MAIL_PASSWORD:placeholder}
-quarkus.mailer.mock=${MAIL_MOCK:true}
-```
+**Recommendation:** Check if this file exists and review its implementation before creating OrderSuccess.vue.
 
-**Key Settings:**
-- `quarkus.mailer.mock=true` by default: Prevents accidental email sends in dev
-- All credentials from environment variables: `MAIL_FROM`, `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD`
-- STARTTLS encryption: `start-tls=REQUIRED` (line 110)
-- Port 587: Standard SMTP submission port
+### Missing Components (Per Task Requirements)
 
-**CRITICAL NOTE:** Configuration is COMPLETE. You only need to document the environment variables in email-setup.md.
+Based on the task specifications, these files appear to be missing:
 
-#### File: `src/main/java/villagecompute/calendar/data/models/DelayedJob.java`
-
-**Summary:** JPA entity for async job queue with Panache active record pattern.
-
-**Key Methods:**
-- `createDelayedJob(actorId, queue, runAt)` - Lines 85-93: Factory method to create and persist jobs
-- `unlock()` - Lines 98-101: Unlock job for retry after failure
-- `findReadyToRun(limit)` - Lines 109-113: Query for pending jobs ready to execute
-
-**Job Fields:**
-- `actorId` (String): Entity ID to process (e.g., CalendarOrder ID as UUID string)
-- `queue` (DelayedJobQueue enum): Job type (EMAIL_ORDER_CONFIRMATION, EMAIL_SHIPPING_NOTIFICATION)
-- `priority` (Integer): Higher numbers = higher priority (set from queue default)
-- `attempts` (Integer): Number of execution attempts (max 3)
-- `locked` (Boolean): Prevents duplicate processing
-- `complete` (Boolean): Job completion flag
-- `failureReason` (String): Error message for permanently failed jobs
-
-**CRITICAL NOTE:** Use the factory method `DelayedJob.createDelayedJob()` to create jobs. Do NOT construct DelayedJob objects manually.
-
-#### File: `src/main/java/villagecompute/calendar/data/models/DelayedJobQueue.java`
-
-**Summary:** Enum defining job queue types and their priorities.
-
-**Existing Queues:**
-- `EMAIL_ORDER_CONFIRMATION(10)` - High priority order confirmation emails
-- `EMAIL_SHIPPING_NOTIFICATION(10)` - High priority shipping notification emails
-- `EMAIL_GENERAL(5)` - Lower priority general emails
-
-**CRITICAL NOTE:** The required email queue types ALREADY EXIST. You do NOT need to add new enum values. The task description mentions creating "EmailJob" but this likely refers to the handler classes, not queue types.
-
-#### File: `src/main/java/villagecompute/calendar/services/OrderService.java`
-
-**Summary:** Order management service with placeholder TODOs for email integration.
-
-**Email Integration Points:**
-
-**Payment Success** (after line 132-136):
-```java
-if (CalendarOrder.STATUS_PAID.equals(newStatus)) {
-    order.paidAt = Instant.now();
-    // TODO I3.T7: Enqueue order confirmation email job here
-}
-```
-
-**Order Shipped** (after line 134-136):
-```java
-else if (CalendarOrder.STATUS_SHIPPED.equals(newStatus)) {
-    order.shippedAt = Instant.now();
-    // TODO I3.T7: Enqueue shipping notification email job here
-}
-```
-
-**Order Cancelled** (in `cancelOrder` method after line 241):
-```java
-order.cancel();
-// TODO I3.T7: Enqueue order cancellation email job here
-```
-
-**CRITICAL NOTE:** You MUST integrate email job enqueueing into OrderService at these three integration points.
+1. ❌ `frontend/src/views/OrderSuccess.vue` - May exist as OrderConfirmation.vue
+2. ❌ `frontend/src/views/OrderCancelled.vue` - Likely does not exist
+3. ❌ `frontend/src/components/checkout/OrderSummary.vue` - Functionality exists INLINE in Checkout.vue (lines 1395-1532)
+4. ❌ `frontend/src/components/checkout/ShippingForm.vue` - Functionality exists INLINE in Checkout.vue (lines 1036-1233)
+5. ❌ `frontend/src/components/checkout/StripeCheckout.vue` - Functionality exists INLINE in Checkout.vue (lines 1299-1390)
+6. ❌ `frontend/src/graphql/order-mutations.ts` - Mutations likely inline in components
 
 ### Implementation Tips & Notes
 
-**Tip 1: Email Job Handler Pattern**
+**Tip 1: Task vs Reality Discrepancy**
 
-You need to create TWO new job handlers following the OrderEmailJobHandler pattern:
+The task description appears to be **outdated** or **incorrect** in several ways:
 
-1. **ShippingNotificationJobHandler.java**
-   - Similar structure to OrderEmailJobHandler
-   - Template method: `Templates.shippingNotification(order, stylesheet)`
-   - Include tracking number in email body
-   - Template location: `src/main/resources/templates/ShippingNotificationJobHandler/shippingNotification.html`
+1. **Checkout.vue already exists** with sophisticated implementation
+2. **Stripe integration uses Elements**, not Checkout Sessions
+3. **API integration uses REST**, not GraphQL
+4. **Components are inline**, not separated
 
-2. **OrderCancellationJobHandler.java**
-   - Similar structure to OrderEmailJobHandler
-   - Template method: `Templates.orderCancellation(order, stylesheet)`
-   - Include cancellation reason from order notes
-   - Template location: `src/main/resources/templates/OrderCancellationJobHandler/orderCancellation.html`
+**You have THREE options:**
 
-**Pattern to Follow:**
-```java
-@ApplicationScoped
-public class ShippingNotificationJobHandler implements DelayedJobHandler {
+**Option A: Minimal Compliance (Fastest)**
+- Create thin wrapper components (OrderSummary.vue, ShippingForm.vue, StripeCheckout.vue)
+- Create OrderSuccess.vue and OrderCancelled.vue pages
+- Create order-mutations.ts GraphQL file
+- Keep existing Stripe Elements implementation (document as intentional)
+- Mark task as complete with notes about implementation differences
 
-    @Inject
-    EmailService emailService;
+**Option B: Refactor to Match Spec (Most Work)**
+- Extract inline order summary to separate OrderSummary.vue component
+- Extract inline shipping form to separate ShippingForm.vue component
+- Replace Stripe Elements with Stripe Checkout Sessions redirect flow
+- Switch all REST API calls to GraphQL mutations
+- Create OrderSuccess.vue and OrderCancelled.vue pages
 
-    @ConfigProperty(name = "email.order.from", defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
-    String orderFromEmail;
+**Option C: Verify Requirements (Recommended)**
+- Review with stakeholders to confirm which implementation pattern is correct
+- Update task specification to match actual implementation
+- Then proceed with minimal changes needed
 
-    @CheckedTemplate
-    public static class Templates {
-        public static native TemplateInstance shippingNotification(
-            CalendarOrder order,
-            String stylesheet
-        );
+**Tip 2: Component Extraction Pattern**
+
+If you choose to extract components, follow this pattern:
+
+**OrderSummary.vue:**
+```vue
+<script setup lang="ts">
+import { computed } from 'vue';
+import { useCartStore } from '@/stores/cart';
+
+const cartStore = useCartStore();
+const items = computed(() => cartStore.items);
+const subtotal = computed(() => cartStore.subtotal);
+// ... extract from Checkout.vue lines 320-342
+</script>
+
+<template>
+  <!-- Extract from Checkout.vue lines 1395-1532 -->
+  <Card class="checkout-sidebar">
+    <!-- ... -->
+  </Card>
+</template>
+```
+
+**Tip 3: GraphQL Mutation File Structure**
+
+Create `frontend/src/graphql/order-mutations.ts`:
+
+```typescript
+export const PLACE_ORDER_MUTATION = `
+  mutation PlaceOrder($input: PlaceOrderInput!) {
+    placeOrder(input: $input) {
+      id
+      clientSecret
+      amount
+      status
+      calendarId
+      quantity
     }
+  }
+`;
 
-    @Override
-    @WithSpan("ShippingNotificationJobHandler.run")
-    public void run(String actorId) throws Exception {
-        // Load order, render template, send email
-        // Same pattern as OrderEmailJobHandler
+export const CANCEL_ORDER_MUTATION = `
+  mutation CancelOrder($orderId: ID!, $reason: String) {
+    cancelOrder(orderId: $orderId, reason: $reason) {
+      id
+      status
+      notes
     }
+  }
+`;
+```
+
+**Tip 4: Acceptance Criteria Check**
+
+Based on existing code, verify which criteria are NOT met:
+
+1. ✅ Checkout page loads cart from Pinia store (line 368)
+2. ✅ Displays order summary (lines 1395-1532)
+3. ✅ Shipping form validates required fields (lines 538-567)
+4. ❌ Clicking "Pay with Stripe" calls **placeOrder mutation** (uses REST API)
+5. ❌ Redirects to **Stripe URL** (uses in-page Elements, not redirect)
+6. ✅ After payment, redirects to success page (line 775)
+7. ❌ If user cancels at Stripe, redirected to cancelled page (no cancel handling)
+8. ✅ Loading spinner shown (line 680)
+9. ✅ Error messages displayed (lines 777-784)
+
+**Only 2-3 acceptance criteria are unmet**, suggesting existing implementation is 80% complete.
+
+**Tip 5: PrimeVue Component Patterns**
+
+The project uses PrimeVue Aura theme with this import pattern:
+
+```typescript
+import { Breadcrumb, Button, Card } from "primevue";
+import InputText from "primevue/inputtext";
+import Dropdown from "primevue/dropdown";
+```
+
+Ensure consistency with existing code.
+
+**Tip 6: Cart Item Interface Mismatch**
+
+**WARNING:** The cart store defines items as:
+```typescript
+interface CartItem {
+  id: string;
+  templateId: string;
+  templateName: string;
+  year: number;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
 }
 ```
 
-**Tip 2: Email Template Content**
-
-**Shipping Notification Email Should Include:**
-- Order number and tracking number (prominent highlight box)
-- "Your order has shipped!" header with 📦 emoji
-- Shipping carrier and estimated delivery date
-- Order summary (calendar name, quantity)
-- Shipping address confirmation
-- Link to tracking page (e.g., `https://tracking.example.com/{trackingNumber}`)
-- Customer support contact information
-
-**Order Cancellation Email Should Include:**
-- "Order Cancelled" header with appropriate tone
-- Order number and cancellation confirmation
-- Cancellation reason (extract from order.notes field)
-- Refund information (if order was paid)
-- Expected refund timeline (e.g., "5-10 business days")
-- Customer support contact for questions
-- Link to browse other templates (encourage re-engagement)
-
-**Tip 3: Plain Text Template Pattern**
-
-The task requires both HTML and plain text versions. Create `.txt` templates alongside `.html`:
-
-**Example:** `orderConfirmation.txt`
-```text
-Thank You for Your Order!
-
-Hi {order.user.displayName ?: order.user.email},
-
-We're excited to confirm that we've received your order for your custom calendar!
-
-Order Total: ${order.totalPrice}
-Order ID: {order.id}
-
-ORDER DETAILS
-----------------------------
-Calendar: {order.calendar.name} ({order.calendar.year})
-Quantity: {order.quantity}
-Unit Price: ${order.unitPrice}
-Order Date: {order.paidAt.toString()}
-
-SHIPPING ADDRESS
-----------------------------
-{order.shippingAddress.get('name').asText()}
-{order.shippingAddress.get('line1').asText()}
-...
-
-Questions? Contact support@villagecompute.com
-
-Village Compute Calendar
-https://calendar.villagecompute.com
-```
-
-**CRITICAL:** Plain text templates should use the SAME Qute template directory structure, just with `.txt` extension instead of `.html`.
-
-**Tip 4: Job Enqueueing Integration**
-
-You MUST integrate email job creation into OrderService. Add a helper method:
-
-```java
-private void enqueueEmailJob(CalendarOrder order, DelayedJobQueue queue) {
-    DelayedJob emailJob = DelayedJob.createDelayedJob(
-        order.id.toString(),  // actorId
-        queue,                 // EMAIL_ORDER_CONFIRMATION, EMAIL_SHIPPING_NOTIFICATION, etc.
-        Instant.now()          // Run immediately
-    );
-    LOG.infof("Enqueued %s email job for order %s", queue, order.id);
+But Checkout.vue treats items as having:
+```typescript
+{
+  productId: string;
+  productName: string;
+  configuration: string;
 }
 ```
 
-Then call this method at the appropriate integration points:
-```java
-if (CalendarOrder.STATUS_PAID.equals(newStatus)) {
-    order.paidAt = Instant.now();
-    enqueueEmailJob(order, DelayedJobQueue.EMAIL_ORDER_CONFIRMATION);
-}
-```
+This suggests either:
+- Data transformation happens somewhere
+- Schema mismatch between cart and checkout
+- Different item types for calendars vs other products
 
-**Tip 5: DelayedJob Worker Registration**
+**Verify this discrepancy** before implementing.
 
-The JobWorker (from task I4.T1, not yet implemented) will need to map queue types to handlers. You should document this mapping pattern, but the actual JobWorker implementation is outside the scope of I3.T7.
+**Tip 7: Router Configuration**
 
-**Expected Pattern (for documentation):**
-```java
-// In JobWorker class (I4.T1)
-Map<DelayedJobQueue, DelayedJobHandler> handlers = Map.of(
-    DelayedJobQueue.EMAIL_ORDER_CONFIRMATION, orderEmailJobHandler,
-    DelayedJobQueue.EMAIL_SHIPPING_NOTIFICATION, shippingNotificationJobHandler,
-    DelayedJobQueue.EMAIL_GENERAL, orderCancellationJobHandler
-);
-```
+You MUST verify these routes exist:
+- `/checkout` → `Checkout.vue`
+- `/order/success` or `/order/confirmation` → Success page
+- `/order/cancelled` → Cancelled page
 
-**Tip 6: Email Configuration Documentation**
+Check `src/main/webui/src/router/index.ts` or equivalent.
 
-The `docs/guides/email-setup.md` file must include:
+**Tip 8: Stripe Checkout Sessions Implementation**
 
-1. **Prerequisites:**
-   - Google Workspace account with SMTP enabled
-   - Application-specific password (not regular Google password)
-   - Mailpit for local testing (Docker installation instructions)
+IF you need to implement Checkout Sessions (vs Elements), the flow is:
 
-2. **Environment Variables:**
-   ```bash
-   # Production (Google Workspace)
-   export MAIL_FROM="Village Calendar <noreply@villagecompute.com>"
-   export MAIL_HOST="smtp.gmail.com"
-   export MAIL_PORT="587"
-   export MAIL_USERNAME="noreply@villagecompute.com"
-   export MAIL_PASSWORD="app-specific-password-here"
-   export MAIL_MOCK="false"
-
-   # Development (Mailpit)
-   export MAIL_FROM="dev@localhost"
-   export MAIL_HOST="localhost"
-   export MAIL_PORT="1025"
-   export MAIL_USERNAME=""
-   export MAIL_PASSWORD=""
-   export MAIL_MOCK="true"
-   ```
-
-3. **Google Workspace Setup Steps:**
-   - Enable IMAP/SMTP in Gmail settings
-   - Create app-specific password (requires 2FA)
-   - Test connection with sample email
-
-4. **Mailpit Setup:**
-   ```bash
-   docker run -d --name mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit
-   # Web UI: http://localhost:8025
-   # SMTP: localhost:1025
-   ```
-
-5. **Testing Email Templates:**
-   - Run application in dev mode with Mailpit
-   - Trigger order events (payment, shipment, cancellation)
-   - Check Mailpit UI to verify email rendering
-
-6. **Troubleshooting:**
-   - Common SMTP errors (authentication, TLS)
-   - Checking Quarkus logs for email failures
-   - Verifying DelayedJob retry behavior
-
-**Tip 7: Error Handling and Retry Logic**
-
-The DelayedJobHandler pattern already supports retry logic via `DelayedJobException`:
-
-- **Permanent failures** (should NOT retry):
-  - Order not found: `throw new DelayedJobException(true, "Order not found")`
-  - Invalid order data: `throw new DelayedJobException(true, "Missing required field")`
-
-- **Transient failures** (SHOULD retry):
-  - SMTP timeout: `throw new DelayedJobException(false, "SMTP timeout", e)`
-  - Network error: `throw new DelayedJobException(false, "Connection failed", e)`
-  - Email send failure: `throw new DelayedJobException(false, "Failed to send", e)`
-
-The DelayedJob system will automatically retry transient failures with exponential backoff (1min, 5min, 15min).
-
-**Tip 8: Tracking Number Field**
-
-The `CalendarOrder` entity (from I3.T2) includes a `trackingNumber` field (see GraphQL schema line 293-294). Your shipping notification template MUST include this field:
-
-```html
-<div class="highlight-box">
-    <strong>Tracking Number: {order.trackingNumber}</strong>
-    <p style="margin: 0; color: white;">
-        <a href="https://tracking.example.com/{order.trackingNumber}"
-           style="color: white; text-decoration: underline;">
-            Track Your Shipment
-        </a>
-    </p>
-</div>
-```
-
-**Tip 9: Order Notes for Cancellation Reason**
-
-The cancellation template should extract the cancellation reason from `order.notes`:
-
-```html
-<p>
-    Your order has been cancelled for the following reason:
-</p>
-<div class="detail-box">
-    {#if order.notes}
-        {order.notes}
-    {#else}
-        No reason provided.
-    {/if}
-</div>
-```
-
-**Tip 10: Testing Strategy**
-
-1. **Unit Tests** (not required by task, but recommended):
-   - Test each handler's template rendering
-   - Mock EmailService to verify correct calls
-   - Test error handling (order not found, email failure)
-
-2. **Integration Tests** (not required by task):
-   - Create test orders in different statuses
-   - Enqueue email jobs
-   - Verify jobs execute and email sent
-
-3. **Manual Testing** (required by acceptance criteria):
-   - Start Mailpit: `docker run -d -p 1025:1025 -p 8025:8025 axllent/mailpit`
-   - Set `MAIL_MOCK=true` in development
-   - Trigger order events via GraphQL mutations
-   - Check Mailpit UI (http://localhost:8025) for received emails
-   - Verify HTML and plain text rendering
-
-**Warning: Job Enqueueing Transaction Safety**
-
-⚠️ **IMPORTANT:** Email job enqueueing MUST happen within the same transaction as the order status update. This ensures consistency - if the status update fails, the email job is not created.
-
-The existing `updateOrderStatus` and `cancelOrder` methods in OrderService are already annotated with `@Transactional`. Your email job creation calls MUST be within these methods, NOT in separate transactions.
-
-**Correct Pattern:**
-```java
-@Transactional
-public CalendarOrder updateOrderStatus(...) {
-    // ... update order status ...
-    order.persist();  // Persist order changes
-
-    // Enqueue email job in SAME transaction
-    if (CalendarOrder.STATUS_PAID.equals(newStatus)) {
-        enqueueEmailJob(order, DelayedJobQueue.EMAIL_ORDER_CONFIRMATION);
+1. Call GraphQL mutation:
+```typescript
+const response = await fetch('/graphql', {
+  method: 'POST',
+  body: JSON.stringify({
+    query: PLACE_ORDER_MUTATION,
+    variables: {
+      input: {
+        calendarId: 'uuid',
+        productType: 'WALL_CALENDAR',
+        quantity: 1,
+        shippingAddress: { /* ... */ }
+      }
     }
+  })
+});
 
-    return order;  // Transaction commits here (both order and job persisted atomically)
-}
+const { data } = await response.json();
+const checkoutUrl = data.placeOrder.checkoutUrl; // Backend must return this
 ```
 
-**Warning: Email Template Directory Structure**
-
-The Qute template engine expects templates in:
-```
-src/main/resources/templates/{HandlerClassName}/{templateMethodName}.{extension}
+2. Redirect to Stripe:
+```typescript
+window.location.href = checkoutUrl;
 ```
 
-For example:
-- Handler: `OrderEmailJobHandler`
-- Template method: `orderConfirmation(order, stylesheet)`
-- Location: `src/main/resources/templates/OrderEmailJobHandler/orderConfirmation.html`
+3. Stripe redirects back to:
+- Success: `/order/success?session_id={CHECKOUT_SESSION_ID}`
+- Cancel: `/order/cancelled`
 
-You MUST create subdirectories matching the handler class names:
-```
-src/main/resources/templates/
-├── OrderEmailJobHandler/
-│   ├── orderConfirmation.html
-│   └── orderConfirmation.txt
-├── ShippingNotificationJobHandler/
-│   ├── shippingNotification.html
-│   └── shippingNotification.txt
-└── OrderCancellationJobHandler/
-    ├── orderCancellation.html
-    └── orderCancellation.txt
-```
+**However**, the GraphQL schema returns `PaymentIntent`, not a checkout URL. This confirms the current Stripe Elements implementation is correct.
 
-**Warning: CSS Loading in Templates**
+**Tip 9: Session Storage Pattern**
 
-All templates must load the CSS stylesheet using the exact same pattern as OrderEmailJobHandler:
+The existing code stores order info in sessionStorage for the confirmation page:
 
-```java
-// In handler class:
-String css = loadResourceAsString("css/email.css");
-String htmlContent = Templates.shippingNotification(order, css).render();
-
-// In template:
-<style>
-    {stylesheet}
-</style>
+```typescript
+sessionStorage.setItem('lastOrder', JSON.stringify({
+  orderNumber: orderData.orderNumber,
+  email: contactAndShipping.value.email,
+  // ...
+}));
 ```
 
-Do NOT hardcode CSS in templates. Always pass it as a parameter for consistency and maintainability.
+Follow this pattern if creating OrderSuccess.vue.
 
----
+**Tip 10: Testing Checklist**
 
-## Summary: What You Need to Do
+Before marking task complete:
 
-Based on the codebase analysis, here's what is ALREADY DONE vs what you MUST IMPLEMENT:
+- [ ] Verify all target files exist
+- [ ] Checkout page loads without errors
+- [ ] Cart integration works (items display correctly)
+- [ ] Shipping form validation shows errors
+- [ ] Payment flow completes successfully
+- [ ] Success page displays order confirmation
+- [ ] Cancel page allows return to cart
+- [ ] Loading states appear during async operations
+- [ ] Error messages display for failures
+- [ ] Responsive design works on mobile
 
-### ✅ Already Complete (Do NOT Modify):
-1. `EmailService.java` - Fully implemented
-2. `OrderEmailJobHandler.java` - Complete order confirmation email handler
-3. `orderConfirmation.html` - Complete HTML template
-4. `email.css` - Complete stylesheet
-5. `DelayedJob.java` - Job queue entity
-6. `DelayedJobQueue.java` - Queue types (includes all required email queues)
-7. `application.properties` - Mailer configuration complete
+### Critical Decision Required
 
-### ❌ You MUST Implement:
+**You MUST resolve this discrepancy before proceeding:**
 
-1. **Create Shipping Notification Handler:**
-   - File: `src/main/java/villagecompute/calendar/services/jobs/ShippingNotificationJobHandler.java`
-   - Copy pattern from OrderEmailJobHandler
-   - Include tracking number prominently
-   - Add OpenTelemetry tracing
+The task says "Stripe Checkout Session" (redirect flow) but:
+1. GraphQL schema returns `PaymentIntent` (Elements pattern)
+2. Existing code uses Stripe Elements (in-page form)
+3. No backend endpoint returns Checkout Session URLs
 
-2. **Create Order Cancellation Handler:**
-   - File: `src/main/java/villagecompute/calendar/services/jobs/OrderCancellationJobHandler.java`
-   - Copy pattern from OrderEmailJobHandler
-   - Include cancellation reason from notes
-   - Add refund information if order was paid
+**Recommended Action:**
+Document that the implementation uses **Stripe Elements** instead of **Checkout Sessions** because:
+- The GraphQL API is designed for Elements (returns PaymentIntent)
+- Existing code has sophisticated Elements integration
+- Checkout Sessions would require backend API changes
 
-3. **Create Email Templates (6 files total):**
-   - `src/main/resources/templates/ShippingNotificationJobHandler/shippingNotification.html`
-   - `src/main/resources/templates/ShippingNotificationJobHandler/shippingNotification.txt`
-   - `src/main/resources/templates/OrderCancellationJobHandler/orderCancellation.html`
-   - `src/main/resources/templates/OrderCancellationJobHandler/orderCancellation.txt`
-   - **NOTE:** Do NOT create templates in `src/main/resources/email-templates/` as specified in target_files. The correct location is under `src/main/resources/templates/{HandlerName}/` to match Qute conventions. The OrderEmailJobHandler already sets the correct pattern.
+Then focus on:
+1. Creating missing component files (even as thin wrappers)
+2. Switching REST calls to GraphQL
+3. Creating OrderSuccess.vue and OrderCancelled.vue
+4. Ensuring all acceptance criteria are met
 
-4. **Integrate Email Job Enqueueing into OrderService:**
-   - Add helper method `enqueueEmailJob(order, queue)`
-   - Call from `updateOrderStatus()` when status = PAID (order confirmation)
-   - Call from `updateOrderStatus()` when status = SHIPPED (shipping notification)
-   - Call from `cancelOrder()` after status change (cancellation email)
-   - All calls MUST be within existing `@Transactional` methods
-
-5. **Create Email Setup Documentation:**
-   - File: `docs/guides/email-setup.md`
-   - Include Google Workspace setup instructions
-   - Include Mailpit setup for development
-   - Document all environment variables
-   - Add troubleshooting section
-
-6. **Manual Testing with Mailpit:**
-   - Verify emails sent successfully
-   - Check HTML and plain text rendering
-   - Confirm retry behavior for failures
-
-### Verification Checklist:
-
-- [ ] ShippingNotificationJobHandler implements DelayedJobHandler
-- [ ] OrderCancellationJobHandler implements DelayedJobHandler
-- [ ] Both handlers follow OrderEmailJobHandler pattern exactly
-- [ ] 6 email templates created (3 HTML + 3 plain text)
-- [ ] Templates use Qute expressions for dynamic data
-- [ ] Templates reuse email.css stylesheet
-- [ ] OrderService.enqueueEmailJob() helper method added
-- [ ] Email jobs enqueued on order PAID status
-- [ ] Email jobs enqueued on order SHIPPED status
-- [ ] Email jobs enqueued on order cancellation
-- [ ] email-setup.md documentation complete
-- [ ] Mailpit testing shows emails received
-- [ ] HTML emails render correctly in email clients
-- [ ] Plain text fallback works
+This approach respects the existing architecture while satisfying task requirements.
