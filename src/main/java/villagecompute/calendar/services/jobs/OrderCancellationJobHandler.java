@@ -44,11 +44,13 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
          *
          * @param order Calendar order
          * @param stylesheet CSS stylesheet
+         * @param includeRefundNote Whether to include refund processing note
          * @return Template instance
          */
         public static native TemplateInstance orderCancellation(
             CalendarOrder order,
-            String stylesheet
+            String stylesheet,
+            boolean includeRefundNote
         );
     }
 
@@ -65,6 +67,12 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
             throw new DelayedJobException(true, "Order not found: " + actorId);
         }
 
+        // Validate order is actually cancelled
+        if (!CalendarOrder.STATUS_CANCELLED.equals(order.status)) {
+            LOG.warnf("Order %s is not in CANCELLED status (current: %s)", actorId, order.status);
+            throw new DelayedJobException(true, "Order is not cancelled: " + actorId);
+        }
+
         // Add tracing attributes
         Span.current().setAttribute("order.id", order.id.toString());
         Span.current().setAttribute("order.user.email", order.user.email);
@@ -74,9 +82,13 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
             // Load CSS from resources
             String css = loadResourceAsString("css/email.css");
 
+            // Determine if refund note should be included
+            // Refunds are needed if order was paid and has a payment intent
+            boolean includeRefundNote = order.stripePaymentIntentId != null && order.paidAt != null;
+
             // Render the cancellation email template
-            String subject = "Order Cancellation Confirmation - Village Compute Calendar";
-            String htmlContent = Templates.orderCancellation(order, css).render();
+            String subject = "Order Cancelled - Village Compute Calendar";
+            String htmlContent = Templates.orderCancellation(order, css, includeRefundNote).render();
 
             // Send the email
             emailService.sendHtmlEmail(orderFromEmail, order.user.email, subject, htmlContent);

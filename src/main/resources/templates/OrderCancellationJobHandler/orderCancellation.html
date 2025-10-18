@@ -66,7 +66,7 @@
         </div>
         {/if}
 
-        {#if order.paidAt != null}
+        {#if includeRefundNote}
         <h2>💳 Refund Information</h2>
 
         <div class="refund-box">
@@ -85,7 +85,7 @@
 
         <h2>🔍 What's Next?</h2>
 
-        {#if order.paidAt != null}
+        {#if includeRefundNote}
         <ul style="color: #374151; font-size: 16px; line-height: 1.8;">
             <li><strong>Refund Processing:</strong> We'll process your refund within 1-2 business days</li>
             <li><strong>Payment Method:</strong> The refund will be credited to your original payment method</li>

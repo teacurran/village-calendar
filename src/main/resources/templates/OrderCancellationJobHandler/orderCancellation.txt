@@ -24,7 +24,7 @@ CANCELLATION REASON
 {order.notes}
 
 {/if}
-{#if order.paidAt != null}
+{#if includeRefundNote}
 REFUND INFORMATION
 ------------------------------------
 Your refund is being processed.

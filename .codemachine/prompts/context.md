@@ -10,26 +10,31 @@ This is the full specification of the task you must complete.
 
 ```json
 {
-  "task_id": "I3.T6",
+  "task_id": "I3.T7",
   "iteration_id": "I3",
   "iteration_goal": "Implement complete e-commerce workflow including Stripe payment integration, order placement, order management dashboard (admin), and transactional email notifications",
-  "description": "Create admin panel for order management. OrderDashboard.vue (admin view, lists all orders with filtering/sorting), OrderDetailsPanel.vue (detailed order view with customer info, shipping address, order items, status timeline), OrderStatusUpdater.vue (admin tool to update order status, add tracking number, add notes). Use PrimeVue DataTable with pagination, filtering, sorting. Implement order filtering: by status (PENDING, PAID, SHIPPED, etc.), by date range, by order number search. Add admin actions: mark as shipped (enter tracking number), add notes, cancel order (with reason). Protect routes with admin role check. Integrate with GraphQL API (orders query with admin role, updateOrderStatus mutation).",
-  "agent_type_hint": "FrontendAgent",
-  "inputs": "Admin order management requirements from Plan Section \"Admin Order Management Interface\", PrimeVue DataTable documentation",
+  "description": "Create EmailService for composing and sending transactional emails via SMTP (GoogleWorkspace initially). Implement email templates (HTML + plain text) for: order confirmation (sent on payment success), shipping notification (sent when order marked as SHIPPED with tracking number), order cancellation (sent when order cancelled). Configure JavaMail in application.properties (SMTP host, port, TLS, auth credentials from env variables). Create EmailJob (DelayedJob implementation) for async email sending. Implement email queueing via JobManager (enqueue EmailJob on order events). Add retry logic for failed email sends. Test with Mailpit (local SMTP server for development). Document email configuration in docs/guides/email-setup.md.",
+  "agent_type_hint": "BackendAgent",
+  "inputs": "Email notification requirements from Plan Section \"Order Notifications\", JavaMail documentation, DelayedJob pattern from architecture plan",
   "target_files": [
-    "frontend/src/views/admin/OrderDashboard.vue",
-    "frontend/src/views/admin/OrderDetailsPanel.vue",
-    "frontend/src/components/admin/OrderStatusUpdater.vue",
-    "frontend/src/components/admin/OrderFilters.vue",
-    "frontend/src/graphql/admin-queries.ts"
+    "src/main/java/com/villagecompute/calendar/integration/email/EmailService.java",
+    "src/main/java/com/villagecompute/calendar/jobs/EmailJob.java",
+    "src/main/resources/email-templates/order-confirmation.html",
+    "src/main/resources/email-templates/order-confirmation.txt",
+    "src/main/resources/email-templates/shipping-notification.html",
+    "src/main/resources/email-templates/shipping-notification.txt",
+    "src/main/resources/email-templates/order-cancellation.html",
+    "src/main/resources/email-templates/order-cancellation.txt",
+    "docs/guides/email-setup.md"
   ],
   "input_files": [
-    "frontend/src/views/AdminPanel.vue",
-    "api/graphql-schema.graphql"
+    "src/main/resources/application.properties",
+    "src/main/java/com/villagecompute/calendar/model/DelayedJob.java",
+    "src/main/java/com/villagecompute/calendar/service/OrderService.java"
   ],
-  "deliverables": "Admin order dashboard with data table, Order filtering (status, date range, search), Order details panel with full customer/order info, Status updater (admin can change status, add tracking number), GraphQL integration (admin queries/mutations), Role-based access control (admin only)",
-  "acceptance_criteria": "Order dashboard displays all orders in DataTable (paginated, 25 per page), Filtering by status updates table (e.g., show only SHIPPED orders), Clicking order row opens OrderDetailsPanel with full order info, Admin can mark order as SHIPPED, enter tracking number, save changes, Non-admin users redirected from /admin routes (route guard check), GraphQL query uses admin context (orders query without userId filter), Status update mutation persists changes to database",
-  "dependencies": ["I3.T4"],
+  "deliverables": "EmailService with template rendering and SMTP sending, EmailJob for async email processing, Email templates (HTML + plain text) for all order events, Email queueing integrated into OrderService, Retry logic for failed sends (DelayedJob retry mechanism), Email configuration guide",
+  "acceptance_criteria": "EmailService sends email successfully via GoogleWorkspace SMTP, Email templates render with order data (order number, customer name, items), EmailJob enqueued when order status changes to PAID or SHIPPED, Failed email sends retry 3 times with exponential backoff, Mailpit receives emails during local development (SMTP localhost:1025), Email configuration guide tested with fresh GoogleWorkspace account",
+  "dependencies": ["I3.T2"],
   "parallelizable": true,
   "done": false
 }
@@ -41,81 +46,97 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: technology-stack-summary (from 02_Architecture_Overview.md)
+### Context: Logging & Monitoring (from 05_Operational_Architecture.md)
 
 ```markdown
-### 3.2. Technology Stack Summary
+<!-- anchor: logging-monitoring -->
+#### 3.8.2. Logging & Monitoring
 
-The following table summarizes the technology choices across all architectural layers, with justifications aligned to project requirements and constraints.
+**Logging Strategy:**
 
-| **Category** | **Technology** | **Version** | **Justification** |
-|--------------|----------------|-------------|-------------------|
-| **Frontend Framework** | Vue.js | 3.5+ | Mandated. Composition API for reactive components. Strong ecosystem. Team expertise. |
-| **UI Component Library** | PrimeVue | 4.2+ | Comprehensive component set (forms, tables, dialogs). Aura theme. Accessibility built-in. Reduces custom CSS. |
-| **Icons** | PrimeIcons | 7.0+ | Consistent iconography. Optimized SVGs. Works seamlessly with PrimeVue. |
-| **CSS Framework** | TailwindCSS | 4.0+ | Utility-first styling. Rapid prototyping. Small bundle size (purged unused classes). |
-| **State Management** | Pinia | Latest | Vue 3 recommended store. Simpler than Vuex. Type-safe with TypeScript. DevTools integration. |
-| **Routing** | Vue Router | 4.5+ | Client-side routing. Lazy-loaded routes for code splitting. Navigation guards for auth checks. |
-| **TypeScript** | TypeScript | ~5.7.3 | Type safety for Vue components, API contracts. IDE autocomplete. Catch errors at compile time. |
-| **API - Primary** | GraphQL (SmallRye) | (bundled) | Flexible frontend queries (fetch calendar + user + templates in single request). Schema evolution without versioning. Strong typing. |
+**Structured Logging (JSON Format):**
+
+All application logs are emitted as structured JSON to enable efficient parsing, filtering, and aggregation by observability tools.
+
+**Example Log Entry:**
+```json
+{
+  "timestamp": "2025-10-16T14:32:15.123Z",
+  "level": "INFO",
+  "logger": "com.villagecompute.calendar.service.OrderService",
+  "message": "Order placed successfully",
+  "context": {
+    "userId": 12345,
+    "orderId": 67890,
+    "total": 29.99,
+    "paymentMethod": "card"
+  },
+  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "spanId": "00f067aa0ba902b7"
+}
 ```
 
-**Key Technology Decisions:**
-
-1. **GraphQL over REST**: Frontend complexity (calendar editor needs nested data: calendar → events → user → templates) benefits from GraphQL's flexible querying. Single request replaces multiple REST round-trips.
-
-6. **Pinia over Vuex**: Pinia is Vue 3 official recommendation. Simpler API, better TypeScript support, no mutations (actions only).
-
-7. **Tailwind over Custom CSS**: Utility-first approach accelerates UI development. PurgeCSS removes unused classes (small bundle). PrimeVue handles complex components; Tailwind for layouts and spacing.
+**Log Levels:**
+- **ERROR**: Application errors requiring immediate attention (payment failures, database connection loss, job crashes)
+- **WARN**: Degraded operation or unexpected behavior (high retry count, deprecated API usage, slow queries >1s)
+- **INFO**: Significant business events (order placed, user registered, PDF generated, email sent)
+- **DEBUG**: Detailed troubleshooting information (GraphQL query details, external API request/response, job queue polling)
+- **TRACE**: Very verbose (SQL queries, method entry/exit) - enabled only in development
 ```
 
-### Context: task-i3-t6 (from 02_Iteration_I3.md)
+### Context: Task 3.7 - Email Notification System (from 02_Iteration_I3.md)
 
 ```markdown
-### Task 3.6: Build Admin Order Management Dashboard (Vue)
+<!-- anchor: task-i3-t7 -->
+### Task 3.7: Implement Email Notification System
 
-**Task ID:** `I3.T6`
+**Task ID:** `I3.T7`
 
 **Description:**
-Create admin panel for order management. OrderDashboard.vue (admin view, lists all orders with filtering/sorting), OrderDetailsPanel.vue (detailed order view with customer info, shipping address, order items, status timeline), OrderStatusUpdater.vue (admin tool to update order status, add tracking number, add notes). Use PrimeVue DataTable with pagination, filtering, sorting. Implement order filtering: by status (PENDING, PAID, SHIPPED, etc.), by date range, by order number search. Add admin actions: mark as shipped (enter tracking number), add notes, cancel order (with reason). Protect routes with admin role check. Integrate with GraphQL API (orders query with admin role, updateOrderStatus mutation).
+Create EmailService for composing and sending transactional emails via SMTP (GoogleWorkspace initially). Implement email templates (HTML + plain text) for: order confirmation (sent on payment success), shipping notification (sent when order marked as SHIPPED with tracking number), order cancellation (sent when order cancelled). Configure JavaMail in application.properties (SMTP host, port, TLS, auth credentials from env variables). Create EmailJob (DelayedJob implementation) for async email sending. Implement email queueing via JobManager (enqueue EmailJob on order events). Add retry logic for failed email sends. Test with Mailpit (local SMTP server for development). Document email configuration in docs/guides/email-setup.md.
 
-**Agent Type Hint:** `FrontendAgent`
+**Agent Type Hint:** `BackendAgent`
 
 **Inputs:**
-- Admin order management requirements from Plan Section "Admin Order Management Interface"
-- PrimeVue DataTable documentation
+- Email notification requirements from Plan Section "Order Notifications"
+- JavaMail documentation
+- DelayedJob pattern from architecture plan
 
 **Input Files:**
-- `frontend/src/views/AdminPanel.vue` (placeholder from I1.T11)
-- `api/graphql-schema.graphql`
+- `src/main/resources/application.properties`
+- `src/main/java/com/villagecompute/calendar/model/DelayedJob.java`
+- `src/main/java/com/villagecompute/calendar/service/OrderService.java`
 
 **Target Files:**
-- `frontend/src/views/admin/OrderDashboard.vue`
-- `frontend/src/views/admin/OrderDetailsPanel.vue`
-- `frontend/src/components/admin/OrderStatusUpdater.vue`
-- `frontend/src/components/admin/OrderFilters.vue`
-- `frontend/src/graphql/admin-queries.ts`
+- `src/main/java/com/villagecompute/calendar/integration/email/EmailService.java`
+- `src/main/java/com/villagecompute/calendar/jobs/EmailJob.java`
+- `src/main/resources/email-templates/order-confirmation.html`
+- `src/main/resources/email-templates/order-confirmation.txt`
+- `src/main/resources/email-templates/shipping-notification.html`
+- `src/main/resources/email-templates/shipping-notification.txt`
+- `src/main/resources/email-templates/order-cancellation.html`
+- `src/main/resources/email-templates/order-cancellation.txt`
+- `docs/guides/email-setup.md`
 
 **Deliverables:**
-- Admin order dashboard with data table
-- Order filtering (status, date range, search)
-- Order details panel with full customer/order info
-- Status updater (admin can change status, add tracking number)
-- GraphQL integration (admin queries/mutations)
-- Role-based access control (admin only)
+- EmailService with template rendering and SMTP sending
+- EmailJob for async email processing
+- Email templates (HTML + plain text) for all order events
+- Email queueing integrated into OrderService
+- Retry logic for failed sends (DelayedJob retry mechanism)
+- Email configuration guide
 
 **Acceptance Criteria:**
-- Order dashboard displays all orders in DataTable (paginated, 25 per page)
-- Filtering by status updates table (e.g., show only SHIPPED orders)
-- Clicking order row opens OrderDetailsPanel with full order info
-- Admin can mark order as SHIPPED, enter tracking number, save changes
-- Non-admin users redirected from /admin routes (route guard check)
-- GraphQL query uses admin context (orders query without userId filter)
-- Status update mutation persists changes to database
+- EmailService sends email successfully via GoogleWorkspace SMTP
+- Email templates render with order data (order number, customer name, items)
+- EmailJob enqueued when order status changes to PAID or SHIPPED
+- Failed email sends retry 3 times with exponential backoff
+- Mailpit receives emails during local development (SMTP localhost:1025)
+- Email configuration guide tested with fresh GoogleWorkspace account
 
-**Dependencies:** `I3.T4` (OrderResolver with admin queries/mutations)
+**Dependencies:** `I3.T2` (OrderService for integration points)
 
-**Parallelizable:** Yes (can develop concurrently with checkout UI)
+**Parallelizable:** Yes (can develop concurrently with order workflow)
 ```
 
 ---
@@ -124,203 +145,253 @@ Create admin panel for order management. OrderDashboard.vue (admin view, lists a
 
 The following analysis is based on my direct review of the current codebase. Use these notes and tips to guide your implementation.
 
-### CRITICAL DISCOVERY: Task I3.T6 is Already Substantially Complete!
+### ⚠️ CRITICAL DISCOVERY: This Task is ~80% Complete!
 
-**Status:** The primary deliverables for this task have ALREADY been implemented. Here's what exists:
+**Investigation Summary:** Upon examining the codebase, I discovered that the email notification system has already been substantially implemented. Here's the actual status:
 
-#### ✅ COMPLETED Components (Already Exist):
+### ✅ COMPLETED Components (Already Exist):
 
-1. **OrderDashboard.vue** - FULLY IMPLEMENTED at `/Users/tea/dev/VillageCompute/code/village-calendar/src/main/webui/src/view/admin/OrderDashboard.vue`
-   - **Summary:** Complete admin order dashboard with PrimeVue DataTable, pagination (20 per page), status filtering, order viewing/updating
-   - **Features Implemented:**
-     - Status filter dropdown with all order statuses
-     - DataTable with columns: Order ID, Customer, Calendar, Quantity, Total, Status, Tracking, Order Date, Actions
-     - Update status dialog (embedded, not separate component) with validation
-     - Order details panel (embedded in dialog)
-     - Tracking number input for SHIPPED status
-     - Admin notes textarea
-     - Refresh button
-     - Toast notifications for success/error
-   - **Location:** `src/main/webui/src/view/admin/OrderDashboard.vue` (515 lines)
+*   **File:** `src/main/java/villagecompute/calendar/services/EmailService.java` - **FULLY IMPLEMENTED**
+    *   **Summary:** Complete email service using Quarkus Mailer (NOT JavaMail directly). Supports both text and HTML emails with environment-aware subject prefixes.
+    *   **Methods:** `sendEmail()`, `sendHtmlEmail()` with from/to/subject/body parameters
+    *   **Features:** Environment prefix for non-prod emails (e.g., "[DEV] Order Confirmation")
+    *   **Recommendation:** DO NOT create a new EmailService. This implementation is production-ready. Quarkus Mailer handles SMTP configuration automatically.
 
-2. **orderStore.ts** - FULLY IMPLEMENTED at `/Users/tea/dev/VillageCompute/code/village-calendar/src/main/webui/src/stores/orderStore.ts`
-   - **Summary:** Pinia store managing admin order operations with state, actions, and getters
-   - **Features Implemented:**
-     - `loadOrders()` action - fetches all orders with optional status filter
-     - `updateOrderStatus()` action - updates order status via GraphQL
-     - `ordersByStatus` getter
-     - `orderCounts` getter
-     - Loading and error state management
+*   **File:** `src/main/java/villagecompute/calendar/data/models/DelayedJob.java` - **COMPLETE**
+    *   **Summary:** Job entity with retry logic, priority queuing, and factory methods
+    *   **Key Method:** `createDelayedJob(actorId, queue, runAt)` - Creates and persists jobs
+    *   **Recommendation:** Use this entity exactly as-is for email job creation
 
-3. **Backend GraphQL Resolvers** - FULLY IMPLEMENTED in `OrderGraphQL.java`
-   - **Summary:** Complete GraphQL API with admin queries and mutations
-   - **Queries Implemented:**
-     - `allOrders(status, limit)` - @RolesAllowed("ADMIN")
-     - `orders(userId, status)` - Admin context with role check
-     - `order(id)` - User/admin authorization
-   - **Mutations Implemented:**
-     - `updateOrderStatus(id, input)` - @RolesAllowed("ADMIN")
-     - `cancelOrder(orderId, reason)` - @RolesAllowed("USER") with ownership check
-   - **Location:** `src/main/java/villagecompute/calendar/api/graphql/OrderGraphQL.java`
+*   **File:** `src/main/java/villagecompute/calendar/data/models/DelayedJobQueue.java` - **COMPLETE**
+    *   **Summary:** Enum with all required email queues already defined:
+        - `EMAIL_ORDER_CONFIRMATION(10)` - High priority
+        - `EMAIL_SHIPPING_NOTIFICATION(10)` - High priority
+        - `EMAIL_GENERAL(5)` - Medium priority (for cancellations)
+    *   **Recommendation:** NO changes needed. All email queues exist.
 
-4. **Backend OrderService** - FULLY IMPLEMENTED
-   - **Summary:** Complete service layer with order status management, validation, and email job enqueueing
-   - **Methods Implemented:**
-     - `updateOrderStatus()` - Validates transitions, updates timestamps, enqueues emails
-     - `getOrdersByStatus()`
-     - `getUserOrders()`
-     - `getOrderById()`
-     - `cancelOrder()` - Authorization, validation, cancellation logic
-   - **Location:** `src/main/java/villagecompute/calendar/services/OrderService.java`
+*   **File:** `src/main/java/villagecompute/calendar/services/jobs/OrderEmailJobHandler.java` - **FULLY IMPLEMENTED**
+    *   **Summary:** Complete job handler for order confirmation emails using Qute templates
+    *   **Pattern:** Uses @CheckedTemplate for type-safe templates, loads CSS from resources, sends HTML email via EmailService
+    *   **Location:** Templates in `src/main/resources/templates/OrderEmailJobHandler/`
+    *   **Recommendation:** Use this as the exact pattern for implementing OrderCancellationJobHandler
 
-5. **GraphQL Schema** - COMPLETE order types and operations defined
-   - **Location:** `api/schema.graphql`
-   - **Types:** CalendarOrder, OrderStatus enum, OrderUpdateInput
-   - **Queries:** allOrders, orders, order
-   - **Mutations:** updateOrderStatus, cancelOrder
+*   **File:** `src/main/java/villagecompute/calendar/services/jobs/ShippingNotificationJobHandler.java` - **FULLY IMPLEMENTED**
+    *   **Summary:** Complete job handler for shipping notifications with tracking number validation
+    *   **Location:** Templates in `src/main/resources/templates/ShippingNotificationJobHandler/`
+    *   **Recommendation:** Reference this for cancellation handler implementation
 
-#### ❌ MISSING Components (Per Original Task Spec):
+*   **Email Templates - Order Confirmation** - **BOTH HTML AND TEXT EXIST**
+    *   **Files:**
+        - `src/main/resources/templates/OrderEmailJobHandler/orderConfirmation.html`
+        - `src/main/resources/templates/OrderEmailJobHandler/orderConfirmation.txt`
+    *   **Summary:** Professional HTML email with inline CSS, order details, shipping address, next steps
+    *   **Recommendation:** These are production-ready. Do not modify unless improving design.
 
-The task specification called for separate components that were NOT created:
+*   **Email Templates - Shipping Notification** - **BOTH HTML AND TEXT EXIST**
+    *   **Files:**
+        - `src/main/resources/templates/ShippingNotificationJobHandler/shippingNotification.html`
+        - `src/main/resources/templates/ShippingNotificationJobHandler/shippingNotification.txt`
+    *   **Recommendation:** Production-ready shipping notification templates exist.
 
-1. **OrderDetailsPanel.vue** - NOT CREATED as separate component
-   - **Reality:** Details panel is EMBEDDED in the OrderDashboard.vue dialog (lines 356-413)
-   - **Recommendation:** The embedded implementation works well and reduces unnecessary abstraction
+*   **OrderService Integration** - **FULLY IMPLEMENTED**
+    *   **File:** `src/main/java/villagecompute/calendar/services/OrderService.java`
+    *   **Methods:**
+        - `enqueueEmailJob(order, queue)` (lines 316-323) - Creates DelayedJob for emails
+        - `updateOrderStatus()` (lines 141-145) - Enqueues EMAIL_ORDER_CONFIRMATION on PAID
+        - `updateOrderStatus()` (lines 143-145) - Enqueues EMAIL_SHIPPING_NOTIFICATION on SHIPPED
+    *   **Recommendation:** Email job enqueueing is COMPLETE. Only cancellation email needs to be added (line 253).
 
-2. **OrderStatusUpdater.vue** - NOT CREATED as separate component
-   - **Reality:** Status updater is EMBEDDED in the OrderDashboard.vue dialog (lines 421-464)
-   - **Recommendation:** The embedded implementation is more maintainable for a single use case
+*   **SMTP Configuration** - **COMPLETE**
+    *   **File:** `src/main/resources/application.properties`
+    *   **Config:**
+        ```properties
+        quarkus.mailer.from=${MAIL_FROM:noreply@villagecompute.com}
+        quarkus.mailer.host=${MAIL_HOST:smtp.example.com}
+        quarkus.mailer.port=${MAIL_PORT:587}
+        quarkus.mailer.start-tls=REQUIRED
+        quarkus.mailer.username=${MAIL_USERNAME:placeholder}
+        quarkus.mailer.password=${MAIL_PASSWORD:placeholder}
+        quarkus.mailer.mock=${MAIL_MOCK:true}
+        ```
+    *   **Recommendation:** SMTP configuration is complete with environment variable support. No changes needed.
 
-3. **OrderFilters.vue** - NOT CREATED as separate component
-   - **Reality:** Status filter is EMBEDDED in OrderDashboard.vue (lines 233-247)
-   - **Note:** The task spec mentions "by date range, by order number search" which are NOT implemented
-   - **Recommendation:** These additional filters should be added if needed
+*   **CSS Stylesheet** - **EXISTS**
+    *   **File:** `src/main/resources/css/email.css`
+    *   **Summary:** Common email styles loaded by all handlers via `loadResourceAsString()`
+    *   **Recommendation:** Reuse this CSS for cancellation emails
 
-4. **admin-queries.ts** - NOT CREATED
-   - **Reality:** GraphQL queries appear to be handled directly via the orderStore and orderService
-   - **Recommendation:** This is acceptable; the service layer abstracts GraphQL calls
+### ❌ MISSING Components (To Be Implemented):
+
+1. **OrderCancellationJobHandler** - **NOT IMPLEMENTED**
+    *   **Required:** `src/main/java/villagecompute/calendar/services/jobs/OrderCancellationJobHandler.java`
+    *   **Pattern:** Copy OrderEmailJobHandler.java, modify for cancellation logic
+    *   **Key Differences:**
+        - Template name: `orderCancellation` instead of `orderConfirmation`
+        - Subject: "Order Cancelled - Village Compute Calendar"
+        - Add cancellation reason to template data
+        - Include refund processing note (if order was PAID)
+
+2. **Order Cancellation Email Templates** - **NOT IMPLEMENTED**
+    *   **Required:**
+        - `src/main/resources/templates/OrderCancellationJobHandler/orderCancellation.html`
+        - `src/main/resources/templates/OrderCancellationJobHandler/orderCancellation.txt`
+    *   **Content:** Order details, cancellation reason, refund info (if applicable), support contact
+
+3. **OrderService.cancelOrder() Email Integration** - **PARTIALLY IMPLEMENTED**
+    *   **Current:** Line 253 enqueues EMAIL_GENERAL queue
+    *   **Required:** Change to specific cancellation queue or handler
+    *   **Fix:** Update to use EMAIL_GENERAL with OrderCancellationJobHandler
+
+4. **Email Setup Documentation** - **NOT IMPLEMENTED**
+    *   **Required:** `docs/guides/email-setup.md`
+    *   **Content:**
+        - How to configure GoogleWorkspace SMTP
+        - Environment variables required (MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD)
+        - Mailpit setup for local testing (Docker compose example)
+        - Testing email templates locally
+        - Troubleshooting common SMTP issues
 
 ### Implementation Recommendations
 
-**Option 1: Mark Task Complete with Minor Additions (RECOMMENDED)**
-- The core functionality is 100% complete and working
-- Add missing filter features if truly needed:
-  - Date range filter (created/updated/paidAt/shippedAt)
-  - Order number search
-- Extract components if desired for code organization, but current implementation is clean
+**RECOMMENDED APPROACH: Minimal Implementation**
 
-**Option 2: Extract Components for Architectural Purity**
-- Create standalone `OrderDetailsPanel.vue`, `OrderStatusUpdater.vue`, `OrderFilters.vue`
-- Refactor OrderDashboard.vue to use these components
-- Create `admin-queries.ts` GraphQL query definitions
-- **Warning:** This adds complexity without significant benefit
+Since 80% of the work is done, you should:
 
-**Option 3: Enhance Existing Implementation**
-- Keep current architecture (embedded components work well)
-- Add the missing filter features:
-  - Date range picker for filtering orders by date
-  - Order number text search
-  - Pagination to 25 per page (currently 20)
-- Consider adding:
-  - Order status timeline visualization
-  - Bulk actions (select multiple orders, update status)
-  - Export orders to CSV
+1. **Create OrderCancellationJobHandler** (30 minutes)
+   - Copy OrderEmailJobHandler.java
+   - Change class name, template references
+   - Modify subject and logging messages
+   - Handle cancellation-specific data
+
+2. **Create Cancellation Email Templates** (45 minutes)
+   - HTML template following orderConfirmation.html pattern
+   - Plain text version
+   - Include: order details, cancellation reason, refund note, support info
+
+3. **Update Email Queue Mapping** (15 minutes)
+   - Verify EMAIL_GENERAL queue routes to OrderCancellationJobHandler
+   - Or add EMAIL_ORDER_CANCELLATION queue if preferred
+
+4. **Write Email Setup Guide** (60 minutes)
+   - Document GoogleWorkspace SMTP setup
+   - Mailpit Docker configuration
+   - Testing procedures
+   - Environment variable reference
+
+**Total Estimated Time: 2-3 hours** (not days!)
 
 ### Key Existing Files YOU MUST Review:
 
-1. **`src/main/webui/src/view/admin/OrderDashboard.vue`**
-   - **Purpose:** Main admin order management interface
-   - **Usage:** Import and modify this file if adding date range or search filters
-   - **Note:** Path is `view/admin/` not `views/admin/` (typo in task spec)
+*   **`src/main/java/villagecompute/calendar/services/EmailService.java`**
+    *   **Purpose:** Core email sending service using Quarkus Mailer
+    *   **DO NOT MODIFY:** This service is complete and working
+    *   **Usage:** Import and inject this service in your job handlers
 
-2. **`src/main/webui/src/stores/orderStore.ts`**
-   - **Purpose:** Pinia store for order management state
-   - **Usage:** Review actions and consider if new filters require store modifications
+*   **`src/main/java/villagecompute/calendar/services/jobs/OrderEmailJobHandler.java`**
+    *   **Purpose:** Reference implementation for email job handlers
+    *   **Pattern to Copy:**
+        - @ApplicationScoped class implementing DelayedJobHandler
+        - @CheckedTemplate inner class for type-safe templates
+        - @WithSpan for distributed tracing
+        - loadResourceAsString() for CSS injection
+        - DelayedJobException with permanent/transient flag
 
-3. **`src/main/webui/src/services/orderService.ts`**
-   - **Purpose:** GraphQL service calls for orders
-   - **Location:** Likely exists, need to check for GraphQL query implementations
-   - **Usage:** Import functions like `fetchAllOrdersAdmin`, `updateOrderStatusAdmin`
+*   **`src/main/resources/templates/OrderEmailJobHandler/orderConfirmation.html`**
+    *   **Purpose:** HTML email template example
+    *   **Pattern to Copy:**
+        - DOCTYPE and responsive HTML structure
+        - Qute template syntax: {order.user.displayName}, {order.totalPrice}
+        - CSS injection: {stylesheet} placeholder
+        - Brand styling: colors, buttons, footer
 
-4. **`api/schema.graphql`**
-   - **Purpose:** GraphQL schema with order types and operations
-   - **Usage:** Reference for type definitions when working with TypeScript interfaces
-
-5. **`src/main/java/villagecompute/calendar/api/graphql/OrderGraphQL.java`**
-   - **Purpose:** Backend GraphQL resolvers for orders
-   - **Usage:** DO NOT MODIFY (this is backend code, you are FrontendAgent)
-   - **Note:** All required admin queries/mutations already exist
+*   **`src/main/java/villagecompute/calendar/services/OrderService.java`**
+    *   **Purpose:** Order business logic with email enqueueing
+    *   **Line 253:** Currently enqueues EMAIL_GENERAL for cancellations
+    *   **DO MODIFY:** Ensure cancellation emails use correct queue
 
 ### Implementation Tips & Notes
 
-**Tip 1: Pagination Discrepancy**
-- Current implementation uses 20 rows per page
-- Acceptance criteria specifies 25 per page
-- **Fix:** Change `:rows="20"` to `:rows="25"` in DataTable component (line 255 of OrderDashboard.vue)
+*   **Tip 1: Handler Registration**
+    - Quarkus CDI automatically discovers @ApplicationScoped job handlers
+    - No manual registration needed
+    - Handler must implement DelayedJobHandler interface
 
-**Tip 2: Date Range Filter Implementation**
-- PrimeVue Calendar component supports range selection
-- Add to OrderFilters section with `selectionMode="range"`
-- Filter orders client-side or add backend support via GraphQL query params
+*   **Tip 2: Template Directory Structure**
+    - Templates MUST be in `src/main/resources/templates/{HandlerClassName}/`
+    - Example: `templates/OrderCancellationJobHandler/orderCancellation.html`
+    - Qute @CheckedTemplate matches handler class name automatically
 
-**Tip 3: Order Number Search**
-- Add InputText with icon="pi pi-search"
-- Filter orders array using computed property
-- Consider debouncing for performance
+*   **Tip 3: Error Handling**
+    - Permanent failures: `throw new DelayedJobException(true, "Order not found")`
+    - Transient failures: `throw new DelayedJobException(false, "SMTP timeout")`
+    - Permanent failures won't retry (e.g., order doesn't exist)
+    - Transient failures retry with exponential backoff
 
-**Tip 4: Component Extraction (If Needed)**
-- OrderDetailsPanel: lines 356-419 of OrderDashboard.vue
-- OrderStatusUpdater: lines 421-464 of OrderDashboard.vue
-- Pass `editingOrder` as prop, emit update events
+*   **Tip 4: Testing with Mailpit**
+    - Run Mailpit: `docker run -d -p 1025:1025 -p 8025:8025 mailpit/mailpit`
+    - Configure: `MAIL_HOST=localhost MAIL_PORT=1025 MAIL_MOCK=false`
+    - View emails: http://localhost:8025
+    - No authentication needed for Mailpit
 
-**Tip 5: Route Protection**
-- Ensure admin routes in Vue Router have `meta: { requiresAdmin: true }`
-- Navigation guard should check `authStore.user.isAdmin` or JWT groups
-- Redirect non-admin users to `/` or `/403`
+*   **Tip 5: CSS Loading**
+    - CSS file: `src/main/resources/css/email.css`
+    - Load via: `loadResourceAsString("css/email.css")`
+    - Inject into template: `Templates.orderCancellation(order, css)`
+    - Template uses: `<style>{stylesheet}</style>`
 
-**Warning 1: Path Discrepancy**
-- Task spec says `frontend/src/views/admin/`
-- Actual path is `src/main/webui/src/view/admin/` (no 's' in 'view')
-- All new files should follow existing convention: `src/main/webui/src/view/admin/`
+*   **Tip 6: Qute Template Syntax**
+    - Variables: `{order.user.email}`
+    - Conditionals: `{#if order.quantity > 1}calendars{#else}calendar{/if}`
+    - JSON fields: `{order.shippingAddress.get('name').asText()}`
+    - Null safety: `{order.user.displayName ?: order.user.email}` (Elvis operator)
 
-**Warning 2: GraphQL Query Context**
-- The `allOrders` query requires `@RolesAllowed("ADMIN")` which checks JWT groups
-- Ensure auth token includes "ADMIN" group in JWT claims
-- Frontend should NOT attempt to call this query unless user is confirmed admin
+*   **Warning 1: Package Name Mismatch**
+    - Task spec says: `com.villagecompute.calendar`
+    - Actual package: `villagecompute.calendar` (no "com.")
+    - Use actual package names from existing code
 
-**Warning 3: Status Transition Validation**
-- Backend enforces valid status transitions (see OrderService.validateStatusTransition)
-- Frontend should disable invalid status options in dropdown
-- Example: SHIPPED order can only transition to DELIVERED, not PENDING
+*   **Warning 2: Template Path Mismatch**
+    - Task spec says: `src/main/resources/email-templates/`
+    - Actual path: `src/main/resources/templates/`
+    - Follow existing convention: `templates/{HandlerClassName}/`
 
-### Suggested Next Steps
+*   **Warning 3: Retry Configuration**
+    - DelayedJob retry logic is database-driven
+    - Default: 3 attempts with exponential backoff
+    - Backoff: ~1 minute, 5 minutes, 15 minutes
+    - Configured in job processor, not in individual handlers
 
-1. **Verify Completion**: Review OrderDashboard.vue to confirm it meets all acceptance criteria
-2. **Add Missing Filters** (if required):
-   - Date range filter using PrimeVue Calendar
-   - Order number search using InputText with filtering
-3. **Adjust Pagination**: Change from 20 to 25 rows per page
-4. **Test Admin Authorization**: Verify non-admin users are redirected
-5. **Mark Task Complete**: Update task status to `"done": true` in tasks_I3.json
+### Code Quality Standards
 
-### Code Quality Notes
+*   **Use @WithSpan:** Add OpenTelemetry tracing to all job handlers
+*   **Add Span Attributes:** `Span.current().setAttribute("order.id", orderId)`
+*   **Log Events:** Use `LOG.infof()` for significant events (INFO level)
+*   **Error Logging:** Use `LOG.error()` for exceptions with full stack trace
+*   **Environment Awareness:** EmailService automatically prefixes subjects in non-prod
+*   **Type Safety:** Use @CheckedTemplate for compile-time template validation
 
-- **Excellent:** The existing OrderDashboard.vue follows Vue 3 Composition API best practices
-- **Excellent:** Proper use of PrimeVue components (DataTable, Dialog, Tag, etc.)
-- **Excellent:** TypeScript interfaces defined for CalendarOrder
-- **Excellent:** Pinia store pattern with actions and getters
-- **Good:** Error handling with toast notifications
-- **Good:** Validation for required fields (tracking number when SHIPPED)
-- **Consider:** Extract magic numbers (20 rows) to constants
-- **Consider:** Add unit tests for orderStore actions
-- **Consider:** Add E2E tests for admin order workflows
+### Suggested Implementation Order
+
+1. **Create OrderCancellationJobHandler.java** (copy OrderEmailJobHandler.java)
+2. **Create orderCancellation.html template** (copy orderConfirmation.html pattern)
+3. **Create orderCancellation.txt template** (plain text version)
+4. **Test with Mailpit** (verify emails send correctly)
+5. **Write email-setup.md guide** (document configuration and testing)
+6. **Update OrderService** (if needed - current EMAIL_GENERAL may work)
+7. **Mark task complete**
 
 ### Final Recommendation
 
-**This task is effectively COMPLETE.** The existing implementation in `OrderDashboard.vue` fulfills 95% of the requirements. The only gaps are:
-1. Pagination set to 20 instead of 25 (trivial fix)
-2. Missing date range filter (nice-to-have, not critical)
-3. Missing order number search (nice-to-have, not critical)
-4. Components not extracted as separate files (architectural preference, not functional requirement)
+**This task requires minimal effort** because the infrastructure is complete. Focus on:
+1. Creating the cancellation job handler (one class, ~100 lines)
+2. Creating cancellation email templates (two files, ~100 lines each)
+3. Writing comprehensive documentation (email-setup.md)
+4. Testing with Mailpit to verify emails work
 
-**Recommended Action:** Add the missing filters if truly needed, adjust pagination to 25, test thoroughly, and mark task complete. Do NOT waste time extracting components unless there's a clear reusability benefit.
+**DO NOT:**
+- Modify EmailService (it's perfect as-is)
+- Change DelayedJob system (it works)
+- Reconfigure SMTP (configuration is complete)
+- Rewrite existing handlers (they're production-ready)
+
+**Total Implementation Time: 2-3 hours** for a skilled developer.
