@@ -8,6 +8,24 @@
         </router-link>
       </template>
       <template #end>
+        <!-- Cart Icon (always visible) -->
+        <div class="cart-icon-wrapper">
+          <Button
+            icon="pi pi-shopping-cart"
+            text
+            rounded
+            @click="toggleCart"
+            class="relative"
+          >
+            <Badge
+              v-if="cartStore.itemCount > 0"
+              :value="cartStore.itemCount.toString()"
+              severity="danger"
+              class="cart-badge"
+            />
+          </Button>
+        </div>
+
         <!-- Auth buttons for non-authenticated users -->
         <div v-if="!authStore.isAuthenticated" class="auth-buttons">
           <Button
@@ -83,17 +101,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/authStore";
+import { useCartStore } from "@/stores/cart";
 import Menubar from "primevue/menubar";
 import Button from "primevue/button";
+import Badge from "primevue/badge";
 import Menu from "primevue/menu";
 import Dialog from "primevue/dialog";
 import type { MenuItem } from "primevue/menuitem";
 
 const router = useRouter();
 const authStore = useAuthStore();
+const cartStore = useCartStore();
 
 // State
 const showLoginDialog = ref(false);
@@ -172,6 +193,16 @@ const handleLogout = () => {
   authStore.logout();
   router.push("/");
 };
+
+// Toggle cart drawer
+const toggleCart = () => {
+  cartStore.toggleCart();
+};
+
+// Fetch cart on mount
+onMounted(() => {
+  cartStore.fetchCart();
+});
 </script>
 
 <style scoped>
@@ -206,6 +237,21 @@ const handleLogout = () => {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+}
+
+.cart-icon-wrapper {
+  display: flex;
+  align-items: center;
+  margin-right: 0.5rem;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  font-size: 0.7rem;
 }
 
 .user-section {

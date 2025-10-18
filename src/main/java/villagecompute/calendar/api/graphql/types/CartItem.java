@@ -1,11 +1,10 @@
 package villagecompute.calendar.api.graphql.types;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import org.eclipse.microprofile.graphql.Type;
 
 /**
  * GraphQL type representing a cart item
- * Stub implementation for future e-commerce functionality
+ * Configuration is stored as JSON string
  */
 @Type("CartItem")
 public class CartItem {
@@ -16,12 +15,12 @@ public class CartItem {
     public Integer quantity;
     public Double unitPrice;
     public Double lineTotal;
-    public JsonNode configuration;
+    public String configuration;
 
     public CartItem() {
     }
 
-    public CartItem(String id, String templateId, String templateName, Integer year, Integer quantity, Double unitPrice, Double lineTotal, JsonNode configuration) {
+    public CartItem(String id, String templateId, String templateName, Integer year, Integer quantity, Double unitPrice, Double lineTotal, String configuration) {
         this.id = id;
         this.templateId = templateId;
         this.templateName = templateName;

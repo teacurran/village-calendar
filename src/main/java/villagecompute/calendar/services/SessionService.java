@@ -1,5 +1,6 @@
 package villagecompute.calendar.services;
 
+import io.vertx.core.http.HttpServerRequest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -24,6 +25,32 @@ public class SessionService {
 
     @Inject
     CalendarService calendarService;
+
+    @Inject
+    HttpServerRequest request;
+
+    /**
+     * Get the current session ID from request headers or generate a new one.
+     * This method is used by GraphQL and other services that need session tracking.
+     *
+     * @return Session ID from X-Session-ID header or newly generated UUID
+     */
+    public String getCurrentSessionId() {
+        try {
+            if (request != null) {
+                String sessionId = request.getHeader("X-Session-ID");
+                if (sessionId != null && !sessionId.isEmpty()) {
+                    LOG.debugf("Found session ID in header: %s", sessionId);
+                    return sessionId;
+                }
+            }
+        } catch (Exception e) {
+            LOG.warnf("Could not extract session ID from request: %s", e.getMessage());
+        }
+
+        // Generate a new session ID for this request
+        return generateSessionId();
+    }
 
     /**
      * Generate a new session ID for guest users.

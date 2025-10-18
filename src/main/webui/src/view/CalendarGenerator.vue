@@ -2442,36 +2442,26 @@ const addToCart = async () => {
       }
     }
 
-    // Add to cart (works for both logged-in and anonymous users)
-    const cartResponse = await fetch('/api/cart/items', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        productId: 'ca1e0da2-0000-0000-0000-000000000001', // Calendar Printing service product
-        quantity: 1,
-        configuration: JSON.stringify(calendarData),
-      }),
+    // Add to cart using GraphQL (works for both logged-in and anonymous users)
+    await cartStore.addToCart(
+      'ca1e0da2-0000-0000-0000-000000000001', // Calendar Printing service product ID
+      calendarData.name,
+      calendarData.year,
+      1, // quantity
+      29.99, // unitPrice
+      calendarData // Full configuration including svgContent
+    )
+
+    toast.add({
+      severity: 'success',
+      summary: 'Added to Cart',
+      detail: 'Your calendar has been added to the cart.',
+      life: 3000,
     })
 
-    if (cartResponse.ok) {
-      // Fetch the updated cart to ensure the store is in sync
-      await cartStore.fetchCart(true)
-
-      toast.add({
-        severity: 'success',
-        summary: 'Added to Cart',
-        detail: 'Your calendar has been added to the cart.',
-        life: 3000,
-      })
-
-      // Save to localStorage for anonymous users
-      if (!userStore.isLoggedIn) {
-        saveToLocalStorage()
-      }
-    } else {
-      throw new Error('Failed to add to cart')
+    // Save to localStorage for anonymous users
+    if (!userStore.isLoggedIn) {
+      saveToLocalStorage()
     }
   } catch (error) {
     console.error('Error adding to cart:', error)
