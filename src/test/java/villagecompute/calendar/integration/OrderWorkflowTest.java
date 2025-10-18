@@ -2,29 +2,26 @@ package villagecompute.calendar.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.InjectMock;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.junit.jupiter.api.*;
 import villagecompute.calendar.data.models.*;
 import villagecompute.calendar.services.PaymentService;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
-import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
-import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.when;
 
 /**
  * Integration tests for order placement and payment workflow.
@@ -46,8 +43,11 @@ class OrderWorkflowTest {
     @Inject
     villagecompute.calendar.services.OrderService orderService;
 
-    @InjectMock
+    @Inject
     PaymentService paymentService;
+
+    @ConfigProperty(name = "stripe.webhook.secret")
+    String webhookSecret;
 
     private CalendarUser testUser;
     private CalendarTemplate testTemplate;
@@ -94,17 +94,8 @@ class OrderWorkflowTest {
             """);
         testCalendar.persist();
 
-        // Mock PaymentService to avoid real Stripe API calls
+        // Initialize test payment intent ID for webhook tests
         testPaymentIntentId = "pi_test_" + System.currentTimeMillis();
-        Map<String, String> mockPaymentIntent = new HashMap<>();
-        mockPaymentIntent.put("clientSecret", "pi_test_secret_123");
-        mockPaymentIntent.put("paymentIntentId", testPaymentIntentId);
-
-        when(paymentService.createPaymentIntent(any(BigDecimal.class), anyString(), anyString()))
-            .thenReturn(mockPaymentIntent);
-
-        // Mock webhook signature validation
-        when(paymentService.getWebhookSecret()).thenReturn("");
     }
 
     @AfterEach
@@ -143,6 +134,22 @@ class OrderWorkflowTest {
                 "country": "US"
             }
             """);
+    }
+
+    /**
+     * Generate a valid Stripe webhook signature for testing.
+     */
+    private String generateStripeSignature(String payload) throws Exception {
+        long timestamp = System.currentTimeMillis() / 1000;
+        String signedPayload = timestamp + "." + payload;
+
+        Mac mac = Mac.getInstance("HmacSHA256");
+        SecretKeySpec secretKey = new SecretKeySpec(webhookSecret.getBytes(), "HmacSHA256");
+        mac.init(secretKey);
+        byte[] hash = mac.doFinal(signedPayload.getBytes());
+        String signature = HexFormat.of().formatHex(hash);
+
+        return "t=" + timestamp + ",v1=" + signature;
     }
 
     // ============================================================================
@@ -185,42 +192,52 @@ class OrderWorkflowTest {
 
     @Test
     @org.junit.jupiter.api.Order(2)
-    @Transactional
     void testWebhookPaymentSuccess_UpdatesOrderToPaid() throws Exception {
-        // Given: Create an order in PENDING status
-        CalendarOrder order = new CalendarOrder();
-        order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("25.00");
-        order.totalPrice = new BigDecimal("25.00");
-        order.status = CalendarOrder.STATUS_PENDING;
-        order.stripePaymentIntentId = testPaymentIntentId;
-        order.shippingAddress = createTestAddress();
-        order.orderNumber = "2025-001";
-        order.persist();
-
-        // Mock PaymentService.processPaymentSuccess to return true
-        when(paymentService.processPaymentSuccess(eq(testPaymentIntentId), anyString()))
-            .thenReturn(true);
+        // Given: Create an order in PENDING status (use programmatic transaction to commit before HTTP request)
+        CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
+            CalendarOrder newOrder = new CalendarOrder();
+            newOrder.user = testUser;
+            newOrder.calendar = testCalendar;
+            newOrder.quantity = 1;
+            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.totalPrice = new BigDecimal("25.00");
+            newOrder.status = CalendarOrder.STATUS_PENDING;
+            newOrder.stripePaymentIntentId = testPaymentIntentId;
+            try {
+                newOrder.shippingAddress = createTestAddress();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            newOrder.orderNumber = "2025-001";
+            newOrder.persist();
+            return newOrder;
+        });
 
         // When: Simulate Stripe webhook (checkout.session.completed)
-        String webhookPayload = """
+        String webhookPayload = String.format("""
             {
-              "id": "evt_test_webhook",
-              "type": "checkout.session.completed",
-              "data": {
-                "object": {
-                  "id": "cs_test_session",
-                  "payment_intent": "%s"
+                "id": "evt_test_webhook",
+                "object": "event",
+                "api_version": "2024-11-20.acacia",
+                "created": %d,
+                "type": "checkout.session.completed",
+                "data": {
+                    "object": {
+                        "id": "cs_test_session",
+                        "object": "checkout.session",
+                        "payment_intent": "%s",
+                        "payment_status": "paid",
+                        "status": "complete"
+                    }
                 }
-              }
             }
-            """.formatted(testPaymentIntentId);
+            """, System.currentTimeMillis() / 1000, testPaymentIntentId);
+
+        String signature = generateStripeSignature(webhookPayload);
 
         given()
             .contentType(ContentType.JSON)
-            .header("Stripe-Signature", "t=123,v1=fake")
+            .header("Stripe-Signature", signature)
             .body(webhookPayload)
             .when()
             .post("/api/webhooks/stripe")
@@ -236,42 +253,52 @@ class OrderWorkflowTest {
 
     @Test
     @org.junit.jupiter.api.Order(3)
-    @Transactional
     void testWebhookPaymentSuccess_EnqueuesEmailJob() throws Exception {
-        // Given: Create an order in PENDING status
-        CalendarOrder order = new CalendarOrder();
-        order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("25.00");
-        order.totalPrice = new BigDecimal("25.00");
-        order.status = CalendarOrder.STATUS_PENDING;
-        order.stripePaymentIntentId = testPaymentIntentId;
-        order.shippingAddress = createTestAddress();
-        order.orderNumber = "2025-002";
-        order.persist();
-
-        // Mock PaymentService.processPaymentSuccess to return true
-        when(paymentService.processPaymentSuccess(eq(testPaymentIntentId), anyString()))
-            .thenReturn(true);
+        // Given: Create an order in PENDING status (use programmatic transaction to commit before HTTP request)
+        CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
+            CalendarOrder newOrder = new CalendarOrder();
+            newOrder.user = testUser;
+            newOrder.calendar = testCalendar;
+            newOrder.quantity = 1;
+            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.totalPrice = new BigDecimal("25.00");
+            newOrder.status = CalendarOrder.STATUS_PENDING;
+            newOrder.stripePaymentIntentId = testPaymentIntentId;
+            try {
+                newOrder.shippingAddress = createTestAddress();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            newOrder.orderNumber = "2025-002";
+            newOrder.persist();
+            return newOrder;
+        });
 
         // When: Simulate payment success webhook
-        String webhookPayload = """
+        String webhookPayload = String.format("""
             {
-              "id": "evt_test_webhook_email",
-              "type": "checkout.session.completed",
-              "data": {
-                "object": {
-                  "id": "cs_test_session_email",
-                  "payment_intent": "%s"
+                "id": "evt_test_webhook_email",
+                "object": "event",
+                "api_version": "2024-11-20.acacia",
+                "created": %d,
+                "type": "checkout.session.completed",
+                "data": {
+                    "object": {
+                        "id": "cs_test_session_email",
+                        "object": "checkout.session",
+                        "payment_intent": "%s",
+                        "payment_status": "paid",
+                        "status": "complete"
+                    }
                 }
-              }
             }
-            """.formatted(testPaymentIntentId);
+            """, System.currentTimeMillis() / 1000, testPaymentIntentId);
+
+        String signature = generateStripeSignature(webhookPayload);
 
         given()
             .contentType(ContentType.JSON)
-            .header("Stripe-Signature", "t=123,v1=fake")
+            .header("Stripe-Signature", signature)
             .body(webhookPayload)
             .when()
             .post("/api/webhooks/stripe")
@@ -288,44 +315,53 @@ class OrderWorkflowTest {
 
     @Test
     @org.junit.jupiter.api.Order(4)
-    @Transactional
     void testWebhookIdempotency_DoesNotDuplicateProcessing() throws Exception {
-        // Given: Create an order in PENDING status
-        CalendarOrder order = new CalendarOrder();
-        order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("25.00");
-        order.totalPrice = new BigDecimal("25.00");
-        order.status = CalendarOrder.STATUS_PENDING;
-        order.stripePaymentIntentId = testPaymentIntentId;
-        order.shippingAddress = createTestAddress();
-        order.orderNumber = "2025-003";
-        order.persist();
-
-        // First call returns true, second call returns false (idempotent)
-        when(paymentService.processPaymentSuccess(eq(testPaymentIntentId), anyString()))
-            .thenReturn(true)
-            .thenReturn(false);
+        // Given: Create an order in PENDING status (use programmatic transaction to commit before HTTP request)
+        CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
+            CalendarOrder newOrder = new CalendarOrder();
+            newOrder.user = testUser;
+            newOrder.calendar = testCalendar;
+            newOrder.quantity = 1;
+            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.totalPrice = new BigDecimal("25.00");
+            newOrder.status = CalendarOrder.STATUS_PENDING;
+            newOrder.stripePaymentIntentId = testPaymentIntentId;
+            try {
+                newOrder.shippingAddress = createTestAddress();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            newOrder.orderNumber = "2025-003";
+            newOrder.persist();
+            return newOrder;
+        });
 
         // When: Send webhook twice
-        String webhookPayload = """
+        String webhookPayload = String.format("""
             {
-              "id": "evt_test_idempotent",
-              "type": "checkout.session.completed",
-              "data": {
-                "object": {
-                  "id": "cs_test_idempotent",
-                  "payment_intent": "%s"
+                "id": "evt_test_idempotent",
+                "object": "event",
+                "api_version": "2024-11-20.acacia",
+                "created": %d,
+                "type": "checkout.session.completed",
+                "data": {
+                    "object": {
+                        "id": "cs_test_idempotent",
+                        "object": "checkout.session",
+                        "payment_intent": "%s",
+                        "payment_status": "paid",
+                        "status": "complete"
+                    }
                 }
-              }
             }
-            """.formatted(testPaymentIntentId);
+            """, System.currentTimeMillis() / 1000, testPaymentIntentId);
+
+        String signature = generateStripeSignature(webhookPayload);
 
         // First webhook
         given()
             .contentType(ContentType.JSON)
-            .header("Stripe-Signature", "t=123,v1=fake1")
+            .header("Stripe-Signature", signature)
             .body(webhookPayload)
             .when()
             .post("/api/webhooks/stripe")
@@ -335,7 +371,7 @@ class OrderWorkflowTest {
         // Second webhook (duplicate)
         given()
             .contentType(ContentType.JSON)
-            .header("Stripe-Signature", "t=124,v1=fake2")
+            .header("Stripe-Signature", signature)
             .body(webhookPayload)
             .when()
             .post("/api/webhooks/stripe")

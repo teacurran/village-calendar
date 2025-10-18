@@ -132,7 +132,7 @@
     "acceptance_criteria": "Order placement test creates order, simulates Stripe webhook, verifies order PAID, Payment success test verifies Payment entity created with correct amount, Email job enqueued on payment success (verifiable in delayed_jobs table), Cancel order test processes refund, updates order status to CANCELLED, Admin workflow test updates order status, adds tracking number, verifies persistence, All integration tests pass with ./mvnw verify, Tests run in <90 seconds",
     "dependencies": ["I3.T1", "I3.T2", "I3.T3", "I3.T4", "I3.T5", "I3.T6", "I3.T7", "I3.T8"],
     "parallelizable": false,
-    "done": false
+    "done": true
   },
   {
     "task_id": "I3.T10",
