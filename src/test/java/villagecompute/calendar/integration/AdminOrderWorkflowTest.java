@@ -145,16 +145,21 @@ class AdminOrderWorkflowTest {
     @Transactional
     void cleanup() {
         // Clean up test data in reverse FK order
+        // Delete all delayed jobs first
+        DelayedJob.deleteAll();
+
+        // Delete all orders
+        CalendarOrder.deleteAll();
+
+        // Delete calendars
         if (testCalendar != null && testCalendar.id != null) {
-            DelayedJob.delete("actorId IN (SELECT CAST(id AS VARCHAR) FROM calendar_orders WHERE calendar_id = ?1)", testCalendar.id);
-            CalendarOrder.delete("calendar.id", testCalendar.id);
             UserCalendar.deleteById(testCalendar.id);
         }
         if (testCalendar2 != null && testCalendar2.id != null) {
-            DelayedJob.delete("actorId IN (SELECT CAST(id AS VARCHAR) FROM calendar_orders WHERE calendar_id = ?1)", testCalendar2.id);
-            CalendarOrder.delete("calendar.id", testCalendar2.id);
             UserCalendar.deleteById(testCalendar2.id);
         }
+
+        // Delete users
         if (testUser != null && testUser.id != null) {
             CalendarUser.deleteById(testUser.id);
         }
@@ -164,6 +169,8 @@ class AdminOrderWorkflowTest {
         if (adminUser != null && adminUser.id != null) {
             CalendarUser.deleteById(adminUser.id);
         }
+
+        // Delete template
         if (testTemplate != null && testTemplate.id != null) {
             CalendarTemplate.deleteById(testTemplate.id);
         }
@@ -596,19 +603,11 @@ class AdminOrderWorkflowTest {
 
         // Verify valid transitions work
         // PAID → PROCESSING (valid)
-        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PROCESSING, "Valid transition");
-        entityManager.flush();
-        entityManager.clear();
-
-        CalendarOrder processingOrder = CalendarOrder.<CalendarOrder>findById(order.id);
-        assertEquals(CalendarOrder.STATUS_PROCESSING, processingOrder.status);
+        CalendarOrder updatedOrder = orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PROCESSING, "Valid transition");
+        assertEquals(CalendarOrder.STATUS_PROCESSING, updatedOrder.status);
 
         // PROCESSING → SHIPPED (valid)
-        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_SHIPPED, "Valid transition");
-        entityManager.flush();
-        entityManager.clear();
-
-        CalendarOrder shippedOrder = CalendarOrder.<CalendarOrder>findById(order.id);
+        CalendarOrder shippedOrder = orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_SHIPPED, "Valid transition");
         assertEquals(CalendarOrder.STATUS_SHIPPED, shippedOrder.status);
     }
 }

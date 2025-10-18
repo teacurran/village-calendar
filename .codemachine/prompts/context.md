@@ -47,76 +47,110 @@ This is the full specification of the task you must complete.
 
 The following are the relevant sections from the architecture and plan documents, which I found by analyzing the task description.
 
-### Context: flow-place-order (from 04_Behavior_and_Communication.md)
+### Context: Integration Testing Strategy (from 03_Verification_and_Glossary.md)
 
-```markdown
-##### Flow 2: Place Order for Printed Calendar
+**Testing Levels**
 
-**Description:**
+Integration tests validate that multiple components work correctly together:
 
-This flow demonstrates the complete e-commerce workflow from cart checkout to payment processing to asynchronous job creation for order confirmation emails.
+- **Service Layer Integration:** Service classes interacting with repositories (Panache entities)
+- **API Integration:** GraphQL resolvers calling services and returning proper responses
+- **External Integration:** Mocked external services (Stripe, OAuth, Email SMTP, R2 storage)
+- **Database Integration:** Real PostgreSQL database (via Testcontainers) to verify data persistence, transactions, and query correctness
 
-**Key Design Points:**
+**CI/CD Pipeline Testing**
 
-1. **Two-Phase Payment**: Order created in PENDING state, updated to PAID after webhook confirmation (handles race conditions)
-2. **Webhook Signature Validation**: Prevents fraudulent payment confirmations
-3. **Transactional Integrity**: Order and payment records created atomically within database transaction
-4. **Asynchronous Email**: Email sending offloaded to job queue to prevent SMTP latency from blocking webhook response
-5. **Idempotent Webhooks**: Stripe may retry webhooks; order service checks if payment already processed (via `stripe_payment_intent_id` uniqueness)
+All tests run automatically on every push via GitHub Actions:
+- Unit tests must pass with >70% code coverage
+- Integration tests verify end-to-end workflows
+- Tests must complete in <90 seconds total execution time
 
-**Complete Sequence:**
-1. User places order via GraphQL `placeOrder` mutation
-2. OrderService creates order in PENDING status with Stripe PaymentIntent
-3. User completes payment on Stripe
-4. Stripe sends `checkout.session.completed` webhook to `/api/webhooks/stripe`
-5. WebhookResource validates signature, calls PaymentService.processPaymentSuccess()
-6. PaymentService updates order status to PAID, enqueues email job
-7. DelayedJob worker sends order confirmation email
-8. User polls order status, sees PAID status
+**Code Quality Gates**
+
+Mandatory quality gates enforced in CI:
+- JaCoCo code coverage: >70% for service/API layers
+- All integration tests must pass
+- No critical SonarQube issues
+
+### Context: E-commerce Testing Requirements (from tasks_I3.json)
+
+Integration test scenarios that must be validated:
+
+1. **Order Placement and Payment Success Workflow:**
+   - Create calendar via GraphQL mutation
+   - Place order via createOrder mutation (returns PaymentIntent with client secret)
+   - Simulate Stripe webhook (checkout.session.completed event)
+   - Verify order status transitions from PENDING to PAID
+   - Verify Payment entity created with correct amount
+   - Verify email job enqueued in delayed_jobs table (ORDER_CONFIRMATION queue)
+
+2. **Order Cancellation and Refund Workflow:**
+   - Create order in PAID status
+   - Cancel order via cancelOrder GraphQL mutation
+   - Verify order status transitions to CANCELLED
+   - Verify Stripe refund processed (mock Stripe API)
+   - Verify refund amount matches order total
+   - Verify cancellation email job enqueued
+
+3. **Admin Order Management Workflow:**
+   - Create multiple orders for different users
+   - Admin queries all orders (across users)
+   - Admin updates order status: PAID → PROCESSING → SHIPPED → DELIVERED
+   - Admin adds tracking number when marking as SHIPPED
+   - Verify shipping notification email job enqueued
+   - Verify status transitions validated (prevent invalid transitions)
+   - Verify authorization checks (users can cancel own orders, admins can cancel any order)
+
+### Context: Stripe Integration Architecture (from Plan Section "Payment Processing")
+
+**Stripe Payment Flow:**
+1. Frontend calls `createOrder` GraphQL mutation with calendar, quantity, shipping address
+2. Backend creates Order entity in PENDING status, generates unique order number
+3. Backend calls Stripe API to create PaymentIntent with amount in cents
+4. Backend returns PaymentIntent client secret to frontend
+5. Frontend redirects user to Stripe Checkout (hosted payment page)
+6. User completes payment on Stripe
+7. Stripe sends webhook (checkout.session.completed) to backend
+8. Backend webhook handler validates signature, processes payment success
+9. Backend updates order status to PAID, enqueues confirmation email
+10. User redirected to order success page with order number
+
+**Webhook Security:**
+- All webhooks MUST validate Stripe signature using webhook secret
+- Idempotent processing: handle duplicate webhook deliveries gracefully
+- Webhook events stored/checked to prevent duplicate processing
+
+### Context: Order Status State Machine (from OrderService.java)
+
+Valid order status transitions:
+- **PENDING** → PAID | CANCELLED
+- **PAID** → PROCESSING | SHIPPED | CANCELLED
+- **PROCESSING** → SHIPPED | CANCELLED
+- **SHIPPED** → DELIVERED
+- **DELIVERED** (terminal, no transitions allowed)
+- **CANCELLED** (terminal, no transitions allowed)
+
+Invalid transitions throw `IllegalStateException` with message: "Invalid status transition from {current} to {new}"
+
+Terminal order check: `order.isTerminal()` returns true for DELIVERED or CANCELLED status
+
+### Context: Email Job Enqueueing (from OrderService.java)
+
+Email jobs are enqueued as DelayedJob entities with different queues:
+- **EMAIL_ORDER_CONFIRMATION**: Sent when order status → PAID (payment success webhook)
+- **EMAIL_SHIPPING_NOTIFICATION**: Sent when order status → SHIPPED (admin updates)
+- **EMAIL_GENERAL**: Sent when order cancelled (user or admin cancellation)
+
+Email jobs created with:
+```java
+DelayedJob emailJob = DelayedJob.createDelayedJob(
+    order.id.toString(),        // actorId (order ID)
+    DelayedJobQueue.EMAIL_ORDER_CONFIRMATION,  // queue type
+    Instant.now()               // runAt (immediate execution)
+);
 ```
 
-### Context: GraphQL Order Operations (from schema.graphql)
-
-The GraphQL schema defines the following order-related queries and mutations that your tests will interact with:
-
-**Queries:**
-- `order(id: ID!): CalendarOrder` - Get a single order by ID (user must own it or be admin)
-- `orders(userId: ID, status: OrderStatus): [CalendarOrder!]!` - Get orders with optional filtering
-- `allOrders(status: OrderStatus, limit: Int = 50): [CalendarOrder!]!` - Admin-only query for all orders
-- `myOrders(status: OrderStatus): [CalendarOrder!]!` - Get authenticated user's orders
-
-**Mutations:**
-- `createOrder(calendarId: ID!, quantity: Int!, shippingAddress: AddressInput!): PaymentIntent!` - Creates Stripe PaymentIntent
-- `placeOrder(input: PlaceOrderInput!): PaymentIntent!` - Alternative order creation with structured input
-- `cancelOrder(orderId: ID!, reason: String): CalendarOrder!` - Cancel order and initiate refund
-- `updateOrderStatus(id: ID!, input: OrderUpdateInput!): CalendarOrder!` - Admin-only status updates
-
-**Order Status Lifecycle:**
-```
-PENDING → PAID → PROCESSING → SHIPPED → DELIVERED
-    ↓           ↓        ↓
-CANCELLED ← CANCELLED ← CANCELLED
-```
-
-**Important CalendarOrder Type Fields:**
-```graphql
-type CalendarOrder {
-  id: ID!
-  calendar: UserCalendar!
-  quantity: Int!
-  unitPrice: BigDecimal!
-  totalPrice: BigDecimal!
-  status: OrderStatus!  # Values: PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED
-  shippingAddress: JSON!
-  stripePaymentIntentId: String
-  stripeChargeId: String
-  paidAt: DateTime
-  shippedAt: DateTime
-  trackingNumber: String
-  notes: String
-  user: CalendarUser!
-}
-```
+Jobs can be queried: `DelayedJob.find("actorId", order.id.toString()).list()`
 
 ---
 
@@ -126,290 +160,216 @@ The following analysis is based on my direct review of the current codebase. Use
 
 ### Relevant Existing Code
 
-*   **File:** `src/main/java/villagecompute/calendar/services/OrderService.java`
-    *   **Summary:** Contains complete order lifecycle management including `createOrder()`, `updateOrderStatus()`, `cancelOrder()`, and email job enqueueing. This is your PRIMARY service under test.
-    *   **Recommendation:** You MUST test the following OrderService methods in your integration tests:
-        - `createOrder()` - verify order creation with tax/shipping calculation
-        - `updateOrderStatus()` - test status transitions (PENDING → PAID → PROCESSING → SHIPPED)
-        - `cancelOrder()` - verify authorization checks and cancellation logic
-        - Email job enqueueing on status changes (check `delayed_jobs` table)
-    *   **Important Detail:** OrderService enqueues email jobs using `DelayedJob.createDelayedJob()` when order status changes to PAID or SHIPPED (lines 144-148). Your tests MUST verify these jobs are created in the database by querying `delayed_jobs` table after order status changes.
-    *   **Authorization Pattern:** cancelOrder() method (lines 222-276) checks if user owns the order OR is admin (lines 234-238). Your tests should verify this authorization logic.
+#### **File:** `src/test/java/villagecompute/calendar/integration/OrderWorkflowTest.java`
+   - **Summary:** Integration tests for order placement and payment webhook processing. Tests order creation via GraphQL, webhook payment success processing, email job enqueueing, and idempotent webhook handling.
+   - **Current State:** The test file exists and contains 5 test methods covering order creation, payment success webhooks, email job enqueueing, idempotency, and shipping calculations.
+   - **What You MUST DO:** Review all existing tests in this file. They provide the foundation and patterns you should follow. DO NOT modify existing tests unless they are broken. ADD additional test scenarios if any acceptance criteria are not covered.
+   - **Key Pattern to Follow:** Uses `@QuarkusTest`, `@InjectMock` for PaymentService, `@Transactional` for setup/cleanup, and REST Assured for GraphQL API testing.
 
-*   **File:** `src/main/java/villagecompute/calendar/services/PaymentService.java`
-    *   **Summary:** Handles Stripe integration including `createPaymentIntent()`, `processPaymentSuccess()` (webhook handler), and `processRefund()`. Implements idempotent webhook processing.
-    *   **Recommendation:** You MUST test PaymentService.processPaymentSuccess() which is called by webhook handler. This method (lines 203-248):
-        - Finds order by PaymentIntent ID using `orderService.findByStripePaymentIntent()`
-        - Updates order status to PAID (idempotent check at lines 216-220)
-        - Enqueues order confirmation email job (lines 240-245)
-        - Returns `false` if already processed (idempotency)
-    *   **Critical for Testing:** The `processPaymentSuccess()` method implements idempotency by checking if order is already PAID before updating. Your tests should verify this by calling the method twice with same PaymentIntent ID.
-    *   **Refund Processing:** processRefund() method (lines 260-303) creates Stripe refund and updates order notes. Your cancel order test should verify refund is attempted.
+#### **File:** `src/test/java/villagecompute/calendar/integration/PaymentWorkflowTest.java`
+   - **Summary:** Integration tests for payment and refund workflows. Tests order cancellation with refund processing, authorization checks (user can only cancel own orders), payment entity creation on webhook, and refund processing via Stripe.
+   - **Current State:** The test file exists and contains 7 test methods covering order cancellation with refund, status validation for cancellation, pending order cancellation without refund, authorization checks, refund webhooks, payment intent creation, and cancellation email enqueueing.
+   - **What You MUST DO:** Review existing test patterns, especially the refund processing mock setup and authorization test patterns. Ensure all acceptance criteria are met.
+   - **Key Pattern to Follow:** Uses `@InjectMock PaymentService` and mocks `processRefund()` method. Authorization tests verify `SecurityException` thrown when user tries to cancel another user's order.
 
-*   **File:** `src/main/java/villagecompute/calendar/api/rest/WebhookResource.java`
-    *   **Summary:** REST endpoint at `/api/webhooks/stripe` (line 69) that handles Stripe webhook events. Validates webhook signatures (lines 126-149) and processes different event types (lines 172-188).
-    *   **Recommendation:** You MUST test the webhook endpoint by POSTing mock Stripe event payloads. Key event types to test:
-        - `checkout.session.completed` (lines 197-220) - triggers order payment success
-        - `payment_intent.succeeded` (lines 229-252) - alternative payment success event
-        - `charge.refunded` (lines 308-347) - triggers refund processing
-    *   **Mock Strategy:** The webhook requires a valid Stripe signature (line 115 header). You SHOULD mock PaymentService to avoid signature validation:
-        ```java
-        @InjectMock
-        PaymentService paymentService;
+#### **File:** `src/test/java/villagecompute/calendar/integration/AdminOrderWorkflowTest.java`
+   - **Summary:** Integration tests for admin order management workflows. Tests admin-only operations like updating order status, adding tracking numbers, querying all orders across users, and authorization checks.
+   - **Current State:** The test file exists and contains 11 test methods covering admin status updates (SHIPPED, PROCESSING, DELIVERED), shipping email enqueueing, terminal order restrictions, admin queries across users, status filtering, and authorization (users can cancel own orders, admins can cancel any order, users cannot cancel other users' orders).
+   - **What You MUST DO:** Review existing admin workflow tests. Verify all acceptance criteria are met, especially status transition validation, tracking number handling, and multi-user query scenarios.
+   - **Key Pattern to Follow:** Uses `OrderService` directly (not mocked) to test service layer logic. Uses `EntityManager.flush()` and `EntityManager.clear()` to ensure database persistence is tested correctly.
 
-        when(paymentService.getWebhookSecret()).thenReturn("");
-        when(paymentService.processPaymentSuccess(anyString(), anyString())).thenReturn(true);
-        ```
-    *   **Important:** Webhook handler parses JSON manually using `ObjectMapper.readTree()` (lines 199-205) to work in both test and production. Your mock events should be valid JSON with correct structure.
+#### **File:** `src/main/java/villagecompute/calendar/services/OrderService.java`
+   - **Summary:** Service for managing calendar orders. Handles order creation, status updates, cancellation, and order queries. Contains status transition validation logic, email job enqueueing, and tax/shipping calculation.
+   - **Recommendation:** Your tests MUST call `OrderService` methods directly (via injection) to verify service layer logic works correctly. DO NOT mock OrderService in integration tests - only mock external dependencies like PaymentService (Stripe API calls).
+   - **Critical Methods to Test:**
+     - `createOrder()`: Creates order with PENDING status, calculates total with tax/shipping, generates order number
+     - `updateOrderStatus()`: Validates status transitions, updates timestamps (paidAt, shippedAt), enqueues email jobs
+     - `cancelOrder()`: Validates authorization (user owns order or isAdmin), validates cancellable status, enqueues cancellation email
+     - `validateStatusTransition()`: Private method enforcing state machine - verify via public method tests
 
-*   **File:** `src/main/java/villagecompute/calendar/api/graphql/OrderResolver.java`
-    *   **Summary:** GraphQL resolver implementing order queries and mutations. Handles authorization checks and delegates to OrderService/PaymentService.
-    *   **Recommendation:** Your integration tests should call GraphQL mutations/queries via REST Assured to `/graphql` endpoint, NOT call service methods directly. This tests the full stack including GraphQL layer, authorization, and service integration.
-    *   **Authentication Note:** Some GraphQL operations require authentication. Check existing test pattern in `CalendarServiceIntegrationTest.java` which uses `@Transactional` setup to create test users and avoids JWT complexity.
+#### **File:** `src/main/java/villagecompute/calendar/services/PaymentService.java`
+   - **Summary:** Service for integrating with Stripe payment processing. Handles PaymentIntent creation, payment confirmations, webhook processing, and refund processing.
+   - **Recommendation:** You MUST mock PaymentService in all integration tests to avoid real Stripe API calls. Use `@InjectMock PaymentService paymentService` annotation.
+   - **Critical Methods to Mock:**
+     - `createPaymentIntent()`: Mock to return Map with "clientSecret" and "paymentIntentId"
+     - `processPaymentSuccess()`: Mock to return true (payment processed) or false (already processed/idempotent)
+     - `processRefund()`: Mock to return null (we don't validate Stripe Refund object in tests)
+     - `getWebhookSecret()`: Mock to return empty string (bypasses signature validation in tests)
 
-*   **File:** `src/test/java/villagecompute/calendar/integration/CalendarServiceIntegrationTest.java`
-    *   **Summary:** Exemplary integration test showing the project's testing patterns. Uses Quarkus @QuarkusTest (line 43), REST Assured for GraphQL testing, @InjectMock for external dependencies (line 53-54), and @Transactional cleanup (lines 88-102).
-    *   **Recommendation:** You SHOULD follow this exact pattern:
-        - Extend your test classes with `@QuarkusTest`
-        - Use `@BeforeEach` with `@Transactional` to create test data (users, calendars, templates, orders)
-        - Use `@AfterEach` with `@Transactional` to clean up test data (lines 88-102)
-        - Use `@InjectMock` to mock StorageService or PaymentService for external API calls (line 53-54)
-        - Use `io.restassured.RestAssured.given()` to make GraphQL API calls (lines 142-153)
-        - Use `@Order(N)` annotations to control test execution order (line 126)
-        - Use `@TestMethodOrder(MethodOrderer.OrderAnnotation.class)` on class (line 44)
-    *   **Code Pattern Example:**
-        ```java
-        @QuarkusTest
-        @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-        class OrderWorkflowTest {
-            @Inject ObjectMapper objectMapper;
-            @InjectMock PaymentService paymentService;  // Mock Stripe calls
-
-            private CalendarUser testUser;
-            private UserCalendar testCalendar;
-
-            @BeforeEach
-            @Transactional
-            void setup() {
-                // Create test user, calendar, template...
-                when(paymentService.getWebhookSecret()).thenReturn("");
-            }
-
-            @AfterEach
-            @Transactional
-            void cleanup() {
-                // Delete test data in reverse FK order
-            }
-        }
-        ```
-
-*   **File:** `src/main/java/villagecompute/calendar/data/models/CalendarOrder.java`
-    *   **Summary:** JPA entity for orders with Panache active record pattern. Contains status constants like `STATUS_PENDING`, `STATUS_PAID`, `STATUS_SHIPPED`, etc.
-    *   **Recommendation:** You MUST use CalendarOrder entity methods and constants in your tests:
-        - Use `CalendarOrder.STATUS_PENDING`, `CalendarOrder.STATUS_PAID`, etc. constants
-        - Use `CalendarOrder.findByStripePaymentIntent(paymentIntentId)` to query orders
-        - Use `CalendarOrder.findByStatusOrderByCreatedDesc(status)` for status filtering
-        - Check `order.isTerminal()` to verify cancellation logic
-
-*   **File:** `src/main/java/villagecompute/calendar/data/models/DelayedJob.java`
-    *   **Summary:** JPA entity for async job queue. Used for email sending after order events.
-    *   **Recommendation:** Your tests MUST verify email jobs are enqueued by querying `delayed_jobs` table:
-        ```java
-        // After order paid, verify email job created
-        List<DelayedJob> jobs = DelayedJob.find("payload", orderId.toString()).list();
-        assertEquals(1, jobs.size(), "Order confirmation email job should be enqueued");
-        assertEquals(DelayedJobQueue.EMAIL_ORDER_CONFIRMATION, jobs.get(0).queue);
-        ```
-    *   **Important:** Email jobs are created by `DelayedJob.createDelayedJob(orderId, queue, runAt)` method. The payload is the order ID as string.
+#### **File:** `api/schema.graphql`
+   - **Summary:** GraphQL schema definition for the Village Calendar API. Defines all query/mutation types, input types, and entity types.
+   - **Recommendation:** Use this schema as the source of truth for all GraphQL API tests. Your test mutations MUST match the exact schema syntax (field names, required fields, input structure).
+   - **Key Mutations to Test:**
+     - `createOrder(calendarId, quantity, shippingAddress)`: Returns PaymentIntent type
+     - `cancelOrder(orderId, reason)`: Returns CalendarOrder type
+     - `updateOrderStatus(id, input: OrderUpdateInput)`: Returns CalendarOrder type (admin only)
+   - **Key Queries to Test:**
+     - `allOrders(status, limit)`: Returns list of CalendarOrder (admin only)
+     - `orders(userId, status)`: Returns list of CalendarOrder for specific user or current user
 
 ### Implementation Tips & Notes
 
-*   **Tip 1: Package Path**
-    The project uses **package path `villagecompute.calendar`** (NO `.com` prefix). Your test files MUST be in `villagecompute.calendar.integration` package, NOT `com.villagecompute.calendar.integration`.
+#### **Tip 1: Test Execution Order**
+All three test files use `@TestMethodOrder(MethodOrderer.OrderAnnotation.class)` and annotate individual tests with `@org.junit.jupiter.api.Order(N)`. This ensures deterministic test execution order. Your new test methods SHOULD follow this pattern if order matters (e.g., creating data in one test, querying it in the next).
 
-*   **Tip 2: Mock Stripe Webhook Events**
-    For webhook testing, you can construct a mock Stripe Event JSON like this:
-    ```java
-    String webhookPayload = """
-        {
-          "id": "evt_test_webhook",
-          "type": "checkout.session.completed",
-          "data": {
-            "object": {
-              "id": "cs_test_session",
-              "payment_intent": "pi_test_12345"
-            }
-          }
+#### **Tip 2: Test Data Cleanup**
+All tests use `@AfterEach @Transactional void cleanup()` to delete test data in reverse foreign key order:
+1. Delete DelayedJob entries referencing orders
+2. Delete CalendarOrder entries
+3. Delete UserCalendar entries
+4. Delete CalendarUser entries
+5. Delete CalendarTemplate entries
+
+**IMPORTANT:** If tests fail during execution, cleanup may not run. Ensure your test database is reset between full test runs. The pattern used is:
+```java
+DelayedJob.delete("actorId IN (SELECT CAST(id AS VARCHAR) FROM calendar_orders WHERE calendar_id = ?1)", testCalendar.id);
+```
+
+#### **Tip 3: GraphQL Testing Pattern with REST Assured**
+All GraphQL tests use REST Assured to POST to `/graphql` endpoint:
+```java
+String mutation = """
+    mutation {
+        createOrder(
+            calendarId: "%s"
+            quantity: 1
+            shippingAddress: { ... }
+        ) {
+            id
+            clientSecret
+            amount
         }
-        """;
-
-    // Mock PaymentService to skip signature validation
-    when(paymentService.getWebhookSecret()).thenReturn("");
-    when(paymentService.processPaymentSuccess(eq("pi_test_12345"), isNull())).thenReturn(true);
-
-    given()
-        .contentType(ContentType.JSON)
-        .header("Stripe-Signature", "t=123,v1=fake")
-        .body(webhookPayload)
-        .when()
-        .post("/api/webhooks/stripe")
-        .then()
-        .statusCode(200)
-        .body("status", equalTo("success"));
-    ```
-
-*   **Tip 3: GraphQL Mutation Pattern**
-    For GraphQL testing, use this pattern from existing tests:
-    ```java
-    String mutation = """
-        mutation {
-            createOrder(
-                calendarId: "%s"
-                quantity: 1
-                shippingAddress: {
-                    street: "123 Main St"
-                    city: "Nashville"
-                    state: "TN"
-                    postalCode: "37203"
-                    country: "US"
-                }
-            ) {
-                id
-                clientSecret
-                amount
-            }
-        }
-        """.formatted(calendarId);
-
-    Response response = given()
-        .contentType(ContentType.JSON)
-        .body(Map.of("query", mutation))
-        .when()
-        .post("/graphql")
-        .then()
-        .statusCode(200)
-        .body("errors", nullValue())
-        .extract()
-        .response();
-
-    String paymentIntentId = response.jsonPath().getString("data.createOrder.id");
-    ```
-
-*   **Tip 4: Creating Test Address JsonNode**
-    To create shipping address for test orders:
-    ```java
-    JsonNode shippingAddress = objectMapper.readTree("""
-        {
-            "street": "123 Main St",
-            "city": "Nashville",
-            "state": "TN",
-            "postalCode": "37203",
-            "country": "US"
-        }
-        """);
-    ```
-
-*   **Tip 5: Idempotency Testing**
-    The PaymentService.processPaymentSuccess() implements idempotency. Test it:
-    ```java
-    // First call should return true (processed)
-    boolean firstCall = paymentService.processPaymentSuccess(paymentIntentId, chargeId);
-    assertTrue(firstCall, "First webhook should be processed");
-
-    // Second call should return false (already processed)
-    boolean secondCall = paymentService.processPaymentSuccess(paymentIntentId, chargeId);
-    assertFalse(secondCall, "Second webhook should be idempotent (already processed)");
-
-    // Verify order status is PAID (not changed by second call)
-    CalendarOrder order = CalendarOrder.findByStripePaymentIntent(paymentIntentId).firstResult();
-    assertEquals(CalendarOrder.STATUS_PAID, order.status);
-    ```
-
-*   **Tip 6: Admin Authorization Testing**
-    To test admin-only operations, create a test user with admin role:
-    ```java
-    CalendarUser adminUser = new CalendarUser();
-    adminUser.oauthProvider = "GOOGLE";
-    adminUser.oauthSubject = "admin-test-" + System.currentTimeMillis();
-    adminUser.email = "admin@example.com";
-    adminUser.isAdmin = true;  // Make this user an admin
-    adminUser.persist();
-    ```
-    Then call admin mutations. Without authentication JWT, you may need to call service methods directly for admin tests.
-
-*   **Tip 7: Test Data Cleanup Order**
-    Clean up test data in reverse FK dependency order to avoid violations:
-    ```java
-    @AfterEach
-    @Transactional
-    void cleanup() {
-        // 1. Delete delayed jobs referencing order
-        DelayedJob.delete("payload", testOrder.id.toString());
-        // 2. Delete order
-        CalendarOrder.deleteById(testOrder.id);
-        // 3. Delete calendar
-        UserCalendar.deleteById(testCalendar.id);
-        // 4. Delete user
-        CalendarUser.deleteById(testUser.id);
-        // 5. Delete template
-        CalendarTemplate.deleteById(testTemplate.id);
     }
-    ```
+    """.formatted(testCalendar.id.toString());
 
-*   **Warning 1: Mock External Services Only**
-    The `PaymentService.createPaymentIntent()` makes real Stripe API calls. You MUST mock this:
-    ```java
-    @InjectMock
-    PaymentService paymentService;
-
-    Map<String, String> mockPaymentIntent = new HashMap<>();
-    mockPaymentIntent.put("clientSecret", "pi_test_secret_123");
-    mockPaymentIntent.put("paymentIntentId", "pi_test_12345");
-
-    when(paymentService.createPaymentIntent(any(BigDecimal.class), anyString(), anyString()))
-        .thenReturn(mockPaymentIntent);
-    ```
-
-*   **Warning 2: Performance - Reuse Test Data**
-    The acceptance criteria requires tests to run in <90 seconds. Avoid creating excessive test data. Reuse test users/calendars/templates across test methods where possible. Use `@Order` annotations to control test execution order and share setup.
-
-*   **Warning 3: Coverage Target**
-    Aim for >70% code coverage on `OrderService.java` and `PaymentService.java`. Focus on testing all public methods and important branches (status transitions, authorization checks, idempotency).
-
-*   **Warning 4: GraphQL Type Names**
-    The GraphQL schema uses `CalendarOrder` as the type name (not just `Order`). Your test queries/mutations MUST use the correct type names from `api/schema.graphql`.
-
-### Suggested Test Structure
-
-**File: OrderWorkflowTest.java** (Main order placement and payment flow)
-- `testOrderPlacement_CreatesPendingOrder()` - GraphQL createOrder returns PaymentIntent
-- `testWebhookPaymentSuccess_UpdatesOrderToPaid()` - Webhook updates order status to PAID
-- `testWebhookPaymentSuccess_EnqueuesEmailJob()` - Verify delayed_jobs entry created
-- `testWebhookPaymentSuccess_Idempotent()` - Second webhook call does not duplicate processing
-
-**File: PaymentWorkflowTest.java** (Payment and refund scenarios)
-- `testPaymentIntentCreation_ReturnsValidIntent()` - Mock Stripe API returns clientSecret
-- `testRefundProcessing_UpdatesOrderNotes()` - Refund webhook updates order
-- `testPaymentFailure_LogsError()` - payment_intent.payment_failed webhook logs error
-
-**File: AdminOrderWorkflowTest.java** (Admin operations)
-- `testAdminUpdateOrderStatus_ToShipped()` - Admin updates status to SHIPPED with tracking
-- `testAdminUpdateOrderStatus_EnqueuesShippingEmail()` - Verify shipping email job created
-- `testAdminQueryAllOrders_ReturnsAllOrders()` - allOrders query returns orders across users
-- `testCancelOrder_UserOwnsOrder()` - User can cancel their own order
-- `testCancelOrder_UnauthorizedUser()` - User cannot cancel other user's order
-
-### Expected File Structure
-
-```
-src/test/java/villagecompute/calendar/integration/
-├── OrderWorkflowTest.java         (~250 lines, 4-5 test methods)
-├── PaymentWorkflowTest.java       (~200 lines, 3-4 test methods)
-└── AdminOrderWorkflowTest.java    (~300 lines, 5-6 test methods)
+given()
+    .contentType(ContentType.JSON)
+    .body(Map.of("query", mutation))
+    .when()
+    .post("/graphql")
+    .then()
+    .statusCode(200)
+    .body("errors", nullValue())
+    .body("data.createOrder.id", notNullValue());
 ```
 
-**Total Implementation Time:** ~4-6 hours for comprehensive integration test suite
+**YOU MUST** use this exact pattern. DO NOT use GraphQL client libraries - REST Assured is the standard.
+
+#### **Tip 4: Webhook Simulation**
+Webhook tests simulate Stripe webhook events by POSTing JSON to `/api/webhooks/stripe`:
+```java
+String webhookPayload = """
+    {
+      "id": "evt_test_webhook",
+      "type": "checkout.session.completed",
+      "data": {
+        "object": {
+          "id": "cs_test_session",
+          "payment_intent": "%s"
+        }
+      }
+    }
+    """.formatted(testPaymentIntentId);
+
+given()
+    .contentType(ContentType.JSON)
+    .header("Stripe-Signature", "t=123,v1=fake")
+    .body(webhookPayload)
+    .when()
+    .post("/api/webhooks/stripe")
+    .then()
+    .statusCode(200);
+```
+
+Mock `paymentService.getWebhookSecret()` to return empty string to bypass signature validation.
+
+#### **Tip 5: Idempotent Webhook Testing**
+Payment webhook tests verify idempotency by:
+1. Sending webhook event once → verify order updated to PAID
+2. Sending same webhook again → verify order still PAID (not modified)
+3. Verify only ONE email job exists (not duplicated)
+
+Mock `processPaymentSuccess()` to return true first time, false second time:
+```java
+when(paymentService.processPaymentSuccess(eq(testPaymentIntentId), anyString()))
+    .thenReturn(true)
+    .thenReturn(false);
+```
+
+#### **Tip 6: Authorization Testing**
+Admin tests create 3 users: testUser (regular), testUser2 (regular), adminUser (admin). Authorization tests verify:
+- User can cancel OWN order: `orderService.cancelOrder(orderId, testUser.id, false, reason)` succeeds
+- User CANNOT cancel OTHER user's order: throws `SecurityException` with message containing "not authorized"
+- Admin CAN cancel ANY order: `orderService.cancelOrder(orderId, adminUser.id, true, reason)` succeeds
+
+**IMPORTANT:** Current tests use `orderService` directly with userId and isAdmin parameters because JWT authentication is not easily testable in @QuarkusTest. This is acceptable - verify business logic at service layer.
+
+#### **Tip 7: Entity Manager Flushing**
+Admin workflow tests frequently use:
+```java
+entityManager.flush();
+entityManager.clear();
+```
+
+This ensures database writes are committed and entities are detached before re-querying. Without this, Hibernate may return cached entities instead of fresh database results. USE THIS PATTERN when testing database persistence.
+
+#### **Warning: Test Database State**
+All tests run against the same Quarkus test database. While `@Transactional` cleanup methods delete test data, there is a risk of test pollution if:
+1. Test creates data with same unique constraints (e.g., order numbers, oauth subjects)
+2. Cleanup fails mid-test
+3. Tests are not properly isolated
+
+**MITIGATION:** All test data uses unique timestamps in string fields:
+```java
+testUser.oauthSubject = "order-test-" + System.currentTimeMillis();
+testPaymentIntentId = "pi_test_" + System.currentTimeMillis();
+```
+
+**YOU MUST** follow this pattern for all unique fields to prevent test pollution.
+
+#### **Note: Code Coverage Verification**
+The acceptance criteria states: "Tests achieve >70% coverage for order/payment code". To verify coverage:
+```bash
+./mvnw clean test jacoco:report
+```
+
+Then open `target/site/jacoco/index.html` and check:
+- `villagecompute.calendar.services.OrderService`: Should show >70% line coverage
+- `villagecompute.calendar.services.PaymentService`: Should show >70% line coverage
+- `villagecompute.calendar.api.graphql.OrderResolver`: Should show >70% line coverage
+
+If coverage is below 70%, identify uncovered branches/methods and add tests targeting those code paths.
 
 ---
 
-**End of Task Briefing Package**
+## 4. Task Completion Checklist
+
+Before marking this task as complete, verify ALL acceptance criteria:
+
+- [ ] **Order placement test** creates order, simulates Stripe webhook, verifies order PAID
+- [ ] **Payment success test** verifies Payment entity created with correct amount (NOTE: Current architecture stores payment in Order entity via `stripePaymentIntentId` and `stripeChargeId` fields, not separate Payment entity - adjust this criteria accordingly)
+- [ ] **Email job enqueued** on payment success (verifiable in delayed_jobs table)
+- [ ] **Cancel order test** processes refund, updates order status to CANCELLED
+- [ ] **Admin workflow test** updates order status, adds tracking number, verifies persistence
+- [ ] **All integration tests pass** with `./mvnw verify`
+- [ ] **Tests run in <90 seconds** (measure with `time ./mvnw verify`)
+- [ ] **Code coverage >70%** for order/payment services and API layer (verify with JaCoCo report)
+
+---
+
+## 5. Final Notes
+
+This task is **I3.T9** - the final task in Iteration 3. Upon successful completion:
+- All e-commerce workflows will have comprehensive integration test coverage
+- The CI/CD pipeline will automatically catch regressions in order/payment/admin workflows
+- The codebase will meet quality gates for production deployment
+- The next iteration (I4) can begin with confidence in e-commerce foundation
+
+**CRITICAL REMINDER:** The three target test files ALREADY EXIST with comprehensive tests. Your primary job is to:
+1. **REVIEW** all existing tests to understand coverage
+2. **VERIFY** all acceptance criteria are met by existing tests
+3. **ADD** any missing test scenarios if acceptance criteria gaps exist
+4. **RUN** all tests and verify they pass: `./mvnw verify`
+5. **CHECK** code coverage meets >70% threshold: `./mvnw jacoco:report`
+
+DO NOT delete or significantly refactor existing tests unless they are broken. The tests follow established patterns and conventions used throughout the project.
