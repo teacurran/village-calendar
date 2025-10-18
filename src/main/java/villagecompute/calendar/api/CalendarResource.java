@@ -27,6 +27,9 @@ public class CalendarResource {
   @Inject
   HebrewCalendarService hebrewCalendarService;
 
+  @Inject
+  villagecompute.calendar.services.HolidayService holidayService;
+
   // Request/Response types
   public static class CalendarRequest {
     public String calendarType; // "gregorian" or "hebrew"
@@ -177,6 +180,28 @@ public class CalendarResource {
       .header("Content-Type", "application/pdf")
       .header("Content-Disposition", "attachment; filename=\"calendar-" + config.year + ".pdf\"")
       .build();
+  }
+
+  @GET
+  @Path("/holidays")
+  public Response getHolidays(
+      @jakarta.ws.rs.QueryParam("year") Integer year,
+      @jakarta.ws.rs.QueryParam("country") String country) {
+
+    // Default to current year if not specified
+    int holidayYear = year != null ? year : java.time.LocalDate.now().getYear();
+
+    // Default to US if country not specified
+    String holidayCountry = country != null ? country : "US";
+
+    // Get holidays from service
+    Map<String, String> holidayMap = holidayService.getHolidays(holidayYear, holidayCountry);
+
+    HolidayResponse response = new HolidayResponse();
+    response.holidays = holidayMap.keySet();
+    response.holidayNames = holidayMap;
+
+    return Response.ok(response).build();
   }
 
   private CalendarRenderingService.CalendarConfig buildConfig(CalendarRequest request) {

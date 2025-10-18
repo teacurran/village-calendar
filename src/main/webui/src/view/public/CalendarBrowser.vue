@@ -30,6 +30,24 @@
             Create beautiful, personalized calendars with custom designs.
             Perfect for gifts, planning, or decoration.
           </p>
+          <div class="hero-actions">
+            <Button
+              label="Create New Calendar"
+              icon="pi pi-plus"
+              size="large"
+              class="create-button"
+              @click="createNewCalendar"
+            />
+            <Button
+              label="Browse Templates"
+              icon="pi pi-th-large"
+              size="large"
+              outlined
+              severity="secondary"
+              class="browse-button"
+              @click="scrollToTemplates"
+            />
+          </div>
         </div>
       </div>
     </section>
@@ -137,7 +155,13 @@
         <!-- No templates state -->
         <div v-else class="empty-state">
           <i class="pi pi-inbox text-6xl text-gray-300 mb-4"></i>
-          <p class="text-gray-500">No templates available yet</p>
+          <p class="text-gray-500 mb-4">No templates available yet</p>
+          <Button
+            label="Create New Calendar"
+            icon="pi pi-plus"
+            size="large"
+            @click="createNewCalendar"
+          />
         </div>
       </div>
     </section>
@@ -369,6 +393,19 @@ const goToAdmin = () => {
     });
 };
 
+// Create new calendar - navigate to generator
+const createNewCalendar = () => {
+  router.push("/generator");
+};
+
+// Scroll to templates section
+const scrollToTemplates = () => {
+  const templatesSection = document.querySelector(".templates-section");
+  if (templatesSection) {
+    templatesSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+};
+
 // Load templates on mount
 onMounted(() => {
   loadTemplates();
@@ -417,6 +454,19 @@ onMounted(() => {
 .hero-subtitle {
   font-size: 1.25rem;
   opacity: 0.95;
+  margin-bottom: 2rem;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.create-button,
+.browse-button {
+  min-width: 180px;
 }
 
 @media (max-width: 768px) {
@@ -425,6 +475,14 @@ onMounted(() => {
   }
   .hero-subtitle {
     font-size: 1rem;
+  }
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .create-button,
+  .browse-button {
+    width: 100%;
   }
 }
 

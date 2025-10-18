@@ -80,6 +80,169 @@ The calendar generator and UI were prototyped in /Users/tea/dev/VillageCompute/c
 4. **DelayedJobs**
     - Email sending and other async tasks are handled with the DelayedJob interface. This is loosely designed after DelayedJob in Ruby On Rails.  Other Async jobs should follow the same pattern.
 
+## API Endpoints
+
+### REST Endpoints (CalendarResource.java)
+- `POST /api/calendar/generate` - Generate calendar SVG (returns XML/SVG)
+- `POST /api/calendar/generate-json` - Generate calendar SVG (returns JSON with svg field)
+- `POST /api/calendar/generate-pdf` - Generate calendar PDF for download
+- `GET /api/calendar/holidays?year={year}&country={country}` - Get holidays for year (currently returns empty set)
+- `GET /api/calendar/themes` - Get available theme configurations
+
+### REST Endpoints (SessionCalendarResource.java)
+Session-based calendar management for anonymous users:
+- `GET /api/session-calendar/current` - Get current session's calendar (requires `X-Session-ID` header)
+- `POST /api/session-calendar/save` - Save/create calendar for session (requires `X-Session-ID` header)
+- `POST /api/session-calendar/from-template/{templateId}` - Create calendar from template for session
+- `PUT /api/session-calendar/{id}/autosave` - Auto-save calendar changes
+
+### REST Endpoints (CartResource.java)
+Shopping cart management (stub implementation):
+- `GET /api/cart/items` - Get cart items (returns empty cart)
+- `POST /api/cart/items` - Add item to cart (stub - returns success message)
+- `DELETE /api/cart/items/{itemId}` - Remove item from cart (stub)
+- `DELETE /api/cart/clear` - Clear cart (stub)
+
+### REST Endpoints (UserCalendarResource.java)
+User calendar management (requires authentication):
+- `GET /api/calendar-templates/user/calendars` - Get all calendars for authenticated user
+- `POST /api/calendar-templates/user/save` - Save or update user calendar
+- `GET /api/calendar-templates/user/calendars/{id}/preview` - Get calendar preview SVG
+- `DELETE /api/calendar-templates/user/calendars/{id}` - Delete user calendar
+
+## Calendar Workflow: Templates vs User Calendars
+
+**Templates (Admin-Only, GraphQL)**
+- Reusable calendar configurations that serve as starting points
+- Created/managed by admins via GraphQL mutations
+- Visible to all users as starting templates
+- Accessed via "Browse Templates" or "Templates" button (admin only)
+
+**User Calendars (Authenticated Users, REST)**
+- Personal saved calendars owned by specific users
+- Created when user clicks "Save Calendar" button
+- Private to the user who created them
+- Listed in "My Saved Calendars" dialog
+
+**Session Calendars (Anonymous Users, REST)**
+- Temporary calendars for unauthenticated users
+- Automatically created and updated via session ID
+- Converted to user calendars upon authentication
+
+### Complete User Workflows
+
+**Workflow 1: Create Calendar from Blank**
+1. User clicks "Create New Calendar" button
+2. CalendarGenerator loads with default configuration
+3. User edits settings (theme, layout, events, etc.)
+4. Changes auto-save to session storage (anonymous) or user calendar (authenticated)
+5. User clicks "Save Calendar" → Creates UserCalendar record
+6. Admin can click bookmark icon "Save as Template" → Creates CalendarTemplate via GraphQL
+
+**Workflow 2: Create Calendar from Template**
+1. User browses templates on home page or clicks "Templates" button (admin)
+2. User selects a template
+3. GraphQL `templates` query loads template configuration
+4. CalendarGenerator applies template config
+5. User edits as desired (auto-saved to session/user)
+6. User clicks "Save Calendar" → Creates UserCalendar based on template
+
+**Workflow 3: Load Saved Calendar**
+1. User clicks "My Saved Calendars"
+2. REST GET `/api/calendar-templates/user/calendars` lists user's calendars
+3. User selects a calendar
+4. Configuration loads into CalendarGenerator
+5. User can edit and re-save
+
+**Workflow 4: Admin Creates Template (Bookmark Icon)**
+1. Admin creates/edits calendar in CalendarGenerator
+2. Admin clicks bookmark icon "Save as Template"
+3. GraphQL `createTemplate` mutation saves template
+4. Template becomes available to all users
+
+### API Usage by Feature
+
+| Feature | API Type | Endpoint/Query |
+|---------|----------|----------------|
+| Browse templates (home page) | GraphQL | `templates(isActive: true)` |
+| Load template | GraphQL | `template(id)` |
+| **Save as Template** (bookmark) | GraphQL | `createTemplate(input)` |
+| Update template | GraphQL | `updateTemplate(id, input)` |
+| List my calendars | REST | `GET /api/calendar-templates/user/calendars` |
+| **Save calendar** (regular save) | REST | `POST /api/calendar-templates/user/save` |
+| Session auto-save | REST | `POST /api/session-calendar/save` |
+
+### GraphQL Endpoints
+
+**Template Management (TemplateGraphQL.java):**
+- **Query** `templates(isActive: Boolean, isFeatured: Boolean)` - Browse available templates
+- **Query** `template(id: String!)` - Get single template by ID
+- **Mutation** `createTemplate(input: TemplateInput!)` - Create new template (admin only)
+- **Mutation** `updateTemplate(id: String!, input: TemplateInput!)` - Update template (admin only)
+- **Mutation** `deleteTemplate(id: String!)` - Soft-delete template (admin only)
+
+**Session Management (SessionResolver.java):**
+- **Query** `sessionCalendars(sessionId: String!)` - Get all calendars for guest session
+- **Query** `hasSessionCalendars(sessionId: String!)` - Check if session has calendars
+- **Mutation** `convertGuestSession(sessionId: String!)` - Convert guest session to user account
+
+**Calendar Management (CalendarGraphQL.java):**
+- **Query** `me` - Get current authenticated user
+- **Query** `myCalendars` - Get all calendars for current user
+- **Query** `calendar(id: String!)` - Get single calendar by ID
+- **Mutation** `createCalendar(input: CalendarInput!)` - Create new calendar
+- **Mutation** `updateCalendar(id: String!, input: CalendarUpdateInput!)` - Update calendar
+- **Mutation** `deleteCalendar(id: String!)` - Delete calendar
+- **Mutation** `duplicateCalendar(id: String!)` - Duplicate calendar
+
+**Cart Management (CartGraphQL.java):**
+- **Query** `cart` - Get current user's shopping cart (stub - returns empty cart)
+- **Mutation** `addToCart(input: AddToCartInput!)` - Add calendar to cart (stub)
+- **Mutation** `updateCartItemQuantity(itemId: ID!, quantity: Int!)` - Update item quantity (stub)
+- **Mutation** `removeFromCart(itemId: ID!)` - Remove item from cart (stub)
+- **Mutation** `clearCart` - Clear all items from cart (stub)
+
+### Frontend-Backend Integration Notes
+
+**Current Status:**
+- ✅ CalendarGenerator.vue imported from VillageCMS (3,460 lines)
+- ✅ Backend REST endpoints exist for calendar generation (`/api/calendar/*`)
+- ✅ Backend REST endpoints created for session calendar management (`/api/session-calendar/*`)
+- ✅ Backend GraphQL endpoints exist for templates, sessions, calendars
+- ✅ CalendarBrowser.vue updated with "Create New Calendar" button
+- ⚠️ CalendarGenerator.vue uses REST endpoints that need adaptation:
+  - `/api/calendar-templates/*` endpoints → Need to migrate to GraphQL queries/mutations
+  - `/api/cart/*` endpoints → To be implemented for e-commerce integration
+  - `/api/calendar/holidays` endpoint → Currently returns empty set, needs holiday calculation service
+
+**Recent Changes (2025-10-17):**
+
+**Phase 1: Initial Import**
+1. **Imported CalendarGenerator.vue** from VillageCMS with full functionality (3,460 lines)
+2. **Created SessionCalendarResource.java** to support anonymous user calendars with session-based storage
+3. **Added `/api/calendar/holidays` endpoint** (placeholder returning empty set)
+4. **Updated CalendarBrowser.vue** with prominent "Create New Calendar" and "Browse Templates" buttons in hero section
+
+**Phase 2: API Integration (Completed)**
+1. ✅ **Created sessionService.ts** - Frontend session ID management with localStorage persistence
+2. ✅ **Updated CalendarGenerator.vue** - All session-calendar API calls now use `sessionFetch` with `X-Session-ID` header
+3. ✅ **Created graphqlService.ts** - GraphQL client utilities with template CRUD operations
+4. ✅ **Migrated template APIs to GraphQL** - All template operations now use GraphQL queries/mutations
+5. ✅ **Implemented HolidayService.java** - US Federal holidays calculation service
+6. ✅ **Created CartResource.java** - Stub implementation for shopping cart endpoints
+
+**Completed Integration:**
+- ✅ Session management: CalendarGenerator uses `X-Session-ID` header via sessionFetch
+- ✅ Template operations: Migrated from REST to GraphQL (fetchTemplates, createTemplate, updateTemplate)
+- ✅ Holiday service: Returns US Federal holidays for any given year
+- ✅ Cart endpoints: Stub implementation to prevent 404 errors
+
+**Remaining Work:**
+1. Full cart/e-commerce implementation (currently stubbed)
+2. Add more holiday sets (Jewish, Hebrew Religious, etc.)
+3. Stripe integration for payment processing
+4. Order management system
+
 ## Infrastructure
 
 ### AWS Services
@@ -125,13 +288,104 @@ Village Calendar is a site that lets users create custom full-year calendars wit
   - astronomical data such as moon projections
 
 ## Calendars
-- Users can either start with a template or a blank calendar
-- updates to calendar settings get saved to the current anonymous session.
-  - to save, download, or order a calendar a user will need to sign in
-- Users should be able to save multiple calendars to their account
-- Users should be able to download a PDF of their calendar
-- Users should be able to place orders for printed versions of their calendar (via Stripe)
-- Users should be able to share a read-only link to their calendar
+
+### Calendar Generator Interface (Imported from VillageCMS)
+The primary calendar creation interface is available at `/generator` and provides:
+
+**Template Workflow (User Experience):**
+1. **Start**: Users begin with either a blank calendar or select from available templates
+2. **Edit**: Make changes to calendar settings, add events, customize appearance
+3. **Preview**: See real-time SVG preview of the full year calendar
+4. **Save**:
+   - Anonymous users: Calendar saved to session storage (persisted via session ID)
+   - Authenticated users: Calendar saved to their account
+   - Admin users: Additional "Save as Template" option (bookmark icon) to create reusable templates
+
+**Calendar Features:**
+- **Calendar Types**:
+  - Gregorian (standard) calendar
+  - Hebrew lunar calendar with traditional month names
+- **Layout Styles**:
+  - Grid (12x31): All months in a compact grid format
+  - Traditional (4x3): Classic month-by-month layout
+  - Weekday Aligned Grid (12x37): Grid aligned by day of week
+- **Themes**:
+  - Default (Black & White)
+  - Vermont Weekends (green-tinted weekends)
+  - Rainbow Weekends (colorful weekend highlights)
+  - Rainbow Days (Warm)
+  - Rainbow Days (Cool)
+- **Display Options**:
+  - Week numbers
+  - Compact mode
+  - Day numbers and names (configurable for grid layouts)
+  - Grid lines
+  - Weekend highlighting
+  - Rotated month names (for grid layouts)
+- **Moon Display**:
+  - None
+  - Moon Phases (small icons showing new/full/quarter moons)
+  - Moon Illumination (detailed rendering with rotation based on observer location)
+  - Customizable moon size, position, colors, and border
+- **Custom Events**:
+  - Add custom dates with emojis
+  - Optional event titles
+  - Emoji positioning (top-left, top-right, bottom-left, bottom-right, center)
+- **Holidays**:
+  - US Federal Holidays
+  - Jewish Holidays
+  - Hebrew Religious Holidays (for Hebrew calendar type)
+  - Customizable holiday colors
+- **Color Customization**:
+  - Year text color
+  - Month names color
+  - Day numbers color
+  - Day names color
+  - Grid line color
+  - Weekend background color
+  - Holiday text color
+  - Custom date color
+  - Moon dark/light colors
+
+**User Actions:**
+- Real-time preview with zoom controls (zoom in, zoom out, reset)
+- Download PDF (35" x 23" print size)
+- Save calendar to account (requires authentication)
+- Save as template (admin only, via bookmark icon)
+- Add to cart for print order
+
+### Template Management (Admin)
+Admin users have access to template management via the "Templates" button:
+- **Browse Templates**: View all created templates in a DataTable
+- **Load Template**: Apply template configuration to current calendar
+- **Update Template**: Save changes back to an existing template
+- **Duplicate Template**: Create a copy of a template with a new name
+- **Template Properties**:
+  - Name (required)
+  - Description (optional)
+  - Active status (controls visibility to non-admin users)
+  - Featured status (highlights template in gallery)
+  - Display order (for template gallery sorting)
+  - Full configuration object (all calendar settings)
+
+### Session-Based Calendar Storage
+To support anonymous users working on calendars before authentication:
+- Calendars are stored with a session ID when user is not authenticated
+- Session ID is generated on frontend and persisted in browser storage
+- Upon login/authentication, a "Convert Guest Session" mutation transfers all session calendars to the authenticated user account
+- Backend provides:
+  - GraphQL query: `sessionCalendars(sessionId: String!)` - retrieve all calendars for a session
+  - GraphQL query: `hasSessionCalendars(sessionId: String!)` - check if conversion is needed
+  - GraphQL mutation: `convertGuestSession(sessionId: String!)` - transfer session calendars to user
+
+### Calendar Persistence
+- **Anonymous Users**: Calendar configuration auto-saved to session storage
+- **Authenticated Users**: Calendars saved to database via user account
+- **Template System**: Admins can save any calendar configuration as a reusable template
+- Users can save multiple calendars to their account
+- Users can download a PDF of their calendar
+- Users can place orders for printed versions of their calendar (via Stripe)
+- Users can share a read-only link to their calendar
   - Users viewing the read-only copy can click a button to "Make a Copy" which will copy the calendar to their own account
 
 ## Login
