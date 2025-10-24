@@ -90,7 +90,7 @@ public class TemplateGraphQL {
     public CalendarTemplate template(
         @Name("id")
         @Description("Template ID")
-        @NonNull
+        @NotNull
         String id
     ) {
         LOG.infof("Querying template by ID: %s", id);

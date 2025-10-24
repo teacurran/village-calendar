@@ -131,7 +131,7 @@ export const useCalendarStore = defineStore("calendar", {
           },
           body: JSON.stringify({
             query: `
-              query GetTemplate($id: ID!) {
+              query GetTemplate($id: String!) {
                 template(id: $id) {
                   id
                   name
@@ -258,7 +258,7 @@ export const useCalendarStore = defineStore("calendar", {
           headers,
           body: JSON.stringify({
             query: `
-              query GetCalendar($id: ID!) {
+              query GetCalendar($id: String!) {
                 calendar(id: $id) {
                   id
                   name
@@ -413,7 +413,7 @@ export const useCalendarStore = defineStore("calendar", {
           },
           body: JSON.stringify({
             query: `
-              mutation UpdateCalendar($id: ID!, $input: CalendarUpdateInput!) {
+              mutation UpdateCalendar($id: String!, $input: CalendarUpdateInput!) {
                 updateCalendar(id: $id, input: $input) {
                   id
                   name
@@ -492,7 +492,7 @@ export const useCalendarStore = defineStore("calendar", {
           },
           body: JSON.stringify({
             query: `
-              mutation DeleteCalendar($id: ID!) {
+              mutation DeleteCalendar($id: String!) {
                 deleteCalendar(id: $id)
               }
             `,
