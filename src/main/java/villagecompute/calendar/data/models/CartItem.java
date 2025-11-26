@@ -39,7 +39,7 @@ public class CartItem extends DefaultPanacheEntityWithTimestamps {
 
     @NotNull
     @Min(2000)
-    @Column(nullable = false)
+    @Column(name = "calendar_year", nullable = false)
     public Integer year;
 
     @NotNull
