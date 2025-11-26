@@ -55,7 +55,7 @@ class AnalyticsRollupRepositoryTest {
     @Transactional
     void testFindByMetric() {
         // Given
-        Instant now = Instant.now();
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         Instant hour1 = now.minus(1, ChronoUnit.HOURS);
         Instant hour2 = now.minus(2, ChronoUnit.HOURS);
         Instant hour3 = now.minus(3, ChronoUnit.HOURS);
@@ -87,7 +87,7 @@ class AnalyticsRollupRepositoryTest {
     @Transactional
     void testFindByMetricAndDimension() {
         // Given
-        Instant now = Instant.now();
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         Instant hour1 = now.minus(1, ChronoUnit.HOURS);
         Instant hour2 = now.minus(2, ChronoUnit.HOURS);
 
@@ -113,7 +113,7 @@ class AnalyticsRollupRepositoryTest {
     @Transactional
     void testFindByMetricAndDimensionValue() {
         // Given
-        Instant now = Instant.now();
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         Instant hour1 = now.minus(1, ChronoUnit.HOURS);
         Instant hour2 = now.minus(2, ChronoUnit.HOURS);
 
@@ -141,7 +141,7 @@ class AnalyticsRollupRepositoryTest {
     @Transactional
     void testFindByTimeRange() {
         // Given
-        Instant now = Instant.now();
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         Instant since = now.minus(5, ChronoUnit.HOURS);
         Instant until = now.minus(1, ChronoUnit.HOURS);
 
@@ -174,7 +174,7 @@ class AnalyticsRollupRepositoryTest {
     @Transactional
     void testFindByMetricAndTimeRange() {
         // Given
-        Instant now = Instant.now();
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         Instant since = now.minus(5, ChronoUnit.HOURS);
         Instant until = now.minus(1, ChronoUnit.HOURS);
 
@@ -214,7 +214,8 @@ class AnalyticsRollupRepositoryTest {
     @Transactional
     void testSumByMetricAndTimeRange() {
         // Given
-        Instant now = Instant.now();
+        // Truncate to microseconds since H2 doesn't preserve nanosecond precision
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         Instant since = now.minus(5, ChronoUnit.HOURS);
         Instant until = now.minus(1, ChronoUnit.HOURS);
 
