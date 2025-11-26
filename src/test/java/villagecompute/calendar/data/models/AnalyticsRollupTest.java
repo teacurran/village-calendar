@@ -279,7 +279,8 @@ class AnalyticsRollupTest {
     @Transactional
     void testFindByMetricAndTimeRange() {
         // Given
-        Instant now = Instant.now();
+        // Truncate to microseconds since H2 doesn't preserve nanosecond precision
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         Instant yesterday = now.minus(1, ChronoUnit.DAYS);
         Instant twoDaysAgo = now.minus(2, ChronoUnit.DAYS);
 
@@ -437,7 +438,8 @@ class AnalyticsRollupTest {
     @Transactional
     void testAllFields_SetAndRetrieve() {
         // Given - Create entity with ALL fields set
-        Instant now = Instant.now();
+        // Truncate to microseconds since H2 doesn't preserve nanosecond precision
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         Instant periodStart = now.minus(1, ChronoUnit.DAYS);
         Instant periodEnd = now;
 

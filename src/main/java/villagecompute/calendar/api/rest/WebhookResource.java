@@ -41,7 +41,7 @@ import java.util.Optional;
  * REST resource for handling Stripe webhooks.
  * Validates webhook signatures and processes payment events.
  */
-@Path("/api/webhooks")
+@Path("/webhooks")
 @ApplicationScoped
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)

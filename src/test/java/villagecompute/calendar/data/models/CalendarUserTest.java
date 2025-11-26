@@ -212,7 +212,8 @@ class CalendarUserTest {
     @Transactional
     void testFindActiveUsersSince() {
         // Given
-        Instant now = Instant.now();
+        // Truncate to microseconds since H2 doesn't preserve nanosecond precision
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         Instant yesterday = now.minus(1, ChronoUnit.DAYS);
         Instant twoDaysAgo = now.minus(2, ChronoUnit.DAYS);
 

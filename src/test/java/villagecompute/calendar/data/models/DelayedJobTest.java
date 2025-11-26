@@ -294,7 +294,8 @@ class DelayedJobTest {
     @Transactional
     void testAllFields_SetAndRetrieve() {
         // Given - Create entity with ALL fields set
-        Instant now = Instant.now();
+        // Truncate to microseconds since H2 doesn't preserve nanosecond precision
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
         DelayedJob job = new DelayedJob();
         job.priority = 100;
         job.attempts = 3;
