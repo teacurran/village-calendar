@@ -39,9 +39,7 @@ export function clearSessionId(): void {
  * Create fetch options with session ID header
  * Use this to automatically include the session ID in API requests
  */
-export function withSessionHeaders(
-  options: RequestInit = {},
-): RequestInit {
+export function withSessionHeaders(options: RequestInit = {}): RequestInit {
   const headers = new Headers(options.headers);
   headers.set("X-Session-ID", getSessionId());
 

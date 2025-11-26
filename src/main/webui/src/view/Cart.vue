@@ -41,7 +41,9 @@ const cartItemCount = computed(() => cartStore.itemCount || 0);
 // Parse configuration and get calendar details
 const getCalendarConfig = (item: any) => {
   // Check if this is a calendar item (either by productId or templateId)
-  const isCalendar = item.productId === CALENDAR_PRODUCT_ID || item.templateId === CALENDAR_PRODUCT_ID;
+  const isCalendar =
+    item.productId === CALENDAR_PRODUCT_ID ||
+    item.templateId === CALENDAR_PRODUCT_ID;
   if (isCalendar && item.configuration) {
     try {
       // Configuration might already be parsed
@@ -62,7 +64,10 @@ const getCalendarConfig = (item: any) => {
 
 // Check if item is a calendar
 const isCalendarItem = (item: any) => {
-  return item.productId === CALENDAR_PRODUCT_ID || item.templateId === CALENDAR_PRODUCT_ID;
+  return (
+    item.productId === CALENDAR_PRODUCT_ID ||
+    item.templateId === CALENDAR_PRODUCT_ID
+  );
 };
 
 // Get month name from number
@@ -387,8 +392,12 @@ watch(
                       class="text-sm text-surface-600"
                     >
                       <template v-if="getCalendarConfig(item)">
-                        <p v-if="getCalendarConfig(item).name">{{ getCalendarConfig(item).name }}</p>
-                        <p>Year: {{ item.year || getCalendarConfig(item).year }}</p>
+                        <p v-if="getCalendarConfig(item).name">
+                          {{ getCalendarConfig(item).name }}
+                        </p>
+                        <p>
+                          Year: {{ item.year || getCalendarConfig(item).year }}
+                        </p>
                       </template>
                       <template v-else>
                         <p>Year: {{ item.year }}</p>

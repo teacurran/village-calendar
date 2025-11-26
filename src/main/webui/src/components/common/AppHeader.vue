@@ -14,8 +14,8 @@
             icon="pi pi-shopping-cart"
             text
             rounded
-            @click="toggleCart"
             class="relative"
+            @click="toggleCart"
           >
             <Badge
               v-if="cartStore.itemCount > 0"

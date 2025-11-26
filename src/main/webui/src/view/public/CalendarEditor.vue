@@ -215,7 +215,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useToast } from "primevue/usetoast";
 import {
@@ -270,14 +270,25 @@ const availableYears = computed(() => getAvailableYears());
 
 const customConfiguration = computed(() => {
   try {
-    const parsed = JSON.parse(configurationJson.value);
-    configError.value = null;
-    return parsed;
-  } catch (err: any) {
-    configError.value = err.message;
+    return JSON.parse(configurationJson.value);
+  } catch {
     return null;
   }
 });
+
+// Watch for configuration JSON changes to update error state
+watch(
+  configurationJson,
+  (newValue) => {
+    try {
+      JSON.parse(newValue);
+      configError.value = null;
+    } catch (err: unknown) {
+      configError.value = err instanceof Error ? err.message : "Invalid JSON";
+    }
+  },
+  { immediate: true },
+);
 
 const isFormValid = computed(() => {
   return (

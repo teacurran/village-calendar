@@ -37,10 +37,7 @@ export async function graphql<T = any>(
 
 // Template Queries and Mutations
 
-export async function fetchTemplates(
-  isActive?: boolean,
-  isFeatured?: boolean,
-) {
+export async function fetchTemplates(isActive?: boolean, isFeatured?: boolean) {
   const query = `
     query Templates($isActive: Boolean, $isFeatured: Boolean) {
       templates(isActive: $isActive, isFeatured: $isFeatured) {
@@ -64,11 +61,12 @@ export async function fetchTemplates(
   });
 
   // Parse configuration from JSON string if needed
-  return data.templates.map(template => ({
+  return data.templates.map((template) => ({
     ...template,
-    configuration: typeof template.configuration === 'string'
-      ? JSON.parse(template.configuration)
-      : template.configuration,
+    configuration:
+      typeof template.configuration === "string"
+        ? JSON.parse(template.configuration)
+        : template.configuration,
   }));
 }
 
@@ -93,7 +91,7 @@ export async function fetchTemplate(id: string) {
   const data = await graphql<{ template: any }>(query, { id });
 
   // Parse configuration from JSON string if needed
-  if (data.template && typeof data.template.configuration === 'string') {
+  if (data.template && typeof data.template.configuration === "string") {
     data.template.configuration = JSON.parse(data.template.configuration);
   }
 
@@ -128,12 +126,15 @@ export async function createTemplate(input: {
   // Configuration must be stringified for the GraphQL JsonNode adapter
   const inputWithStringConfig = {
     ...input,
-    configuration: typeof input.configuration === 'string'
-      ? input.configuration
-      : JSON.stringify(input.configuration),
+    configuration:
+      typeof input.configuration === "string"
+        ? input.configuration
+        : JSON.stringify(input.configuration),
   };
 
-  const data = await graphql<{ createTemplate: any }>(mutation, { input: inputWithStringConfig });
+  const data = await graphql<{ createTemplate: any }>(mutation, {
+    input: inputWithStringConfig,
+  });
   return data.createTemplate;
 }
 
@@ -168,12 +169,16 @@ export async function updateTemplate(
   // Configuration must be stringified for the GraphQL JsonNode adapter
   const inputWithStringConfig = {
     ...input,
-    configuration: typeof input.configuration === 'string'
-      ? input.configuration
-      : JSON.stringify(input.configuration),
+    configuration:
+      typeof input.configuration === "string"
+        ? input.configuration
+        : JSON.stringify(input.configuration),
   };
 
-  const data = await graphql<{ updateTemplate: any }>(mutation, { id, input: inputWithStringConfig });
+  const data = await graphql<{ updateTemplate: any }>(mutation, {
+    id,
+    input: inputWithStringConfig,
+  });
   return data.updateTemplate;
 }
 
