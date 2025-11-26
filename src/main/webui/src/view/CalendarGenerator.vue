@@ -587,14 +587,90 @@
       </template>
     </Drawer>
 
+    <!-- Template Selection Drawer -->
+    <Drawer
+      v-model:visible="showTemplateDrawer"
+      position="left"
+      :style="{ width: '400px' }"
+      class="template-drawer"
+    >
+      <template #header>
+        <div class="flex items-center gap-2">
+          <i class="pi pi-palette text-xl"></i>
+          <span class="font-semibold">Choose a Template</span>
+        </div>
+      </template>
+
+      <div class="template-drawer-content">
+        <p class="text-sm text-gray-600 mb-4">
+          Select a template to customize your calendar
+        </p>
+
+        <div v-if="loadingAllTemplates" class="flex justify-center py-8">
+          <ProgressSpinner />
+        </div>
+
+        <div v-else-if="allTemplates.length === 0" class="text-center py-8 text-gray-500">
+          <i class="pi pi-inbox text-4xl mb-3"></i>
+          <p>No templates available</p>
+        </div>
+
+        <div v-else class="space-y-3">
+          <div
+            v-for="template in sortedAllTemplates"
+            :key="template.id"
+            class="template-card-item p-3 border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+            :class="{ 'ring-2 ring-blue-500': currentTemplateId === template.id }"
+            @click="selectTemplate(template)"
+          >
+            <div class="flex gap-3">
+              <!-- Template Preview Thumbnail -->
+              <div class="template-thumbnail w-20 h-20 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                <div
+                  v-if="templatePreviews[template.id]"
+                  class="w-full h-full"
+                  v-html="templatePreviews[template.id]"
+                ></div>
+                <div v-else class="w-full h-full flex items-center justify-center">
+                  <i class="pi pi-calendar text-2xl text-gray-400"></i>
+                </div>
+              </div>
+              <!-- Template Info -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <h4 class="font-semibold text-sm truncate">{{ template.name }}</h4>
+                  <Tag v-if="template.isFeatured" value="Popular" severity="warning" class="text-xs" />
+                </div>
+                <p v-if="template.description" class="text-xs text-gray-600 line-clamp-2">
+                  {{ template.description }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button label="Close" icon="pi pi-times" outlined class="w-full" @click="showTemplateDrawer = false" />
+      </template>
+    </Drawer>
+
     <!-- Main Content Area -->
     <div class="p-4">
       <div class="flex justify-between items-center mb-4">
         <h1 class="text-2xl font-bold">Full Year Calendar Generator</h1>
         <div class="flex gap-2">
           <Button
-            v-if="isAdmin"
             label="Templates"
+            icon="pi pi-palette"
+            outlined
+            :badge="allTemplates.length > 0 ? allTemplates.length.toString() : null"
+            badge-severity="info"
+            @click="showTemplateDrawer = true"
+          />
+          <Button
+            v-if="isAdmin"
+            label="Manage Templates"
             icon="pi pi-book"
             outlined
             :badge="templates.length > 0 ? templates.length.toString() : null"
@@ -1197,6 +1273,7 @@ import { useToast } from 'primevue/usetoast'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { useCartStore } from '../stores/cart'
+import { useAuthStore } from '../stores/authStore'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
@@ -1223,9 +1300,16 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const cartStore = useCartStore()
+const authStore = useAuthStore()
 
 // Drawer visibility
 const drawerVisible = ref(false)
+const showTemplateDrawer = ref(false)
+
+// All templates (for all users)
+const allTemplates = ref([])
+const loadingAllTemplates = ref(false)
+const templatePreviews = ref({})
 
 // Session calendar state
 const currentCalendarId = ref(null)
@@ -1256,9 +1340,9 @@ const config = ref({
   firstDayOfWeek: 'SUNDAY',
   latitude: 0, // No location by default (no rotation)
   longitude: 0, // No location by default (no rotation)
-  moonSize: 24, // Default moon radius in pixels
-  moonOffsetX: 30, // Horizontal offset in pixels from left edge of cell
-  moonOffsetY: 30, // Vertical offset in pixels from top edge of cell
+  moonSize: 20, // Default moon radius in pixels
+  moonOffsetX: 25, // Horizontal offset in pixels from left edge of cell
+  moonOffsetY: 45, // Vertical offset in pixels from top edge of cell
   moonBorderColor: '#c1c1c1', // Default border color
   moonBorderWidth: 0.5, // Default border width
   // Color customization - simple black and gray
@@ -1667,11 +1751,22 @@ const holidayData = {
 }
 
 // Templates (Admin)
-const isAdmin = computed(() => userStore.isAdmin)
+const isAdmin = computed(() => authStore.isAdmin)
 const showTemplatesDialog = ref(false)
 const templates = ref([])
 const loadingTemplates = ref(false)
 const currentTemplateId = ref(null)
+
+// Sorted templates for user selection (by displayOrder, featured first)
+const sortedAllTemplates = computed(() => {
+  return [...allTemplates.value].sort((a, b) => {
+    // Featured templates first
+    if (a.isFeatured && !b.isFeatured) return -1
+    if (!a.isFeatured && b.isFeatured) return 1
+    // Then by displayOrder
+    return a.displayOrder - b.displayOrder
+  })
+})
 
 // Template save dialog
 const showSaveTemplateDialog = ref(false)
@@ -1714,28 +1809,40 @@ onMounted(async () => {
   // Fetch user data to ensure store is populated
   await userStore.fetchCurrentUser()
 
-  // Load templates if admin
+  // Load templates for admin management
   if (isAdmin.value) {
     await loadTemplates()
   }
 
+  // Load all active templates for all users (for template drawer)
+  await loadAllTemplates()
+
   // Load holidays (but don't show them by default)
   await fetchHolidays()
 
-  // Try to load from localStorage for anonymous users
+  // Check if URL has calendar ID or template ID
+  const hasUrlParams = route.query.id || route.query.templateId
+
+  // Try to load from localStorage for anonymous users (only if no URL params)
   let configLoaded = false
-  if (!userStore.isLoggedIn) {
+  if (!hasUrlParams && !userStore.isLoggedIn) {
     configLoaded = loadFromLocalStorage()
   }
 
   // Load calendar or template from URL (takes precedence over localStorage)
   const calendarLoaded = await loadCalendarFromUrl()
 
-  // Generate default calendar immediately if nothing was loaded
-  if (!calendarLoaded) {
-    generateCalendar()
-    // Trigger initial save after generation
-    await autoSaveCalendar()
+  // If nothing was loaded and we have templates, load the most popular one
+  if (!calendarLoaded && !configLoaded) {
+    const mostPopularTemplate = sortedAllTemplates.value[0]
+    if (mostPopularTemplate) {
+      // Load the most popular template
+      await loadTemplateConfig(mostPopularTemplate)
+    } else {
+      // No templates available, generate default calendar
+      generateCalendar()
+      await autoSaveCalendar()
+    }
   }
 
   // Don't open drawer automatically - let user open it when needed
@@ -2898,6 +3005,52 @@ const loadTemplates = async () => {
   }
 }
 
+// Load all active templates for all users
+const loadAllTemplates = async () => {
+  loadingAllTemplates.value = true
+  try {
+    // Fetch only active templates for regular users
+    allTemplates.value = await fetchTemplates(true, undefined)
+    // Generate previews for templates
+    await generateTemplatePreviewsForDrawer()
+  } catch (error) {
+    console.error('Error loading templates:', error)
+  } finally {
+    loadingAllTemplates.value = false
+  }
+}
+
+// Generate preview thumbnails for templates in the drawer
+const generateTemplatePreviewsForDrawer = async () => {
+  for (const template of allTemplates.value) {
+    if (templatePreviews.value[template.id]) continue // Skip if already loaded
+
+    try {
+      if (template.previewSvg) {
+        templatePreviews.value[template.id] = scaleSvgForPreview(template.previewSvg)
+      } else if (template.configuration) {
+        const response = await fetch('/api/calendar/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(template.configuration),
+        })
+        if (response.ok) {
+          const svg = await response.text()
+          templatePreviews.value[template.id] = scaleSvgForPreview(svg)
+        }
+      }
+    } catch (error) {
+      console.error(`Error generating preview for template ${template.id}:`, error)
+    }
+  }
+}
+
+// Select a template from the drawer
+const selectTemplate = async (template) => {
+  await loadTemplateConfig(template)
+  showTemplateDrawer.value = false
+}
+
 // Load saved calendars for the current user
 const loadSavedCalendars = async () => {
   loadingSavedCalendars.value = true
@@ -3415,5 +3568,42 @@ const confirmDuplicateTemplate = async () => {
 
 .config-content::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* Template drawer styles */
+.template-drawer-content {
+  overflow-y: auto;
+  height: calc(100vh - 180px);
+  padding: 0 0.5rem;
+}
+
+.template-drawer-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.template-drawer-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.template-drawer-content::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.template-thumbnail :deep(svg) {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.template-card-item:hover {
+  background-color: #f9fafb;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>

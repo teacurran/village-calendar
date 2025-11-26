@@ -130,7 +130,7 @@ export const useAuthStore = defineStore("auth", {
       }
 
       // Redirect to OAuth provider
-      window.location.href = `/auth/login/${provider}`;
+      window.location.href = `/api/auth/login/${provider}`;
     },
 
     /**
@@ -180,15 +180,19 @@ export const useAuthStore = defineStore("auth", {
       // Clear guest session ID from localStorage after conversion
       clearSessionId();
 
-      // Check if user is an admin
-      if (hasAdminRole()) {
+      // Get the return URL (set before OAuth redirect)
+      const returnTo = sessionStorage.getItem("auth_return_to");
+      sessionStorage.removeItem("auth_return_to");
+
+      // If there's a specific return URL, use it (e.g., /bootstrap)
+      if (returnTo) {
+        window.location.href = returnTo;
+      } else if (hasAdminRole()) {
         // Redirect admin users to the admin dashboard
         window.location.href = "/admin";
       } else {
-        // Redirect regular users to the original page or home
-        const returnTo = sessionStorage.getItem("auth_return_to") || "/";
-        sessionStorage.removeItem("auth_return_to");
-        window.location.href = returnTo;
+        // Redirect regular users to home
+        window.location.href = "/";
       }
     },
 

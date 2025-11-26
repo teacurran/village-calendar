@@ -8,6 +8,12 @@ const router = createRouter({
     {
       path: "/",
       name: "home",
+      redirect: "/generator",
+      meta: { requiresAuth: false },
+    },
+    {
+      path: "/browse",
+      name: "browse",
       component: () => import("./view/public/CalendarBrowser.vue"),
       meta: { requiresAuth: false },
     },

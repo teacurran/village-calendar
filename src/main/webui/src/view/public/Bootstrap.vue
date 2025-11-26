@@ -172,7 +172,7 @@ onMounted(async () => {
 async function checkBootstrapStatus() {
   try {
     loading.value = true;
-    const response = await fetch("/bootstrap/status");
+    const response = await fetch("/api/bootstrap/status");
 
     if (!response.ok) {
       throw new Error("Failed to check bootstrap status");
@@ -195,7 +195,7 @@ async function checkBootstrapStatus() {
 
 async function fetchUsers() {
   try {
-    const response = await fetch("/bootstrap/users");
+    const response = await fetch("/api/bootstrap/users");
 
     if (!response.ok) {
       throw new Error("Failed to fetch users");
@@ -217,7 +217,7 @@ async function createAdmin() {
     creating.value = true;
     errorMessage.value = null;
 
-    const response = await fetch("/bootstrap/create-admin", {
+    const response = await fetch("/api/bootstrap/create-admin", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -258,13 +258,17 @@ async function createAdmin() {
 }
 
 function loginWithGoogle() {
+  // Store bootstrap return URL so OAuth callback redirects back here
+  sessionStorage.setItem("auth_return_to", "/bootstrap");
   // Redirect to Google OAuth login
-  window.location.href = "/auth/login/google";
+  window.location.href = "/api/auth/login/google";
 }
 
 function loginWithFacebook() {
+  // Store bootstrap return URL so OAuth callback redirects back here
+  sessionStorage.setItem("auth_return_to", "/bootstrap");
   // Redirect to Facebook OAuth login
-  window.location.href = "/auth/login/facebook";
+  window.location.href = "/api/auth/login/facebook";
 }
 
 function goHome() {

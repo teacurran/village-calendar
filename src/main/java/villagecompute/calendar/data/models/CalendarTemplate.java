@@ -45,8 +45,19 @@ public class CalendarTemplate extends DefaultPanacheEntityWithTimestamps {
     @NotNull
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = false)
-    @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
+    @org.eclipse.microprofile.graphql.Ignore
     public JsonNode configuration;
+
+    /**
+     * Get configuration as JSON string for GraphQL.
+     */
+    @org.eclipse.microprofile.graphql.Name("configuration")
+    public String getConfigurationJson() {
+        if (configuration == null) {
+            return null;
+        }
+        return configuration.toString();
+    }
 
     @Column(name = "preview_svg", columnDefinition = "TEXT")
     public String previewSvg;

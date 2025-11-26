@@ -52,8 +52,8 @@ export async function fetchTemplates(
         displayOrder
         configuration
         previewSvg
-        createdAt
-        updatedAt
+        created
+        updated
       }
     }
   `;
@@ -63,7 +63,13 @@ export async function fetchTemplates(
     isFeatured,
   });
 
-  return data.templates;
+  // Parse configuration from JSON string if needed
+  return data.templates.map(template => ({
+    ...template,
+    configuration: typeof template.configuration === 'string'
+      ? JSON.parse(template.configuration)
+      : template.configuration,
+  }));
 }
 
 export async function fetchTemplate(id: string) {
@@ -78,13 +84,19 @@ export async function fetchTemplate(id: string) {
         displayOrder
         configuration
         previewSvg
-        createdAt
-        updatedAt
+        created
+        updated
       }
     }
   `;
 
   const data = await graphql<{ template: any }>(query, { id });
+
+  // Parse configuration from JSON string if needed
+  if (data.template && typeof data.template.configuration === 'string') {
+    data.template.configuration = JSON.parse(data.template.configuration);
+  }
+
   return data.template;
 }
 
@@ -107,13 +119,21 @@ export async function createTemplate(input: {
         displayOrder
         configuration
         previewSvg
-        createdAt
-        updatedAt
+        created
+        updated
       }
     }
   `;
 
-  const data = await graphql<{ createTemplate: any }>(mutation, { input });
+  // Configuration must be stringified for the GraphQL JsonNode adapter
+  const inputWithStringConfig = {
+    ...input,
+    configuration: typeof input.configuration === 'string'
+      ? input.configuration
+      : JSON.stringify(input.configuration),
+  };
+
+  const data = await graphql<{ createTemplate: any }>(mutation, { input: inputWithStringConfig });
   return data.createTemplate;
 }
 
@@ -139,13 +159,21 @@ export async function updateTemplate(
         displayOrder
         configuration
         previewSvg
-        createdAt
-        updatedAt
+        created
+        updated
       }
     }
   `;
 
-  const data = await graphql<{ updateTemplate: any }>(mutation, { id, input });
+  // Configuration must be stringified for the GraphQL JsonNode adapter
+  const inputWithStringConfig = {
+    ...input,
+    configuration: typeof input.configuration === 'string'
+      ? input.configuration
+      : JSON.stringify(input.configuration),
+  };
+
+  const data = await graphql<{ updateTemplate: any }>(mutation, { id, input: inputWithStringConfig });
   return data.updateTemplate;
 }
 

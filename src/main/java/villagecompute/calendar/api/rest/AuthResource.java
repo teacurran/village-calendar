@@ -48,6 +48,9 @@ public class AuthResource {
 
     private static final Logger LOG = Logger.getLogger(AuthResource.class);
 
+    @org.eclipse.microprofile.config.inject.ConfigProperty(name = "app.frontend.url")
+    java.util.Optional<String> frontendUrl;
+
     @Inject
     SecurityIdentity securityIdentity;
 
@@ -151,7 +154,7 @@ public class AuthResource {
             LOG.infof("Successfully authenticated user: %s", user.email);
 
             // Redirect to frontend OAuth callback page with token
-            String redirectUrl = "/auth/callback?token=" + jwtToken;
+            String redirectUrl = frontendUrl.orElse("") + "/auth/callback?token=" + jwtToken;
             return Response.seeOther(URI.create(redirectUrl)).build();
 
         } catch (Exception e) {
@@ -258,7 +261,7 @@ public class AuthResource {
             LOG.infof("Successfully authenticated user: %s", user.email);
 
             // Redirect to frontend OAuth callback page with token
-            String redirectUrl = "/auth/callback?token=" + jwtToken;
+            String redirectUrl = frontendUrl.orElse("") + "/auth/callback?token=" + jwtToken;
             return Response.seeOther(URI.create(redirectUrl)).build();
 
         } catch (Exception e) {
@@ -365,7 +368,7 @@ public class AuthResource {
             LOG.infof("Successfully authenticated user: %s", user.email);
 
             // Redirect to frontend OAuth callback page with token
-            String redirectUrl = "/auth/callback?token=" + jwtToken;
+            String redirectUrl = frontendUrl.orElse("") + "/auth/callback?token=" + jwtToken;
             return Response.seeOther(URI.create(redirectUrl)).build();
 
         } catch (Exception e) {
