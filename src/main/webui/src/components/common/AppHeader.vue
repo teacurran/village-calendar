@@ -8,36 +8,37 @@
         </router-link>
       </template>
       <template #end>
-        <!-- Cart Icon (always visible) -->
-        <div class="cart-icon-wrapper">
-          <Button
-            icon="pi pi-shopping-cart"
-            text
-            rounded
-            class="relative"
-            @click="toggleCart"
-          >
-            <Badge
-              v-if="cartStore.itemCount > 0"
-              :value="cartStore.itemCount.toString()"
-              severity="danger"
-              class="cart-badge"
+        <div class="header-end-section">
+          <!-- Cart Icon (always visible) -->
+          <div class="cart-icon-wrapper">
+            <Button
+              icon="pi pi-shopping-cart"
+              text
+              rounded
+              class="relative"
+              @click="toggleCart"
+            >
+              <Badge
+                v-if="cartStore.itemCount > 0"
+                :value="cartStore.itemCount.toString()"
+                severity="danger"
+                class="cart-badge"
+              />
+            </Button>
+          </div>
+
+          <!-- Auth buttons for non-authenticated users -->
+          <div v-if="!authStore.isAuthenticated" class="auth-buttons">
+            <Button
+              label="Sign In"
+              icon="pi pi-sign-in"
+              text
+              @click="showLoginDialog = true"
             />
-          </Button>
-        </div>
+          </div>
 
-        <!-- Auth buttons for non-authenticated users -->
-        <div v-if="!authStore.isAuthenticated" class="auth-buttons">
-          <Button
-            label="Sign In"
-            icon="pi pi-sign-in"
-            text
-            @click="showLoginDialog = true"
-          />
-        </div>
-
-        <!-- User menu for authenticated users -->
-        <div v-else class="user-section">
+          <!-- User menu for authenticated users -->
+          <div v-else class="user-section">
           <!-- Admin button for admin users -->
           <Button
             v-if="authStore.isAdmin"
@@ -64,6 +65,7 @@
             :model="userMenuItems"
             :popup="true"
           />
+          </div>
         </div>
       </template>
     </Menubar>
@@ -233,6 +235,12 @@ onMounted(() => {
   white-space: nowrap;
 }
 
+.header-end-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .auth-buttons {
   display: flex;
   gap: 0.5rem;
@@ -242,7 +250,6 @@ onMounted(() => {
 .cart-icon-wrapper {
   display: flex;
   align-items: center;
-  margin-right: 0.5rem;
 }
 
 .cart-badge {
