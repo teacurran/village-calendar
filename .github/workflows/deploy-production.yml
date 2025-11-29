@@ -1,9 +1,6 @@
 name: Deploy to Production Environment
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 env:
