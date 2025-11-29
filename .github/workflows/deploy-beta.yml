@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: calendar-api
+  IMAGE_NAME: village-calendar
   USE_WIREGUARD: ${{ secrets.USE_WIREGUARD || 'false' }}
   DEPLOYMENT_NAMESPACE: calendar-beta
 
@@ -51,7 +51,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/villagecompute/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=${{ steps.image_tag.outputs.tag }}
             type=raw,value=${{ steps.image_tag.outputs.sha_tag }}

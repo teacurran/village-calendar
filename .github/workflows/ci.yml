@@ -10,7 +10,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: calendar-api
+  IMAGE_NAME: village-calendar
 
 jobs:
   backend-build:
