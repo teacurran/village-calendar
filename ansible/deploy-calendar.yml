@@ -59,8 +59,8 @@
       shell: |
         {{ kubectl }} create secret docker-registry docker-registry-secret \
           --docker-server=docker.io \
-          --docker-username={{ registry_user }} \
-          --docker-password={{ registry_password }} \
+          --docker-username='{{ registry_user }}' \
+          --docker-password='{{ registry_password }}' \
           --namespace={{ namespace }} \
           --dry-run=client -o yaml | {{ kubectl }} apply -f -
       no_log: true
@@ -68,11 +68,11 @@
     - name: Create database secret
       shell: |
         {{ kubectl }} create secret generic calendar-db-secret \
-          --from-literal=db-host={{ db_host }} \
-          --from-literal=db-port={{ db_port }} \
-          --from-literal=db-name={{ db_name }} \
-          --from-literal=db-user={{ db_user }} \
-          --from-literal=db-password={{ db_password }} \
+          --from-literal=db-host='{{ db_host }}' \
+          --from-literal=db-port='{{ db_port }}' \
+          --from-literal=db-name='{{ db_name }}' \
+          --from-literal=db-user='{{ db_user }}' \
+          --from-literal=db-password='{{ db_password }}' \
           --namespace={{ namespace }} \
           --dry-run=client -o yaml | {{ kubectl }} apply -f -
       no_log: true
@@ -129,7 +129,7 @@
                   - name: docker-registry-secret
                 containers:
                   - name: {{ app_name }}
-                    image: villagecompute/calendar-api:{{ image_tag }}
+                    image: {{ registry_user }}/village-calendar:{{ image_tag }}
                     imagePullPolicy: Always
                     ports:
                       - containerPort: 8030
