@@ -1,6 +1,5 @@
 package villagecompute.calendar.api.graphql.inputs;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -11,6 +10,8 @@ import org.eclipse.microprofile.graphql.Input;
 /**
  * GraphQL input type for creating or updating a calendar template.
  * Admin-only operations. Validated using Bean Validation annotations.
+ *
+ * Note: configuration is accepted as a JSON string and parsed in the service layer.
  */
 @Input("TemplateInput")
 @Description("Input for creating or updating a calendar template (admin only).")
@@ -26,9 +27,9 @@ public class TemplateInput {
     public String description;
 
     @NotNull(message = "Configuration is required")
-    @Description("JSONB configuration defining design")
-    @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
-    public JsonNode configuration;
+    @NotBlank(message = "Configuration cannot be blank")
+    @Description("JSON string containing template configuration")
+    public String configuration;
 
     @Description("URL to thumbnail image")
     @Size(max = 500, message = "Thumbnail URL must not exceed 500 characters")
@@ -52,7 +53,7 @@ public class TemplateInput {
     }
 
     // Constructor for testing
-    public TemplateInput(String name, String description, JsonNode configuration, String thumbnailUrl,
+    public TemplateInput(String name, String description, String configuration, String thumbnailUrl,
                          Boolean isActive, Boolean isFeatured, Integer displayOrder, String previewSvg) {
         this.name = name;
         this.description = description;

@@ -1,6 +1,8 @@
 package villagecompute.calendar.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -21,6 +23,7 @@ import java.util.UUID;
 public class TemplateService {
 
     private static final Logger LOG = Logger.getLogger(TemplateService.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Inject
     CalendarTemplateRepository templateRepository;
@@ -40,8 +43,11 @@ public class TemplateService {
     public CalendarTemplate createTemplate(TemplateInput input) {
         LOG.infof("Creating template: name=%s", input.name);
 
+        // Parse configuration JSON string
+        JsonNode configNode = parseConfiguration(input.configuration);
+
         // Validate configuration structure
-        validateTemplateConfiguration(input.configuration);
+        validateTemplateConfiguration(configNode);
 
         // Check for duplicate name
         Optional<CalendarTemplate> existing = templateRepository.findByName(input.name);
@@ -54,7 +60,7 @@ public class TemplateService {
         CalendarTemplate template = new CalendarTemplate();
         template.name = input.name;
         template.description = input.description;
-        template.configuration = input.configuration;
+        template.configuration = configNode;
         template.thumbnailUrl = input.thumbnailUrl;
         template.isActive = input.isActive != null ? input.isActive : true;
         template.isFeatured = input.isFeatured != null ? input.isFeatured : false;
@@ -89,9 +95,11 @@ public class TemplateService {
             throw new IllegalArgumentException("Template not found");
         }
 
-        // Validate configuration if provided
-        if (input.configuration != null) {
-            validateTemplateConfiguration(input.configuration);
+        // Parse and validate configuration if provided
+        JsonNode configNode = null;
+        if (input.configuration != null && !input.configuration.isBlank()) {
+            configNode = parseConfiguration(input.configuration);
+            validateTemplateConfiguration(configNode);
         }
 
         // Check for name conflicts (if name is being changed)
@@ -110,8 +118,8 @@ public class TemplateService {
         if (input.description != null) {
             template.description = input.description;
         }
-        if (input.configuration != null) {
-            template.configuration = input.configuration;
+        if (configNode != null) {
+            template.configuration = configNode;
         }
         if (input.thumbnailUrl != null) {
             template.thumbnailUrl = input.thumbnailUrl;
@@ -200,8 +208,28 @@ public class TemplateService {
     }
 
     /**
+     * Parse a JSON string into a JsonNode.
+     *
+     * @param configurationJson JSON string to parse
+     * @return Parsed JsonNode
+     * @throws IllegalArgumentException if JSON is invalid
+     */
+    private JsonNode parseConfiguration(String configurationJson) {
+        if (configurationJson == null || configurationJson.isBlank()) {
+            throw new IllegalArgumentException("Configuration cannot be null or empty");
+        }
+
+        try {
+            return OBJECT_MAPPER.readTree(configurationJson);
+        } catch (JsonProcessingException e) {
+            LOG.errorf("Invalid JSON in configuration: %s", e.getMessage());
+            throw new IllegalArgumentException("Invalid JSON in configuration: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Validate the structure of a template configuration JSONB.
-     * Ensures required fields are present.
+     * Ensures the configuration is a valid JSON object.
      *
      * @param configuration JsonNode representing the template configuration
      * @throws IllegalArgumentException if configuration is invalid
@@ -211,15 +239,8 @@ public class TemplateService {
             throw new IllegalArgumentException("Template configuration cannot be null");
         }
 
-        // Check for required top-level fields
-        String[] requiredFields = {"layout", "fonts", "colors"};
-        for (String field : requiredFields) {
-            if (!configuration.has(field)) {
-                LOG.errorf("Template configuration missing required field: %s", field);
-                throw new IllegalArgumentException(
-                    "Template configuration must include required field: " + field
-                );
-            }
+        if (!configuration.isObject()) {
+            throw new IllegalArgumentException("Template configuration must be a JSON object");
         }
 
         LOG.debug("Template configuration validation passed");

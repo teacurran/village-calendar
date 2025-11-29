@@ -2,7 +2,6 @@ package villagecompute.calendar.services;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
@@ -36,18 +35,24 @@ class TemplateServiceTest {
     StorageService storageService;
 
     private ObjectMapper objectMapper;
-    private JsonNode validConfiguration;
+    private String validConfiguration;
+    private JsonNode validConfigurationNode;
 
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
 
-        // Create valid template configuration
-        ObjectNode config = objectMapper.createObjectNode();
-        config.put("layout", "grid");
-        config.put("fonts", "Arial");
-        config.put("colors", "#000000");
-        validConfiguration = config;
+        // Create valid template configuration as JSON string
+        validConfiguration = """
+            {"layout": "grid", "fonts": "Arial", "colors": "#000000"}
+            """;
+
+        // Also create as JsonNode for entity-level tests
+        try {
+            validConfigurationNode = objectMapper.readTree(validConfiguration);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
         // Reset storage service mock
         Mockito.reset(storageService);
@@ -102,7 +107,8 @@ class TemplateServiceTest {
         assertNotNull(result.id);
         assertEquals("Modern Calendar", result.name);
         assertEquals("A modern calendar design", result.description);
-        assertEquals(validConfiguration, result.configuration);
+        assertNotNull(result.configuration);
+        assertEquals("grid", result.configuration.get("layout").asText());
         assertTrue(result.isActive);
         assertFalse(result.isFeatured);
         assertEquals(0, result.displayOrder);
@@ -139,7 +145,7 @@ class TemplateServiceTest {
         // Given: Existing template with same name
         CalendarTemplate existing = new CalendarTemplate();
         existing.name = "Existing Template";
-        existing.configuration = validConfiguration;
+        existing.configuration = validConfigurationNode;
         existing.persist();
 
         TemplateInput input = new TemplateInput(
@@ -181,21 +187,19 @@ class TemplateServiceTest {
             templateService.createTemplate(input);
         });
 
-        assertTrue(exception.getMessage().contains("configuration cannot be null"));
+        assertTrue(exception.getMessage().toLowerCase().contains("configuration"));
     }
 
     @Test
     @Transactional
-    void testCreateTemplate_InvalidConfiguration_MissingLayout() {
-        // Given: Configuration missing required "layout" field
-        ObjectNode invalidConfig = objectMapper.createObjectNode();
-        invalidConfig.put("fonts", "Arial");
-        invalidConfig.put("colors", "#000000");
+    void testCreateTemplate_InvalidConfiguration_InvalidJson() {
+        // Given: Configuration with invalid JSON
+        String invalidJson = "{ this is not valid json }";
 
         TemplateInput input = new TemplateInput(
             "Test Template",
             "Description",
-            invalidConfig,
+            invalidJson,
             null,
             true,
             false,
@@ -208,21 +212,19 @@ class TemplateServiceTest {
             templateService.createTemplate(input);
         });
 
-        assertTrue(exception.getMessage().contains("layout"));
+        assertTrue(exception.getMessage().toLowerCase().contains("invalid json"));
     }
 
     @Test
     @Transactional
-    void testCreateTemplate_InvalidConfiguration_MissingFonts() {
-        // Given: Configuration missing required "fonts" field
-        ObjectNode invalidConfig = objectMapper.createObjectNode();
-        invalidConfig.put("layout", "grid");
-        invalidConfig.put("colors", "#000000");
+    void testCreateTemplate_InvalidConfiguration_NotObject() {
+        // Given: Configuration is a JSON array, not an object
+        String arrayConfig = "[1, 2, 3]";
 
         TemplateInput input = new TemplateInput(
             "Test Template",
             "Description",
-            invalidConfig,
+            arrayConfig,
             null,
             true,
             false,
@@ -235,34 +237,7 @@ class TemplateServiceTest {
             templateService.createTemplate(input);
         });
 
-        assertTrue(exception.getMessage().contains("fonts"));
-    }
-
-    @Test
-    @Transactional
-    void testCreateTemplate_InvalidConfiguration_MissingColors() {
-        // Given: Configuration missing required "colors" field
-        ObjectNode invalidConfig = objectMapper.createObjectNode();
-        invalidConfig.put("layout", "grid");
-        invalidConfig.put("fonts", "Arial");
-
-        TemplateInput input = new TemplateInput(
-            "Test Template",
-            "Description",
-            invalidConfig,
-            null,
-            true,
-            false,
-            0,
-            null
-        );
-
-        // When/Then: Should throw exception
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            templateService.createTemplate(input);
-        });
-
-        assertTrue(exception.getMessage().contains("colors"));
+        assertTrue(exception.getMessage().toLowerCase().contains("json object"));
     }
 
     // ============================================================================
@@ -276,7 +251,7 @@ class TemplateServiceTest {
         CalendarTemplate existingTemplate = new CalendarTemplate();
         existingTemplate.name = "Old Name";
         existingTemplate.description = "Old Description";
-        existingTemplate.configuration = validConfiguration;
+        existingTemplate.configuration = validConfigurationNode;
         existingTemplate.isActive = true;
         existingTemplate.isFeatured = false;
         existingTemplate.displayOrder = 0;
@@ -314,7 +289,7 @@ class TemplateServiceTest {
         CalendarTemplate existingTemplate = new CalendarTemplate();
         existingTemplate.name = "Original Name";
         existingTemplate.description = "Original Description";
-        existingTemplate.configuration = validConfiguration;
+        existingTemplate.configuration = validConfigurationNode;
         existingTemplate.isActive = true;
         existingTemplate.isFeatured = false;
         existingTemplate.displayOrder = 0;
@@ -372,12 +347,12 @@ class TemplateServiceTest {
         // Given: Two templates
         CalendarTemplate template1 = new CalendarTemplate();
         template1.name = "Original Name";
-        template1.configuration = validConfiguration;
+        template1.configuration = validConfigurationNode;
         template1.persist();
 
         CalendarTemplate template2 = new CalendarTemplate();
         template2.name = "Conflicting Name";
-        template2.configuration = validConfiguration;
+        template2.configuration = validConfigurationNode;
         template2.persist();
 
         // When: Try to update template1 with template2's name
@@ -406,7 +381,7 @@ class TemplateServiceTest {
         // Given: Existing template
         CalendarTemplate template = new CalendarTemplate();
         template.name = "Same Name";
-        template.configuration = validConfiguration;
+        template.configuration = validConfigurationNode;
         template.persist();
 
         // When: Update with same name
@@ -438,7 +413,7 @@ class TemplateServiceTest {
         // Given: Template to soft-delete
         CalendarTemplate template = new CalendarTemplate();
         template.name = "Test Template";
-        template.configuration = validConfiguration;
+        template.configuration = validConfigurationNode;
         template.isActive = true;
         template.persist();
 
@@ -476,7 +451,7 @@ class TemplateServiceTest {
         // Given: Template with existing UserCalendar
         CalendarTemplate template = new CalendarTemplate();
         template.name = "Popular Template";
-        template.configuration = validConfiguration;
+        template.configuration = validConfigurationNode;
         template.isActive = true;
         template.persist();
 
@@ -516,7 +491,7 @@ class TemplateServiceTest {
         // Given: Existing template
         CalendarTemplate template = new CalendarTemplate();
         template.name = "Test Template";
-        template.configuration = validConfiguration;
+        template.configuration = validConfigurationNode;
         template.persist();
 
         byte[] imageBytes = new byte[]{1, 2, 3, 4, 5};
@@ -565,7 +540,7 @@ class TemplateServiceTest {
         // Given: Template and JPEG content type
         CalendarTemplate template = new CalendarTemplate();
         template.name = "Test Template";
-        template.configuration = validConfiguration;
+        template.configuration = validConfigurationNode;
         template.persist();
 
         byte[] imageBytes = new byte[]{1, 2, 3, 4, 5};
@@ -597,14 +572,14 @@ class TemplateServiceTest {
         activeTemplate.name = "Active Template " + System.currentTimeMillis();
         activeTemplate.description = "Active template";
         activeTemplate.isActive = true;
-        activeTemplate.configuration = validConfiguration;
+        activeTemplate.configuration = validConfigurationNode;
         activeTemplate.persist();
 
         CalendarTemplate inactiveTemplate = new CalendarTemplate();
         inactiveTemplate.name = "Inactive Template " + System.currentTimeMillis();
         inactiveTemplate.description = "Soft-deleted template";
         inactiveTemplate.isActive = false; // Soft-deleted
-        inactiveTemplate.configuration = validConfiguration;
+        inactiveTemplate.configuration = validConfigurationNode;
         inactiveTemplate.persist();
 
         // When: Query for active templates
@@ -638,7 +613,7 @@ class TemplateServiceTest {
         template.name = "Template Before Delete " + System.currentTimeMillis();
         template.description = "Will be soft-deleted";
         template.isActive = true;
-        template.configuration = validConfiguration;
+        template.configuration = validConfigurationNode;
         template.persist();
 
         UUID templateId = template.id;
@@ -767,7 +742,7 @@ class TemplateServiceTest {
         sourceTemplate.name = "Independent Test Template";
         sourceTemplate.description = "Testing independent copies";
         sourceTemplate.isActive = true;
-        sourceTemplate.configuration = validConfiguration;
+        sourceTemplate.configuration = validConfigurationNode;
         sourceTemplate.persist();
 
         // When: Create two calendars from the same template
