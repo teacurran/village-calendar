@@ -79,7 +79,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/villagecompute/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
