@@ -28,6 +28,10 @@
     # Session configuration
     session_encryption_key: "{{ lookup('env', 'SESSION_ENCRYPTION_KEY') }}"
 
+    # Google OAuth configuration
+    google_client_id: "{{ lookup('env', 'GOOGLE_CLIENT_ID') }}"
+    google_client_secret: "{{ lookup('env', 'GOOGLE_CLIENT_SECRET') }}"
+
     # Kubernetes namespace
     namespace: "village-calendar"
 
@@ -93,7 +97,16 @@
     - name: Create session secret
       shell: |
         {{ kubectl }} create secret generic calendar-session-secret \
-          --from-literal=encryption-key={{ session_encryption_key }} \
+          --from-literal=encryption-key='{{ session_encryption_key }}' \
+          --namespace={{ namespace }} \
+          --dry-run=client -o yaml | {{ kubectl }} apply -f -
+      no_log: true
+
+    - name: Create Google OAuth secret
+      shell: |
+        {{ kubectl }} create secret generic calendar-google-oauth-secret \
+          --from-literal=client-id='{{ google_client_id }}' \
+          --from-literal=client-secret='{{ google_client_secret }}' \
           --namespace={{ namespace }} \
           --dry-run=client -o yaml | {{ kubectl }} apply -f -
       no_log: true
@@ -203,6 +216,18 @@
                           secretKeyRef:
                             name: calendar-session-secret
                             key: encryption-key
+
+                      # Google OAuth configuration
+                      - name: GOOGLE_CLIENT_ID
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-google-oauth-secret
+                            key: client-id
+                      - name: GOOGLE_CLIENT_SECRET
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-google-oauth-secret
+                            key: client-secret
 
                       # Application settings
                       - name: QUARKUS_PROFILE
