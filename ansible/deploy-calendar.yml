@@ -32,8 +32,11 @@
     google_client_id: "{{ lookup('env', 'GOOGLE_CLIENT_ID') }}"
     google_client_secret: "{{ lookup('env', 'GOOGLE_CLIENT_SECRET') }}"
 
-    # Kubernetes namespace
-    namespace: "village-calendar"
+    # Kubernetes namespace (overridden by -e namespace=calendar-beta)
+    namespace: "calendar-beta"
+
+    # Ingress hostname (overridden by -e ingress_host=...)
+    ingress_host: "{{ lookup('env', 'INGRESS_HOST') | default('calendar-beta.villagecompute.com', true) }}"
 
     # Application configuration
     app_name: "calendar"
@@ -281,6 +284,36 @@
                 targetPort: 8030
                 protocol: TCP
                 name: http
+
+          ---
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: calendar-ingress
+            namespace: {{ namespace }}
+            labels:
+              app: {{ app_name }}
+            annotations:
+              nginx.ingress.kubernetes.io/ssl-redirect: "true"
+              nginx.ingress.kubernetes.io/affinity: "cookie"
+              nginx.ingress.kubernetes.io/session-cookie-name: "calendar_route"
+              nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
+              nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
+              nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+              nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+          spec:
+            ingressClassName: nginx
+            rules:
+              - host: {{ ingress_host }}
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: calendar-service
+                          port:
+                            number: 80
 
     - name: Apply Kubernetes manifest
       shell: "{{ kubectl }} apply -f /tmp/calendar-k8s.yaml"

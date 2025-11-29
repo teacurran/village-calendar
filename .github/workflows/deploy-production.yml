@@ -213,6 +213,7 @@ jobs:
           SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID_PROD }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET_PROD }}
+          INGRESS_HOST: calendar.villagecompute.com
           DEPLOYMENT_NAMESPACE: ${{ env.DEPLOYMENT_NAMESPACE }}
         run: |
           # Install Ansible

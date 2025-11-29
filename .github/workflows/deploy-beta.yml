@@ -215,6 +215,7 @@ jobs:
           SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY_BETA || secrets.SESSION_ENCRYPTION_KEY }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          INGRESS_HOST: calendar-beta.villagecompute.com
           DEPLOYMENT_NAMESPACE: ${{ env.DEPLOYMENT_NAMESPACE }}
         run: |
           # Install Ansible
