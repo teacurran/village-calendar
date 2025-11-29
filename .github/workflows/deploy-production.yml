@@ -250,10 +250,14 @@ jobs:
           K3S_USER: ${{ secrets.K3S_USER }}
         run: |
           echo "Running health check..."
-          HEALTH_STATUS=$(ssh -o StrictHostKeyChecking=no ${K3S_USER}@${K3S_HOST} \
+          HEALTH_OUTPUT=$(ssh -o StrictHostKeyChecking=no ${K3S_USER}@${K3S_HOST} \
             "kubectl run smoke-test-health --rm -i --restart=Never --image=curlimages/curl:latest -n ${DEPLOYMENT_NAMESPACE} -- \
-            curl -s -o /dev/null -w '%{http_code}' http://calendar-service.${DEPLOYMENT_NAMESPACE}.svc.cluster.local/q/health/live")
+            curl -s -o /dev/null -w '%{http_code}' http://calendar-service.${DEPLOYMENT_NAMESPACE}.svc.cluster.local/q/health/live" 2>&1)
 
+          # Extract just the HTTP status code (first 3 digits)
+          HEALTH_STATUS=$(echo "${HEALTH_OUTPUT}" | grep -oE '^[0-9]{3}' | head -1)
+
+          echo "Health check output: ${HEALTH_OUTPUT}"
           echo "Health check status: ${HEALTH_STATUS}"
           if [ "${HEALTH_STATUS}" != "200" ]; then
             echo "Health check failed with status ${HEALTH_STATUS}"
@@ -261,14 +265,17 @@ jobs:
           fi
 
           echo "Running GraphQL smoke test..."
-          GRAPHQL_RESPONSE=$(ssh -o StrictHostKeyChecking=no ${K3S_USER}@${K3S_HOST} \
+          GRAPHQL_OUTPUT=$(ssh -o StrictHostKeyChecking=no ${K3S_USER}@${K3S_HOST} \
             "kubectl run smoke-test-graphql --rm -i --restart=Never --image=curlimages/curl:latest -n ${DEPLOYMENT_NAMESPACE} -- \
             curl -s -X POST http://calendar-service.${DEPLOYMENT_NAMESPACE}.svc.cluster.local/graphql \
             -H 'Content-Type: application/json' \
-            -d '{\"query\":\"query { __typename }\"}'")
+            -d '{\"query\":\"query { __typename }\"}'") 2>&1
+
+          # Filter out kubectl messages, keep only JSON response
+          GRAPHQL_RESPONSE=$(echo "${GRAPHQL_OUTPUT}" | grep -v "^pod " | head -1)
 
           echo "GraphQL response: ${GRAPHQL_RESPONSE}"
-          if echo "${GRAPHQL_RESPONSE}" | grep -q "errors"; then
+          if echo "${GRAPHQL_RESPONSE}" | grep -q '"errors"'; then
             echo "GraphQL query failed"
             exit 1
           fi
