@@ -15,16 +15,14 @@
               icon="pi pi-shopping-cart"
               text
               rounded
-              class="relative"
               @click="toggleCart"
-            >
-              <Badge
-                v-if="cartStore.itemCount > 0"
-                :value="cartStore.itemCount.toString()"
-                severity="danger"
-                class="cart-badge"
-              />
-            </Button>
+            />
+            <Badge
+              v-if="cartStore.itemCount > 0"
+              :value="cartStore.itemCount.toString()"
+              severity="danger"
+              class="cart-badge"
+            />
           </div>
 
           <!-- Auth buttons for non-authenticated users -->
@@ -248,17 +246,19 @@ onMounted(() => {
 }
 
 .cart-icon-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
 }
 
 .cart-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: 0;
+  right: 0;
   min-width: 18px;
   height: 18px;
   font-size: 0.7rem;
+  pointer-events: none;
 }
 
 .user-section {

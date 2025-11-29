@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <Toast />
+    <Toast position="bottom-right" />
     <ConfirmDialog />
     <AppHeader />
     <main class="main-content">

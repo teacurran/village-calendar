@@ -2573,12 +2573,6 @@ const generateCalendar = async () => {
       const data = await response.json();
       generatedSVG.value = data.svg;
       resetZoom();
-      toast.add({
-        severity: "success",
-        summary: "Calendar Generated",
-        detail: `Your ${config.value.year} calendar has been generated`,
-        life: 3000,
-      });
     } else {
       throw new Error("Failed to generate calendar");
     }
@@ -3165,13 +3159,6 @@ const loadTemplate = async () => {
           });
         }
       }
-
-      toast.add({
-        severity: "success",
-        summary: "Template Loaded",
-        detail: `Loaded template: ${template.name}`,
-        life: 3000,
-      });
 
       // Auto-generate preview
       generateCalendar();
@@ -3918,13 +3905,6 @@ const loadTemplateConfig = async (template) => {
         // Update URL to use calendar ID
         router.replace({
           query: { id: result.id },
-        });
-
-        toast.add({
-          severity: "success",
-          summary: "Template Loaded",
-          detail: `Loaded template: ${template.name}`,
-          life: 3000,
         });
 
         showTemplatesDialog.value = false;
