@@ -797,7 +797,6 @@
     <!-- Main Content Area -->
     <div class="p-4">
       <div class="flex justify-between items-center mb-4">
-        <h1 class="text-2xl font-bold">Full Year Calendar Generator</h1>
         <div class="flex gap-2">
           <Button
             label="Templates"
@@ -829,7 +828,7 @@
             @click="showEventsDialog = true"
           />
           <Button
-            label="Settings"
+            label="Customize Design"
             icon="pi pi-cog"
             outlined
             @click="drawerVisible = true"

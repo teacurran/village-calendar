@@ -4,17 +4,31 @@
  */
 
 /**
+ * Get JWT token from localStorage
+ */
+function getAuthToken(): string | null {
+  return localStorage.getItem("auth_token");
+}
+
+/**
  * Execute a GraphQL query or mutation
  */
 export async function graphql<T = any>(
   query: string,
   variables?: Record<string, any>,
 ): Promise<T> {
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch("/graphql", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({
       query,
       variables,

@@ -1,5 +1,6 @@
 package villagecompute.calendar.api.graphql;
 
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -33,6 +34,9 @@ public class TemplateGraphQL {
 
     @Inject
     TemplateService templateService;
+
+    @Inject
+    SecurityIdentity securityIdentity;
 
     /**
      * Get all calendar templates with optional filtering.
@@ -166,6 +170,27 @@ public class TemplateGraphQL {
      * @param input Template update data
      * @return Updated template
      */
+    /**
+     * Debug query to check current user's security identity and roles.
+     * Temporary - remove after debugging.
+     */
+    @Query("debugSecurityIdentity")
+    @Description("Debug: Show current security identity and roles")
+    public String debugSecurityIdentity() {
+        if (securityIdentity == null) {
+            return "SecurityIdentity is null";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("Anonymous: ").append(securityIdentity.isAnonymous()).append("\n");
+        sb.append("Principal: ").append(securityIdentity.getPrincipal() != null ? securityIdentity.getPrincipal().getName() : "null").append("\n");
+        sb.append("Roles: ").append(securityIdentity.getRoles()).append("\n");
+        sb.append("Has ADMIN: ").append(securityIdentity.hasRole("ADMIN")).append("\n");
+        sb.append("Has USER: ").append(securityIdentity.hasRole("USER")).append("\n");
+        sb.append("Attributes: ").append(securityIdentity.getAttributes()).append("\n");
+        LOG.info("Debug security identity: " + sb.toString());
+        return sb.toString();
+    }
+
     @Mutation("updateTemplate")
     @Description("Update an existing calendar template (admin only). Requires ADMIN role in JWT claims.")
     @RolesAllowed("ADMIN")
@@ -182,7 +207,7 @@ public class TemplateGraphQL {
         @Valid
         TemplateInput input
     ) {
-        LOG.infof("Mutation: updateTemplate(id=%s)", id);
+        LOG.infof("Mutation: updateTemplate(id=%s), user roles: %s", id, securityIdentity != null ? securityIdentity.getRoles() : "null");
 
         try {
             UUID templateId = UUID.fromString(id);

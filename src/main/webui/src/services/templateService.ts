@@ -21,7 +21,7 @@ interface ServiceResponse<T> {
  * Get JWT token from localStorage
  */
 function getAuthToken(): string | null {
-  return localStorage.getItem("authToken");
+  return localStorage.getItem("auth_token");
 }
 
 /**
