@@ -8,8 +8,10 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.enums.SecuritySchemeIn;
@@ -60,6 +62,9 @@ public class AuthResource {
 
     @Inject
     AuthenticationService authenticationService;
+
+    @Context
+    UriInfo uriInfo;
 
     /**
      * Initiates OAuth login with Google.
@@ -154,18 +159,37 @@ public class AuthResource {
             LOG.infof("Successfully authenticated user: %s", user.email);
 
             // Redirect to frontend OAuth callback page with token
-            String redirectUrl = frontendUrl.orElse("") + "/auth/callback?token=" + jwtToken;
+            // Build absolute URL to avoid JAX-RS path prefix issues
+            String redirectUrl = buildFrontendUrl("/auth/callback?token=" + jwtToken);
+            LOG.infof("Redirecting to: %s", redirectUrl);
             return Response.seeOther(URI.create(redirectUrl)).build();
 
         } catch (Exception e) {
             LOG.errorf(e, "Error handling Google OAuth callback");
             // Redirect to home with error
-            String errorUrl = "/?error=" + java.net.URLEncoder.encode(
+            String errorUrl = buildFrontendUrl("/?error=" + java.net.URLEncoder.encode(
                 "Authentication failed: " + e.getMessage(),
                 java.nio.charset.StandardCharsets.UTF_8
-            );
+            ));
             return Response.seeOther(URI.create(errorUrl)).build();
         }
+    }
+
+    /**
+     * Build absolute URL to frontend, using configured frontend URL or deriving from request.
+     */
+    private String buildFrontendUrl(String path) {
+        // If frontend URL is explicitly configured (dev mode), use it
+        if (frontendUrl.isPresent() && !frontendUrl.get().isEmpty()) {
+            return frontendUrl.get() + path;
+        }
+        // In production, derive from request base URI (strip /api prefix)
+        URI baseUri = uriInfo.getBaseUri();
+        String baseUrl = baseUri.getScheme() + "://" + baseUri.getHost();
+        if (baseUri.getPort() != -1 && baseUri.getPort() != 80 && baseUri.getPort() != 443) {
+            baseUrl += ":" + baseUri.getPort();
+        }
+        return baseUrl + path;
     }
 
     /**
@@ -261,16 +285,16 @@ public class AuthResource {
             LOG.infof("Successfully authenticated user: %s", user.email);
 
             // Redirect to frontend OAuth callback page with token
-            String redirectUrl = frontendUrl.orElse("") + "/auth/callback?token=" + jwtToken;
+            String redirectUrl = buildFrontendUrl("/auth/callback?token=" + jwtToken);
             return Response.seeOther(URI.create(redirectUrl)).build();
 
         } catch (Exception e) {
             LOG.errorf(e, "Error handling Facebook OAuth callback");
             // Redirect to home with error
-            String errorUrl = "/?error=" + java.net.URLEncoder.encode(
+            String errorUrl = buildFrontendUrl("/?error=" + java.net.URLEncoder.encode(
                 "Authentication failed: " + e.getMessage(),
                 java.nio.charset.StandardCharsets.UTF_8
-            );
+            ));
             return Response.seeOther(URI.create(errorUrl)).build();
         }
     }
@@ -368,16 +392,16 @@ public class AuthResource {
             LOG.infof("Successfully authenticated user: %s", user.email);
 
             // Redirect to frontend OAuth callback page with token
-            String redirectUrl = frontendUrl.orElse("") + "/auth/callback?token=" + jwtToken;
+            String redirectUrl = buildFrontendUrl("/auth/callback?token=" + jwtToken);
             return Response.seeOther(URI.create(redirectUrl)).build();
 
         } catch (Exception e) {
             LOG.errorf(e, "Error handling Apple OAuth callback");
             // Redirect to home with error
-            String errorUrl = "/?error=" + java.net.URLEncoder.encode(
+            String errorUrl = buildFrontendUrl("/?error=" + java.net.URLEncoder.encode(
                 "Authentication failed: " + e.getMessage(),
                 java.nio.charset.StandardCharsets.UTF_8
-            );
+            ));
             return Response.seeOther(URI.create(errorUrl)).build();
         }
     }
