@@ -829,7 +829,7 @@ onMounted(() => {
                     v-model="yearColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
-                    :row-length="8"
+                    :row-length="10"
                     popover-x="left"
                     show-fallback
                     fallback-input-type="color"
@@ -842,7 +842,7 @@ onMounted(() => {
                     v-model="monthColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
-                    :row-length="8"
+                    :row-length="10"
                     popover-x="left"
                     show-fallback
                     fallback-input-type="color"
@@ -855,7 +855,7 @@ onMounted(() => {
                     v-model="dayTextColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
-                    :row-length="8"
+                    :row-length="10"
                     popover-x="left"
                     show-fallback
                     fallback-input-type="color"
@@ -868,7 +868,7 @@ onMounted(() => {
                     v-model="dayNameColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
-                    :row-length="8"
+                    :row-length="10"
                     popover-x="left"
                     show-fallback
                     fallback-input-type="color"
@@ -881,7 +881,7 @@ onMounted(() => {
                     v-model="gridLineColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
-                    :row-length="8"
+                    :row-length="10"
                     popover-x="left"
                     show-fallback
                     fallback-input-type="color"
@@ -1358,17 +1358,18 @@ onMounted(() => {
   border: 1px solid var(--surface-200);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 8px;
-  max-width: 220px;
+  padding: 6px;
+  max-width: 280px;
 }
 
 .color-option :deep(.vue-swatches__wrapper) {
   padding: 0;
+  gap: 0;
 }
 
 .color-option :deep(.vue-swatches__swatch) {
-  margin: 2px;
-  border-radius: 3px;
+  margin: 1px;
+  border-radius: 2px;
 }
 
 .color-option :deep(.vue-swatches__fallback-wrapper) {
