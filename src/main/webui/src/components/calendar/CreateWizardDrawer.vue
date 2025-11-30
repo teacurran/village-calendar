@@ -202,24 +202,42 @@ const weekendStyleOptions = [
   },
 ];
 
-// Color swatches for the color picker
+// Compact color swatches - flat array for inline display
 const colorSwatches = [
-  // Row 1: Blacks and grays
-  ["#000000", "#333333", "#666666", "#999999", "#cccccc", "#ffffff"],
-  // Row 2: Browns and earth tones
-  ["#4a2c2a", "#6b4423", "#8b5a2b", "#a0522d", "#cd853f", "#deb887"],
-  // Row 3: Reds
-  ["#8b0000", "#b22222", "#dc143c", "#ff0000", "#ff6347", "#ffa07a"],
-  // Row 4: Oranges and yellows
-  ["#ff4500", "#ff8c00", "#ffa500", "#ffd700", "#ffff00", "#fffacd"],
-  // Row 5: Greens
-  ["#006400", "#228b22", "#32cd32", "#00ff00", "#90ee90", "#98fb98"],
-  // Row 6: Blues
-  ["#00008b", "#0000cd", "#0000ff", "#4169e1", "#6495ed", "#87ceeb"],
-  // Row 7: Purples
-  ["#4b0082", "#800080", "#9932cc", "#ba55d3", "#da70d6", "#dda0dd"],
-  // Row 8: Pinks
-  ["#c71585", "#ff1493", "#ff69b4", "#ffb6c1", "#ffc0cb", "#ffe4e1"],
+  // Grays
+  "#000000",
+  "#333333",
+  "#666666",
+  "#999999",
+  "#cccccc",
+  // Earth tones
+  "#4a2c2a",
+  "#8b5a2b",
+  "#cd853f",
+  // Reds
+  "#8b0000",
+  "#dc143c",
+  "#ff6347",
+  // Oranges/Yellows
+  "#ff8c00",
+  "#ffd700",
+  "#ffff00",
+  // Greens
+  "#006400",
+  "#228b22",
+  "#90ee90",
+  // Blues
+  "#00008b",
+  "#0000ff",
+  "#87ceeb",
+  // Purples
+  "#4b0082",
+  "#9932cc",
+  "#dda0dd",
+  // Pinks
+  "#c71585",
+  "#ff69b4",
+  "#ffc0cb",
 ];
 
 // Random day for preview (1-28 to be safe)
@@ -810,6 +828,8 @@ onMounted(() => {
                   <VSwatches
                     v-model="yearColor"
                     :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="8"
                     popover-x="left"
                     show-fallback
                     fallback-input-type="color"
@@ -821,6 +841,8 @@ onMounted(() => {
                   <VSwatches
                     v-model="monthColor"
                     :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="8"
                     popover-x="left"
                     show-fallback
                     fallback-input-type="color"
@@ -832,6 +854,8 @@ onMounted(() => {
                   <VSwatches
                     v-model="dayTextColor"
                     :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="8"
                     popover-x="left"
                     show-fallback
                     fallback-input-type="color"
@@ -843,6 +867,8 @@ onMounted(() => {
                   <VSwatches
                     v-model="dayNameColor"
                     :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="8"
                     popover-x="left"
                     show-fallback
                     fallback-input-type="color"
@@ -854,6 +880,8 @@ onMounted(() => {
                   <VSwatches
                     v-model="gridLineColor"
                     :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="8"
                     popover-x="left"
                     show-fallback
                     fallback-input-type="color"
@@ -1330,15 +1358,26 @@ onMounted(() => {
   border: 1px solid var(--surface-200);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  max-width: 220px;
+}
+
+.color-option :deep(.vue-swatches__wrapper) {
+  padding: 0;
+}
+
+.color-option :deep(.vue-swatches__swatch) {
+  margin: 2px;
+  border-radius: 3px;
 }
 
 .color-option :deep(.vue-swatches__fallback-wrapper) {
-  padding: 8px;
+  padding: 8px 0 0 0;
 }
 
 .color-option :deep(.vue-swatches__fallback-input) {
   width: 100%;
-  height: 32px;
+  height: 28px;
   border: 1px solid var(--surface-300);
   border-radius: 4px;
 }
