@@ -3757,7 +3757,6 @@ const handleWizardDisplayOptionsChange = (options: DisplayOptions) => {
   config.value.theme = weekendStyleMap[options.weekendStyle] || "default";
   config.value.showGrid = options.showGrid;
   config.value.showDayNames = options.showDayNames;
-  config.value.showWeekNumbers = options.showWeekNumbers;
   config.value.rotateMonthNames = options.rotateMonthNames;
 };
 

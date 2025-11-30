@@ -54,7 +54,6 @@ export interface DisplayOptions {
   weekendStyle: WeekendStyleType;
   showGrid: boolean;
   showDayNames: boolean;
-  showWeekNumbers: boolean;
   rotateMonthNames: boolean;
 }
 
@@ -85,7 +84,6 @@ const loadingPreviews = ref(false);
 const selectedWeekendStyle = ref<WeekendStyleType>("greyscale");
 const showGrid = ref(true);
 const showDayNames = ref(true);
-const showWeekNumbers = ref(true);
 const rotateMonthNames = ref(false);
 
 // Color settings state
@@ -442,7 +440,6 @@ const emitDisplayOptions = () => {
     weekendStyle: selectedWeekendStyle.value,
     showGrid: showGrid.value,
     showDayNames: showDayNames.value,
-    showWeekNumbers: showWeekNumbers.value,
     rotateMonthNames: rotateMonthNames.value,
   });
 
@@ -471,7 +468,7 @@ const handleClose = () => {
 };
 
 // Watch for display option changes
-watch([showGrid, showDayNames, showWeekNumbers, rotateMonthNames], () => {
+watch([showGrid, showDayNames, rotateMonthNames], () => {
   emitDisplayOptions();
 });
 
@@ -739,20 +736,6 @@ onMounted(() => {
                     <span class="checkbox-title">Show Day Names</span>
                     <span class="checkbox-description"
                       >Display abbreviated day names (Mon, Tue, etc.)</span
-                    >
-                  </label>
-                </div>
-
-                <div class="checkbox-option">
-                  <Checkbox
-                    v-model="showWeekNumbers"
-                    input-id="showWeekNumbers"
-                    :binary="true"
-                  />
-                  <label for="showWeekNumbers" class="checkbox-label">
-                    <span class="checkbox-title">Show Week Numbers</span>
-                    <span class="checkbox-description"
-                      >Display week numbers on the left side</span
                     >
                   </label>
                 </div>
