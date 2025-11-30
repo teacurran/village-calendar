@@ -9,6 +9,7 @@ import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
 import ColorPicker from "primevue/colorpicker";
 import ProgressSpinner from "primevue/progressspinner";
+import Select from "primevue/select";
 
 // Props
 interface Props {
@@ -99,6 +100,10 @@ const isOpen = computed({
   get: () => props.visible,
   set: (value) => emit("update:visible", value),
 });
+
+const isMoonSizeDisabled = computed(
+  () => selectedMoonDisplayMode.value === "none",
+);
 
 // Layout options with their corresponding API layoutStyle values
 const layoutOptions = [
@@ -596,65 +601,60 @@ onMounted(() => {
             <div class="step-content">
               <h3 class="step-title">Moon Display</h3>
 
-              <!-- Moon Size Selection -->
-              <h4 class="subsection-title">Moon Size</h4>
-              <p class="step-description">
-                Choose how large the moon appears in each cell
-              </p>
-              <div class="moon-options">
-                <div
-                  v-for="moon in moonSizeOptions"
-                  :key="moon.id"
-                  class="moon-option"
-                  :class="{ selected: selectedMoonStyle === moon.id }"
-                  @click="selectMoonStyle(moon.id)"
-                >
-                  <div class="moon-preview">
-                    <div
-                      class="preview-cell"
-                      v-html="generateMoonPreviewSVG(moon)"
-                    ></div>
-                  </div>
-
-                  <div class="moon-info">
-                    <div class="moon-name">{{ moon.name }}</div>
-                    <div class="moon-description">{{ moon.description }}</div>
-                  </div>
-
-                  <div class="selection-indicator">
-                    <i
-                      v-if="selectedMoonStyle === moon.id"
-                      class="pi pi-check-circle"
-                    ></i>
-                    <i v-else class="pi pi-circle"></i>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Moon Display Mode Selection -->
+              <!-- Moon Display Mode Selection (Dropdown) -->
               <h4 class="subsection-title">Which Moons to Show</h4>
-              <p class="step-description">
-                Select which moon phases appear on your calendar
-              </p>
-              <div class="display-mode-options">
-                <div
-                  v-for="mode in moonDisplayModeOptions"
-                  :key="mode.id"
-                  class="display-mode-option"
-                  :class="{ selected: selectedMoonDisplayMode === mode.id }"
-                  @click="selectMoonDisplayMode(mode.id)"
-                >
-                  <div class="mode-info">
-                    <div class="mode-name">{{ mode.name }}</div>
-                    <div class="mode-description">{{ mode.description }}</div>
-                  </div>
+              <Select
+                v-model="selectedMoonDisplayMode"
+                :options="moonDisplayModeOptions"
+                option-label="name"
+                option-value="id"
+                placeholder="Select moon display"
+                class="w-full"
+                @change="emitMoonSettings"
+              />
 
-                  <div class="selection-indicator">
-                    <i
-                      v-if="selectedMoonDisplayMode === mode.id"
-                      class="pi pi-check-circle"
-                    ></i>
-                    <i v-else class="pi pi-circle"></i>
+              <!-- Moon Size Selection -->
+              <div
+                class="moon-size-section"
+                :class="{ disabled: isMoonSizeDisabled }"
+              >
+                <h4 class="subsection-title">Moon Size</h4>
+                <p class="step-description">
+                  Choose how large the moon appears in each cell
+                </p>
+                <div class="moon-options">
+                  <div
+                    v-for="moon in moonSizeOptions"
+                    :key="moon.id"
+                    class="moon-option"
+                    :class="{
+                      selected:
+                        selectedMoonStyle === moon.id && !isMoonSizeDisabled,
+                      disabled: isMoonSizeDisabled,
+                    }"
+                    @click="!isMoonSizeDisabled && selectMoonStyle(moon.id)"
+                  >
+                    <div class="moon-preview">
+                      <div
+                        class="preview-cell"
+                        v-html="generateMoonPreviewSVG(moon)"
+                      ></div>
+                    </div>
+
+                    <div class="moon-info">
+                      <div class="moon-name">{{ moon.name }}</div>
+                      <div class="moon-description">{{ moon.description }}</div>
+                    </div>
+
+                    <div class="selection-indicator">
+                      <i
+                        v-if="
+                          selectedMoonStyle === moon.id && !isMoonSizeDisabled
+                        "
+                        class="pi pi-check-circle"
+                      ></i>
+                      <i v-else class="pi pi-circle"></i>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1055,6 +1055,27 @@ onMounted(() => {
 .moon-option.selected {
   border-color: var(--primary-color);
   background: var(--primary-50);
+}
+
+/* Disabled state for moon size section */
+.moon-size-section.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.moon-size-section.disabled .subsection-title,
+.moon-size-section.disabled .step-description {
+  color: var(--text-color-secondary);
+}
+
+.moon-option.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.moon-option.disabled:hover {
+  border-color: var(--surface-200);
+  background: var(--surface-0);
 }
 
 .layout-preview {
