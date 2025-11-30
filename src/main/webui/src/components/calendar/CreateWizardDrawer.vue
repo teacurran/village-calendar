@@ -9,8 +9,8 @@ import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
 import ProgressSpinner from "primevue/progressspinner";
 import Select from "primevue/select";
-import VSwatches from "vue-swatches";
-import "vue-swatches/dist/vue-swatches.css";
+import { VSwatches } from "vue3-swatches";
+import "vue3-swatches/dist/style.css";
 
 // Props
 interface Props {
