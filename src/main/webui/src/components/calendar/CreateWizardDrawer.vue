@@ -734,36 +734,6 @@ onMounted(() => {
             <div class="step-content">
               <h3 class="step-title">Display Options</h3>
 
-              <!-- Weekend Colors -->
-              <h4 class="subsection-title">Weekend Colors</h4>
-              <p class="step-description">
-                Choose how weekends are highlighted
-              </p>
-              <div class="display-mode-options">
-                <div
-                  v-for="style in weekendStyleOptions"
-                  :key="style.id"
-                  class="display-mode-option"
-                  :class="{ selected: selectedWeekendStyle === style.id }"
-                  @click="selectWeekendStyle(style.id)"
-                >
-                  <div class="mode-info">
-                    <div class="mode-name">{{ style.name }}</div>
-                    <div class="mode-description">{{ style.description }}</div>
-                  </div>
-
-                  <div class="selection-indicator">
-                    <i
-                      v-if="selectedWeekendStyle === style.id"
-                      class="pi pi-check-circle"
-                    ></i>
-                    <i v-else class="pi pi-circle"></i>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Checkbox Options -->
-              <h4 class="subsection-title">Additional Options</h4>
               <div class="checkbox-options">
                 <div class="checkbox-option">
                   <Checkbox
@@ -832,10 +802,34 @@ onMounted(() => {
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
               <h3 class="step-title">Color Customization</h3>
-              <p class="step-description">
-                Fine-tune the colors of your calendar
-              </p>
 
+              <!-- Weekend Colors -->
+              <h4 class="subsection-title">Weekend Style</h4>
+              <div class="display-mode-options">
+                <div
+                  v-for="style in weekendStyleOptions"
+                  :key="style.id"
+                  class="display-mode-option"
+                  :class="{ selected: selectedWeekendStyle === style.id }"
+                  @click="selectWeekendStyle(style.id)"
+                >
+                  <div class="mode-info">
+                    <div class="mode-name">{{ style.name }}</div>
+                    <div class="mode-description">{{ style.description }}</div>
+                  </div>
+
+                  <div class="selection-indicator">
+                    <i
+                      v-if="selectedWeekendStyle === style.id"
+                      class="pi pi-check-circle"
+                    ></i>
+                    <i v-else class="pi pi-circle"></i>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Color Swatches -->
+              <h4 class="subsection-title">Text Colors</h4>
               <div class="color-options">
                 <div class="color-option">
                   <label class="color-label">Year Color</label>
