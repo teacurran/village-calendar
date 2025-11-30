@@ -7,9 +7,10 @@ import Step from "primevue/step";
 import StepPanel from "primevue/steppanel";
 import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
-import ColorPicker from "primevue/colorpicker";
 import ProgressSpinner from "primevue/progressspinner";
 import Select from "primevue/select";
+import VSwatches from "vue-swatches";
+import "vue-swatches/dist/vue-swatches.css";
 
 // Props
 interface Props {
@@ -199,6 +200,26 @@ const weekendStyleOptions = [
     description: "Seasonal colors inspired by Vermont landscapes.",
     theme: "vermontWeekends",
   },
+];
+
+// Color swatches for the color picker
+const colorSwatches = [
+  // Row 1: Blacks and grays
+  ["#000000", "#333333", "#666666", "#999999", "#cccccc", "#ffffff"],
+  // Row 2: Browns and earth tones
+  ["#4a2c2a", "#6b4423", "#8b5a2b", "#a0522d", "#cd853f", "#deb887"],
+  // Row 3: Reds
+  ["#8b0000", "#b22222", "#dc143c", "#ff0000", "#ff6347", "#ffa07a"],
+  // Row 4: Oranges and yellows
+  ["#ff4500", "#ff8c00", "#ffa500", "#ffd700", "#ffff00", "#fffacd"],
+  // Row 5: Greens
+  ["#006400", "#228b22", "#32cd32", "#00ff00", "#90ee90", "#98fb98"],
+  // Row 6: Blues
+  ["#00008b", "#0000cd", "#0000ff", "#4169e1", "#6495ed", "#87ceeb"],
+  // Row 7: Purples
+  ["#4b0082", "#800080", "#9932cc", "#ba55d3", "#da70d6", "#dda0dd"],
+  // Row 8: Pinks
+  ["#c71585", "#ff1493", "#ff69b4", "#ffb6c1", "#ffc0cb", "#ffe4e1"],
 ];
 
 // Random day for preview (1-28 to be safe)
@@ -786,42 +807,57 @@ onMounted(() => {
               <div class="color-options">
                 <div class="color-option">
                   <label class="color-label">Year Color</label>
-                  <div class="color-picker-wrapper">
-                    <ColorPicker v-model="yearColor" />
-                    <span class="color-value">{{ yearColor }}</span>
-                  </div>
+                  <VSwatches
+                    v-model="yearColor"
+                    :swatches="colorSwatches"
+                    popover-x="left"
+                    show-fallback
+                    fallback-input-type="color"
+                  />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Month Names</label>
-                  <div class="color-picker-wrapper">
-                    <ColorPicker v-model="monthColor" />
-                    <span class="color-value">{{ monthColor }}</span>
-                  </div>
+                  <VSwatches
+                    v-model="monthColor"
+                    :swatches="colorSwatches"
+                    popover-x="left"
+                    show-fallback
+                    fallback-input-type="color"
+                  />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Day Numbers</label>
-                  <div class="color-picker-wrapper">
-                    <ColorPicker v-model="dayTextColor" />
-                    <span class="color-value">{{ dayTextColor }}</span>
-                  </div>
+                  <VSwatches
+                    v-model="dayTextColor"
+                    :swatches="colorSwatches"
+                    popover-x="left"
+                    show-fallback
+                    fallback-input-type="color"
+                  />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Day Names</label>
-                  <div class="color-picker-wrapper">
-                    <ColorPicker v-model="dayNameColor" />
-                    <span class="color-value">{{ dayNameColor }}</span>
-                  </div>
+                  <VSwatches
+                    v-model="dayNameColor"
+                    :swatches="colorSwatches"
+                    popover-x="left"
+                    show-fallback
+                    fallback-input-type="color"
+                  />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Grid Lines</label>
-                  <div class="color-picker-wrapper">
-                    <ColorPicker v-model="gridLineColor" />
-                    <span class="color-value">{{ gridLineColor }}</span>
-                  </div>
+                  <VSwatches
+                    v-model="gridLineColor"
+                    :swatches="colorSwatches"
+                    popover-x="left"
+                    show-fallback
+                    fallback-input-type="color"
+                  />
                 </div>
               </div>
 
@@ -1260,7 +1296,7 @@ onMounted(() => {
 .color-options {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .color-option {
@@ -1275,16 +1311,36 @@ onMounted(() => {
   color: var(--text-color);
 }
 
-.color-picker-wrapper {
+/* Vue Swatches customization */
+.color-option :deep(.vue-swatches) {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
 }
 
-.color-value {
-  font-size: 0.75rem;
-  font-family: monospace;
-  color: var(--text-color-secondary);
+.color-option :deep(.vue-swatches__trigger) {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid var(--surface-300);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.color-option :deep(.vue-swatches__container) {
+  background: var(--surface-0);
+  border: 1px solid var(--surface-200);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.color-option :deep(.vue-swatches__fallback-wrapper) {
+  padding: 8px;
+}
+
+.color-option :deep(.vue-swatches__fallback-input) {
+  width: 100%;
+  height: 32px;
+  border: 1px solid var(--surface-300);
+  border-radius: 4px;
 }
 
 /* Finish panel */
