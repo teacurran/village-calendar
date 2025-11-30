@@ -2447,10 +2447,11 @@ const wrapSvgWithMargins = (innerSvg: string): string => {
 </svg>`;
 };
 
-// Zoom state (0.3 fits the 3500x2250 SVG reasonably on screen)
+// Zoom state (calculated to fit window width)
 const zoomLevel = ref(0.3);
 const showRulers = ref(false);
 const previewContainer = ref(null);
+const isInitialGeneration = ref(true);
 
 // Emoji picker instance
 let emojiPicker = null;
@@ -2684,7 +2685,11 @@ const generateCalendar = async () => {
       const data = await response.json();
       // Wrap SVG with margins so content fits within printable area
       generatedSVG.value = wrapSvgWithMargins(data.svg);
-      resetZoom();
+      // Only reset zoom on initial generation, preserve zoom/pan on updates
+      if (isInitialGeneration.value) {
+        resetZoom();
+        isInitialGeneration.value = false;
+      }
     } else {
       throw new Error("Failed to generate calendar");
     }
@@ -2999,9 +3004,17 @@ const zoomOut = () => {
 };
 
 const resetZoom = () => {
-  // SVG is now 3500x2250 units (100 units per inch for 35"x22.5" page)
-  // Set initial zoom to fit reasonably on screen (~0.3 fits ~1050px width)
-  zoomLevel.value = 0.3;
+  // SVG is 3500x2250 units (100 units per inch for 35"x22.5" page)
+  // Calculate zoom to fit calendar width to available window width
+  const calendarWidth = 3500;
+  // Account for sidebar/drawer (~460px) and some padding (~50px)
+  const availableWidth = window.innerWidth - 510;
+  // Calculate zoom level to fit, with min 0.15 and max 0.5
+  const calculatedZoom = Math.max(
+    0.15,
+    Math.min(0.5, availableWidth / calendarWidth),
+  );
+  zoomLevel.value = calculatedZoom;
 };
 
 const resetColorsToTheme = () => {
