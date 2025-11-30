@@ -831,8 +831,6 @@ onMounted(() => {
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
-                    show-fallback
-                    fallback-input-type="color"
                   />
                 </div>
 
@@ -844,8 +842,6 @@ onMounted(() => {
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
-                    show-fallback
-                    fallback-input-type="color"
                   />
                 </div>
 
@@ -857,8 +853,6 @@ onMounted(() => {
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
-                    show-fallback
-                    fallback-input-type="color"
                   />
                 </div>
 
@@ -870,8 +864,6 @@ onMounted(() => {
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
-                    show-fallback
-                    fallback-input-type="color"
                   />
                 </div>
 
@@ -883,8 +875,6 @@ onMounted(() => {
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
-                    show-fallback
-                    fallback-input-type="color"
                   />
                 </div>
               </div>
@@ -1370,17 +1360,6 @@ onMounted(() => {
 .color-option :deep(.vue-swatches__swatch) {
   margin: 1px;
   border-radius: 2px;
-}
-
-.color-option :deep(.vue-swatches__fallback-wrapper) {
-  padding: 8px 0 0 0;
-}
-
-.color-option :deep(.vue-swatches__fallback-input) {
-  width: 100%;
-  height: 28px;
-  border: 1px solid var(--surface-300);
-  border-radius: 4px;
 }
 
 /* Finish panel */
