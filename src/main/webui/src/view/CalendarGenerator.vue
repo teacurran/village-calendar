@@ -96,32 +96,6 @@
                   class="w-full"
                 />
               </div>
-
-              <!-- First Day of Week -->
-              <div>
-                <label for="firstDay" class="block text-sm font-medium mb-1">
-                  First Day of Week
-                  <span
-                    v-if="
-                      config.layoutStyle === 'grid' ||
-                      config.layoutStyle === 'weekday-grid'
-                    "
-                    class="text-xs text-gray-500 font-normal"
-                    >(traditional layout only)</span
-                  >
-                </label>
-                <Dropdown
-                  v-model="config.firstDayOfWeek"
-                  :options="weekdayOptions"
-                  option-label="label"
-                  option-value="value"
-                  :disabled="
-                    config.layoutStyle === 'grid' ||
-                    config.layoutStyle === 'weekday-grid'
-                  "
-                  class="w-full"
-                />
-              </div>
             </div>
           </AccordionTab>
 
@@ -338,7 +312,7 @@
                         <InputNumber
                           id="moonSize"
                           v-model="config.moonSize"
-                          :min="10"
+                          :min="5"
                           :max="50"
                           :show-buttons="true"
                           class="w-full"
@@ -794,10 +768,24 @@
       </template>
     </Drawer>
 
+    <!-- Create Your Own Wizard Drawer -->
+    <CreateWizardDrawer
+      v-model:visible="showCreateWizard"
+      @layout-change="handleWizardLayoutChange"
+      @moon-change="handleWizardMoonChange"
+      @display-options-change="handleWizardDisplayOptionsChange"
+      @colors-change="handleWizardColorsChange"
+    />
+
     <!-- Main Content Area -->
     <div class="p-4">
       <div class="flex justify-between items-center mb-4">
         <div class="flex gap-2">
+          <Button
+            label="Create Your Own"
+            icon="pi pi-sparkles"
+            @click="showCreateWizard = true"
+          />
           <Button
             label="Templates"
             icon="pi pi-palette"
@@ -867,7 +855,17 @@
                 @click="resetZoom"
               />
               <Button
-                v-tooltip="'Download PDF (35&quot; x 23&quot;)'"
+                v-if="FEATURE_FLAGS.enableRulers"
+                v-tooltip="'Toggle Rulers'"
+                icon="pi pi-chart-bar"
+                text
+                rounded
+                :disabled="!generatedSVG"
+                :class="{ 'bg-primary-100': showRulers }"
+                @click="showRulers = !showRulers"
+              />
+              <Button
+                v-tooltip="'Download PDF (35&quot; x 22.5&quot;)'"
                 icon="pi pi-download"
                 text
                 rounded
@@ -910,13 +908,58 @@
             </div>
             <div
               v-else
-              class="svg-container"
-              :style="{
-                transform: `scale(${zoomLevel})`,
-                transformOrigin: 'top left',
-              }"
-              v-html="generatedSVG"
-            ></div>
+              class="ruler-wrapper"
+              :class="{ 'show-rulers': showRulers }"
+            >
+              <!-- Scaled container - width/height set to match visual size after scale -->
+              <div
+                class="scaled-wrapper"
+                :style="{
+                  width: `${3500 * zoomLevel}px`,
+                  height: `${2250 * zoomLevel}px`,
+                }"
+              >
+                <div
+                  class="svg-container"
+                  :style="{
+                    transform: `scale(${zoomLevel})`,
+                    transformOrigin: 'top left',
+                  }"
+                >
+                  <div class="page-border">
+                    <div v-html="generatedSVG"></div>
+                  </div>
+                </div>
+              </div>
+              <!-- Bottom ruler -->
+              <div v-if="showRulers" class="ruler ruler-bottom">
+                <div
+                  v-for="inch in 35"
+                  :key="'b' + inch"
+                  class="ruler-mark"
+                  :style="{ width: `${100 * zoomLevel}px` }"
+                >
+                  <span class="ruler-label">{{ inch }}"</span>
+                </div>
+              </div>
+              <!-- Right ruler (22.5 inches total) -->
+              <div v-if="showRulers" class="ruler ruler-right">
+                <div
+                  v-for="inch in 22"
+                  :key="'r' + inch"
+                  class="ruler-mark"
+                  :style="{ height: `${100 * zoomLevel}px` }"
+                >
+                  <span class="ruler-label">{{ inch }}"</span>
+                </div>
+                <div
+                  class="ruler-mark ruler-mark-half"
+                  :style="{ height: `${50 * zoomLevel}px` }"
+                >
+                  <span class="ruler-label">22½"</span>
+                </div>
+              </div>
+            </div>
           </div>
         </template>
       </Card>
@@ -1530,12 +1573,24 @@ import Tag from "primevue/tag";
 import ProgressSpinner from "primevue/progressspinner";
 import "emoji-picker-element";
 import CustomEventCellPreview from "../components/CustomEventCellPreview.vue";
+import CreateWizardDrawer from "../components/calendar/CreateWizardDrawer.vue";
+import type {
+  LayoutType,
+  MoonSettings,
+  DisplayOptions,
+  ColorSettings,
+} from "../components/calendar/CreateWizardDrawer.vue";
 import { sessionFetch } from "../services/sessionService";
 import {
   fetchTemplates,
   createTemplate,
   updateTemplate as updateTemplateGraphQL,
 } from "../services/graphqlService";
+
+// Feature flags
+const FEATURE_FLAGS = {
+  enableRulers: false, // Ruler functionality - disabled for now
+};
 
 const toast = useToast();
 const route = useRoute();
@@ -1547,6 +1602,7 @@ const authStore = useAuthStore();
 // Drawer visibility
 const drawerVisible = ref(false);
 const showTemplateDrawer = ref(false);
+const showCreateWizard = ref(false);
 
 // All templates (for all users)
 const allTemplates = ref([]);
@@ -1630,9 +1686,8 @@ const currentHebrewYear = computed(() => {
 
 // Layout options
 const layoutOptions = ref([
-  { label: "Grid (12x31)", value: "grid" },
-  { label: "Traditional (4x3)", value: "traditional" },
-  { label: "Weekday Aligned Grid (12x37)", value: "weekday-grid" },
+  { label: "Left Aligned (12x31)", value: "grid" },
+  { label: "Day of Week Aligned (12x37)", value: "weekday-grid" },
 ]);
 
 // Weekday options
@@ -2330,8 +2385,71 @@ const generatedSVG = ref("");
 const generating = ref(false);
 const holidays = ref(new Set());
 
-// Zoom state
-const zoomLevel = ref(1);
+// ===========================================
+// PRINT DIMENSIONS (must match backend CalendarRenderingService)
+// ===========================================
+const PAGE_WIDTH_INCHES = 35;
+const PAGE_HEIGHT_INCHES = 22.5;
+const MARGIN_INCHES = 0.5; // Change this to adjust margins (e.g., 1.0 for 1 inch)
+const PRINTABLE_WIDTH_INCHES = PAGE_WIDTH_INCHES - 2 * MARGIN_INCHES; // 34"
+const PRINTABLE_HEIGHT_INCHES = PAGE_HEIGHT_INCHES - 2 * MARGIN_INCHES; // 21.5"
+
+/**
+ * Wraps the SVG with margins so content fits within the printable area.
+ * The outer SVG represents the full page, and the inner content is scaled
+ * and positioned within the margins.
+ */
+const wrapSvgWithMargins = (innerSvg: string): string => {
+  // Extract viewBox from inner SVG
+  const viewBoxMatch = innerSvg.match(
+    /viewBox="([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)"/,
+  );
+  if (!viewBoxMatch) {
+    console.warn("No viewBox found in SVG, returning without margins");
+    return innerSvg;
+  }
+
+  const innerWidth = parseFloat(viewBoxMatch[3]);
+  const innerHeight = parseFloat(viewBoxMatch[4]);
+
+  // Use a coordinate system scaled by 100 for precision
+  const pageWidth = PAGE_WIDTH_INCHES * 100;
+  const pageHeight = PAGE_HEIGHT_INCHES * 100;
+  const marginSize = MARGIN_INCHES * 100;
+  const printableWidth = PRINTABLE_WIDTH_INCHES * 100;
+  const printableHeight = PRINTABLE_HEIGHT_INCHES * 100;
+
+  // Calculate scale to fit inner SVG within printable area
+  const scaleX = printableWidth / innerWidth;
+  const scaleY = printableHeight / innerHeight;
+  const scale = Math.min(scaleX, scaleY);
+
+  // Calculate actual size of scaled content
+  const scaledWidth = innerWidth * scale;
+  const scaledHeight = innerHeight * scale;
+
+  // Calculate offset - center horizontally, align to top vertically
+  const offsetX = marginSize + (printableWidth - scaledWidth) / 2;
+  const offsetY = marginSize; // Top-aligned, extra space goes to bottom
+
+  // Strip outer SVG tags and XML declaration from inner SVG
+  const innerContent = innerSvg
+    .replace(/<\?xml[^?]*\?>\s*/g, "")
+    .replace(/<svg[^>]*>/, "")
+    .replace(/<\/svg>\s*$/, "");
+
+  // Build wrapper SVG
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${pageWidth}" height="${pageHeight}" viewBox="0 0 ${pageWidth} ${pageHeight}" preserveAspectRatio="xMidYMid meet">
+  <rect width="${pageWidth}" height="${pageHeight}" fill="white"/>
+  <g transform="translate(${offsetX.toFixed(2)}, ${offsetY.toFixed(2)}) scale(${scale.toFixed(6)})">
+    ${innerContent}
+  </g>
+</svg>`;
+};
+
+// Zoom state (0.3 fits the 3500x2250 SVG reasonably on screen)
+const zoomLevel = ref(0.3);
+const showRulers = ref(false);
 const previewContainer = ref(null);
 
 // Emoji picker instance
@@ -2365,17 +2483,10 @@ onMounted(async () => {
   // Load calendar or template from URL (takes precedence over localStorage)
   const calendarLoaded = await loadCalendarFromUrl();
 
-  // If nothing was loaded and we have templates, load the most popular one
+  // If nothing was loaded, generate a default calendar (no template)
   if (!calendarLoaded && !configLoaded) {
-    const mostPopularTemplate = sortedAllTemplates.value[0];
-    if (mostPopularTemplate) {
-      // Load the most popular template
-      await loadTemplateConfig(mostPopularTemplate);
-    } else {
-      // No templates available, generate default calendar
-      generateCalendar();
-      await autoSaveCalendar();
-    }
+    generateCalendar();
+    await autoSaveCalendar();
   }
 
   // Don't open drawer automatically - let user open it when needed
@@ -2525,6 +2636,7 @@ const generateCalendar = async () => {
       layoutStyle: config.value.layoutStyle,
       showMoonPhases: config.value.moonDisplayMode === "phases",
       showMoonIllumination: config.value.moonDisplayMode === "illumination",
+      showFullMoonOnly: config.value.moonDisplayMode === "full-only",
       showWeekNumbers: config.value.showWeekNumbers,
       showDayNames: config.value.showDayNames,
       showDayNumbers: config.value.showDayNumbers,
@@ -2570,7 +2682,8 @@ const generateCalendar = async () => {
 
     if (response.ok) {
       const data = await response.json();
-      generatedSVG.value = data.svg;
+      // Wrap SVG with margins so content fits within printable area
+      generatedSVG.value = wrapSvgWithMargins(data.svg);
       resetZoom();
     } else {
       throw new Error("Failed to generate calendar");
@@ -2878,15 +2991,17 @@ const useCurrentLocation = () => {
 
 // Zoom functions
 const zoomIn = () => {
-  zoomLevel.value = Math.min(zoomLevel.value + 0.25, 3);
+  zoomLevel.value = Math.min(zoomLevel.value + 0.05, 1);
 };
 
 const zoomOut = () => {
-  zoomLevel.value = Math.max(zoomLevel.value - 0.25, 0.5);
+  zoomLevel.value = Math.max(zoomLevel.value - 0.05, 0.1);
 };
 
 const resetZoom = () => {
-  zoomLevel.value = 1;
+  // SVG is now 3500x2250 units (100 units per inch for 35"x22.5" page)
+  // Set initial zoom to fit reasonably on screen (~0.3 fits ~1050px width)
+  zoomLevel.value = 0.3;
 };
 
 const resetColorsToTheme = () => {
@@ -3609,6 +3724,52 @@ const selectTemplate = async (template) => {
   showTemplateDrawer.value = false;
 };
 
+// Handle layout change from wizard
+const handleWizardLayoutChange = (layout: LayoutType) => {
+  // Map wizard layout names to config layoutStyle values
+  const layoutMap: Record<LayoutType, string> = {
+    "left-aligned": "grid",
+    "day-of-week-aligned": "weekday-grid",
+  };
+  config.value.layoutStyle = layoutMap[layout];
+};
+
+// Handle moon settings change from wizard
+const handleWizardMoonChange = (settings: MoonSettings) => {
+  config.value.moonDisplayMode = settings.moonDisplayMode;
+  config.value.moonSize = settings.moonSize;
+  config.value.moonOffsetX = settings.moonX;
+  config.value.moonOffsetY = settings.moonY;
+  config.value.moonBorderColor = settings.moonBorderColor;
+  config.value.moonBorderWidth = settings.moonBorderWidth;
+  config.value.moonDarkColor = settings.moonDarkSideColor;
+  config.value.moonLightColor = settings.moonLightSideColor;
+};
+
+// Handle display options change from wizard
+const handleWizardDisplayOptionsChange = (options: DisplayOptions) => {
+  // Map weekend style to theme
+  const weekendStyleMap: Record<string, string> = {
+    greyscale: "default",
+    rainbow: "rainbowWeekends",
+    vermont: "vermontWeekends",
+  };
+  config.value.theme = weekendStyleMap[options.weekendStyle] || "default";
+  config.value.showGrid = options.showGrid;
+  config.value.showDayNames = options.showDayNames;
+  config.value.showWeekNumbers = options.showWeekNumbers;
+  config.value.rotateMonthNames = options.rotateMonthNames;
+};
+
+// Handle color settings change from wizard
+const handleWizardColorsChange = (colors: ColorSettings) => {
+  config.value.yearColor = colors.yearColor;
+  config.value.monthColor = colors.monthColor;
+  config.value.dayTextColor = colors.dayTextColor;
+  config.value.dayNameColor = colors.dayNameColor;
+  config.value.gridLineColor = colors.gridLineColor;
+};
+
 // Load saved calendars for the current user
 const loadSavedCalendars = async () => {
   loadingSavedCalendars.value = true;
@@ -4098,7 +4259,7 @@ const confirmDuplicateTemplate = async () => {
   overflow: auto;
   max-height: calc(100vh - 250px);
   min-height: 500px;
-  background: #f8f9fa;
+  border: 1px solid #f8f9fa;
   border-radius: 8px;
   padding: 1rem;
 }
@@ -4111,6 +4272,88 @@ const confirmDuplicateTemplate = async () => {
 :deep(.svg-container svg) {
   max-width: none;
   height: auto;
+}
+
+/* Ruler styles */
+.ruler-wrapper {
+  display: inline-block;
+  position: relative;
+}
+
+.ruler-wrapper.show-rulers {
+  padding-right: 32px;
+  padding-bottom: 28px;
+}
+
+.scaled-wrapper {
+  position: relative;
+}
+
+.page-border {
+  display: inline-block;
+  border: 1px solid #ccc;
+  border-right: 2px solid #999;
+  border-bottom: 2px solid #999;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.ruler {
+  position: absolute;
+  background: transparent;
+  display: flex;
+  z-index: 100;
+}
+
+.ruler-bottom {
+  bottom: 0;
+  left: 0;
+  height: 24px;
+  flex-direction: row;
+  border-top: 2px solid #999;
+}
+
+.ruler-right {
+  top: 0;
+  right: 0;
+  width: 28px;
+  flex-direction: column;
+  border-left: 2px solid #999;
+}
+
+/* Each inch mark - width/height set dynamically via inline styles */
+/* Base: 100px per inch (matching SVG's 100 units per inch), scaled by zoomLevel */
+.ruler-bottom .ruler-mark {
+  height: 100%;
+  border-right: 1px solid #999;
+  position: relative;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.ruler-right .ruler-mark {
+  width: 100%;
+  border-bottom: 1px solid #999;
+  position: relative;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.ruler-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #333;
+  position: absolute;
+  white-space: nowrap;
+}
+
+.ruler-bottom .ruler-label {
+  bottom: 4px;
+  right: 2px;
+}
+
+.ruler-right .ruler-label {
+  top: 2px;
+  left: 5px;
 }
 
 :deep(.p-accordion .p-accordion-header-link) {

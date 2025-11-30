@@ -37,32 +37,32 @@
 
           <!-- User menu for authenticated users -->
           <div v-else class="user-section">
-          <!-- Admin button for admin users -->
-          <Button
-            v-if="authStore.isAdmin"
-            label="Admin"
-            icon="pi pi-cog"
-            severity="secondary"
-            outlined
-            class="mr-2"
-            @click="navigateToAdmin"
-          />
+            <!-- Admin button for admin users -->
+            <Button
+              v-if="authStore.isAdmin"
+              label="Admin"
+              icon="pi pi-cog"
+              severity="secondary"
+              outlined
+              class="mr-2"
+              @click="navigateToAdmin"
+            />
 
-          <!-- User profile dropdown -->
-          <Button
-            :label="authStore.userName"
-            icon="pi pi-user"
-            outlined
-            aria-haspopup="true"
-            aria-controls="user_menu"
-            @click="toggleUserMenu"
-          />
-          <Menu
-            id="user_menu"
-            ref="userMenuRef"
-            :model="userMenuItems"
-            :popup="true"
-          />
+            <!-- User profile dropdown -->
+            <Button
+              :label="authStore.userName"
+              icon="pi pi-user"
+              outlined
+              aria-haspopup="true"
+              aria-controls="user_menu"
+              @click="toggleUserMenu"
+            />
+            <Menu
+              id="user_menu"
+              ref="userMenuRef"
+              :model="userMenuItems"
+              :popup="true"
+            />
           </div>
         </div>
       </template>

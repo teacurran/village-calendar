@@ -37,6 +37,7 @@ public class CalendarResource {
     public String theme;
     public Boolean showMoonPhases;
     public Boolean showMoonIllumination;
+    public Boolean showFullMoonOnly;
     public Boolean showWeekNumbers;
     public Boolean compactMode;
     public Boolean showDayNames;
@@ -123,6 +124,7 @@ public class CalendarResource {
       // Copy all moon-related settings
       hebrewConfig.showMoonPhases = config.showMoonPhases;
       hebrewConfig.showMoonIllumination = config.showMoonIllumination;
+      hebrewConfig.showFullMoonOnly = config.showFullMoonOnly;
       hebrewConfig.moonSize = config.moonSize;
       hebrewConfig.moonOffsetX = config.moonOffsetX;
       hebrewConfig.moonOffsetY = config.moonOffsetY;
@@ -218,6 +220,9 @@ public class CalendarResource {
     }
     if (request.showMoonIllumination != null) {
       config.showMoonIllumination = request.showMoonIllumination;
+    }
+    if (request.showFullMoonOnly != null) {
+      config.showFullMoonOnly = request.showFullMoonOnly;
     }
     if (request.latitude != null) {
       config.latitude = request.latitude;

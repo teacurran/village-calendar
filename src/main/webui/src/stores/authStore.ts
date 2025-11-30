@@ -25,30 +25,13 @@ export const useAuthStore = defineStore("auth", {
   actions: {
     /**
      * Initialize authentication by checking for existing token
-     * and decoding user from JWT
+     * and validating it with the backend
      */
     async initialize() {
       if (this.token) {
-        try {
-          const parts = this.token.split(".");
-          const payload = JSON.parse(atob(parts[1]));
-
-          // Create user object from JWT payload
-          this.user = {
-            id: payload.sub,
-            email: payload.email,
-            displayName: payload.name,
-            profileImageUrl: undefined,
-            oauthProvider: "GOOGLE",
-            oauthSubject: "",
-            created: "",
-            lastLoginAt: "",
-          };
-        } catch (err) {
-          console.error("Failed to decode JWT token on initialize:", err);
-          // Clear invalid token
-          this.logout();
-        }
+        // Validate token with backend - this will logout if token is invalid
+        // (e.g., after server restart when OIDC session is lost)
+        await this.fetchCurrentUser();
       }
     },
 

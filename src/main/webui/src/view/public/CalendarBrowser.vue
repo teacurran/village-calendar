@@ -32,11 +32,11 @@
           </p>
           <div class="hero-actions">
             <Button
-              label="Create New Calendar"
-              icon="pi pi-plus"
+              label="Create Your Own"
+              icon="pi pi-palette"
               size="large"
-              class="create-button"
-              @click="createNewCalendar"
+              class="create-own-button"
+              @click="goToGenerator"
             />
             <Button
               label="Browse Templates"
@@ -393,8 +393,8 @@ const goToAdmin = () => {
     });
 };
 
-// Create new calendar - navigate to generator
-const createNewCalendar = () => {
+// Go to generator page
+const goToGenerator = () => {
   router.push("/generator");
 };
 
@@ -464,7 +464,7 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.create-button,
+.create-own-button,
 .browse-button {
   min-width: 180px;
 }
@@ -480,7 +480,7 @@ onMounted(() => {
     flex-direction: column;
     align-items: stretch;
   }
-  .create-button,
+  .create-own-button,
   .browse-button {
     width: 100%;
   }

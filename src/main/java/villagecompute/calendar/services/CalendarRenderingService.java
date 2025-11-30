@@ -28,12 +28,31 @@ import java.util.Set;
 @ApplicationScoped
 public class CalendarRenderingService {
 
+  // ===========================================
+  // PRINT DIMENSIONS (in inches)
+  // ===========================================
+  // Page size for printing
+  public static final float PAGE_WIDTH_INCHES = 35f;
+  public static final float PAGE_HEIGHT_INCHES = 22.5f;
+
+  // Margin on all sides - change this value to adjust margins (e.g., 1.0f for 1 inch)
+  public static final float MARGIN_INCHES = 0.5f;
+
+  // Printable area (calculated from page size minus margins)
+  public static final float PRINTABLE_WIDTH_INCHES = PAGE_WIDTH_INCHES - (2 * MARGIN_INCHES);   // 34"
+  public static final float PRINTABLE_HEIGHT_INCHES = PAGE_HEIGHT_INCHES - (2 * MARGIN_INCHES); // 21.5"
+
+  // Points per inch (PDF standard)
+  private static final float POINTS_PER_INCH = 72f;
+  // ===========================================
+
   // Calendar configuration options
   public static class CalendarConfig {
     public int year = LocalDate.now().getYear();
     public String theme = "default";
     public boolean showMoonPhases = false;
     public boolean showMoonIllumination = false;
+    public boolean showFullMoonOnly = false;
     public boolean showWeekNumbers = false;
     public boolean compactMode = false;
     public boolean showDayNames = true;
@@ -276,8 +295,12 @@ public class CalendarRenderingService {
           ));
         }
 
-        // Moon display (either illumination or phase symbols)
-        if ((config.showMoonIllumination || (config.showMoonPhases && isMoonPhaseDay(date)))) {
+        // Moon display (illumination, phase symbols, or full moon only)
+        boolean shouldShowMoon = config.showMoonIllumination ||
+          (config.showMoonPhases && isMoonPhaseDay(date)) ||
+          (config.showFullMoonOnly && isFullMoonDay(date));
+
+        if (shouldShowMoon) {
           // Use X/Y offset settings for precise positioning
           int moonX = cellX + config.moonOffsetX;
           int moonY = cellY + config.moonOffsetY;
@@ -285,6 +308,8 @@ public class CalendarRenderingService {
           // For moon phases, only show on phase days
           if (config.showMoonPhases && !isMoonPhaseDay(date)) {
             // Skip non-phase days
+          } else if (config.showFullMoonOnly && !isFullMoonDay(date)) {
+            // Skip non-full-moon days
           } else {
             // Use same size for both modes
             svg.append(generateMoonIlluminationSVG(date, moonX, moonY,
@@ -540,7 +565,10 @@ public class CalendarRenderingService {
     int svgHeight = cellHeight * 12 + headerHeight + 20;
 
     StringBuilder svg = new StringBuilder();
-    svg.append(String.format("<svg width=\"%d\" height=\"%d\" xmlns=\"http://www.w3.org/2000/svg\">%n", svgWidth, svgHeight));
+    svg.append(String.format(
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid meet\">%n",
+      svgWidth, svgHeight, svgWidth, svgHeight
+    ));
 
     // Add styles
     svg.append("<style>\n");
@@ -563,16 +591,6 @@ public class CalendarRenderingService {
       "<text x=\"50\" y=\"80\" class=\"year-text\">%d</text>%n",
       year
     ));
-
-    // Weekday headers (Sunday through Saturday)
-    String[] weekdayNames = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-    for (int col = 0; col < totalCols; col++) {
-      String dayName = weekdayNames[col % 7];
-      svg.append(String.format(
-        "<text x=\"%d\" y=\"%d\" class=\"header-day\" text-anchor=\"middle\" fill=\"%s\">%s</text>%n",
-        cellWidth + col * cellWidth + cellWidth / 2, headerHeight - 5, config.dayTextColor, dayName
-      ));
-    }
 
     // Generate each month row
     Locale locale = Locale.forLanguageTag(config.locale);
@@ -624,12 +642,21 @@ public class CalendarRenderingService {
         boolean isHoliday = config.holidays != null && config.holidays.contains(dateStr);
         boolean isCustomDate = config.customDates != null && config.customDates.containsKey(dateStr);
 
-        // Day number
+        // Day number - positioned at top-left like grid layout
         if (config.showDayNumbers) {
-          String dayClass = isHoliday ? "holiday" : (isCustomDate ? "custom-date" : "day-number");
+          String dayClass = isHoliday ? "holiday" : (isCustomDate ? "custom-date" : "day-text");
           svg.append(String.format(
-            "<text x=\"%d\" y=\"%d\" class=\"%s\" text-anchor=\"middle\">%d</text>%n",
-            cellX + cellWidth / 2, cellY + 15, dayClass, day
+            "<text x=\"%d\" y=\"%d\" class=\"%s\">%d</text>%n",
+            cellX + 5, cellY + 14, dayClass, day
+          ));
+        }
+
+        // Day name (if enabled) - positioned below day number like grid layout
+        if (config.showDayNames) {
+          String dayName = dayOfWeek.getDisplayName(TextStyle.SHORT, locale).substring(0, 2);
+          svg.append(String.format(
+            "<text x=\"%d\" y=\"%d\" class=\"day-name\">%s</text>%n",
+            cellX + 5, cellY + 26, dayName
           ));
         }
 
@@ -689,13 +716,7 @@ public class CalendarRenderingService {
       }
     }
 
-    // Outer border
-    if (config.showGrid) {
-      svg.append(String.format(
-        "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" class=\"grid-line\" fill=\"none\" stroke=\"%s\" stroke-width=\"2\"/>%n",
-        cellWidth, headerHeight - 1, cellWidth * totalCols, cellHeight * 12 + 2, config.gridLineColor
-      ));
-    }
+    // No outer border for weekday-grid layout - only cell borders
 
     svg.append("</svg>");
     return svg.toString();
@@ -801,8 +822,12 @@ public class CalendarRenderingService {
         ));
       }
 
-      // Moon display for year view
-      if ((config.showMoonIllumination || (config.showMoonPhases && isMoonPhaseDay(date)))) {
+      // Moon display for year view (illumination, phase symbols, or full moon only)
+      boolean shouldShowMoonYearView = config.showMoonIllumination ||
+        (config.showMoonPhases && isMoonPhaseDay(date)) ||
+        (config.showFullMoonOnly && isFullMoonDay(date));
+
+      if (shouldShowMoonYearView) {
         // Scale down X/Y offsets for year view's smaller cells
         int scaledOffsetX = config.moonOffsetX * cellSize / 100; // Scale based on cell size
         int scaledOffsetY = config.moonOffsetY * cellSize / 100;
@@ -812,6 +837,8 @@ public class CalendarRenderingService {
         // Skip non-phase days if in phase mode
         if (config.showMoonPhases && !isMoonPhaseDay(date)) {
           // Skip non-phase days
+        } else if (config.showFullMoonOnly && !isFullMoonDay(date)) {
+          // Skip non-full-moon days
         } else {
           // Create a smaller moon for year view
           CalendarConfig yearConfig = new CalendarConfig();
@@ -1059,6 +1086,19 @@ public class CalendarRenderingService {
     return false;
   }
 
+  // Check if this is a full moon day only
+  private boolean isFullMoonDay(LocalDate date) {
+    double phaseToday = calculateMoonPhaseValue(date);
+    double phaseYesterday = calculateMoonPhaseValue(date.minusDays(1));
+    double phaseTomorrow = calculateMoonPhaseValue(date.plusDays(1));
+
+    // Check for Full Moon (0.5)
+    double distToday = Math.abs(phaseToday - 0.5);
+    double distYesterday = Math.abs(phaseYesterday - 0.5);
+    double distTomorrow = Math.abs(phaseTomorrow - 0.5);
+    return distToday < distYesterday && distToday < distTomorrow && distToday < 0.017;
+  }
+
   // Calculate moon phase as a value from 0 to 1
   private double calculateMoonPhaseValue(LocalDate date) {
     // Known new moon date (January 6, 2000 at 18:14 UTC)
@@ -1187,25 +1227,28 @@ public class CalendarRenderingService {
       // Debug: Log SVG content length
       System.out.println("SVG content length: " + svgContent.length());
 
+      // Wrap SVG with margins for proper print layout
+      String wrappedSvg = wrapSvgWithMargins(svgContent);
+
       // Create transcoder for PDF
       Transcoder transcoder = new PDFTranscoder();
 
-      // Set PDF page size to 35w x 23h inches (landscape)
-      // PDF units are in points (1 inch = 72 points)
-      float widthInPoints = 35 * 72;  // 2520 points
-      float heightInPoints = 23 * 72;  // 1656 points
+      // PDF page size using constants (in points: 1 inch = 72 points)
+      float pageWidthInPoints = PAGE_WIDTH_INCHES * POINTS_PER_INCH;
+      float pageHeightInPoints = PAGE_HEIGHT_INCHES * POINTS_PER_INCH;
 
+      // Set the page/output size
       transcoder.addTranscodingHint(
         PDFTranscoder.KEY_WIDTH,
-        widthInPoints
+        pageWidthInPoints
       );
       transcoder.addTranscodingHint(
         PDFTranscoder.KEY_HEIGHT,
-        heightInPoints
+        pageHeightInPoints
       );
 
       // Create input and output
-      StringReader reader = new StringReader(svgContent);
+      StringReader reader = new StringReader(wrappedSvg);
       TranscoderInput input = new TranscoderInput(reader);
 
       // Set a dummy URI to avoid null pointer exception with style elements
@@ -1233,6 +1276,81 @@ public class CalendarRenderingService {
       // Return empty array on error
       return new byte[0];
     }
+  }
+
+  /**
+   * Wraps the generated SVG with an outer SVG that adds margins for print layout.
+   * The inner SVG is scaled to fit within the printable area (page size minus margins)
+   * and centered on the page.
+   */
+  private String wrapSvgWithMargins(String innerSvg) {
+    // Extract the viewBox from the inner SVG to get its dimensions
+    java.util.regex.Pattern viewBoxPattern = java.util.regex.Pattern.compile("viewBox=\"([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\"");
+    java.util.regex.Matcher matcher = viewBoxPattern.matcher(innerSvg);
+
+    if (!matcher.find()) {
+      // If no viewBox, return original SVG
+      System.out.println("Warning: No viewBox found in SVG, returning without margins");
+      return innerSvg;
+    }
+
+    float innerWidth = Float.parseFloat(matcher.group(3));
+    float innerHeight = Float.parseFloat(matcher.group(4));
+
+    // Calculate the printable area in the same units as the page
+    // We'll use a coordinate system where the page is PAGE_WIDTH_INCHES x PAGE_HEIGHT_INCHES
+    float pageWidth = PAGE_WIDTH_INCHES * 100;  // Scale up for better precision
+    float pageHeight = PAGE_HEIGHT_INCHES * 100;
+    float marginSize = MARGIN_INCHES * 100;
+    float printableWidth = PRINTABLE_WIDTH_INCHES * 100;
+    float printableHeight = PRINTABLE_HEIGHT_INCHES * 100;
+
+    // Calculate scale to fit inner SVG within printable area while maintaining aspect ratio
+    float scaleX = printableWidth / innerWidth;
+    float scaleY = printableHeight / innerHeight;
+    float scale = Math.min(scaleX, scaleY);
+
+    // Calculate the actual size of the scaled content
+    float scaledWidth = innerWidth * scale;
+    float scaledHeight = innerHeight * scale;
+
+    // Calculate offset - center horizontally, align to top vertically
+    float offsetX = marginSize + (printableWidth - scaledWidth) / 2;
+    float offsetY = marginSize; // Top-aligned, extra space goes to bottom
+
+    // Remove the <?xml...?> declaration if present from inner SVG
+    String cleanedInnerSvg = innerSvg.replaceFirst("<\\?xml[^?]*\\?>\\s*", "");
+
+    // Build the wrapper SVG
+    StringBuilder wrapper = new StringBuilder();
+    wrapper.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+    wrapper.append(String.format(
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%.0f\" height=\"%.0f\" viewBox=\"0 0 %.0f %.0f\">\n",
+      pageWidth, pageHeight, pageWidth, pageHeight
+    ));
+
+    // Add a white background for the full page
+    wrapper.append(String.format(
+      "  <rect width=\"%.0f\" height=\"%.0f\" fill=\"white\"/>\n",
+      pageWidth, pageHeight
+    ));
+
+    // Position and scale the inner SVG content within the margins
+    wrapper.append(String.format(
+      "  <g transform=\"translate(%.2f, %.2f) scale(%.6f)\">\n",
+      offsetX, offsetY, scale
+    ));
+
+    // Insert the inner SVG content (strip the outer <svg> tags)
+    String innerContent = cleanedInnerSvg
+      .replaceFirst("<svg[^>]*>", "")  // Remove opening <svg> tag
+      .replaceFirst("</svg>\\s*$", ""); // Remove closing </svg> tag
+
+    wrapper.append(innerContent);
+    wrapper.append("\n  </g>\n");
+    wrapper.append("</svg>");
+
+    return wrapper.toString();
   }
 
   // Get common holidays for a year
