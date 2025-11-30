@@ -978,8 +978,8 @@ onMounted(() => {
 }
 
 :deep(.p-steppanel) {
-  padding-left: 1rem;
-  margin-left: 0.75rem;
+  padding-left: 0;
+  margin-left: 0;
   border-left: 2px solid var(--surface-300);
 }
 
