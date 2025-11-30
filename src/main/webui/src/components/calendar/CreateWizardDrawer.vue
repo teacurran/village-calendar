@@ -473,6 +473,20 @@ const selectMoonDisplayMode = (modeId: MoonDisplayModeType) => {
   emitMoonSettings();
 };
 
+// Handle moon display mode change from dropdown
+const handleMoonDisplayModeChange = () => {
+  // If selecting a moon display mode (not "none") and no moon size is selected,
+  // auto-select "full-size" as the default
+  if (
+    selectedMoonDisplayMode.value &&
+    selectedMoonDisplayMode.value !== "none" &&
+    !selectedMoonStyle.value
+  ) {
+    selectedMoonStyle.value = "full-size";
+  }
+  emitMoonSettings();
+};
+
 // Emit display options
 const emitDisplayOptions = () => {
   emit("displayOptionsChange", {
@@ -646,7 +660,7 @@ onMounted(() => {
                 option-value="id"
                 placeholder="Select moon display"
                 class="w-full"
-                @change="emitMoonSettings"
+                @change="handleMoonDisplayModeChange"
               />
 
               <!-- Moon Size Selection -->
