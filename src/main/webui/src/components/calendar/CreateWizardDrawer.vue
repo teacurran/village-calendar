@@ -574,10 +574,9 @@ onMounted(() => {
       >
         <!-- Step 1: Layout -->
         <StepItem value="1">
-          <Step>Layout</Step>
+          <Step>Choose Your Layout</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
-              <h3 class="step-title">Choose Your Layout</h3>
               <p class="step-description">
                 Select how you want your full-year calendar arranged
               </p>
@@ -646,11 +645,9 @@ onMounted(() => {
 
         <!-- Step 2: Moon Display -->
         <StepItem value="2">
-          <Step>Moon</Step>
+          <Step>Moon Display</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
-              <h3 class="step-title">Moon Display</h3>
-
               <!-- Moon Display Mode Selection (Dropdown) -->
               <h4 class="subsection-title">Which Moons to Show</h4>
               <Select
@@ -729,11 +726,9 @@ onMounted(() => {
 
         <!-- Step 3: Display Options -->
         <StepItem value="3">
-          <Step>Display</Step>
+          <Step>Display Options</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
-              <h3 class="step-title">Display Options</h3>
-
               <div class="checkbox-options">
                 <div class="checkbox-option">
                   <Checkbox
@@ -798,11 +793,9 @@ onMounted(() => {
 
         <!-- Step 4: Colors -->
         <StepItem value="4">
-          <Step>Colors</Step>
+          <Step>Color Customization</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
-              <h3 class="step-title">Color Customization</h3>
-
               <!-- Weekend Colors -->
               <h4 class="subsection-title">Weekend Style</h4>
               <div class="display-mode-options">
@@ -907,11 +900,9 @@ onMounted(() => {
 
         <!-- Step 5: Finish -->
         <StepItem value="5">
-          <Step>Finish</Step>
+          <Step>Your Calendar is Ready!</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
-              <h3 class="step-title">Your Calendar is Ready!</h3>
-
               <div class="finish-content">
                 <div class="finish-icon">
                   <i class="pi pi-check-circle"></i>
