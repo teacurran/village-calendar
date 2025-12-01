@@ -821,7 +821,7 @@ onMounted(() => {
 
         <!-- Step 3: Colors -->
         <StepItem value="3">
-          <Step>Color Customization</Step>
+          <Step>Colors</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
               <!-- Weekend Colors -->
