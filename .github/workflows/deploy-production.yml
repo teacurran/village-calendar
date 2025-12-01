@@ -181,6 +181,15 @@ jobs:
           echo "${{ secrets.K3S_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
+          # Configure SSH with keep-alive settings to prevent connection drops
+          cat >> ~/.ssh/config <<EOF
+          Host *
+            ServerAliveInterval 30
+            ServerAliveCountMax 10
+            TCPKeepAlive yes
+            ConnectionAttempts 3
+          EOF
+
           # Add host key (use private IP if WireGuard, public if direct)
           if [ "${{ env.USE_WIREGUARD }}" == "true" ]; then
             # For WireGuard, accept any host key for the private IP (since it's over VPN)
@@ -234,7 +243,7 @@ jobs:
           # Run deployment (override namespace for production)
           ansible-playbook \
             -i inventory.yml \
-            -e "namespace=${DEPLOYMENT_NAMESPACE}" \
+            -e "k8s_namespace=${DEPLOYMENT_NAMESPACE}" \
             ansible/deploy-calendar.yml
 
       - name: Wait for rollout completion

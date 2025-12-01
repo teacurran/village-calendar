@@ -32,8 +32,8 @@
     google_client_id: "{{ lookup('env', 'GOOGLE_CLIENT_ID') }}"
     google_client_secret: "{{ lookup('env', 'GOOGLE_CLIENT_SECRET') }}"
 
-    # Kubernetes namespace (overridden by -e namespace=calendar-beta)
-    namespace: "calendar-beta"
+    # Kubernetes namespace (overridden by -e k8s_namespace=calendar-beta)
+    k8s_namespace: "calendar-beta"
 
     # Ingress hostname (overridden by -e ingress_host=...)
     ingress_host: "{{ lookup('env', 'INGRESS_HOST') | default('calendar-beta.villagecompute.com', true) }}"
@@ -60,7 +60,7 @@
         kubectl: "{{ kubectl_cmd.stdout }}"
 
     - name: Ensure namespace exists
-      shell: "{{ kubectl }} create namespace {{ namespace }} --dry-run=client -o yaml | {{ kubectl }} apply -f -"
+      shell: "{{ kubectl }} create namespace {{ k8s_namespace }} --dry-run=client -o yaml | {{ kubectl }} apply -f -"
 
     - name: Create Docker registry secret
       shell: |
@@ -68,7 +68,7 @@
           --docker-server=docker.io \
           --docker-username='{{ registry_user }}' \
           --docker-password='{{ registry_password }}' \
-          --namespace={{ namespace }} \
+          --namespace={{ k8s_namespace }} \
           --dry-run=client -o yaml | {{ kubectl }} apply -f -
       no_log: true
 
@@ -80,7 +80,7 @@
           --from-literal=db-name='{{ db_name }}' \
           --from-literal=db-user='{{ db_user }}' \
           --from-literal=db-password='{{ db_password }}' \
-          --namespace={{ namespace }} \
+          --namespace={{ k8s_namespace }} \
           --dry-run=client -o yaml | {{ kubectl }} apply -f -
       no_log: true
 
@@ -93,7 +93,7 @@
           --from-literal=cdn-url={{ object_storage_cdn_url }} \
           --from-literal=access-key={{ object_storage_access_key }} \
           --from-literal=secret-key={{ object_storage_secret_key }} \
-          --namespace={{ namespace }} \
+          --namespace={{ k8s_namespace }} \
           --dry-run=client -o yaml | {{ kubectl }} apply -f -
       no_log: true
 
@@ -101,7 +101,7 @@
       shell: |
         {{ kubectl }} create secret generic calendar-session-secret \
           --from-literal=encryption-key='{{ session_encryption_key }}' \
-          --namespace={{ namespace }} \
+          --namespace={{ k8s_namespace }} \
           --dry-run=client -o yaml | {{ kubectl }} apply -f -
       no_log: true
 
@@ -110,7 +110,7 @@
         {{ kubectl }} create secret generic calendar-google-oauth-secret \
           --from-literal=client-id='{{ google_client_id }}' \
           --from-literal=client-secret='{{ google_client_secret }}' \
-          --namespace={{ namespace }} \
+          --namespace={{ k8s_namespace }} \
           --dry-run=client -o yaml | {{ kubectl }} apply -f -
       no_log: true
 
@@ -123,7 +123,7 @@
           kind: Deployment
           metadata:
             name: {{ app_name }}
-            namespace: {{ namespace }}
+            namespace: {{ k8s_namespace }}
             labels:
               app: {{ app_name }}
           spec:
@@ -268,7 +268,7 @@
           kind: Service
           metadata:
             name: calendar-service
-            namespace: {{ namespace }}
+            namespace: {{ k8s_namespace }}
             labels:
               app: {{ app_name }}
           spec:
@@ -290,7 +290,7 @@
           kind: Ingress
           metadata:
             name: calendar-ingress
-            namespace: {{ namespace }}
+            namespace: {{ k8s_namespace }}
             labels:
               app: {{ app_name }}
             annotations:
@@ -319,10 +319,10 @@
       shell: "{{ kubectl }} apply -f /tmp/calendar-k8s.yaml"
 
     - name: Wait for deployment to be ready
-      shell: "{{ kubectl }} rollout status deployment/{{ app_name }} -n {{ namespace }} --timeout=5m"
+      shell: "{{ kubectl }} rollout status deployment/{{ app_name }} -n {{ k8s_namespace }} --timeout=5m"
 
     - name: Get deployment status
-      shell: "{{ kubectl }} get pods -n {{ namespace }} -l app={{ app_name }}"
+      shell: "{{ kubectl }} get pods -n {{ k8s_namespace }} -l app={{ app_name }}"
       register: deployment_status
 
     - name: Display deployment status
