@@ -13,8 +13,30 @@ import { VSwatches } from "vue3-swatches";
 import "vue3-swatches/dist/style.css";
 
 // Props
+interface CalendarConfig {
+  layoutStyle?: string;
+  theme?: string;
+  moonDisplayMode?: string;
+  moonSize?: number;
+  moonOffsetX?: number;
+  moonOffsetY?: number;
+  moonBorderColor?: string;
+  moonBorderWidth?: number;
+  moonDarkColor?: string;
+  moonLightColor?: string;
+  showGrid?: boolean;
+  showDayNames?: boolean;
+  rotateMonthNames?: boolean;
+  yearColor?: string;
+  monthColor?: string;
+  dayTextColor?: string;
+  dayNameColor?: string;
+  gridLineColor?: string;
+}
+
 interface Props {
   visible: boolean;
+  config?: CalendarConfig;
 }
 
 const props = defineProps<Props>();
@@ -533,12 +555,85 @@ watch(
   },
 );
 
-// Load previews when drawer opens
+// Initialize wizard state from config
+const initializeFromConfig = () => {
+  if (!props.config) return;
+
+  // Initialize layout
+  if (props.config.layoutStyle === "grid") {
+    selectedLayout.value = "left-aligned";
+  } else if (props.config.layoutStyle === "weekday-grid") {
+    selectedLayout.value = "day-of-week-aligned";
+  }
+
+  // Initialize moon display mode
+  if (props.config.moonDisplayMode) {
+    selectedMoonDisplayMode.value = props.config
+      .moonDisplayMode as MoonDisplayModeType;
+  }
+
+  // Initialize moon size/style based on moonSize
+  if (props.config.moonSize !== undefined && props.config.moonSize > 0) {
+    // Determine which preset matches best
+    if (props.config.moonSize >= 15) {
+      selectedMoonStyle.value = "full-size";
+    } else {
+      selectedMoonStyle.value = "small-corner";
+    }
+  }
+
+  // Initialize theme/weekend style
+  if (props.config.theme) {
+    const themeToWeekendStyle: Record<string, WeekendStyleType> = {
+      default: "greyscale",
+      rainbowWeekends: "rainbow",
+      vermontWeekends: "vermont",
+    };
+    selectedWeekendStyle.value =
+      themeToWeekendStyle[props.config.theme] || "greyscale";
+  }
+
+  // Initialize display options
+  if (props.config.showGrid !== undefined) {
+    showGrid.value = props.config.showGrid;
+  }
+  if (props.config.showDayNames !== undefined) {
+    showDayNames.value = props.config.showDayNames;
+  }
+  if (props.config.rotateMonthNames !== undefined) {
+    rotateMonthNames.value = props.config.rotateMonthNames;
+  }
+
+  // Initialize colors
+  if (props.config.yearColor) {
+    yearColor.value = props.config.yearColor;
+  }
+  if (props.config.monthColor) {
+    monthColor.value = props.config.monthColor;
+  }
+  if (props.config.dayTextColor) {
+    dayTextColor.value = props.config.dayTextColor;
+  }
+  if (props.config.dayNameColor) {
+    dayNameColor.value = props.config.dayNameColor;
+  }
+  if (props.config.gridLineColor) {
+    gridLineColor.value = props.config.gridLineColor;
+  }
+};
+
+// Load previews when drawer opens and initialize state from config
 watch(
   () => props.visible,
   (visible) => {
-    if (visible && Object.keys(layoutPreviews.value).length === 0) {
-      loadLayoutPreviews();
+    if (visible) {
+      // Initialize wizard state from current config
+      initializeFromConfig();
+
+      // Load layout previews if not already loaded
+      if (Object.keys(layoutPreviews.value).length === 0) {
+        loadLayoutPreviews();
+      }
     }
   },
 );

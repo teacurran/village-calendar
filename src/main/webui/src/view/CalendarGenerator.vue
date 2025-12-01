@@ -771,6 +771,7 @@
     <!-- Create Your Own Wizard Drawer -->
     <CreateWizardDrawer
       v-model:visible="showCreateWizard"
+      :config="config"
       @layout-change="handleWizardLayoutChange"
       @moon-change="handleWizardMoonChange"
       @display-options-change="handleWizardDisplayOptionsChange"
