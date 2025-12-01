@@ -3015,14 +3015,23 @@ const zoomOut = () => {
 
 const resetZoom = () => {
   // SVG is 3500x2250 units (100 units per inch for 35"x22.5" page)
-  // Calculate zoom to fit calendar width to available window width
   const calendarWidth = 3500;
-  // Account for sidebar/drawer (~460px) and some padding (~50px)
-  const availableWidth = window.innerWidth - 510;
-  // Calculate zoom level to fit, with min 0.15 and max 0.5
+
+  // Use the actual preview container width if available, otherwise estimate
+  let availableWidth: number;
+  if (previewContainer.value) {
+    // Get the actual container width with a small padding
+    availableWidth = (previewContainer.value as HTMLElement).clientWidth - 32;
+  } else {
+    // Fallback: estimate based on window width minus typical sidebar
+    availableWidth = window.innerWidth - 510;
+  }
+
+  // Calculate zoom to fill the available width
+  // Min 0.15 to prevent too small, max 1.0 to prevent over-zoom
   const calculatedZoom = Math.max(
     0.15,
-    Math.min(0.5, availableWidth / calendarWidth),
+    Math.min(1.0, availableWidth / calendarWidth),
   );
   zoomLevel.value = calculatedZoom;
 };
