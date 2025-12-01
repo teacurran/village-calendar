@@ -790,11 +790,6 @@
       <div class="flex justify-between items-center mb-4">
         <div class="flex gap-2">
           <Button
-            label="Create Your Own"
-            icon="pi pi-sparkles"
-            @click="showCreateWizard = true"
-          />
-          <Button
             label="Templates"
             icon="pi pi-palette"
             outlined
@@ -2500,9 +2495,24 @@ onMounted(async () => {
     await autoSaveCalendar();
   }
 
-  // Don't open drawer automatically - let user open it when needed
-  // drawerVisible.value = true;
+  // Check if wizard should open from query param
+  if (route.query.wizard === "true") {
+    showCreateWizard.value = true;
+    // Clear the query param without adding to history
+    router.replace({ query: { ...route.query, wizard: undefined } });
+  }
 });
+
+// Watch for wizard query param changes (for when already on page)
+watch(
+  () => route.query.wizard,
+  (wizard) => {
+    if (wizard === "true") {
+      showCreateWizard.value = true;
+      router.replace({ query: { ...route.query, wizard: undefined } });
+    }
+  },
+);
 
 // Update event date when calendar year changes
 watch(

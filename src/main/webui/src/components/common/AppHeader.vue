@@ -122,7 +122,13 @@ const userMenuRef = ref();
 
 // Navigation menu items
 const menuItems = computed<MenuItem[]>(() => {
-  const items: MenuItem[] = [];
+  const items: MenuItem[] = [
+    {
+      label: "Create Your Own",
+      icon: "pi pi-sparkles",
+      command: () => router.push("/?wizard=true"),
+    },
+  ];
 
   // Add authenticated user menu items
   if (authStore.isAuthenticated) {
