@@ -282,6 +282,33 @@ The service uses OAuth2 for user authentication:
 - Separate PostgreSQL database instance for data isolation
 - Cloud-native deployment with Docker + Kubernetes (K3s)
 
+## Future Feature Considerations
+
+The following calendar configuration options are available in the backend but not yet exposed in the user-facing wizard. These could be added in future iterations:
+
+### Calendar Type & Basic Settings
+- **Calendar Type**: Hebrew calendar support (currently defaults to Gregorian)
+- **Year Selection**: Manual year input (currently auto-detects)
+- **Theme Selection**: Direct theme picker (wizard uses weekend color themes instead)
+
+### Display Options
+- **Show Week Numbers**: Display ISO week numbers
+- **Compact Mode**: Condensed calendar layout
+- **Emoji Position**: Configure where emojis appear in calendar cells (top-left, top-right, bottom-left, bottom-right)
+- **Show Day Numbers (1-31)**: Toggle day number display
+- **Highlight Weekends**: Toggle weekend highlighting
+
+### Moon & Location Settings
+- **Observer Location**: City selection or manual latitude/longitude for accurate moon rotation
+- **Use Current Location**: Geolocation-based moon positioning
+- **Moon Size**: Configurable moon radius in pixels
+- **Moon X/Y Position**: Fine-tune moon placement within cells
+- **Moon Border Color/Width**: Moon outline customization
+
+### Additional Color Options
+- **Holiday Text Color**: Color for holiday labels
+- **Custom Date Text Color**: Color for user-added event labels
+
 ## License
 
 Private - Village Compute
