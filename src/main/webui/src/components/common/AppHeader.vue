@@ -122,18 +122,7 @@ const userMenuRef = ref();
 
 // Navigation menu items
 const menuItems = computed<MenuItem[]>(() => {
-  const items: MenuItem[] = [
-    {
-      label: "Home",
-      icon: "pi pi-home",
-      command: () => router.push("/"),
-    },
-    {
-      label: "Templates",
-      icon: "pi pi-calendar",
-      command: () => router.push("/"),
-    },
-  ];
+  const items: MenuItem[] = [];
 
   // Add authenticated user menu items
   if (authStore.isAuthenticated) {
