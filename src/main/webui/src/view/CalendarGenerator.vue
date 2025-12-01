@@ -778,6 +778,13 @@
       @colors-change="handleWizardColorsChange"
     />
 
+    <!-- Add to Cart Modal -->
+    <AddToCartModal
+      v-model:visible="showAddToCartModal"
+      :calendar-year="config.year"
+      @select="handleAddToCartSelect"
+    />
+
     <!-- Main Content Area -->
     <div class="p-4">
       <div class="flex justify-between items-center mb-4">
@@ -896,7 +903,7 @@
                 text
                 rounded
                 :disabled="!generatedSVG"
-                @click="addToCart"
+                @click="openAddToCartModal"
               />
             </div>
           </div>
@@ -1575,6 +1582,7 @@ import ProgressSpinner from "primevue/progressspinner";
 import "emoji-picker-element";
 import CustomEventCellPreview from "../components/CustomEventCellPreview.vue";
 import CreateWizardDrawer from "../components/calendar/CreateWizardDrawer.vue";
+import AddToCartModal from "../components/calendar/AddToCartModal.vue";
 import type {
   LayoutType,
   MoonSettings,
@@ -1604,6 +1612,7 @@ const authStore = useAuthStore();
 const drawerVisible = ref(false);
 const showTemplateDrawer = ref(false);
 const showCreateWizard = ref(false);
+const showAddToCartModal = ref(false);
 
 // All templates (for all users)
 const allTemplates = ref([]);
@@ -3175,7 +3184,26 @@ const saveCalendar = async () => {
 };
 
 // Add to cart functionality
-const addToCart = async () => {
+// Show the add to cart modal
+const openAddToCartModal = () => {
+  if (!generatedSVG.value) {
+    toast.add({
+      severity: "warn",
+      summary: "No Calendar",
+      detail: "Please generate a calendar first.",
+      life: 3000,
+    });
+    return;
+  }
+  showAddToCartModal.value = true;
+};
+
+// Handle product selection from modal
+const handleAddToCartSelect = async (productType: "pdf" | "print") => {
+  await addToCart(productType);
+};
+
+const addToCart = async (productType: "pdf" | "print" = "print") => {
   if (!generatedSVG.value) {
     toast.add({
       severity: "warn",
@@ -3186,10 +3214,30 @@ const addToCart = async () => {
     return;
   }
 
+  // Product configuration based on type
+  const productConfig = {
+    pdf: {
+      productId: "ca1e0da2-0000-0000-0000-000000000002", // Digital PDF product ID
+      name: `Calendar ${config.value.year} (PDF)`,
+      price: 5.0,
+      successMessage: "Your PDF calendar has been added to the cart.",
+    },
+    print: {
+      productId: "ca1e0da2-0000-0000-0000-000000000001", // Printed Calendar product ID
+      name: `Calendar ${config.value.year} (Printed)`,
+      price: 25.0,
+      successMessage:
+        "Your printed calendar has been added to the cart. PDF download included!",
+    },
+  };
+
+  const product = productConfig[productType];
+
   try {
     const calendarData = {
       year: config.value.year,
-      name: `Calendar ${config.value.year}`,
+      name: product.name,
+      productType: productType,
       configuration: buildFullConfiguration(),
       svgContent: generatedSVG.value,
     };
@@ -3224,18 +3272,18 @@ const addToCart = async () => {
 
     // Add to cart using GraphQL (works for both logged-in and anonymous users)
     await cartStore.addToCart(
-      "ca1e0da2-0000-0000-0000-000000000001", // Calendar Printing service product ID
+      product.productId,
       calendarData.name,
       calendarData.year,
       1, // quantity
-      29.99, // unitPrice
-      calendarData, // Full configuration including svgContent
+      product.price,
+      calendarData, // Full configuration including svgContent and productType
     );
 
     toast.add({
       severity: "success",
       summary: "Added to Cart",
-      detail: "Your calendar has been added to the cart.",
+      detail: product.successMessage,
       life: 3000,
     });
 
