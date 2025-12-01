@@ -60,6 +60,7 @@ export type MoonDisplayModeType =
   | "full-only"
   | "illumination";
 export type WeekendStyleType =
+  | "none"
   | "greyscale"
   | "rainbow"
   | "vermont"
@@ -213,6 +214,11 @@ const moonDisplayModeOptions = [
 
 // Weekend style options for dropdown
 const weekendStyleOptions = [
+  {
+    id: "none" as const,
+    name: "None",
+    theme: "none",
+  },
   {
     id: "greyscale" as const,
     name: "Greyscale",

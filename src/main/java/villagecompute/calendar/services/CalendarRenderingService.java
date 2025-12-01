@@ -127,86 +127,86 @@ public class CalendarRenderingService {
 
   // Ocean Breeze monthly colors - cool blue gradient through the year
   private static final String[][] OCEAN_MONTHLY_COLORS = {
-    // January - Deep winter ocean
+    // January - Icy blue
     {"#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd"},
-    // February - Cold waters
-    {"#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb"},
-    // March - Thawing seas
-    {"#90caf9", "#90caf9", "#90caf9", "#90caf9", "#90caf9", "#90caf9", "#90caf9", "#90caf9", "#90caf9", "#90caf9"},
-    // April - Spring waters
-    {"#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6"},
-    // May - Warming seas
-    {"#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5"},
-    // June - Early summer ocean
+    // February - Pale azure
+    {"#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe"},
+    // March - Soft sky
+    {"#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc"},
+    // April - Spring mist
+    {"#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa"},
+    // May - Aqua tint
+    {"#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2"},
+    // June - Light cyan
+    {"#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb"},
+    // July - Tropical mist
     {"#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea"},
-    // July - Tropical waters
-    {"#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1"},
-    // August - Warm currents
-    {"#26c6da", "#26c6da", "#26c6da", "#26c6da", "#26c6da", "#26c6da", "#26c6da", "#26c6da", "#26c6da", "#26c6da"},
-    // September - Cooling waters
-    {"#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4"},
-    // October - Autumn seas
-    {"#0097a7", "#0097a7", "#0097a7", "#0097a7", "#0097a7", "#0097a7", "#0097a7", "#0097a7", "#0097a7", "#0097a7"},
-    // November - Late fall ocean
-    {"#00838f", "#00838f", "#00838f", "#00838f", "#00838f", "#00838f", "#00838f", "#00838f", "#00838f", "#00838f"},
-    // December - Winter deep
-    {"#006064", "#006064", "#006064", "#006064", "#006064", "#006064", "#006064", "#006064", "#006064", "#006064"}
+    // August - Seafoam
+    {"#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff"},
+    // September - Pale teal
+    {"#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb"},
+    // October - Cool aqua
+    {"#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb"},
+    // November - Soft cyan
+    {"#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc"},
+    // December - Winter blue
+    {"#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb"}
   };
 
-  // Sunset Glow monthly colors - warm orange/pink/red tones
+  // Sunset Glow monthly colors - warm pastel peach/pink/coral tones
   private static final String[][] SUNSET_MONTHLY_COLORS = {
-    // January - Winter sunset
-    {"#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc"},
-    // February - Valentine hues
-    {"#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9"},
-    // March - Spring warmth
+    // January - Blush pink
+    {"#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec"},
+    // February - Rose tint
+    {"#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0"},
+    // March - Soft coral
     {"#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2"},
-    // April - Coral dawn
-    {"#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91"},
-    // May - Peachy glow
-    {"#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80"},
-    // June - Golden hour
+    // April - Pale peach
+    {"#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc"},
+    // May - Light apricot
     {"#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2"},
-    // July - Summer blaze
-    {"#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d"},
-    // August - Amber heat
-    {"#ffa726", "#ffa726", "#ffa726", "#ffa726", "#ffa726", "#ffa726", "#ffa726", "#ffa726", "#ffa726", "#ffa726"},
-    // September - Harvest sunset
-    {"#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65"},
-    // October - Autumn fire
-    {"#ff7043", "#ff7043", "#ff7043", "#ff7043", "#ff7043", "#ff7043", "#ff7043", "#ff7043", "#ff7043", "#ff7043"},
-    // November - Rustic glow
-    {"#ff5722", "#ff5722", "#ff5722", "#ff5722", "#ff5722", "#ff5722", "#ff5722", "#ff5722", "#ff5722", "#ff5722"},
-    // December - Winter warmth
-    {"#e64a19", "#e64a19", "#e64a19", "#e64a19", "#e64a19", "#e64a19", "#e64a19", "#e64a19", "#e64a19", "#e64a19"}
+    // June - Cream gold
+    {"#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1"},
+    // July - Warm butter
+    {"#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3"},
+    // August - Soft amber
+    {"#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082"},
+    // September - Mellow peach
+    {"#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180"},
+    // October - Light terracotta
+    {"#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91"},
+    // November - Dusty rose
+    {"#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2"},
+    // December - Winter blush
+    {"#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0"}
   };
 
-  // Forest Floor monthly colors - earth and green tones
+  // Forest Floor monthly colors - light sage and mint tones
   private static final String[][] FOREST_MONTHLY_COLORS = {
-    // January - Evergreen
+    // January - Frost sage
+    {"#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9"},
+    // February - Pale mint
     {"#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9"},
-    // February - Pine needles
+    // March - Spring bud
+    {"#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8"},
+    // April - Fresh leaf
+    {"#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5"},
+    // May - Soft fern
+    {"#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581"},
+    // June - Light moss
+    {"#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9"},
+    // July - Meadow mist
     {"#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7"},
-    // March - New growth
-    {"#81c784", "#81c784", "#81c784", "#81c784", "#81c784", "#81c784", "#81c784", "#81c784", "#81c784", "#81c784"},
-    // April - Spring ferns
-    {"#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a"},
-    // May - Lush canopy
-    {"#4caf50", "#4caf50", "#4caf50", "#4caf50", "#4caf50", "#4caf50", "#4caf50", "#4caf50", "#4caf50", "#4caf50"},
-    // June - Deep forest
-    {"#43a047", "#43a047", "#43a047", "#43a047", "#43a047", "#43a047", "#43a047", "#43a047", "#43a047", "#43a047"},
-    // July - Moss
-    {"#388e3c", "#388e3c", "#388e3c", "#388e3c", "#388e3c", "#388e3c", "#388e3c", "#388e3c", "#388e3c", "#388e3c"},
-    // August - Late summer
-    {"#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32"},
-    // September - Early autumn
-    {"#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63"},
-    // October - Fall leaves
-    {"#a1887f", "#a1887f", "#a1887f", "#a1887f", "#a1887f", "#a1887f", "#a1887f", "#a1887f", "#a1887f", "#a1887f"},
-    // November - Bark
-    {"#795548", "#795548", "#795548", "#795548", "#795548", "#795548", "#795548", "#795548", "#795548", "#795548"},
-    // December - Winter forest
-    {"#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41"}
+    // August - Summer sage
+    {"#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca"},
+    // September - Pale olive
+    {"#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8"},
+    // October - Light cedar
+    {"#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8"},
+    // November - Soft birch
+    {"#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9"},
+    // December - Winter pine
+    {"#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9"}
   };
 
   static {

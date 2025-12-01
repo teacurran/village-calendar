@@ -3824,6 +3824,10 @@ const handleWizardDisplayOptionsChange = (options: DisplayOptions) => {
     // Use default theme but override weekend background color
     config.value.theme = "default";
     config.value.weekendBgColor = options.solidWeekendColor;
+  } else if (options.weekendStyle === "none") {
+    // No weekend coloring - use transparent background
+    config.value.theme = "default";
+    config.value.weekendBgColor = "transparent";
   } else {
     // Map weekend style to theme
     const weekendStyleMap: Record<string, string> = {
