@@ -102,6 +102,7 @@
       @moon-change="handleWizardMoonChange"
       @display-options-change="handleWizardDisplayOptionsChange"
       @colors-change="handleWizardColorsChange"
+      @holidays-change="handleWizardHolidaysChange"
     />
 
     <!-- Add to Cart Modal -->
@@ -901,6 +902,7 @@ import type {
   MoonSettings,
   DisplayOptions,
   ColorSettings,
+  HolidaySettings,
 } from "../components/calendar/CreateWizardDrawer.vue";
 import { sessionFetch } from "../services/sessionService";
 import {
@@ -978,6 +980,9 @@ const config = ref({
   moonDarkColor: "#c1c1c1", // Default gray for moon dark side
   moonLightColor: "#FFFFFF", // Default white for moon light side
   emojiPosition: "bottom-left", // Position of emojis in calendar cells
+  // Holiday settings
+  holidaySets: [] as string[], // List of selected holiday set IDs
+  eventDisplayMode: "small" as "small" | "large", // Display mode for events/holidays
 });
 
 // Theme options
@@ -2004,6 +2009,8 @@ const generateCalendar = async () => {
       customDates: customDatesMap,
       eventTitles: eventTitles,
       holidaySet: selectedHolidaySet.value,
+      holidaySets: config.value.holidaySets,
+      eventDisplayMode: config.value.eventDisplayMode,
       showHolidays:
         selectedHolidaySet.value && selectedHolidaySet.value !== "none",
       locale: "en-US",
@@ -3180,6 +3187,13 @@ const handleWizardColorsChange = (colors: ColorSettings) => {
   config.value.dayTextColor = colors.dayTextColor;
   config.value.dayNameColor = colors.dayNameColor;
   config.value.gridLineColor = colors.gridLineColor;
+  config.value.holidayColor = colors.holidayColor;
+};
+
+// Handle holiday settings change from wizard
+const handleWizardHolidaysChange = (holidays: HolidaySettings) => {
+  config.value.holidaySets = holidays.selectedSets;
+  config.value.eventDisplayMode = holidays.displayMode;
 };
 
 // Load saved calendars for the current user

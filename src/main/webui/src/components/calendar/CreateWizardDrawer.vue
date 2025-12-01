@@ -49,6 +49,7 @@ const emit = defineEmits<{
   (e: "moonChange", settings: MoonSettings): void;
   (e: "displayOptionsChange", options: DisplayOptions): void;
   (e: "colorsChange", colors: ColorSettings): void;
+  (e: "holidaysChange", holidays: HolidaySettings): void;
 }>();
 
 // Types
@@ -95,6 +96,14 @@ export interface ColorSettings {
   dayTextColor: string;
   dayNameColor: string;
   gridLineColor: string;
+  holidayColor: string;
+}
+
+export type EventDisplayMode = "small" | "large";
+
+export interface HolidaySettings {
+  selectedSets: string[];
+  displayMode: EventDisplayMode;
 }
 
 export interface WizardConfig {
@@ -102,6 +111,7 @@ export interface WizardConfig {
   moon: MoonSettings;
   displayOptions: DisplayOptions;
   colors: ColorSettings;
+  holidays: HolidaySettings;
 }
 
 // State
@@ -125,6 +135,63 @@ const monthColor = ref("#000000");
 const dayTextColor = ref("#000000");
 const dayNameColor = ref("#666666");
 const gridLineColor = ref("#c1c1c1");
+const holidayColor = ref("#ff5252");
+
+// Holiday settings state
+const selectedHolidaySets = ref<string[]>([]);
+const pendingHolidaySet = ref<string | null>(null);
+const eventDisplayMode = ref<EventDisplayMode>("small");
+
+// Holiday set options
+const holidaySetOptions = [
+  { label: "US Holidays", value: "us" },
+  { label: "Jewish Holidays", value: "jewish" },
+  { label: "Christian Holidays", value: "christian" },
+  { label: "Canadian Holidays", value: "canadian" },
+  { label: "UK Holidays", value: "uk" },
+  { label: "Major World Holidays", value: "major_world" },
+];
+
+// Filter out already selected sets from dropdown options
+const availableHolidaySets = computed(() => {
+  return holidaySetOptions.filter(
+    (opt) => !selectedHolidaySets.value.includes(opt.value),
+  );
+});
+
+// Get label for a holiday set value
+const getHolidaySetLabel = (value: string) => {
+  const option = holidaySetOptions.find((opt) => opt.value === value);
+  return option ? option.label : value;
+};
+
+// Add a holiday set
+const addHolidaySet = () => {
+  if (
+    pendingHolidaySet.value &&
+    !selectedHolidaySets.value.includes(pendingHolidaySet.value)
+  ) {
+    selectedHolidaySets.value.push(pendingHolidaySet.value);
+    pendingHolidaySet.value = null;
+    emitHolidaySettings();
+  }
+};
+
+// Remove a holiday set
+const removeHolidaySet = (setValue: string) => {
+  selectedHolidaySets.value = selectedHolidaySets.value.filter(
+    (v) => v !== setValue,
+  );
+  emitHolidaySettings();
+};
+
+// Emit holiday settings
+const emitHolidaySettings = () => {
+  emit("holidaysChange", {
+    selectedSets: selectedHolidaySets.value,
+    displayMode: eventDisplayMode.value,
+  });
+};
 
 // Computed
 const isOpen = computed({
@@ -610,6 +677,7 @@ const emitColorSettings = () => {
     dayTextColor: dayTextColor.value,
     dayNameColor: dayNameColor.value,
     gridLineColor: gridLineColor.value,
+    holidayColor: holidayColor.value,
   });
 };
 
@@ -624,7 +692,14 @@ watch([showGrid, showDayNames, rotateMonthNames], () => {
 
 // Watch for color changes
 watch(
-  [yearColor, monthColor, dayTextColor, dayNameColor, gridLineColor],
+  [
+    yearColor,
+    monthColor,
+    dayTextColor,
+    dayNameColor,
+    gridLineColor,
+    holidayColor,
+  ],
   () => {
     emitColorSettings();
   },
@@ -702,6 +777,9 @@ const initializeFromConfig = () => {
   }
   if (props.config.gridLineColor) {
     gridLineColor.value = props.config.gridLineColor;
+  }
+  if (props.config.holidayColor) {
+    holidayColor.value = props.config.holidayColor;
   }
 };
 
@@ -993,6 +1071,17 @@ onMounted(() => {
                     popover-x="left"
                   />
                 </div>
+
+                <div class="color-option">
+                  <label class="color-label">Holidays</label>
+                  <VSwatches
+                    v-model="holidayColor"
+                    :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="10"
+                    popover-x="left"
+                  />
+                </div>
               </div>
 
               <div class="step-navigation">
@@ -1013,8 +1102,137 @@ onMounted(() => {
           </StepPanel>
         </StepItem>
 
-        <!-- Step 4: Additional Options -->
+        <!-- Step 4: Holidays -->
         <StepItem value="4">
+          <Step>Holidays</Step>
+          <StepPanel v-slot="{ activateCallback }">
+            <div class="step-content">
+              <p class="step-description">
+                Add holiday sets to your calendar. You can select multiple sets.
+              </p>
+
+              <!-- Holiday Set Selector -->
+              <div class="holiday-selector">
+                <div class="holiday-add-row">
+                  <Select
+                    v-model="pendingHolidaySet"
+                    :options="availableHolidaySets"
+                    option-label="label"
+                    option-value="value"
+                    placeholder="Select a holiday set..."
+                    class="holiday-dropdown"
+                    :disabled="availableHolidaySets.length === 0"
+                  />
+                  <Button
+                    v-tooltip="'Add holiday set'"
+                    icon="pi pi-plus"
+                    :disabled="!pendingHolidaySet"
+                    @click="addHolidaySet"
+                  />
+                </div>
+
+                <!-- Selected Holiday Sets -->
+                <div class="selected-holidays">
+                  <div
+                    v-if="selectedHolidaySets.length === 0"
+                    class="no-holidays"
+                  >
+                    <i class="pi pi-calendar"></i>
+                    <span>No holiday sets selected</span>
+                  </div>
+                  <div
+                    v-for="setId in selectedHolidaySets"
+                    :key="setId"
+                    class="holiday-chip"
+                  >
+                    <span>{{ getHolidaySetLabel(setId) }}</span>
+                    <Button
+                      v-tooltip="'Remove'"
+                      icon="pi pi-times"
+                      text
+                      rounded
+                      severity="secondary"
+                      size="small"
+                      @click="removeHolidaySet(setId)"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Event Display Mode -->
+              <div class="display-mode-section">
+                <h4 class="section-title">Event & Holiday Display</h4>
+                <p class="section-description">
+                  Choose how events and holidays appear in calendar cells.
+                </p>
+
+                <div class="display-mode-options">
+                  <div
+                    class="display-mode-card"
+                    :class="{ selected: eventDisplayMode === 'small' }"
+                    @click="
+                      eventDisplayMode = 'small';
+                      emitHolidaySettings();
+                    "
+                  >
+                    <div class="mode-icon small-mode">
+                      <div class="mode-cell">
+                        <span class="mode-emoji small">🎄</span>
+                        <span class="mode-text small">Christmas</span>
+                      </div>
+                    </div>
+                    <div class="mode-info">
+                      <span class="mode-name">Compact</span>
+                      <span class="mode-desc"
+                        >Small emoji in corner, text at bottom</span
+                      >
+                    </div>
+                  </div>
+
+                  <div
+                    class="display-mode-card"
+                    :class="{ selected: eventDisplayMode === 'large' }"
+                    @click="
+                      eventDisplayMode = 'large';
+                      emitHolidaySettings();
+                    "
+                  >
+                    <div class="mode-icon large-mode">
+                      <div class="mode-cell">
+                        <span class="mode-emoji large">🎄</span>
+                        <span class="mode-text large">Christmas</span>
+                      </div>
+                    </div>
+                    <div class="mode-info">
+                      <span class="mode-name">Prominent</span>
+                      <span class="mode-desc"
+                        >Centered emoji with text below</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="step-navigation">
+                <Button
+                  label="Previous"
+                  icon="pi pi-arrow-left"
+                  outlined
+                  @click="activateCallback('3')"
+                />
+                <Button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  icon-pos="right"
+                  @click="activateCallback('5')"
+                />
+              </div>
+            </div>
+          </StepPanel>
+        </StepItem>
+
+        <!-- Step 5: Additional Options -->
+        <StepItem value="5">
           <Step>Additional Options</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
@@ -1067,21 +1285,21 @@ onMounted(() => {
                   label="Previous"
                   icon="pi pi-arrow-left"
                   outlined
-                  @click="activateCallback('3')"
+                  @click="activateCallback('4')"
                 />
                 <Button
                   label="Next"
                   icon="pi pi-arrow-right"
                   icon-pos="right"
-                  @click="activateCallback('5')"
+                  @click="activateCallback('6')"
                 />
               </div>
             </div>
           </StepPanel>
         </StepItem>
 
-        <!-- Step 5: Finish -->
-        <StepItem value="5">
+        <!-- Step 6: Finish -->
+        <StepItem value="6">
           <Step>Your Calendar is Ready!</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
@@ -1141,7 +1359,7 @@ onMounted(() => {
                   label="Previous"
                   icon="pi pi-arrow-left"
                   outlined
-                  @click="activateCallback('4')"
+                  @click="activateCallback('5')"
                 />
                 <Button label="Done" icon="pi pi-check" @click="handleClose" />
               </div>
@@ -1644,5 +1862,187 @@ onMounted(() => {
     height: auto;
     aspect-ratio: 60 / 70;
   }
+}
+
+/* Holiday selector styles */
+.holiday-selector {
+  margin-bottom: 1.5rem;
+}
+
+.holiday-add-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.holiday-dropdown {
+  flex: 1;
+}
+
+.selected-holidays {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 60px;
+  padding: 0.75rem;
+  background: var(--surface-50);
+  border-radius: 8px;
+  border: 1px solid var(--surface-200);
+}
+
+.no-holidays {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--text-color-secondary);
+  font-size: 0.875rem;
+  padding: 0.5rem;
+}
+
+.no-holidays i {
+  font-size: 1rem;
+}
+
+.holiday-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-0);
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.holiday-chip span {
+  font-weight: 500;
+}
+
+/* Display mode section */
+.display-mode-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-200);
+}
+
+.section-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 0.25rem 0;
+}
+
+.section-description {
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  margin-bottom: 1rem;
+}
+
+.display-mode-options {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.display-mode-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  border: 2px solid var(--surface-200);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--surface-0);
+}
+
+.display-mode-card:hover {
+  border-color: var(--primary-300);
+  background: var(--surface-50);
+}
+
+.display-mode-card.selected {
+  border-color: var(--primary-color);
+  background: var(--primary-50);
+}
+
+.mode-icon {
+  width: 80px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.mode-cell {
+  width: 100%;
+  height: 100%;
+  background: var(--surface-100);
+  border: 1px solid var(--surface-300);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 4px;
+}
+
+.mode-emoji {
+  position: absolute;
+}
+
+.mode-emoji.small {
+  font-size: 12px;
+  bottom: 14px;
+  left: 4px;
+}
+
+.mode-emoji.large {
+  font-size: 24px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+}
+
+.mode-text {
+  position: absolute;
+  font-size: 6px;
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mode-text.small {
+  bottom: 2px;
+  left: 4px;
+  right: 4px;
+}
+
+.mode-text.large {
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 7px;
+  font-weight: 500;
+}
+
+.mode-info {
+  text-align: center;
+}
+
+.mode-name {
+  display: block;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  margin-bottom: 0.25rem;
+}
+
+.mode-desc {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
 }
 </style>
