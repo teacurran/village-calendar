@@ -125,6 +125,90 @@ public class CalendarRenderingService {
       "rgba(161,161,161,0.6)", "rgba(161,161,161,0.6)"}
   };
 
+  // Ocean Breeze monthly colors - cool blue gradient through the year
+  private static final String[][] OCEAN_MONTHLY_COLORS = {
+    // January - Deep winter ocean
+    {"#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd"},
+    // February - Cold waters
+    {"#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb"},
+    // March - Thawing seas
+    {"#90caf9", "#90caf9", "#90caf9", "#90caf9", "#90caf9", "#90caf9", "#90caf9", "#90caf9", "#90caf9", "#90caf9"},
+    // April - Spring waters
+    {"#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6", "#64b5f6"},
+    // May - Warming seas
+    {"#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5", "#42a5f5"},
+    // June - Early summer ocean
+    {"#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea"},
+    // July - Tropical waters
+    {"#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1", "#4dd0e1"},
+    // August - Warm currents
+    {"#26c6da", "#26c6da", "#26c6da", "#26c6da", "#26c6da", "#26c6da", "#26c6da", "#26c6da", "#26c6da", "#26c6da"},
+    // September - Cooling waters
+    {"#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4", "#00bcd4"},
+    // October - Autumn seas
+    {"#0097a7", "#0097a7", "#0097a7", "#0097a7", "#0097a7", "#0097a7", "#0097a7", "#0097a7", "#0097a7", "#0097a7"},
+    // November - Late fall ocean
+    {"#00838f", "#00838f", "#00838f", "#00838f", "#00838f", "#00838f", "#00838f", "#00838f", "#00838f", "#00838f"},
+    // December - Winter deep
+    {"#006064", "#006064", "#006064", "#006064", "#006064", "#006064", "#006064", "#006064", "#006064", "#006064"}
+  };
+
+  // Sunset Glow monthly colors - warm orange/pink/red tones
+  private static final String[][] SUNSET_MONTHLY_COLORS = {
+    // January - Winter sunset
+    {"#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc"},
+    // February - Valentine hues
+    {"#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9", "#f8bbd9"},
+    // March - Spring warmth
+    {"#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2"},
+    // April - Coral dawn
+    {"#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91"},
+    // May - Peachy glow
+    {"#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80", "#ffcc80"},
+    // June - Golden hour
+    {"#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2"},
+    // July - Summer blaze
+    {"#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d", "#ffb74d"},
+    // August - Amber heat
+    {"#ffa726", "#ffa726", "#ffa726", "#ffa726", "#ffa726", "#ffa726", "#ffa726", "#ffa726", "#ffa726", "#ffa726"},
+    // September - Harvest sunset
+    {"#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65", "#ff8a65"},
+    // October - Autumn fire
+    {"#ff7043", "#ff7043", "#ff7043", "#ff7043", "#ff7043", "#ff7043", "#ff7043", "#ff7043", "#ff7043", "#ff7043"},
+    // November - Rustic glow
+    {"#ff5722", "#ff5722", "#ff5722", "#ff5722", "#ff5722", "#ff5722", "#ff5722", "#ff5722", "#ff5722", "#ff5722"},
+    // December - Winter warmth
+    {"#e64a19", "#e64a19", "#e64a19", "#e64a19", "#e64a19", "#e64a19", "#e64a19", "#e64a19", "#e64a19", "#e64a19"}
+  };
+
+  // Forest Floor monthly colors - earth and green tones
+  private static final String[][] FOREST_MONTHLY_COLORS = {
+    // January - Evergreen
+    {"#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9"},
+    // February - Pine needles
+    {"#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7"},
+    // March - New growth
+    {"#81c784", "#81c784", "#81c784", "#81c784", "#81c784", "#81c784", "#81c784", "#81c784", "#81c784", "#81c784"},
+    // April - Spring ferns
+    {"#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a", "#66bb6a"},
+    // May - Lush canopy
+    {"#4caf50", "#4caf50", "#4caf50", "#4caf50", "#4caf50", "#4caf50", "#4caf50", "#4caf50", "#4caf50", "#4caf50"},
+    // June - Deep forest
+    {"#43a047", "#43a047", "#43a047", "#43a047", "#43a047", "#43a047", "#43a047", "#43a047", "#43a047", "#43a047"},
+    // July - Moss
+    {"#388e3c", "#388e3c", "#388e3c", "#388e3c", "#388e3c", "#388e3c", "#388e3c", "#388e3c", "#388e3c", "#388e3c"},
+    // August - Late summer
+    {"#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32", "#2e7d32"},
+    // September - Early autumn
+    {"#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63", "#8d6e63"},
+    // October - Fall leaves
+    {"#a1887f", "#a1887f", "#a1887f", "#a1887f", "#a1887f", "#a1887f", "#a1887f", "#a1887f", "#a1887f", "#a1887f"},
+    // November - Bark
+    {"#795548", "#795548", "#795548", "#795548", "#795548", "#795548", "#795548", "#795548", "#795548", "#795548"},
+    // December - Winter forest
+    {"#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41", "#6d4c41"}
+  };
+
   static {
     // Default theme
     THEMES.put("default", new ThemeColors(
@@ -159,6 +243,33 @@ public class CalendarRenderingService {
       null,
       "#333333",
       "#666666"
+    ));
+
+    // Ocean Breeze theme - cool blue tones
+    THEMES.put("oceanWeekends", new ThemeColors(
+      "#000000",
+      "#ffffff",
+      null, // weekend color will be dynamic per month
+      "#1565c0",
+      "#333333"
+    ));
+
+    // Sunset Glow theme - warm orange/pink tones
+    THEMES.put("sunsetWeekends", new ThemeColors(
+      "#000000",
+      "#ffffff",
+      null, // weekend color will be dynamic per month
+      "#e65100",
+      "#333333"
+    ));
+
+    // Forest Floor theme - earth/green tones
+    THEMES.put("forestWeekends", new ThemeColors(
+      "#000000",
+      "#ffffff",
+      null, // weekend color will be dynamic per month
+      "#2e7d32",
+      "#333333"
     ));
   }
 
@@ -1786,6 +1897,27 @@ public class CalendarRenderingService {
           return monthColors[weekendIndex];
         }
         return monthColors[0]; // Fallback to first color
+      } else if ("oceanWeekends".equals(theme)) {
+        // Use Ocean Breeze monthly colors for weekends
+        String[] monthColors = OCEAN_MONTHLY_COLORS[monthNum - 1];
+        if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
+          return monthColors[weekendIndex];
+        }
+        return monthColors[0];
+      } else if ("sunsetWeekends".equals(theme)) {
+        // Use Sunset Glow monthly colors for weekends
+        String[] monthColors = SUNSET_MONTHLY_COLORS[monthNum - 1];
+        if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
+          return monthColors[weekendIndex];
+        }
+        return monthColors[0];
+      } else if ("forestWeekends".equals(theme)) {
+        // Use Forest Floor monthly colors for weekends
+        String[] monthColors = FOREST_MONTHLY_COLORS[monthNum - 1];
+        if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
+          return monthColors[weekendIndex];
+        }
+        return monthColors[0];
       } else if (config.highlightWeekends) {
         // First check if user has specified a custom weekend color
         if (config.weekendBgColor != null && !config.weekendBgColor.isEmpty()) {

@@ -16,6 +16,7 @@ import "vue3-swatches/dist/style.css";
 interface CalendarConfig {
   layoutStyle?: string;
   theme?: string;
+  weekendBgColor?: string;
   moonDisplayMode?: string;
   moonSize?: number;
   moonOffsetX?: number;
@@ -58,7 +59,13 @@ export type MoonDisplayModeType =
   | "phases"
   | "full-only"
   | "illumination";
-export type WeekendStyleType = "greyscale" | "rainbow" | "vermont";
+export type WeekendStyleType =
+  | "greyscale"
+  | "rainbow"
+  | "vermont"
+  | "ocean"
+  | "sunset"
+  | "forest";
 
 export interface MoonSettings {
   style: MoonStyleType;
@@ -75,6 +82,7 @@ export interface MoonSettings {
 
 export interface DisplayOptions {
   weekendStyle: WeekendStyleType;
+  solidWeekendColor: string | null;
   showGrid: boolean;
   showDayNames: boolean;
   rotateMonthNames: boolean;
@@ -104,7 +112,8 @@ const layoutPreviews = ref<Record<string, string>>({});
 const loadingPreviews = ref(false);
 
 // Display options state
-const selectedWeekendStyle = ref<WeekendStyleType>("greyscale");
+const selectedWeekendStyle = ref<WeekendStyleType | null>("greyscale");
+const solidWeekendColor = ref<string | null>(null);
 const showGrid = ref(true);
 const showDayNames = ref(true);
 const rotateMonthNames = ref(false);
@@ -202,26 +211,74 @@ const moonDisplayModeOptions = [
   },
 ];
 
-// Weekend style options
+// Weekend style options for dropdown
 const weekendStyleOptions = [
   {
     id: "greyscale" as const,
     name: "Greyscale",
-    description: "Subtle grey background for weekends.",
     theme: "default",
   },
   {
     id: "rainbow" as const,
-    name: "Rainbow Weekends",
-    description: "Colorful rainbow gradient for weekends.",
+    name: "Rainbow",
     theme: "rainbowWeekends",
   },
   {
     id: "vermont" as const,
     name: "Vermont Seasons",
-    description: "Seasonal colors inspired by Vermont landscapes.",
     theme: "vermontWeekends",
   },
+  {
+    id: "ocean" as const,
+    name: "Ocean Breeze",
+    theme: "oceanWeekends",
+  },
+  {
+    id: "sunset" as const,
+    name: "Sunset Glow",
+    theme: "sunsetWeekends",
+  },
+  {
+    id: "forest" as const,
+    name: "Forest Floor",
+    theme: "forestWeekends",
+  },
+];
+
+// Weekend color swatches for solid colors (lighter, suitable for backgrounds)
+const weekendColorSwatches = [
+  // Light grays
+  "#f5f5f5",
+  "#e8e8e8",
+  "#d9d9d9",
+  // Light blues
+  "#e3f2fd",
+  "#bbdefb",
+  "#90caf9",
+  // Light greens
+  "#e8f5e9",
+  "#c8e6c9",
+  "#a5d6a7",
+  // Light yellows
+  "#fffde7",
+  "#fff9c4",
+  "#fff59d",
+  // Light oranges
+  "#fff3e0",
+  "#ffe0b2",
+  "#ffcc80",
+  // Light pinks
+  "#fce4ec",
+  "#f8bbd9",
+  "#f48fb1",
+  // Light purples
+  "#f3e5f5",
+  "#e1bee7",
+  "#ce93d8",
+  // Light teals
+  "#e0f2f1",
+  "#b2dfdb",
+  "#80cbc4",
 ];
 
 // Compact color swatches - flat array for inline display
@@ -512,7 +569,8 @@ const handleMoonDisplayModeChange = () => {
 // Emit display options
 const emitDisplayOptions = () => {
   emit("displayOptionsChange", {
-    weekendStyle: selectedWeekendStyle.value,
+    weekendStyle: selectedWeekendStyle.value || "greyscale",
+    solidWeekendColor: solidWeekendColor.value,
     showGrid: showGrid.value,
     showDayNames: showDayNames.value,
     rotateMonthNames: rotateMonthNames.value,
@@ -522,8 +580,19 @@ const emitDisplayOptions = () => {
   emitMoonSettings();
 };
 
-const selectWeekendStyle = (styleId: WeekendStyleType) => {
-  selectedWeekendStyle.value = styleId;
+// Handle weekend style dropdown change
+const handleWeekendStyleChange = () => {
+  // Clear solid color when selecting a theme
+  solidWeekendColor.value = null;
+  emitDisplayOptions();
+};
+
+// Handle solid weekend color change
+const handleSolidWeekendColorChange = () => {
+  // Clear theme selection when picking a solid color
+  if (solidWeekendColor.value) {
+    selectedWeekendStyle.value = null;
+  }
   emitDisplayOptions();
 };
 
@@ -583,14 +652,22 @@ const initializeFromConfig = () => {
   }
 
   // Initialize theme/weekend style
-  if (props.config.theme) {
+  if (props.config.weekendBgColor) {
+    // If there's a solid weekend color, use that
+    solidWeekendColor.value = props.config.weekendBgColor;
+    selectedWeekendStyle.value = null;
+  } else if (props.config.theme) {
     const themeToWeekendStyle: Record<string, WeekendStyleType> = {
       default: "greyscale",
       rainbowWeekends: "rainbow",
       vermontWeekends: "vermont",
+      oceanWeekends: "ocean",
+      sunsetWeekends: "sunset",
+      forestWeekends: "forest",
     };
     selectedWeekendStyle.value =
       themeToWeekendStyle[props.config.theme] || "greyscale";
+    solidWeekendColor.value = null;
   }
 
   // Initialize display options
@@ -825,27 +902,31 @@ onMounted(() => {
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
               <!-- Weekend Colors -->
-              <h4 class="subsection-title">Weekend Style</h4>
-              <div class="display-mode-options">
-                <div
-                  v-for="style in weekendStyleOptions"
-                  :key="style.id"
-                  class="display-mode-option"
-                  :class="{ selected: selectedWeekendStyle === style.id }"
-                  @click="selectWeekendStyle(style.id)"
-                >
-                  <div class="mode-info">
-                    <div class="mode-name">{{ style.name }}</div>
-                    <div class="mode-description">{{ style.description }}</div>
-                  </div>
+              <h4 class="subsection-title">Weekend Colors</h4>
+              <div class="weekend-color-controls">
+                <div class="weekend-theme-select">
+                  <label class="color-label">Color Theme</label>
+                  <Select
+                    v-model="selectedWeekendStyle"
+                    :options="weekendStyleOptions"
+                    option-label="name"
+                    option-value="id"
+                    placeholder="Select a theme"
+                    class="w-full"
+                    @change="handleWeekendStyleChange"
+                  />
+                </div>
 
-                  <div class="selection-indicator">
-                    <i
-                      v-if="selectedWeekendStyle === style.id"
-                      class="pi pi-check-circle"
-                    ></i>
-                    <i v-else class="pi pi-circle"></i>
-                  </div>
+                <div class="weekend-solid-color">
+                  <label class="color-label">Or Solid Color</label>
+                  <VSwatches
+                    v-model="solidWeekendColor"
+                    :swatches="weekendColorSwatches"
+                    :swatch-size="24"
+                    :row-length="9"
+                    popover-x="left"
+                    @update:model-value="handleSolidWeekendColorChange"
+                  />
                 </div>
               </div>
 
@@ -1402,6 +1483,26 @@ onMounted(() => {
 .checkbox-description {
   font-size: 0.75rem;
   color: var(--text-color-secondary);
+}
+
+/* Weekend color controls */
+.weekend-color-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.weekend-theme-select,
+.weekend-solid-color {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.weekend-theme-select :deep(.p-select) {
+  min-width: 180px;
 }
 
 /* Color options */

@@ -3819,13 +3819,24 @@ const handleWizardMoonChange = (settings: MoonSettings) => {
 
 // Handle display options change from wizard
 const handleWizardDisplayOptionsChange = (options: DisplayOptions) => {
-  // Map weekend style to theme
-  const weekendStyleMap: Record<string, string> = {
-    greyscale: "default",
-    rainbow: "rainbowWeekends",
-    vermont: "vermontWeekends",
-  };
-  config.value.theme = weekendStyleMap[options.weekendStyle] || "default";
+  // Handle solid weekend color vs theme
+  if (options.solidWeekendColor) {
+    // Use default theme but override weekend background color
+    config.value.theme = "default";
+    config.value.weekendBgColor = options.solidWeekendColor;
+  } else {
+    // Map weekend style to theme
+    const weekendStyleMap: Record<string, string> = {
+      greyscale: "default",
+      rainbow: "rainbowWeekends",
+      vermont: "vermontWeekends",
+      ocean: "oceanWeekends",
+      sunset: "sunsetWeekends",
+      forest: "forestWeekends",
+    };
+    config.value.theme = weekendStyleMap[options.weekendStyle] || "default";
+    config.value.weekendBgColor = ""; // Clear solid color when using theme
+  }
   config.value.showGrid = options.showGrid;
   config.value.showDayNames = options.showDayNames;
   config.value.rotateMonthNames = options.rotateMonthNames;
