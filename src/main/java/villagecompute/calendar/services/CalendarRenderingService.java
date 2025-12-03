@@ -113,6 +113,41 @@ public class CalendarRenderingService {
     return "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
   }
 
+  // Emoji substitutions for monochrome mode (newer emojis -> older compatible ones)
+  private static final Map<String, String> MONOCHROME_EMOJI_SUBSTITUTIONS = new HashMap<>();
+  static {
+    // Jewish
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🕎", "✡️");      // Menorah -> Star of David
+    // Mexican
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🎖️", "⚔️");     // Military Medal -> Crossed Swords
+    // Hindu
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🪁", "☀️");      // Kite -> Sun (Makar Sankranti)
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🪈", "🎵");      // Flute -> Music Note (Janmashtami)
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🪔", "🕯️");     // Diya Lamp -> Candle (Diwali)
+    // Islamic
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🤲", "🙏");      // Palms Up -> Folded Hands (Ashura)
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("☪️", "🌙");      // Star and Crescent -> Crescent Moon
+    // Chinese
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🧧", "🏮");      // Red Envelope -> Lantern (Chinese New Year)
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🪦", "🌸");      // Headstone -> Blossom (Qingming)
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🥮", "🌕");      // Moon Cake -> Full Moon (Mid-Autumn)
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🏔️", "⛰️");     // Snow Mountain -> Mountain (Double Ninth)
+    // Secular
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🦫", "🐿️");     // Beaver -> Chipmunk (Groundhog Day)
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🏳️‍🌈", "🌈");    // Pride Flag -> Rainbow
+  }
+
+  /**
+   * Substitutes emojis that aren't available in Noto Emoji monochrome font
+   * with compatible alternatives.
+   */
+  private static String substituteEmojiForMonochrome(String emoji, CalendarConfig config) {
+    if (!"noto-mono".equals(config.emojiFont)) {
+      return emoji; // No substitution needed for color mode
+    }
+    return MONOCHROME_EMOJI_SUBSTITUTIONS.getOrDefault(emoji, emoji);
+  }
+
   // Color themes
   private static final Map<String, ThemeColors> THEMES = new HashMap<>();
 
@@ -497,7 +532,8 @@ public class CalendarRenderingService {
         String dateStr = date.toString();
         String dayClass = "day-text"; // Always use same class for consistent styling
         String dayText = String.valueOf(day);
-        String holidayEmoji = config.holidayEmojis.getOrDefault(dateStr, "");
+        String holidayEmoji = substituteEmojiForMonochrome(
+            config.holidayEmojis.getOrDefault(dateStr, ""), config);
         String customEmoji = "";
         boolean isHoliday = config.holidays.contains(dateStr);
 
@@ -507,12 +543,12 @@ public class CalendarRenderingService {
 
           if (customData instanceof String) {
             // Old format: just emoji string
-            customEmoji = (String) customData;
+            customEmoji = substituteEmojiForMonochrome((String) customData, config);
           } else if (customData instanceof Map) {
             // New format: object with emoji and display settings
             Map<String, Object> dataMap = (Map<String, Object>) customData;
             if (dataMap.containsKey("emoji")) {
-              customEmoji = (String) dataMap.get("emoji");
+              customEmoji = substituteEmojiForMonochrome((String) dataMap.get("emoji"), config);
               if (dataMap.containsKey("displaySettings") && dataMap.get("displaySettings") instanceof Map) {
                 Map<String, Object> settings = (Map<String, Object>) dataMap.get("displaySettings");
                 eventDisplay = new CustomEventDisplay(customEmoji, settings);
@@ -1075,12 +1111,12 @@ public class CalendarRenderingService {
 
         if (customData instanceof String) {
           // Old format: just emoji string
-          customEmoji = (String) customData;
+          customEmoji = substituteEmojiForMonochrome((String) customData, config);
         } else if (customData instanceof Map) {
           // New format: object with emoji and display settings
           Map<String, Object> dataMap = (Map<String, Object>) customData;
           if (dataMap.containsKey("emoji")) {
-            customEmoji = (String) dataMap.get("emoji");
+            customEmoji = substituteEmojiForMonochrome((String) dataMap.get("emoji"), config);
             if (dataMap.containsKey("displaySettings") && dataMap.get("displaySettings") instanceof Map) {
               Map<String, Object> settings = (Map<String, Object>) dataMap.get("displaySettings");
               eventDisplay = new CustomEventDisplay(customEmoji, settings);
