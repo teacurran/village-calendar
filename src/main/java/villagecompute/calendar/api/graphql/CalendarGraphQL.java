@@ -66,6 +66,12 @@ public class CalendarGraphQL {
     private JsonWebToken jwt;
 
     /**
+     * Security identity for getting principal.
+     */
+    @Inject
+    private io.quarkus.security.identity.SecurityIdentity securityIdentity;
+
+    /**
      * Authentication service for user management.
      */
     @Inject
@@ -101,16 +107,27 @@ public class CalendarGraphQL {
     public CalendarUser me() {
         LOG.debug("Query: me()");
 
+        // Try to get JWT from SecurityIdentity principal first (more reliable)
+        JsonWebToken effectiveJwt = jwt;
+        if ((effectiveJwt == null || effectiveJwt.getSubject() == null) && securityIdentity != null) {
+            if (securityIdentity.getPrincipal() instanceof JsonWebToken) {
+                effectiveJwt = (JsonWebToken) securityIdentity.getPrincipal();
+                LOG.debug("Got JWT from SecurityIdentity principal");
+            }
+        }
+
         // Check if JWT is present
-        if (jwt == null || jwt.getSubject() == null) {
+        if (effectiveJwt == null || effectiveJwt.getSubject() == null) {
             LOG.debug("No JWT token present, returning null");
             return null;
         }
 
-        Optional<CalendarUser> user = authService.getCurrentUser(jwt);
+        LOG.debugf("JWT subject: %s", effectiveJwt.getSubject());
+
+        Optional<CalendarUser> user = authService.getCurrentUser(effectiveJwt);
         if (user.isEmpty()) {
             LOG.warnf("User not found for JWT subject: %s",
-                jwt.getSubject());
+                effectiveJwt.getSubject());
             return null;
         }
 

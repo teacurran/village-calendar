@@ -114,117 +114,80 @@
 
     <!-- Main Content Area -->
     <div class="p-4">
-      <div class="flex justify-between items-center mb-4">
+      <!-- Toolbar -->
+      <div class="flex justify-end items-center mb-2">
         <div class="flex gap-2">
           <Button
-            label="Templates"
-            icon="pi pi-palette"
-            outlined
-            :badge="
-              allTemplates.length > 0 ? allTemplates.length.toString() : null
-            "
-            badge-severity="info"
-            @click="showTemplateDrawer = true"
+            v-tooltip="'Zoom In'"
+            icon="pi pi-search-plus"
+            text
+            rounded
+            :disabled="!generatedSVG"
+            @click="zoomIn"
+          />
+          <Button
+            v-tooltip="'Zoom Out'"
+            icon="pi pi-search-minus"
+            text
+            rounded
+            :disabled="!generatedSVG"
+            @click="zoomOut"
+          />
+          <Button
+            v-tooltip="'Reset Zoom'"
+            icon="pi pi-refresh"
+            text
+            rounded
+            :disabled="!generatedSVG"
+            @click="resetZoom"
+          />
+          <Button
+            v-if="FEATURE_FLAGS.enableRulers"
+            v-tooltip="'Toggle Rulers'"
+            icon="pi pi-chart-bar"
+            text
+            rounded
+            :disabled="!generatedSVG"
+            :class="{ 'bg-primary-100': showRulers }"
+            @click="showRulers = !showRulers"
+          />
+          <Button
+            v-tooltip="'Download PDF (35&quot; x 22.5&quot;)'"
+            icon="pi pi-download"
+            text
+            rounded
+            :disabled="!generatedSVG"
+            @click="downloadCalendar"
+          />
+          <Button
+            v-tooltip="'Save Calendar'"
+            icon="pi pi-save"
+            text
+            rounded
+            :disabled="!generatedSVG"
+            @click="saveCalendar"
           />
           <Button
             v-if="isAdmin"
-            label="Manage Templates"
-            icon="pi pi-book"
-            outlined
-            :badge="templates.length > 0 ? templates.length.toString() : null"
-            badge-severity="success"
-            @click="showTemplatesDialog = true"
+            v-tooltip="'Save as Template'"
+            icon="pi pi-bookmark"
+            text
+            rounded
+            :disabled="!generatedSVG"
+            @click="saveAsTemplate"
           />
           <Button
-            label="Events"
-            icon="pi pi-calendar-plus"
-            outlined
-            :badge="
-              customEvents.length > 0 ? customEvents.length.toString() : null
-            "
-            badge-severity="info"
-            @click="showEventsDialog = true"
+            v-tooltip="'Add to Cart'"
+            icon="pi pi-shopping-cart"
+            text
+            rounded
+            :disabled="!generatedSVG"
+            @click="openAddToCartModal"
           />
         </div>
       </div>
 
       <!-- Preview Panel -->
-      <Card>
-        <template #title>
-          <div class="flex justify-between items-center">
-            <span class="hidden lg:inline">Preview</span>
-            <div class="flex gap-2">
-              <Button
-                v-tooltip="'Zoom In'"
-                icon="pi pi-search-plus"
-                text
-                rounded
-                :disabled="!generatedSVG"
-                @click="zoomIn"
-              />
-              <Button
-                v-tooltip="'Zoom Out'"
-                icon="pi pi-search-minus"
-                text
-                rounded
-                :disabled="!generatedSVG"
-                @click="zoomOut"
-              />
-              <Button
-                v-tooltip="'Reset Zoom'"
-                icon="pi pi-refresh"
-                text
-                rounded
-                :disabled="!generatedSVG"
-                @click="resetZoom"
-              />
-              <Button
-                v-if="FEATURE_FLAGS.enableRulers"
-                v-tooltip="'Toggle Rulers'"
-                icon="pi pi-chart-bar"
-                text
-                rounded
-                :disabled="!generatedSVG"
-                :class="{ 'bg-primary-100': showRulers }"
-                @click="showRulers = !showRulers"
-              />
-              <Button
-                v-tooltip="'Download PDF (35&quot; x 22.5&quot;)'"
-                icon="pi pi-download"
-                text
-                rounded
-                :disabled="!generatedSVG"
-                @click="downloadCalendar"
-              />
-              <Button
-                v-tooltip="'Save Calendar'"
-                icon="pi pi-save"
-                text
-                rounded
-                :disabled="!generatedSVG"
-                @click="saveCalendar"
-              />
-              <Button
-                v-if="isAdmin"
-                v-tooltip="'Save as Template'"
-                icon="pi pi-bookmark"
-                text
-                rounded
-                :disabled="!generatedSVG"
-                @click="saveAsTemplate"
-              />
-              <Button
-                v-tooltip="'Add to Cart'"
-                icon="pi pi-shopping-cart"
-                text
-                rounded
-                :disabled="!generatedSVG"
-                @click="openAddToCartModal"
-              />
-            </div>
-          </div>
-        </template>
-        <template #content>
           <div ref="previewContainer" class="calendar-preview">
             <div v-if="!generatedSVG" class="text-center py-12 text-gray-500">
               <ProgressSpinner />
@@ -285,8 +248,6 @@
               </div>
             </div>
           </div>
-        </template>
-      </Card>
     </div>
   </div>
 
@@ -879,7 +840,6 @@ import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "../stores/user";
 import { useCartStore } from "../stores/cart";
 import { useAuthStore } from "../stores/authStore";
-import Card from "primevue/card";
 import Button from "primevue/button";
 import InputNumber from "primevue/inputnumber";
 import Dropdown from "primevue/dropdown";
@@ -1888,6 +1848,12 @@ onMounted(async () => {
     // Clear the query param without adding to history
     router.replace({ query: { ...route.query, wizard: undefined } });
   }
+
+  // Check if manage templates dialog should open from query param
+  if (route.query["manage-templates"] === "true") {
+    showTemplatesDialog.value = true;
+    router.replace({ query: { ...route.query, "manage-templates": undefined } });
+  }
 });
 
 // Watch for wizard query param changes (for when already on page)
@@ -1897,6 +1863,17 @@ watch(
     if (wizard === "true") {
       showCreateWizard.value = true;
       router.replace({ query: { ...route.query, wizard: undefined } });
+    }
+  },
+);
+
+// Watch for manage-templates query param changes (for when already on page)
+watch(
+  () => route.query["manage-templates"],
+  (manageTemplates) => {
+    if (manageTemplates === "true") {
+      showTemplatesDialog.value = true;
+      router.replace({ query: { ...route.query, "manage-templates": undefined } });
     }
   },
 );

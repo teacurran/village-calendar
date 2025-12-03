@@ -808,6 +808,9 @@ const initializeFromConfig = () => {
   if (props.config.holidayColor) {
     holidayColor.value = props.config.holidayColor;
   }
+  if (props.config.emojiFont) {
+    emojiFont.value = props.config.emojiFont;
+  }
 };
 
 // Load previews when drawer opens and initialize state from config

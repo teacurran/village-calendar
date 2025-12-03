@@ -124,18 +124,18 @@ const userMenuRef = ref();
 const menuItems = computed<MenuItem[]>(() => {
   const items: MenuItem[] = [
     {
-      label: "Create Your Own",
+      label: "Design Your Own",
       icon: "pi pi-sparkles",
       command: () => router.push("/?wizard=true"),
     },
   ];
 
-  // Add authenticated user menu items
-  if (authStore.isAuthenticated) {
+  // Add admin menu items
+  if (authStore.isAdmin) {
     items.push({
-      label: "My Orders",
-      icon: "pi pi-shopping-bag",
-      command: () => router.push("/dashboard"),
+      label: "Manage Templates",
+      icon: "pi pi-book",
+      command: () => router.push("/?manage-templates=true"),
     });
   }
 

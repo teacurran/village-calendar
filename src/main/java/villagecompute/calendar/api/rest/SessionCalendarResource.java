@@ -205,6 +205,40 @@ public class SessionCalendarResource {
     }
 
     /**
+     * Get a calendar by ID
+     * Returns the calendar and whether it belongs to the current session
+     */
+    @GET
+    @Path("/{id}")
+    public Response getCalendar(
+            @HeaderParam("X-Session-ID") String sessionId,
+            @PathParam("id") UUID id) {
+
+        UserCalendar calendar = UserCalendar.findById(id);
+        if (calendar == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(Map.of("error", "Calendar not found"))
+                .build();
+        }
+
+        // Check if this is the session's own calendar
+        boolean isOwnCalendar = sessionId != null && sessionId.equals(calendar.sessionId);
+
+        // Only allow viewing if it's public or belongs to the session
+        if (!calendar.isPublic && !isOwnCalendar) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(Map.of("error", "Calendar is not public"))
+                .build();
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("calendar", SessionCalendarDTO.from(calendar));
+        response.put("isOwnCalendar", isOwnCalendar);
+
+        return Response.ok(response).build();
+    }
+
+    /**
      * Auto-save calendar configuration
      */
     @PUT

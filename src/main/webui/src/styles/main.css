@@ -879,3 +879,8 @@ h2 {
 .p-menubar-root-list > .p-menubar-item-active > .p-menubar-item-content .p-menubar-submenu-icon {
   transform: rotate(180deg);
 }
+
+/* Ensure Noto Emoji font is used for monochrome emoji in SVG */
+.calendar-preview svg text[font-family*="Noto Emoji"] {
+  font-family: "Noto Emoji", "Segoe UI Symbol", sans-serif !important;
+}
