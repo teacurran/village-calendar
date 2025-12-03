@@ -572,6 +572,83 @@ public class CalendarGraphQL {
     }
 
     /**
+     * Update a user's admin status.
+     * Requires ADMIN role. Cannot remove admin from self.
+     *
+     * @param userId User ID to update
+     * @param isAdmin New admin status
+     * @return Updated user
+     */
+    @Mutation("updateUserAdmin")
+    @Description("Update a user's admin status. Requires ADMIN role. "
+        + "Cannot remove admin from self to prevent lockout.")
+    @RolesAllowed("ADMIN")
+    @Transactional
+    public CalendarUser updateUserAdmin(
+        @Name("userId")
+        @Description("User ID to update")
+        @NotNull
+        final String userId,
+
+        @Name("isAdmin")
+        @Description("New admin status")
+        @NotNull
+        final Boolean isAdmin
+    ) {
+        LOG.infof("Mutation: updateUserAdmin(userId=%s, isAdmin=%s)",
+            userId, isAdmin);
+
+        // Get current admin user
+        Optional<CalendarUser> currentUser =
+            authService.getCurrentUser(jwt);
+        if (currentUser.isEmpty()) {
+            LOG.error("Admin user not found despite passing "
+                + "@RolesAllowed check");
+            throw new IllegalStateException(
+                "Unauthorized: User not found");
+        }
+
+        CalendarUser adminUser = currentUser.get();
+
+        // Parse target user ID
+        UUID targetUserId;
+        try {
+            targetUserId = UUID.fromString(userId);
+        } catch (IllegalArgumentException e) {
+            LOG.errorf("Invalid user ID format: %s", userId);
+            throw new IllegalArgumentException(
+                "Invalid user ID format");
+        }
+
+        // Prevent removing admin from self (lockout protection)
+        if (adminUser.id.equals(targetUserId) && !isAdmin) {
+            LOG.warnf("Admin %s attempted to remove own admin status",
+                adminUser.email);
+            throw new IllegalArgumentException(
+                "Cannot remove admin status from yourself");
+        }
+
+        // Find target user
+        Optional<CalendarUser> targetUserOpt =
+            CalendarUser.findByIdOptional(targetUserId);
+        if (targetUserOpt.isEmpty()) {
+            LOG.errorf("Target user not found: %s", userId);
+            throw new IllegalArgumentException("User not found");
+        }
+
+        CalendarUser targetUser = targetUserOpt.get();
+
+        // Update admin status
+        targetUser.isAdmin = isAdmin;
+        targetUser.persist();
+
+        LOG.infof("Updated user %s admin status to %s by admin %s",
+            targetUser.email, isAdmin, adminUser.email);
+
+        return targetUser;
+    }
+
+    /**
      * Convert anonymous guest session to authenticated user account.
      * Links all calendars from the guest session to the newly
      * authenticated user. Called after successful OAuth authentication

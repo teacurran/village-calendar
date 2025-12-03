@@ -67,8 +67,8 @@
         </template>
       </Card>
 
-      <!-- User Management Card (Future) -->
-      <Card class="dashboard-card disabled-card">
+      <!-- User Management Card -->
+      <Card class="dashboard-card" @click="navigateTo('/admin/users')">
         <template #header>
           <div
             class="card-icon"
@@ -84,7 +84,9 @@
         </template>
         <template #content>
           <p>Manage user accounts, permissions, and admin roles.</p>
-          <Tag severity="info" value="Coming Soon" class="mt-2" />
+          <div class="card-actions">
+            <Button label="Manage Users" icon="pi pi-arrow-right" text />
+          </div>
         </template>
       </Card>
 
@@ -126,6 +128,12 @@
           icon="pi pi-list"
           severity="secondary"
           @click="navigateTo('/admin/orders')"
+        />
+        <Button
+          label="Manage Users"
+          icon="pi pi-users"
+          severity="secondary"
+          @click="navigateTo('/admin/users')"
         />
         <Button
           label="Go to Homepage"

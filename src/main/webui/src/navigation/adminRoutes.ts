@@ -110,4 +110,14 @@ export const adminRoutes: RouteRecordRaw[] = [
     },
     beforeEnter: adminGuard,
   },
+  {
+    path: "/admin/users",
+    name: "admin-users",
+    component: () => import("../view/admin/UserManager.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+    },
+    beforeEnter: adminGuard,
+  },
 ];

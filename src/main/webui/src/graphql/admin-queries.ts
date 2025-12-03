@@ -162,9 +162,26 @@ export const ALL_USERS_QUERY = `
       id
       email
       displayName
+      profileImageUrl
       created
       lastLoginAt
       oauthProvider
+      isAdmin
+    }
+  }
+`;
+
+/**
+ * Mutation: Update user admin status (admin only)
+ * Cannot remove admin from self to prevent lockout
+ */
+export const UPDATE_USER_ADMIN_MUTATION = `
+  mutation UpdateUserAdmin($userId: ID!, $isAdmin: Boolean!) {
+    updateUserAdmin(userId: $userId, isAdmin: $isAdmin) {
+      id
+      email
+      displayName
+      isAdmin
     }
   }
 `;
@@ -214,4 +231,15 @@ export interface CalendarOrder {
     email: string;
     displayName?: string;
   };
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  displayName?: string;
+  profileImageUrl?: string;
+  created: string;
+  lastLoginAt?: string;
+  oauthProvider: string;
+  isAdmin: boolean;
 }
