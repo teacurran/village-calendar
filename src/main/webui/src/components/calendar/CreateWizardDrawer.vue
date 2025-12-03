@@ -980,130 +980,8 @@ onMounted(() => {
           </StepPanel>
         </StepItem>
 
-        <!-- Step 3: Colors -->
+        <!-- Step 3: Holidays -->
         <StepItem value="3">
-          <Step>Colors</Step>
-          <StepPanel v-slot="{ activateCallback }">
-            <div class="step-content">
-              <!-- Weekend Colors -->
-              <h4 class="subsection-title">Weekend Colors</h4>
-              <div class="weekend-color-controls">
-                <div class="weekend-theme-select">
-                  <label class="color-label">Color Theme</label>
-                  <Select
-                    v-model="selectedWeekendStyle"
-                    :options="weekendStyleOptions"
-                    option-label="name"
-                    option-value="id"
-                    placeholder="Select a theme"
-                    class="w-full"
-                    @change="handleWeekendStyleChange"
-                  />
-                </div>
-
-                <div class="weekend-solid-color">
-                  <label class="color-label">Or Solid Color</label>
-                  <VSwatches
-                    v-model="solidWeekendColor"
-                    :swatches="weekendColorSwatches"
-                    :swatch-size="24"
-                    :row-length="9"
-                    popover-x="left"
-                    @update:model-value="handleSolidWeekendColorChange"
-                  />
-                </div>
-              </div>
-
-              <!-- Color Swatches -->
-              <h4 class="subsection-title">Text Colors</h4>
-              <div class="color-options">
-                <div class="color-option">
-                  <label class="color-label">Year Color</label>
-                  <VSwatches
-                    v-model="yearColor"
-                    :swatches="colorSwatches"
-                    :swatch-size="24"
-                    :row-length="10"
-                    popover-x="left"
-                  />
-                </div>
-
-                <div class="color-option">
-                  <label class="color-label">Month Names</label>
-                  <VSwatches
-                    v-model="monthColor"
-                    :swatches="colorSwatches"
-                    :swatch-size="24"
-                    :row-length="10"
-                    popover-x="left"
-                  />
-                </div>
-
-                <div class="color-option">
-                  <label class="color-label">Day Numbers</label>
-                  <VSwatches
-                    v-model="dayTextColor"
-                    :swatches="colorSwatches"
-                    :swatch-size="24"
-                    :row-length="10"
-                    popover-x="left"
-                  />
-                </div>
-
-                <div class="color-option">
-                  <label class="color-label">Day Names</label>
-                  <VSwatches
-                    v-model="dayNameColor"
-                    :swatches="colorSwatches"
-                    :swatch-size="24"
-                    :row-length="10"
-                    popover-x="left"
-                  />
-                </div>
-
-                <div class="color-option">
-                  <label class="color-label">Grid Lines</label>
-                  <VSwatches
-                    v-model="gridLineColor"
-                    :swatches="colorSwatches"
-                    :swatch-size="24"
-                    :row-length="10"
-                    popover-x="left"
-                  />
-                </div>
-
-                <div class="color-option">
-                  <label class="color-label">Holidays</label>
-                  <VSwatches
-                    v-model="holidayColor"
-                    :swatches="colorSwatches"
-                    :swatch-size="24"
-                    :row-length="10"
-                    popover-x="left"
-                  />
-                </div>
-              </div>
-
-              <div class="step-navigation">
-                <Button
-                  label="Previous"
-                  icon="pi pi-arrow-left"
-                  outlined
-                  @click="activateCallback('2')"
-                />
-                <Button
-                  label="Next"
-                  icon="pi pi-arrow-right"
-                  icon-pos="right"
-                  @click="activateCallback('4')"
-                />
-              </div>
-            </div>
-          </StepPanel>
-        </StepItem>
-
-        <!-- Step 4: Holidays -->
-        <StepItem value="4">
           <Step>Holidays</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
@@ -1218,21 +1096,21 @@ onMounted(() => {
                   label="Previous"
                   icon="pi pi-arrow-left"
                   outlined
-                  @click="activateCallback('3')"
+                  @click="activateCallback('2')"
                 />
                 <Button
                   label="Next"
                   icon="pi pi-arrow-right"
                   icon-pos="right"
-                  @click="activateCallback('5')"
+                  @click="activateCallback('4')"
                 />
               </div>
             </div>
           </StepPanel>
         </StepItem>
 
-        <!-- Step 5: Additional Options -->
-        <StepItem value="5">
+        <!-- Step 4: Additional Options -->
+        <StepItem value="4">
           <Step>Additional Options</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
@@ -1277,6 +1155,128 @@ onMounted(() => {
                       >Display month names vertically</span
                     >
                   </label>
+                </div>
+              </div>
+
+              <div class="step-navigation">
+                <Button
+                  label="Previous"
+                  icon="pi pi-arrow-left"
+                  outlined
+                  @click="activateCallback('3')"
+                />
+                <Button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  icon-pos="right"
+                  @click="activateCallback('5')"
+                />
+              </div>
+            </div>
+          </StepPanel>
+        </StepItem>
+
+        <!-- Step 5: Colors -->
+        <StepItem value="5">
+          <Step>Colors</Step>
+          <StepPanel v-slot="{ activateCallback }">
+            <div class="step-content">
+              <!-- Weekend Colors -->
+              <h4 class="subsection-title">Weekend Colors</h4>
+              <div class="weekend-color-controls">
+                <div class="weekend-theme-select">
+                  <label class="color-label">Color Theme</label>
+                  <Select
+                    v-model="selectedWeekendStyle"
+                    :options="weekendStyleOptions"
+                    option-label="name"
+                    option-value="id"
+                    placeholder="Select a theme"
+                    class="w-full"
+                    @change="handleWeekendStyleChange"
+                  />
+                </div>
+
+                <div class="weekend-solid-color">
+                  <label class="color-label">Or Solid Color</label>
+                  <VSwatches
+                    v-model="solidWeekendColor"
+                    :swatches="weekendColorSwatches"
+                    :swatch-size="24"
+                    :row-length="9"
+                    popover-x="left"
+                    @update:model-value="handleSolidWeekendColorChange"
+                  />
+                </div>
+              </div>
+
+              <!-- Color Swatches -->
+              <h4 class="subsection-title">Text Colors</h4>
+              <div class="color-options">
+                <div class="color-option">
+                  <label class="color-label">Year Color</label>
+                  <VSwatches
+                    v-model="yearColor"
+                    :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="10"
+                    popover-x="left"
+                  />
+                </div>
+
+                <div class="color-option">
+                  <label class="color-label">Month Names</label>
+                  <VSwatches
+                    v-model="monthColor"
+                    :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="10"
+                    popover-x="left"
+                  />
+                </div>
+
+                <div class="color-option">
+                  <label class="color-label">Day Numbers</label>
+                  <VSwatches
+                    v-model="dayTextColor"
+                    :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="10"
+                    popover-x="left"
+                  />
+                </div>
+
+                <div class="color-option">
+                  <label class="color-label">Day Names</label>
+                  <VSwatches
+                    v-model="dayNameColor"
+                    :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="10"
+                    popover-x="left"
+                  />
+                </div>
+
+                <div class="color-option">
+                  <label class="color-label">Grid Lines</label>
+                  <VSwatches
+                    v-model="gridLineColor"
+                    :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="10"
+                    popover-x="left"
+                  />
+                </div>
+
+                <div class="color-option">
+                  <label class="color-label">Holidays</label>
+                  <VSwatches
+                    v-model="holidayColor"
+                    :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="10"
+                    popover-x="left"
+                  />
                 </div>
               </div>
 
