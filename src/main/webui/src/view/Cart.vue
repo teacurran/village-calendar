@@ -348,7 +348,7 @@ watch(
                         style="
                           width: 800px;
                           height: 800px;
-                          transform: scale(0.08);
+                          transform: scale(0.16);
                           transform-origin: top left;
                           pointer-events: none;
                           position: absolute;
@@ -522,12 +522,12 @@ watch(
 </template>
 
 <style scoped>
-/* Match CartDrawer thumbnail styling */
+/* Larger thumbnails for full cart page */
 .calendar-thumbnail,
 .product-thumbnail,
 .product-thumbnail-placeholder {
-  width: 64px;
-  height: 64px;
+  width: 128px;
+  height: 80px;
   background: #f5f5f5;
   border: 1px solid #e1e1e1;
   border-radius: 4px;
