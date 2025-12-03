@@ -150,10 +150,16 @@ const eventDisplayMode = ref<EventDisplayMode>("small");
 const holidaySetOptions = [
   { label: "No Holidays", value: "none" },
   { label: "US Holidays", value: "us" },
-  { label: "Jewish Holidays", value: "jewish" },
-  { label: "Christian Holidays", value: "christian" },
   { label: "Canadian Holidays", value: "canadian" },
   { label: "UK Holidays", value: "uk" },
+  { label: "Mexican Holidays", value: "mexican" },
+  { label: "Christian Holidays", value: "christian" },
+  { label: "Jewish Holidays", value: "jewish" },
+  { label: "Islamic Holidays", value: "islamic" },
+  { label: "Hindu Holidays", value: "hindu" },
+  { label: "Chinese/Lunar Holidays", value: "chinese" },
+  { label: "Pagan/Wiccan (Wheel of the Year)", value: "pagan" },
+  { label: "Fun & Secular Holidays", value: "secular" },
   { label: "Major World Holidays", value: "major_world" },
 ];
 
