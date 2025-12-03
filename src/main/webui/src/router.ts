@@ -48,12 +48,6 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
-      path: "/checkout/:calendarId",
-      name: "checkout-calendar",
-      component: () => import("./views/Checkout.vue"),
-      meta: { requiresAuth: true },
-    },
-    {
       path: "/order/:orderId/confirmation",
       name: "order-confirmation",
       component: () => import("./view/public/OrderConfirmation.vue"),
