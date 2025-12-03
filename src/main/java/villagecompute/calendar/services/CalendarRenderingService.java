@@ -1733,7 +1733,7 @@ public class CalendarRenderingService {
       holidayEmojis.put(LocalDate.of(year, 1, 1).toString(), "🎆"); // New Year's Day
 
       LocalDate mlkDay = getNthWeekdayOfMonth(year, Month.JANUARY, DayOfWeek.MONDAY, 3);
-      holidayEmojis.put(mlkDay.toString(), "✊"); // MLK Day
+      holidayEmojis.put(mlkDay.toString(), "🕊️"); // MLK Day
 
       LocalDate presidentsDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
       holidayEmojis.put(presidentsDay.toString(), "🇺🇸"); // Presidents' Day
