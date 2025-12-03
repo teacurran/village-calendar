@@ -139,11 +139,12 @@ const holidayColor = ref("#ff5252");
 
 // Holiday settings state
 const selectedHolidaySets = ref<string[]>([]);
-const pendingHolidaySet = ref<string | null>(null);
+const primaryHolidaySet = ref<string>("none");
 const eventDisplayMode = ref<EventDisplayMode>("small");
 
-// Holiday set options
+// Holiday set options (including "No Holidays" as default)
 const holidaySetOptions = [
+  { label: "No Holidays", value: "none" },
   { label: "US Holidays", value: "us" },
   { label: "Jewish Holidays", value: "jewish" },
   { label: "Christian Holidays", value: "christian" },
@@ -152,10 +153,11 @@ const holidaySetOptions = [
   { label: "Major World Holidays", value: "major_world" },
 ];
 
-// Filter out already selected sets from dropdown options
+// Filter out already selected sets from dropdown options (keep "none" always available)
 const availableHolidaySets = computed(() => {
   return holidaySetOptions.filter(
-    (opt) => !selectedHolidaySets.value.includes(opt.value),
+    (opt) =>
+      opt.value === "none" || !selectedHolidaySets.value.includes(opt.value),
   );
 });
 
@@ -165,14 +167,31 @@ const getHolidaySetLabel = (value: string) => {
   return option ? option.label : value;
 };
 
-// Add a holiday set
+// Handle primary holiday set change (auto-applies selection)
+const handlePrimaryHolidayChange = () => {
+  if (primaryHolidaySet.value === "none") {
+    // Clear all selected sets when "No Holidays" is chosen
+    selectedHolidaySets.value = [];
+  } else if (!selectedHolidaySets.value.includes(primaryHolidaySet.value)) {
+    // Add the primary selection to the list if not already there
+    selectedHolidaySets.value = [
+      primaryHolidaySet.value,
+      ...selectedHolidaySets.value,
+    ];
+  }
+  emitHolidaySettings();
+};
+
+// Add current primary selection as additional holiday set
 const addHolidaySet = () => {
   if (
-    pendingHolidaySet.value &&
-    !selectedHolidaySets.value.includes(pendingHolidaySet.value)
+    primaryHolidaySet.value &&
+    primaryHolidaySet.value !== "none" &&
+    !selectedHolidaySets.value.includes(primaryHolidaySet.value)
   ) {
-    selectedHolidaySets.value.push(pendingHolidaySet.value);
-    pendingHolidaySet.value = null;
+    selectedHolidaySets.value.push(primaryHolidaySet.value);
+    // Reset dropdown to prompt for another selection
+    primaryHolidaySet.value = "none";
     emitHolidaySettings();
   }
 };
@@ -182,6 +201,13 @@ const removeHolidaySet = (setValue: string) => {
   selectedHolidaySets.value = selectedHolidaySets.value.filter(
     (v) => v !== setValue,
   );
+  // If the removed set was the primary, reset to none or first remaining
+  if (primaryHolidaySet.value === setValue) {
+    primaryHolidaySet.value =
+      selectedHolidaySets.value.length > 0
+        ? selectedHolidaySets.value[0]
+        : "none";
+  }
   emitHolidaySettings();
 };
 
@@ -993,31 +1019,29 @@ onMounted(() => {
               <div class="holiday-selector">
                 <div class="holiday-add-row">
                   <Select
-                    v-model="pendingHolidaySet"
+                    v-model="primaryHolidaySet"
                     :options="availableHolidaySets"
                     option-label="label"
                     option-value="value"
-                    placeholder="Select a holiday set..."
                     class="holiday-dropdown"
-                    :disabled="availableHolidaySets.length === 0"
+                    @change="handlePrimaryHolidayChange"
                   />
                   <Button
-                    v-tooltip="'Add holiday set'"
+                    v-tooltip="'Add another holiday set'"
                     icon="pi pi-plus"
-                    :disabled="!pendingHolidaySet"
+                    :disabled="
+                      primaryHolidaySet === 'none' ||
+                      selectedHolidaySets.includes(primaryHolidaySet)
+                    "
                     @click="addHolidaySet"
                   />
                 </div>
 
-                <!-- Selected Holiday Sets -->
-                <div class="selected-holidays">
-                  <div
-                    v-if="selectedHolidaySets.length === 0"
-                    class="no-holidays"
-                  >
-                    <i class="pi pi-calendar"></i>
-                    <span>No holiday sets selected</span>
-                  </div>
+                <!-- Additional Selected Holiday Sets (shown as chips when multiple) -->
+                <div
+                  v-if="selectedHolidaySets.length > 1"
+                  class="selected-holidays"
+                >
                   <div
                     v-for="setId in selectedHolidaySets"
                     :key="setId"
