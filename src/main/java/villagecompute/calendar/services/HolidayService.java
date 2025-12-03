@@ -1096,6 +1096,7 @@ public class HolidayService {
         holidayEmojis.put(fathersDay.toString(), "👔");                                 // Father's Day
 
         holidayEmojis.put(LocalDate.of(year, Month.JUNE, 1).toString(), "🏳️‍🌈");         // Pride Month
+        holidayEmojis.put(LocalDate.of(year, Month.JULY, 4).toString(), "🦅");          // Independence Day
         holidayEmojis.put(LocalDate.of(year, Month.OCTOBER, 31).toString(), "🎃");      // Halloween
 
         LocalDate thanksgiving = LocalDate.of(year, Month.NOVEMBER, 1)
@@ -1103,7 +1104,7 @@ public class HolidayService {
         holidayEmojis.put(thanksgiving.plusDays(1).toString(), "🛒");                   // Black Friday
 
         holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 26).toString(), "🕯️");    // Kwanzaa
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 31).toString(), "🎆");     // New Year's Eve
+        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 31).toString(), "🍾");     // New Year's Eve
 
         return holidayEmojis;
     }
