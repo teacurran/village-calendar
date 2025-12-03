@@ -38,41 +38,20 @@ export function hasAdminRole(): boolean {
  * Checks for authentication and admin role
  */
 export async function adminGuard(to: any, from: any, next: any) {
-  console.log("Admin guard triggered for route:", to.path);
-
   const token = localStorage.getItem("auth_token");
-  console.log("Token exists?", !!token);
 
   if (!token) {
-    // Not authenticated - redirect to home
-    console.log("No token - redirecting to home");
     next({ name: "home", query: { error: "auth_required" } });
     return;
   }
 
   const isAdmin = hasAdminRole();
-  console.log("Has admin role?", isAdmin);
 
   if (!isAdmin) {
-    // Not an admin - show forbidden error
-    console.log("Not admin - redirecting to home");
-
-    // Debug: decode token to see what's inside
-    try {
-      const parts = token.split(".");
-      const payload = JSON.parse(atob(parts[1]));
-      console.log("JWT payload:", payload);
-      console.log("JWT groups:", payload.groups);
-    } catch (e) {
-      console.error("Failed to decode token:", e);
-    }
-
     next({ name: "home", query: { error: "forbidden" } });
     return;
   }
 
-  // User is admin - allow access
-  console.log("Admin access granted");
   next();
 }
 

@@ -109,7 +109,6 @@ export const useAuthStore = defineStore("auth", {
       const sessionId = getSessionId();
       if (sessionId) {
         sessionStorage.setItem("guest_session_id", sessionId);
-        console.log("[Auth] Stored session ID for OAuth flow:", sessionId);
       }
 
       // Redirect to OAuth provider
@@ -148,14 +147,9 @@ export const useAuthStore = defineStore("auth", {
       const guestSessionId = sessionStorage.getItem("guest_session_id");
       if (guestSessionId) {
         try {
-          console.log(
-            "[Auth] Converting guest session to user:",
-            guestSessionId,
-          );
           await this.convertGuestSession(guestSessionId);
           sessionStorage.removeItem("guest_session_id");
-        } catch (err) {
-          console.error("[Auth] Failed to convert guest session:", err);
+        } catch {
           // Don't block login if session conversion fails
         }
       }
@@ -216,13 +210,8 @@ export const useAuthStore = defineStore("auth", {
           );
         }
 
-        const convertedCount = result.data?.convertGuestSession || 0;
-        console.log(
-          `[Auth] Converted ${convertedCount} calendars from guest session`,
-        );
-        return convertedCount;
+        return result.data?.convertGuestSession || 0;
       } catch (err: any) {
-        console.error("[Auth] Error converting guest session:", err);
         throw err;
       }
     },

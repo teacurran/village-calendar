@@ -379,18 +379,7 @@ const customizeTemplate = (template: CalendarTemplate | null) => {
 
 // Navigate to admin dashboard
 const goToAdmin = () => {
-  console.log("Admin button clicked");
-  console.log("Is admin?", authStore.isAdmin);
-  console.log("Current route:", router.currentRoute.value.path);
-
-  router
-    .push("/admin")
-    .then(() => {
-      console.log("Navigation successful");
-    })
-    .catch((err) => {
-      console.error("Navigation failed:", err);
-    });
+  router.push("/admin");
 };
 
 // Go to generator page

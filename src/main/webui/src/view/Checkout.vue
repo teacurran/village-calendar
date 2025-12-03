@@ -5,7 +5,6 @@ import { useCartStore } from "../stores/cart";
 import { useUserStore } from "../stores/user";
 import { useToast } from "primevue/usetoast";
 import { ROUTE_NAMES } from "../navigation/routes";
-import { paymentService } from "../services/payment";
 import { homeBreadcrumb } from "../navigation/breadcrumbs";
 import { Breadcrumb, Button, Card } from "primevue";
 import InputText from "primevue/inputtext";
@@ -180,15 +179,6 @@ const stripeElementsContainer = ref<HTMLElement | null>(null);
 const paymentIntentClientSecret = ref<string | null>(null);
 const stripePublishableKey = ref<string | null>(null);
 
-// Payment - Express checkout
-const expressCheckoutAvailable = ref({
-  googlePay: false,
-  paypal: false,
-  shopPay: false,
-  affirm: false,
-});
-const paypalButtonContainer = ref(null);
-const googlePayButtonContainer = ref(null);
 
 // Countries list
 const countries = [
@@ -381,9 +371,6 @@ onMounted(async () => {
     if (shippingMethods.value.length > 0) {
       selectedShippingMethod.value = shippingMethods.value[0] as ShippingMethod;
     }
-
-    // Initialize express checkout methods
-    await initializeExpressCheckout();
   } finally {
     pageLoading.value = false;
   }
@@ -457,43 +444,6 @@ async function fetchShippingOptions() {
     });
   } finally {
     loadingShipping.value = false;
-  }
-}
-
-// Initialize express checkout payment methods
-async function initializeExpressCheckout() {
-  // Check Google Pay availability
-  try {
-    const isGooglePayReady = await paymentService.isGooglePayReady(
-      orderTotal.value,
-    );
-    expressCheckoutAvailable.value.googlePay = isGooglePayReady;
-  } catch (err) {
-    console.log("Google Pay not available:", err);
-  }
-
-  // Initialize PayPal
-  try {
-    await paymentService.initializePayPal();
-    expressCheckoutAvailable.value.paypal = true;
-  } catch (err) {
-    console.log("PayPal not available:", err);
-  }
-
-  // Initialize Shop Pay (may not be available in all regions)
-  try {
-    const shopPay = await paymentService.initializeShopPay();
-    expressCheckoutAvailable.value.shopPay = !!shopPay;
-  } catch (err) {
-    console.log("Shop Pay not available:", err);
-  }
-
-  // Initialize Affirm
-  try {
-    await paymentService.initializeAffirm();
-    expressCheckoutAvailable.value.affirm = true;
-  } catch (err) {
-    console.log("Affirm not available:", err);
   }
 }
 
@@ -797,167 +747,6 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
-// Express Checkout Handlers
-async function handleGooglePay() {
-  try {
-    processing.value = true;
-
-    const cartData = {
-      total: orderTotal.value,
-      items: cartItems.value,
-      subtotal: cartSubtotal.value,
-      shipping: shippingCost.value,
-      tax: taxAmount.value,
-    };
-
-    const paymentData = await paymentService.processGooglePayPayment(cartData);
-
-    // Process the payment token with your backend
-    const response = await fetch("/api/checkout/google-pay", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        paymentData,
-        cartData,
-        shippingAddress: contactAndShipping.value,
-      }),
-    });
-
-    if (!response.ok) throw new Error("Payment failed");
-
-    const order = await response.json();
-    await cartStore.clearCart();
-    router.push({
-      name: ROUTE_NAMES.ORDER_CONFIRMATION,
-      params: { orderId: order.id },
-    });
-  } catch (error: any) {
-    console.error("Google Pay error:", error);
-    toast.add({
-      severity: "error",
-      summary: "Payment Failed",
-      detail: error.message || "Unable to process Google Pay payment",
-      life: 5000,
-    });
-  } finally {
-    processing.value = false;
-  }
-}
-
-async function handlePayPal() {
-  try {
-    const buttons = await paymentService.createPayPalButtons({
-      createOrder: async () => {
-        const response = await fetch("/api/checkout/paypal/create-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            items: cartItems.value,
-            subtotal: cartSubtotal.value,
-            shipping: shippingCost.value,
-            tax: taxAmount.value,
-            total: orderTotal.value,
-          }),
-        });
-        const data = await response.json();
-        return data.orderId;
-      },
-      onApprove: async (data: any) => {
-        processing.value = true;
-        const response = await fetch("/api/checkout/paypal/capture-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: data.orderID,
-            shippingAddress: contactAndShipping.value,
-          }),
-        });
-
-        if (!response.ok) throw new Error("Payment capture failed");
-
-        const order = await response.json();
-        await cartStore.clearCart();
-        router.push({
-          name: ROUTE_NAMES.ORDER_CONFIRMATION,
-          params: { orderId: order.id },
-        });
-      },
-      onError: (err: any) => {
-        console.error("PayPal error:", err);
-        toast.add({
-          severity: "error",
-          summary: "Payment Failed",
-          detail: "Unable to process PayPal payment",
-          life: 5000,
-        });
-        processing.value = false;
-      },
-      onCancel: () => {
-        processing.value = false;
-      },
-    });
-
-    // Render PayPal button in a modal or inline
-    if (paypalButtonContainer.value) {
-      buttons.render(paypalButtonContainer.value);
-    }
-  } catch (error: any) {
-    console.error("PayPal initialization error:", error);
-    toast.add({
-      severity: "error",
-      summary: "PayPal Error",
-      detail: "Unable to initialize PayPal",
-      life: 5000,
-    });
-  }
-}
-
-async function handleShopPay() {
-  // Shop Pay requires Shopify Plus integration
-  // This is a placeholder for the Shop Pay accelerated checkout
-  toast.add({
-    severity: "info",
-    summary: "Shop Pay",
-    detail: "Shop Pay integration requires additional merchant setup",
-    life: 5000,
-  });
-}
-
-async function handleAffirm() {
-  try {
-    processing.value = true;
-
-    const checkoutData = {
-      shippingAddress: contactAndShipping.value,
-      billingAddress: sameAsShipping.value
-        ? contactAndShipping.value
-        : billingAddress.value,
-      items: cartItems.value,
-      shippingMethod: selectedShippingMethod.value,
-      total: orderTotal.value,
-      subtotal: cartSubtotal.value,
-      shipping: shippingCost.value,
-      tax: taxAmount.value,
-    };
-
-    // Open Affirm checkout modal
-    await paymentService.openAffirmCheckout(checkoutData);
-
-    // Affirm will redirect back to your site with a checkout token
-    // Handle the response in a separate route or modal callback
-  } catch (error: any) {
-    console.error("Affirm error:", error);
-    toast.add({
-      severity: "error",
-      summary: "Affirm Error",
-      detail: "Unable to open Affirm checkout",
-      life: 5000,
-    });
-  } finally {
-    processing.value = false;
-  }
-}
-
 // Watch for billing address changes
 watch(sameAsShipping, (newVal) => {
   if (newVal) {
@@ -987,54 +776,6 @@ watch(
     <!-- Left: Main checkout form -->
     <Card class="checkout-form">
       <template #content>
-        <!-- Express checkout -->
-        <div
-          v-if="
-            currentStep === 1 &&
-            Object.values(expressCheckoutAvailable).some((v) => v)
-          "
-          class="express-checkout"
-        >
-          <div class="express-title">Express checkout</div>
-          <div class="express-buttons">
-            <Button
-              v-if="expressCheckoutAvailable.shopPay"
-              label="Shop Pay"
-              class="express-btn shop-pay"
-              :disabled="processing"
-              @click="handleShopPay"
-            />
-            <Button
-              v-if="expressCheckoutAvailable.paypal"
-              label="PayPal"
-              class="express-btn paypal"
-              :disabled="processing"
-              @click="handlePayPal"
-            />
-            <Button
-              v-if="expressCheckoutAvailable.googlePay"
-              label="Google Pay"
-              class="express-btn google-pay"
-              :disabled="processing"
-              @click="handleGooglePay"
-            />
-            <Button
-              v-if="expressCheckoutAvailable.affirm"
-              label="Pay with Affirm"
-              class="express-btn affirm"
-              :disabled="processing"
-              @click="handleAffirm"
-            />
-          </div>
-          <div class="divider-or">
-            <span>OR</span>
-          </div>
-
-          <!-- Hidden containers for payment buttons -->
-          <div ref="paypalButtonContainer" style="display: none"></div>
-          <div ref="googlePayButtonContainer" style="display: none"></div>
-        </div>
-
         <!-- Step 1: Contact Information -->
         <div v-show="currentStep === 1">
           <div class="section-header">
@@ -1588,84 +1329,6 @@ watch(
   position: sticky;
   top: 2rem;
   height: fit-content;
-}
-
-/* Express checkout */
-.express-checkout {
-  margin-bottom: 2rem;
-}
-
-.express-title {
-  font-size: 0.875rem;
-  color: #545454;
-  margin-bottom: 1rem;
-}
-
-.express-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
-}
-
-.express-btn {
-  height: 44px;
-  border-radius: 4px;
-  font-weight: 500;
-}
-
-.shop-pay {
-  background: #5a31f4;
-  border-color: #5a31f4;
-  color: white;
-}
-
-.paypal {
-  background: #ffc439;
-  border-color: #ffc439;
-  color: #333;
-}
-
-.google-pay {
-  background: var(--p-surface-0);
-  border: 1px solid #dadada;
-  color: #3c4043;
-}
-
-.affirm {
-  background: var(--p-surface-0);
-  border: 1px solid #0fa0ea;
-  color: #0fa0ea;
-  font-weight: 600;
-}
-
-.affirm:hover {
-  background: #0fa0ea;
-  color: white;
-}
-
-.divider-or {
-  text-align: center;
-  margin: 2rem 0;
-  position: relative;
-}
-
-.divider-or::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: #e1e1e1;
-}
-
-.divider-or span {
-  background: #fafafa;
-  padding: 0 1rem;
-  position: relative;
-  font-size: 0.75rem;
-  color: #737373;
-  text-transform: uppercase;
 }
 
 /* Sections */

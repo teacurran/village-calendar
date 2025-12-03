@@ -115,33 +115,13 @@ const authStore = useAuthStore();
 const currentYear = computed(() => new Date().getFullYear());
 
 // Placeholder click handlers (can be implemented later)
-const handleContactClick = () => {
-  console.log("Contact Us clicked");
-};
-
-const handleFaqClick = () => {
-  console.log("FAQ clicked");
-};
-
-const handleShippingClick = () => {
-  console.log("Shipping Info clicked");
-};
-
-const handlePrivacyClick = () => {
-  console.log("Privacy Policy clicked");
-};
-
-const handleTermsClick = () => {
-  console.log("Terms of Service clicked");
-};
-
-const handleRefundClick = () => {
-  console.log("Refund Policy clicked");
-};
-
-const handleSocialClick = (platform: string) => {
-  console.log(`${platform} social link clicked`);
-};
+const handleContactClick = () => {};
+const handleFaqClick = () => {};
+const handleShippingClick = () => {};
+const handlePrivacyClick = () => {};
+const handleTermsClick = () => {};
+const handleRefundClick = () => {};
+const handleSocialClick = (_platform: string) => {};
 </script>
 
 <style scoped>

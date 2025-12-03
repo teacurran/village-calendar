@@ -17,7 +17,6 @@ export function getOrCreateSessionId(): string {
   if (!sessionId) {
     sessionId = crypto.randomUUID();
     localStorage.setItem(SESSION_ID_KEY, sessionId);
-    console.log("[Session] Created new session ID:", sessionId);
   }
 
   return sessionId;
@@ -37,11 +36,7 @@ export function getSessionId(): string | null {
  * Called after successful conversion of guest session to user account.
  */
 export function clearSessionId(): void {
-  const sessionId = localStorage.getItem(SESSION_ID_KEY);
-  if (sessionId) {
-    console.log("[Session] Clearing session ID:", sessionId);
-    localStorage.removeItem(SESSION_ID_KEY);
-  }
+  localStorage.removeItem(SESSION_ID_KEY);
 }
 
 /**
@@ -60,5 +55,4 @@ export function hasSessionId(): boolean {
  */
 export function setSessionId(sessionId: string): void {
   localStorage.setItem(SESSION_ID_KEY, sessionId);
-  console.log("[Session] Set session ID:", sessionId);
 }

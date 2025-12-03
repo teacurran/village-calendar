@@ -185,7 +185,6 @@ const createNewCalendar = () => {
 
 const viewOrders = () => {
   // TODO: Navigate to orders page when implemented
-  console.log("View orders clicked");
 };
 
 const browseTemplates = () => {

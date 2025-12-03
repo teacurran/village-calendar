@@ -44,7 +44,7 @@ const productOptions = [
   },
   {
     id: "print" as const,
-    name: "Professionally Printed Calendar",
+    name: 'Printed 35" x 22.5" Poster',
     price: 25.0,
     description: "Beautiful printed calendar shipped directly to your door.",
     features: [

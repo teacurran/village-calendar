@@ -94,38 +94,24 @@ const fetchCalendarSvg = async (calendarId: string) => {
 
 // Load calendar SVGs when cart items change
 const loadCalendarSvgs = async () => {
-  console.log("CartDrawer loadCalendarSvgs called, items:", cartStore.items);
   if (!cartStore.items || cartStore.items.length === 0) return;
 
-  // Process each cart item
   for (const item of cartStore.items) {
-    console.log("Processing item:", item.id, "templateId:", item.templateId);
     const config = getCalendarConfig(item);
-    console.log("Parsed config:", config);
 
     if (config) {
-      // Use item.id as the primary key for lookups - this ensures consistency
       const calendarKey = item.id;
 
-      // First check if SVG content is already in the configuration
       if (config.svgContent) {
-        console.log("Found svgContent for item:", calendarKey);
         calendarSvgs.value[calendarKey] = config.svgContent;
       } else if (config.calendarId) {
-        // Otherwise try to fetch from API if there's a calendarId
-        console.log("Fetching SVG for calendarId:", config.calendarId);
         const svg = await fetchCalendarSvg(config.calendarId);
         if (svg) {
           calendarSvgs.value[calendarKey] = svg;
         }
-      } else {
-        console.log("No svgContent or calendarId found in config");
       }
-    } else {
-      console.log("getCalendarConfig returned null for item");
     }
   }
-  console.log("Final calendarSvgs:", Object.keys(calendarSvgs.value));
 };
 
 // Show calendar preview
@@ -144,10 +130,7 @@ const showCalendarPreview = (item: any) => {
 
 // Fetch cart on component mount
 onMounted(async () => {
-  console.log("CartDrawer mounted, fetching cart...");
-  // Force fetch when opening cart drawer to get full cart with items
   await cartStore.fetchCart(true);
-  console.log("Cart fetched, cart data:", cartStore.cart);
   await loadCalendarSvgs();
 });
 
@@ -160,15 +143,10 @@ watch(
 );
 
 const isOpen = computed({
-  get: () => {
-    console.log("CartDrawer isOpen getter:", cartStore.isOpen);
-    return cartStore.isOpen;
-  },
+  get: () => cartStore.isOpen,
   set: (value) => {
-    console.log("CartDrawer isOpen setter:", value);
     if (value) {
       cartStore.openCart();
-      // Load calendar SVGs when opening the drawer
       loadCalendarSvgs();
     } else {
       cartStore.closeCart();

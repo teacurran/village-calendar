@@ -2006,13 +2006,6 @@ const generateCalendar = async () => {
       }
     });
 
-    // Debug logging
-    if (customEvents.value.length > 0) {
-      console.log("Custom events:", customEvents.value);
-      console.log("Custom dates map:", customDatesMap);
-      console.log("Event titles:", eventTitles);
-    }
-
     // Build request
     const request = {
       calendarType: config.value.calendarType,
@@ -2978,9 +2971,8 @@ const loadCalendarFromUrl = async () => {
         generateCalendar();
         return true;
       }
-    } catch (error) {
+    } catch {
       // No existing session calendar, that's ok
-      console.log("No existing session calendar");
     }
   }
 
@@ -3596,8 +3588,6 @@ const confirmSaveTemplate = async () => {
     isFeatured: templateToSave.value.isFeatured,
     displayOrder: templateToSave.value.displayOrder,
   };
-
-  console.log("Saving template with data:", requestBody);
 
   try {
     // Use GraphQL to create template

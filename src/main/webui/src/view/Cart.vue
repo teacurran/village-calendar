@@ -113,42 +113,28 @@ const fetchCalendarSvg = async (calendarId: string) => {
 const loadCalendarSvgs = async () => {
   if (!cartStore.items || cartStore.items.length === 0) return;
 
-  console.log("Loading calendar SVGs for cart items:", cartStore.items);
-
   for (const item of cartStore.items) {
     const config = getCalendarConfig(item);
-    console.log("Item config:", item.id, config);
 
     if (config) {
-      const calendarKey = item.id; // Use item.id as consistent key
+      const calendarKey = item.id;
 
-      // Check for different possible SVG field names
       if (config.svgContent) {
-        console.log("Found svgContent for", calendarKey);
         calendarSvgs.value[calendarKey] = config.svgContent;
       } else if (config.generatedSvg) {
-        console.log("Found generatedSvg for", calendarKey);
         calendarSvgs.value[calendarKey] = config.generatedSvg;
       } else if (config.calendarId) {
-        // Try to fetch the SVG using the calendar ID
         const svg = await fetchCalendarSvg(config.calendarId);
         if (svg) {
-          console.log("Fetched SVG for calendar", config.calendarId);
           calendarSvgs.value[calendarKey] = svg;
         } else {
-          // Find the calendar in our cached list
           const calendar = allUserCalendars.value.find(
             (c) => c.id === config.calendarId,
           );
-          console.log("Found calendar by ID:", calendar);
-
           if (calendar) {
-            // Check different possible field names
             if (calendar.generatedSvg) {
-              console.log("Using generatedSvg from calendar");
               calendarSvgs.value[calendarKey] = calendar.generatedSvg;
             } else if (calendar.svgContent) {
-              console.log("Using svgContent from calendar");
               calendarSvgs.value[calendarKey] = calendar.svgContent;
             }
           }
@@ -156,8 +142,6 @@ const loadCalendarSvgs = async () => {
       }
     }
   }
-
-  console.log("Final calendarSvgs:", calendarSvgs.value);
 };
 
 // Show calendar preview
