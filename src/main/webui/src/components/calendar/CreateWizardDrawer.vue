@@ -138,8 +138,8 @@ const gridLineColor = ref("#c1c1c1");
 const holidayColor = ref("#ff5252");
 
 // Holiday settings state
-const selectedHolidaySets = ref<string[]>([]);
-const primaryHolidaySet = ref<string>("none");
+const primaryHolidaySet = ref<string>("none"); // Current dropdown selection
+const additionalHolidaySets = ref<string[]>([]); // Items added via + button
 const eventDisplayMode = ref<EventDisplayMode>("small");
 
 // Holiday set options (including "No Holidays" as default)
@@ -153,11 +153,11 @@ const holidaySetOptions = [
   { label: "Major World Holidays", value: "major_world" },
 ];
 
-// Filter out already selected sets from dropdown options (keep "none" always available)
+// Filter out items already in the additional list from dropdown options
 const availableHolidaySets = computed(() => {
   return holidaySetOptions.filter(
     (opt) =>
-      opt.value === "none" || !selectedHolidaySets.value.includes(opt.value),
+      opt.value === "none" || !additionalHolidaySets.value.includes(opt.value),
   );
 });
 
@@ -167,54 +167,48 @@ const getHolidaySetLabel = (value: string) => {
   return option ? option.label : value;
 };
 
-// Handle primary holiday set change (auto-applies selection)
+// Handle primary holiday set change - just emit, no auto-add to list
 const handlePrimaryHolidayChange = () => {
-  if (primaryHolidaySet.value === "none") {
-    // Clear all selected sets when "No Holidays" is chosen
-    selectedHolidaySets.value = [];
-  } else if (!selectedHolidaySets.value.includes(primaryHolidaySet.value)) {
-    // Add the primary selection to the list if not already there
-    selectedHolidaySets.value = [
-      primaryHolidaySet.value,
-      ...selectedHolidaySets.value,
-    ];
-  }
   emitHolidaySettings();
 };
 
-// Add current primary selection as additional holiday set
+// Add current primary selection to the additional list via + button
 const addHolidaySet = () => {
   if (
     primaryHolidaySet.value &&
     primaryHolidaySet.value !== "none" &&
-    !selectedHolidaySets.value.includes(primaryHolidaySet.value)
+    !additionalHolidaySets.value.includes(primaryHolidaySet.value)
   ) {
-    selectedHolidaySets.value.push(primaryHolidaySet.value);
-    // Reset dropdown to prompt for another selection
+    additionalHolidaySets.value.push(primaryHolidaySet.value);
+    // Reset dropdown to allow selecting another
     primaryHolidaySet.value = "none";
     emitHolidaySettings();
   }
 };
 
-// Remove a holiday set
+// Remove a holiday set from the additional list
 const removeHolidaySet = (setValue: string) => {
-  selectedHolidaySets.value = selectedHolidaySets.value.filter(
+  additionalHolidaySets.value = additionalHolidaySets.value.filter(
     (v) => v !== setValue,
   );
-  // If the removed set was the primary, reset to none or first remaining
-  if (primaryHolidaySet.value === setValue) {
-    primaryHolidaySet.value =
-      selectedHolidaySets.value.length > 0
-        ? selectedHolidaySets.value[0]
-        : "none";
-  }
   emitHolidaySettings();
 };
 
-// Emit holiday settings
+// Emit holiday settings - combines primary selection with additional list
 const emitHolidaySettings = () => {
+  const allSets: string[] = [];
+  // Add primary selection if not "none"
+  if (primaryHolidaySet.value && primaryHolidaySet.value !== "none") {
+    allSets.push(primaryHolidaySet.value);
+  }
+  // Add all items from the additional list
+  additionalHolidaySets.value.forEach((set) => {
+    if (!allSets.includes(set)) {
+      allSets.push(set);
+    }
+  });
   emit("holidaysChange", {
-    selectedSets: selectedHolidaySets.value,
+    selectedSets: allSets,
     displayMode: eventDisplayMode.value,
   });
 };
@@ -1027,23 +1021,24 @@ onMounted(() => {
                     @change="handlePrimaryHolidayChange"
                   />
                   <Button
-                    v-tooltip="'Add another holiday set'"
+                    v-tooltip="'Add to list and select another'"
                     icon="pi pi-plus"
                     :disabled="
                       primaryHolidaySet === 'none' ||
-                      selectedHolidaySets.includes(primaryHolidaySet)
+                      additionalHolidaySets.includes(primaryHolidaySet)
                     "
                     @click="addHolidaySet"
                   />
                 </div>
 
-                <!-- Additional Selected Holiday Sets (shown as chips when multiple) -->
+                <!-- Additional Holiday Sets (items added via + button) -->
                 <div
-                  v-if="selectedHolidaySets.length > 1"
+                  v-if="additionalHolidaySets.length > 0"
                   class="selected-holidays"
                 >
+                  <p class="additional-label">Also showing:</p>
                   <div
-                    v-for="setId in selectedHolidaySets"
+                    v-for="setId in additionalHolidaySets"
                     :key="setId"
                     class="holiday-chip"
                   >
@@ -1912,6 +1907,12 @@ onMounted(() => {
   background: var(--surface-50);
   border-radius: 8px;
   border: 1px solid var(--surface-200);
+}
+
+.additional-label {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+  margin: 0 0 0.25rem 0;
 }
 
 .no-holidays {
