@@ -28,8 +28,9 @@ const cartStore = useCartStore();
 const userStore = useUserStore();
 const toast = useToast();
 
-// Calendar printing product ID
-const CALENDAR_PRODUCT_ID = "ca1e0da2-0000-0000-0000-000000000001";
+// Calendar product IDs
+const CALENDAR_PRINT_PRODUCT_ID = "ca1e0da2-0000-0000-0000-000000000001";
+const CALENDAR_PDF_PRODUCT_ID = "ca1e0da2-0000-0000-0000-000000000002";
 
 // Store for calendar SVGs
 const calendarSvgs = ref<Record<string, string>>({});
@@ -37,9 +38,17 @@ const showPreviewModal = ref(false);
 const previewCalendarSvg = ref("");
 const previewCalendarName = ref("");
 
+// Check if item is a calendar (print or PDF)
+const isCalendarItem = (item: any) => {
+  return (
+    item.templateId === CALENDAR_PRINT_PRODUCT_ID ||
+    item.templateId === CALENDAR_PDF_PRODUCT_ID
+  );
+};
+
 // Parse configuration and get calendar details
 const getCalendarConfig = (item: any) => {
-  if (item.productId === CALENDAR_PRODUCT_ID && item.configuration) {
+  if (isCalendarItem(item) && item.configuration) {
     try {
       return JSON.parse(item.configuration);
     } catch (e) {
@@ -47,11 +56,6 @@ const getCalendarConfig = (item: any) => {
     }
   }
   return null;
-};
-
-// Check if item is a calendar
-const isCalendarItem = (item: any) => {
-  return item.productId === CALENDAR_PRODUCT_ID;
 };
 
 // Get month name from number
@@ -394,9 +398,7 @@ async function fetchShippingOptions() {
   loadingShipping.value = true;
   try {
     // Check if cart has calendars
-    const hasCalendars = cartStore.items?.some(
-      (item) => item.productId === "ca1e0da2-0000-0000-0000-000000000001",
-    );
+    const hasCalendars = cartStore.items?.some((item) => isCalendarItem(item));
 
     if (hasCalendars) {
       // Use calendar-specific shipping endpoint

@@ -42,8 +42,14 @@ const router = createRouter({
       meta: { requiresAuth: false, title: "Browse Templates" },
     },
     {
-      path: "/checkout/:calendarId",
+      path: "/checkout",
       name: "checkout",
+      component: () => import("./view/Checkout.vue"),
+      meta: { requiresAuth: false },
+    },
+    {
+      path: "/checkout/:calendarId",
+      name: "checkout-calendar",
       component: () => import("./views/Checkout.vue"),
       meta: { requiresAuth: true },
     },
