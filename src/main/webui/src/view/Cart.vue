@@ -16,8 +16,9 @@ const router = useRouter();
 const cartStore = useCartStore();
 const toast = useToast();
 
-// Calendar printing product ID
-const CALENDAR_PRODUCT_ID = "ca1e0da2-0000-0000-0000-000000000001";
+// Calendar product IDs
+const CALENDAR_PRINT_PRODUCT_ID = "ca1e0da2-0000-0000-0000-000000000001";
+const CALENDAR_PDF_PRODUCT_ID = "ca1e0da2-0000-0000-0000-000000000002";
 
 // Store for calendar SVGs
 const calendarSvgs = ref<Record<string, string>>({});
@@ -38,13 +39,17 @@ const cartItems = computed(() => cartStore.items || []);
 const cartSubtotal = computed(() => cartStore.subtotal || 0);
 const cartItemCount = computed(() => cartStore.itemCount || 0);
 
+// Check if item is a calendar (print or PDF)
+const isCalendarItem = (item: any) => {
+  return (
+    item.templateId === CALENDAR_PRINT_PRODUCT_ID ||
+    item.templateId === CALENDAR_PDF_PRODUCT_ID
+  );
+};
+
 // Parse configuration and get calendar details
 const getCalendarConfig = (item: any) => {
-  // Check if this is a calendar item (either by productId or templateId)
-  const isCalendar =
-    item.productId === CALENDAR_PRODUCT_ID ||
-    item.templateId === CALENDAR_PRODUCT_ID;
-  if (isCalendar && item.configuration) {
+  if (isCalendarItem(item) && item.configuration) {
     try {
       // Configuration might already be parsed
       if (typeof item.configuration === "object") {
@@ -60,14 +65,6 @@ const getCalendarConfig = (item: any) => {
     }
   }
   return null;
-};
-
-// Check if item is a calendar
-const isCalendarItem = (item: any) => {
-  return (
-    item.productId === CALENDAR_PRODUCT_ID ||
-    item.templateId === CALENDAR_PRODUCT_ID
-  );
 };
 
 // Get month name from number
