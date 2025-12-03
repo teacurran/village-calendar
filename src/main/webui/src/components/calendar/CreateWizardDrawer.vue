@@ -65,7 +65,7 @@ export type WeekendStyleType =
   | "greyscale"
   | "rainbow"
   | "vermont"
-  | "ocean"
+  | "lakeshore"
   | "sunset"
   | "forest";
 
@@ -302,9 +302,9 @@ const weekendStyleOptions = [
     theme: "vermontWeekends",
   },
   {
-    id: "ocean" as const,
-    name: "Ocean Breeze",
-    theme: "oceanWeekends",
+    id: "lakeshore" as const,
+    name: "Lakeshore",
+    theme: "lakeshoreWeekends",
   },
   {
     id: "sunset" as const,
@@ -742,7 +742,7 @@ const initializeFromConfig = () => {
       default: "greyscale",
       rainbowWeekends: "rainbow",
       vermontWeekends: "vermont",
-      oceanWeekends: "ocean",
+      lakeshoreWeekends: "lakeshore",
       sunsetWeekends: "sunset",
       forestWeekends: "forest",
     };

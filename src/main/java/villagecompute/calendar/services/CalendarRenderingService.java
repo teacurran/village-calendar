@@ -130,8 +130,8 @@ public class CalendarRenderingService {
       "rgba(161,161,161,0.6)", "rgba(161,161,161,0.6)"}
   };
 
-  // Ocean Breeze monthly colors - cool blue gradient through the year
-  private static final String[][] OCEAN_MONTHLY_COLORS = {
+  // Lakeshore monthly colors - cool blue gradient through the year
+  private static final String[][] LAKESHORE_MONTHLY_COLORS = {
     // January - Icy blue
     {"#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd"},
     // February - Pale azure
@@ -250,8 +250,8 @@ public class CalendarRenderingService {
       "#666666"
     ));
 
-    // Ocean Breeze theme - cool blue tones
-    THEMES.put("oceanWeekends", new ThemeColors(
+    // Lakeshore theme - cool blue tones
+    THEMES.put("lakeshoreWeekends", new ThemeColors(
       "#000000",
       "#ffffff",
       null, // weekend color will be dynamic per month
@@ -2195,9 +2195,9 @@ public class CalendarRenderingService {
           return monthColors[weekendIndex];
         }
         return monthColors[0]; // Fallback to first color
-      } else if ("oceanWeekends".equals(theme)) {
-        // Use Ocean Breeze monthly colors for weekends
-        String[] monthColors = OCEAN_MONTHLY_COLORS[monthNum - 1];
+      } else if ("lakeshoreWeekends".equals(theme)) {
+        // Use Lakeshore monthly colors for weekends
+        String[] monthColors = LAKESHORE_MONTHLY_COLORS[monthNum - 1];
         if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
           return monthColors[weekendIndex];
         }

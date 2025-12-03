@@ -3168,7 +3168,7 @@ const handleWizardDisplayOptionsChange = (options: DisplayOptions) => {
       greyscale: "default",
       rainbow: "rainbowWeekends",
       vermont: "vermontWeekends",
-      ocean: "oceanWeekends",
+      lakeshore: "lakeshoreWeekends",
       sunset: "sunsetWeekends",
       forest: "forestWeekends",
     };
