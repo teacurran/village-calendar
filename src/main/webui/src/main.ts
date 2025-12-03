@@ -1,5 +1,6 @@
 import { createApp } from "vue";
 import Ripple from "primevue/ripple";
+import Tooltip from "primevue/tooltip";
 import "./styles/main.css";
 import i18n from "./i18n";
 
@@ -37,6 +38,7 @@ app.use(ToastService);
 app.use(ConfirmationService);
 app.directive("styleclass", StyleClass);
 app.directive("ripple", Ripple);
+app.directive("tooltip", Tooltip);
 app.use(i18n);
 
 // Initialize auth store to load user from token

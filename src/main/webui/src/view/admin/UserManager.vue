@@ -9,7 +9,6 @@ import {
   Tag,
   InputText,
   Avatar,
-  ConfirmDialog,
 } from "primevue";
 import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue/useconfirm";
@@ -246,7 +245,6 @@ onMounted(async () => {
 </script>
 
 <template>
-  <ConfirmDialog />
   <Breadcrumb :home="homeBreadcrumb" :model="breadCrumbs" class="mb-4" />
 
   <div class="user-manager-page">
