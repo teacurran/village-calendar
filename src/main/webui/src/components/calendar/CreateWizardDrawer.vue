@@ -146,21 +146,21 @@ const primaryHolidaySet = ref<string>("none"); // Current dropdown selection
 const additionalHolidaySets = ref<string[]>([]); // Items added via + button
 const eventDisplayMode = ref<EventDisplayMode>("small");
 
-// Holiday set options (including "No Holidays" as default)
+// Holiday set options (including "No Holidays" as default, rest alphabetical)
 const holidaySetOptions = [
   { label: "No Holidays", value: "none" },
-  { label: "US Holidays", value: "us" },
   { label: "Canadian Holidays", value: "canadian" },
-  { label: "UK Holidays", value: "uk" },
-  { label: "Mexican Holidays", value: "mexican" },
-  { label: "Christian Holidays", value: "christian" },
-  { label: "Jewish Holidays", value: "jewish" },
-  { label: "Islamic Holidays", value: "islamic" },
-  { label: "Hindu Holidays", value: "hindu" },
   { label: "Chinese/Lunar Holidays", value: "chinese" },
-  { label: "Pagan/Wiccan (Wheel of the Year)", value: "pagan" },
+  { label: "Christian Holidays", value: "christian" },
   { label: "Fun & Secular Holidays", value: "secular" },
+  { label: "Hindu Holidays", value: "hindu" },
+  { label: "Islamic Holidays", value: "islamic" },
+  { label: "Jewish Holidays", value: "jewish" },
   { label: "Major World Holidays", value: "major_world" },
+  { label: "Mexican Holidays", value: "mexican" },
+  { label: "Pagan/Wiccan (Wheel of the Year)", value: "pagan" },
+  { label: "UK Holidays", value: "uk" },
+  { label: "US Holidays", value: "us" },
 ];
 
 // Filter out items already in the additional list from dropdown options
