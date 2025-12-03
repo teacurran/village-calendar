@@ -72,6 +72,7 @@ public class CalendarResource {
     public String holidaySet; // Holiday set to use (e.g., "US", "JEWISH", "HEBREW_RELIGIOUS")
     public List<String> holidaySets; // List of holiday set IDs to include
     public String eventDisplayMode; // "small" or "large" for event/holiday display
+    public String emojiFont; // "noto-color" (default) or "noto-mono" for monochrome
     public String locale;
     public String firstDayOfWeek;
     public String observationTime; // Time for moon calculations (e.g., "20:00")
@@ -330,6 +331,9 @@ public class CalendarResource {
     }
     if (request.eventDisplayMode != null) {
       config.eventDisplayMode = request.eventDisplayMode;
+    }
+    if (request.emojiFont != null) {
+      config.emojiFont = request.emojiFont;
     }
     if (request.observationTime != null) {
       try {

@@ -90,6 +90,8 @@ export interface DisplayOptions {
   rotateMonthNames: boolean;
 }
 
+export type EmojiFontType = "noto-color" | "noto-mono";
+
 export interface ColorSettings {
   yearColor: string;
   monthColor: string;
@@ -97,6 +99,7 @@ export interface ColorSettings {
   dayNameColor: string;
   gridLineColor: string;
   holidayColor: string;
+  emojiFont: EmojiFontType;
 }
 
 export type EventDisplayMode = "small" | "large";
@@ -136,6 +139,7 @@ const dayTextColor = ref("#000000");
 const dayNameColor = ref("#666666");
 const gridLineColor = ref("#c1c1c1");
 const holidayColor = ref("#ff5252");
+const emojiFont = ref<EmojiFontType>("noto-color");
 
 // Holiday settings state
 const primaryHolidaySet = ref<string>("none"); // Current dropdown selection
@@ -299,7 +303,7 @@ const moonDisplayModeOptions = [
   },
 ];
 
-// Weekend style options for dropdown
+// Weekend style options for dropdown (alphabetical, with None first)
 const weekendStyleOptions = [
   {
     id: "none" as const,
@@ -307,19 +311,14 @@ const weekendStyleOptions = [
     theme: "none",
   },
   {
+    id: "forest" as const,
+    name: "Forest",
+    theme: "forestWeekends",
+  },
+  {
     id: "greyscale" as const,
     name: "Greyscale",
     theme: "default",
-  },
-  {
-    id: "rainbow" as const,
-    name: "Rainbow",
-    theme: "rainbowWeekends",
-  },
-  {
-    id: "vermont" as const,
-    name: "Vermont Seasons",
-    theme: "vermontWeekends",
   },
   {
     id: "lakeshore" as const,
@@ -327,14 +326,19 @@ const weekendStyleOptions = [
     theme: "lakeshoreWeekends",
   },
   {
+    id: "rainbow" as const,
+    name: "Rainbow",
+    theme: "rainbowWeekends",
+  },
+  {
     id: "sunset" as const,
-    name: "Sunset Glow",
+    name: "Sunset",
     theme: "sunsetWeekends",
   },
   {
-    id: "forest" as const,
-    name: "Forest Floor",
-    theme: "forestWeekends",
+    id: "vermont" as const,
+    name: "Vermont Seasons",
+    theme: "vermontWeekends",
   },
 ];
 
@@ -343,35 +347,20 @@ const weekendColorSwatches = [
   // Light grays
   "#f5f5f5",
   "#e8e8e8",
-  "#d9d9d9",
-  // Light blues
+  // Light blue
   "#e3f2fd",
-  "#bbdefb",
-  "#90caf9",
-  // Light greens
+  // Light green
   "#e8f5e9",
-  "#c8e6c9",
-  "#a5d6a7",
-  // Light yellows
+  // Light yellow
   "#fffde7",
-  "#fff9c4",
-  "#fff59d",
-  // Light oranges
+  // Light orange
   "#fff3e0",
-  "#ffe0b2",
-  "#ffcc80",
-  // Light pinks
+  // Light pink
   "#fce4ec",
-  "#f8bbd9",
-  "#f48fb1",
-  // Light purples
+  // Light purple
   "#f3e5f5",
-  "#e1bee7",
-  "#ce93d8",
-  // Light teals
+  // Light teal
   "#e0f2f1",
-  "#b2dfdb",
-  "#80cbc4",
 ];
 
 // Compact color swatches - flat array for inline display
@@ -410,6 +399,22 @@ const colorSwatches = [
   "#c71585",
   "#ff69b4",
   "#ffc0cb",
+];
+
+// Emoji font options
+const emojiFontOptions = [
+  {
+    id: "noto-color" as const,
+    name: "Color Emoji",
+    description: "Full-color emoji (Noto Color Emoji)",
+    preview: "🎄",
+  },
+  {
+    id: "noto-mono" as const,
+    name: "Monochrome",
+    description: "Black and white line art style",
+    preview: "🎄",
+  },
 ];
 
 // Random day for preview (1-28 to be safe)
@@ -698,6 +703,7 @@ const emitColorSettings = () => {
     dayNameColor: dayNameColor.value,
     gridLineColor: gridLineColor.value,
     holidayColor: holidayColor.value,
+    emojiFont: emojiFont.value,
   });
 };
 
@@ -719,6 +725,7 @@ watch(
     dayNameColor,
     gridLineColor,
     holidayColor,
+    emojiFont,
   ],
   () => {
     emitColorSettings();
@@ -1296,6 +1303,41 @@ onMounted(() => {
                     :row-length="10"
                     popover-x="left"
                   />
+                </div>
+              </div>
+
+              <!-- Emoji Style -->
+              <h4 class="subsection-title">Emoji Style</h4>
+              <p class="step-description">
+                Choose how emojis appear in your calendar
+              </p>
+              <div class="emoji-font-options">
+                <div
+                  v-for="option in emojiFontOptions"
+                  :key="option.id"
+                  class="emoji-font-option"
+                  :class="{ selected: emojiFont === option.id }"
+                  @click="emojiFont = option.id"
+                >
+                  <div
+                    class="emoji-preview"
+                    :class="{ monochrome: option.id === 'noto-mono' }"
+                  >
+                    {{ option.preview }}
+                  </div>
+                  <div class="emoji-font-info">
+                    <div class="emoji-font-name">{{ option.name }}</div>
+                    <div class="emoji-font-description">
+                      {{ option.description }}
+                    </div>
+                  </div>
+                  <div class="selection-indicator">
+                    <i
+                      v-if="emojiFont === option.id"
+                      class="pi pi-check-circle"
+                    ></i>
+                    <i v-else class="pi pi-circle"></i>
+                  </div>
                 </div>
               </div>
 
@@ -2068,6 +2110,71 @@ onMounted(() => {
 .mode-desc {
   display: block;
   font-size: 0.75rem;
+  color: var(--text-color-secondary);
+}
+
+/* Emoji font options */
+.emoji-font-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.emoji-font-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 2px solid var(--surface-200);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--surface-0);
+}
+
+.emoji-font-option:hover {
+  border-color: var(--primary-300);
+  background: var(--surface-50);
+}
+
+.emoji-font-option.selected {
+  border-color: var(--primary-color);
+  background: var(--primary-50);
+}
+
+.emoji-preview {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  background: var(--surface-100);
+  border-radius: 6px;
+  font-family:
+    "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+}
+
+.emoji-preview.monochrome {
+  font-family: "Noto Emoji", "Segoe UI Symbol", sans-serif;
+  filter: grayscale(100%);
+}
+
+.emoji-font-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.emoji-font-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  margin-bottom: 0.125rem;
+}
+
+.emoji-font-description {
+  font-size: 0.8125rem;
   color: var(--text-color-secondary);
 }
 </style>

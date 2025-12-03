@@ -1,6 +1,7 @@
 package villagecompute.calendar.services;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.apache.batik.transcoder.Transcoder;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
@@ -29,6 +30,9 @@ import java.util.Set;
 
 @ApplicationScoped
 public class CalendarRenderingService {
+
+  @Inject
+  HolidayService holidayService;
 
   // ===========================================
   // PRINT DIMENSIONS (in inches)
@@ -89,9 +93,24 @@ public class CalendarRenderingService {
     public Map<String, String> holidayEmojis = new HashMap<>(); // date -> emoji for holidays
     public List<String> holidaySets = new ArrayList<>(); // List of holiday set IDs to include
     public String eventDisplayMode = "small"; // "small" or "large" for event/holiday display
+    public String emojiFont = "noto-color"; // "noto-color" (default) or "noto-mono" for monochrome
     public String locale = "en-US";
     public DayOfWeek firstDayOfWeek = DayOfWeek.SUNDAY;
     public String layoutStyle = "grid"; // "grid" for 12x31 layout, "traditional" for 4x3 month grid
+  }
+
+  /**
+   * Returns the CSS font-family string for emoji rendering based on config.
+   * Noto Color Emoji is the default (Apache 2.0 licensed, safe for commercial printing).
+   * Noto Emoji (monochrome) is available for a text-only look.
+   */
+  private static String getEmojiFontFamily(CalendarConfig config) {
+    if ("noto-mono".equals(config.emojiFont)) {
+      // Noto Emoji (monochrome version) - black and white outline style
+      return "'Noto Emoji', 'Segoe UI Symbol', sans-serif";
+    }
+    // Default: Noto Color Emoji (full color, Apache 2.0 licensed)
+    return "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
   }
 
   // Color themes
@@ -118,8 +137,8 @@ public class CalendarRenderingService {
     // September - Early fall
     {"#FAD7A0", "#F8C471", "#F5B041", "#F39C12", "#F39C12", "#F39C12", "#F39C12", "#F39C12", "#FFD700", "#FFD700"},
     // October - Peak fall foliage
-    {"#FF4500", "#FF8C00", "#DAA520", "rgba(110,44,0,0.5)", "rgba(139,69,19,0.5)",
-      "rgba(160,82,45,0.5)", "rgba(205,133,63,0.5)", "rgba(222,184,135,0.5)", "#C0C0C0", "#808080"},
+    {"#FF4500", "#FF8C00", "#DAA520", "rgba(180,120,60,0.4)", "rgba(190,130,70,0.4)",
+      "rgba(200,140,80,0.4)", "rgba(210,160,100,0.4)", "rgba(225,190,140,0.4)", "#C0C0C0", "#808080"},
     // November - Late fall
     {"rgba(161,161,161,0.30)", "rgba(161,161,161,0.30)", "rgba(161,161,161,0.30)", "rgba(161,161,161,0.30)",
       "rgba(161,161,161,0.30)", "rgba(161,161,161,0.30)", "rgba(161,161,161,0.30)", "rgba(161,161,161,0.30)",
@@ -324,13 +343,25 @@ public class CalendarRenderingService {
       case "us": return "US";
       case "jewish": return "JEWISH";
       case "christian": return "CHRISTIAN";
-      case "muslim": return "MUSLIM";
+      case "muslim":
+      case "islamic": return "ISLAMIC";
       case "buddhist": return "BUDDHIST";
-      case "hindu": return "HINDU";
-      case "canadian": return "CANADIAN";
+      case "hindu":
+      case "in": return "HINDU";
+      case "canadian":
+      case "ca": return "CANADIAN";
       case "uk": return "UK";
       case "european": return "EUROPEAN";
       case "major_world": return "MAJOR_WORLD";
+      case "mexican":
+      case "mx": return "MEXICAN";
+      case "pagan":
+      case "wiccan": return "PAGAN";
+      case "chinese":
+      case "cn":
+      case "lunar": return "CHINESE";
+      case "secular":
+      case "fun": return "SECULAR";
       default: return setId.toUpperCase();
     }
   }
@@ -495,13 +526,21 @@ public class CalendarRenderingService {
         // Holiday emoji (if applicable) - render based on eventDisplayMode
         if (!holidayEmoji.isEmpty()) {
           if ("large".equals(config.eventDisplayMode)) {
-            // Large mode: centered emoji
+            // Large mode: centered emoji (or lower if moon is displayed)
             int emojiX = cellX + cellWidth / 2;
-            int emojiY = cellY + cellHeight / 2 + 5;
             int fontSize = Math.max(16, cellHeight / 3);
+            int emojiY;
+            if (shouldShowMoon) {
+              // When moon is displayed, position emoji halfway between center and bottom
+              int centerY = cellY + cellHeight / 2 + 5;
+              int bottomY = cellY + cellHeight - fontSize / 2 - 5;
+              emojiY = (centerY + bottomY) / 2;
+            } else {
+              emojiY = cellY + cellHeight / 2 + 5;
+            }
             svg.append(String.format(
-              "<text x=\"%d\" y=\"%d\" style=\"font-size: %dpx; text-anchor: middle; dominant-baseline: middle; font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;\">%s</text>%n",
-              emojiX, emojiY, fontSize, holidayEmoji
+              "<text x=\"%d\" y=\"%d\" style=\"font-size: %dpx; text-anchor: middle; dominant-baseline: middle; font-family: %s;\">%s</text>%n",
+              emojiX, emojiY, fontSize, getEmojiFontFamily(config), holidayEmoji
             ));
           } else {
             // Small mode: bottom-left corner
@@ -509,8 +548,8 @@ public class CalendarRenderingService {
             int emojiY = cellY + cellHeight - 5;
             int fontSize = Math.max(10, cellHeight / 6);
             svg.append(String.format(
-              "<text x=\"%d\" y=\"%d\" style=\"font-size: %dpx; font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;\">%s</text>%n",
-              emojiX, emojiY, fontSize, holidayEmoji
+              "<text x=\"%d\" y=\"%d\" style=\"font-size: %dpx; font-family: %s;\">%s</text>%n",
+              emojiX, emojiY, fontSize, getEmojiFontFamily(config), holidayEmoji
             ));
           }
         }
@@ -535,8 +574,8 @@ public class CalendarRenderingService {
             int emojiSize = Math.max(8, Math.min(24, scaledSize)); // Clamp between 8-24px
 
             svg.append(String.format(
-              "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; text-anchor: middle; dominant-baseline: middle; font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;\">%s</text>%n",
-              emojiX, emojiY, emojiSize, customEmoji
+              "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; text-anchor: middle; dominant-baseline: middle; font-family: %s;\">%s</text>%n",
+              emojiX, emojiY, emojiSize, getEmojiFontFamily(config), customEmoji
             ));
           } else {
             // Fall back to original positioning logic
@@ -1074,8 +1113,8 @@ public class CalendarRenderingService {
           int emojiSize = Math.max(6, Math.min(16, scaledSize)); // Clamp between 6-16px for smaller cells
 
           month.append(String.format(
-            "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; text-anchor: middle; dominant-baseline: middle; font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;\">%s</text>%n",
-            emojiX, emojiY, emojiSize, customEmoji
+            "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; text-anchor: middle; dominant-baseline: middle; font-family: %s;\">%s</text>%n",
+            emojiX, emojiY, emojiSize, getEmojiFontFamily(config), customEmoji
           ));
         } else {
           // Fall back to original positioning logic
@@ -1559,56 +1598,8 @@ public class CalendarRenderingService {
       // Christmas Day
       holidays.add(LocalDate.of(year, 12, 25).toString());
     } else if ("JEWISH".equals(country) || "HEBREW".equals(country)) {
-      // Jewish holidays on Gregorian calendar
-      // These are approximate dates - actual dates vary each year based on the Hebrew calendar
-      // For accurate dates, these should be calculated based on the Hebrew calendar conversion
-
-      // High Holy Days (September/October)
-      // Rosh Hashanah typically falls in September
-      if (year == 2024) {
-        holidays.add(LocalDate.of(2024, 10, 3).toString()); // Rosh Hashanah
-        holidays.add(LocalDate.of(2024, 10, 4).toString()); // Rosh Hashanah Day 2
-        holidays.add(LocalDate.of(2024, 10, 12).toString()); // Yom Kippur
-      } else if (year == 2025) {
-        holidays.add(LocalDate.of(2025, 9, 23).toString()); // Rosh Hashanah
-        holidays.add(LocalDate.of(2025, 9, 24).toString()); // Rosh Hashanah Day 2
-        holidays.add(LocalDate.of(2025, 10, 2).toString()); // Yom Kippur
-      }
-
-      // Sukkot (September/October)
-      if (year == 2024) {
-        holidays.add(LocalDate.of(2024, 10, 17).toString()); // Sukkot
-        holidays.add(LocalDate.of(2024, 10, 24).toString()); // Shemini Atzeret
-        holidays.add(LocalDate.of(2024, 10, 25).toString()); // Simchat Torah
-      }
-
-      // Chanukah (December)
-      if (year == 2024) {
-        holidays.add(LocalDate.of(2024, 12, 26).toString()); // Chanukah begins
-      }
-
-      // Purim (February/March)
-      if (year == 2024) {
-        holidays.add(LocalDate.of(2024, 3, 24).toString()); // Purim
-      } else if (year == 2025) {
-        holidays.add(LocalDate.of(2025, 3, 14).toString()); // Purim
-      }
-
-      // Passover (March/April)
-      if (year == 2024) {
-        holidays.add(LocalDate.of(2024, 4, 23).toString()); // Passover begins
-        holidays.add(LocalDate.of(2024, 4, 30).toString()); // Passover ends
-      } else if (year == 2025) {
-        holidays.add(LocalDate.of(2025, 4, 13).toString()); // Passover begins
-        holidays.add(LocalDate.of(2025, 4, 20).toString()); // Passover ends
-      }
-
-      // Shavuot (May/June)
-      if (year == 2024) {
-        holidays.add(LocalDate.of(2024, 6, 12).toString()); // Shavuot
-      } else if (year == 2025) {
-        holidays.add(LocalDate.of(2025, 6, 2).toString()); // Shavuot
-      }
+      // Jewish holidays - calculated dynamically from Hebrew calendar
+      holidays.addAll(holidayService.getJewishHolidays(year).keySet());
     } else if ("CHRISTIAN".equals(country)) {
       // Christian holidays
       // Easter Sunday (varies by year - using common dates)
@@ -1719,6 +1710,24 @@ public class CalendarRenderingService {
       // Easter
       LocalDate easter = calculateEasterSunday(year);
       holidays.add(easter.toString());
+    } else if ("MEXICAN".equals(country)) {
+      // Mexican holidays - calculated dynamically
+      holidays.addAll(holidayService.getMexicanHolidays(year).keySet());
+    } else if ("PAGAN".equals(country) || "WICCAN".equals(country)) {
+      // Pagan/Wiccan holidays (Wheel of the Year)
+      holidays.addAll(holidayService.getPaganHolidays(year).keySet());
+    } else if ("HINDU".equals(country)) {
+      // Hindu holidays
+      holidays.addAll(holidayService.getHinduHolidays(year).keySet());
+    } else if ("ISLAMIC".equals(country) || "MUSLIM".equals(country)) {
+      // Islamic holidays
+      holidays.addAll(holidayService.getIslamicHolidays(year).keySet());
+    } else if ("CHINESE".equals(country) || "LUNAR".equals(country)) {
+      // Chinese/Lunar New Year holidays
+      holidays.addAll(holidayService.getChineseHolidays(year).keySet());
+    } else if ("SECULAR".equals(country) || "FUN".equals(country)) {
+      // Fun/Secular American holidays
+      holidays.addAll(holidayService.getSecularHolidays(year).keySet());
     }
 
     return holidays;
@@ -1756,24 +1765,8 @@ public class CalendarRenderingService {
       holidayEmojis.put(LocalDate.of(year, 12, 25).toString(), "🎄"); // Christmas
 
     } else if ("JEWISH".equals(country) || "HEBREW".equals(country)) {
-      // Jewish holidays with emojis
-      if (year == 2024) {
-        holidayEmojis.put(LocalDate.of(2024, 10, 3).toString(), "🍎"); // Rosh Hashanah
-        holidayEmojis.put(LocalDate.of(2024, 10, 4).toString(), "🍎"); // Rosh Hashanah Day 2
-        holidayEmojis.put(LocalDate.of(2024, 10, 12).toString(), "✡️"); // Yom Kippur
-        holidayEmojis.put(LocalDate.of(2024, 10, 17).toString(), "🌿"); // Sukkot
-        holidayEmojis.put(LocalDate.of(2024, 12, 26).toString(), "🕎"); // Chanukah
-        holidayEmojis.put(LocalDate.of(2024, 3, 24).toString(), "🎭"); // Purim
-        holidayEmojis.put(LocalDate.of(2024, 4, 23).toString(), "🍷"); // Passover
-      } else if (year == 2025) {
-        holidayEmojis.put(LocalDate.of(2025, 9, 23).toString(), "🍎"); // Rosh Hashanah
-        holidayEmojis.put(LocalDate.of(2025, 9, 24).toString(), "🍎"); // Rosh Hashanah Day 2
-        holidayEmojis.put(LocalDate.of(2025, 10, 2).toString(), "✡️"); // Yom Kippur
-        holidayEmojis.put(LocalDate.of(2025, 3, 14).toString(), "🎭"); // Purim
-        holidayEmojis.put(LocalDate.of(2025, 4, 13).toString(), "🍷"); // Passover
-        holidayEmojis.put(LocalDate.of(2025, 6, 2).toString(), "📜"); // Shavuot
-        holidayEmojis.put(LocalDate.of(2025, 12, 15).toString(), "🕎"); // Chanukah 2025
-      }
+      // Jewish holidays with emojis - calculated dynamically
+      holidayEmojis.putAll(holidayService.getJewishHolidaysWithEmoji(year));
 
     } else if ("CHRISTIAN".equals(country)) {
       LocalDate easter = calculateEasterSunday(year);
@@ -1833,6 +1826,30 @@ public class CalendarRenderingService {
       holidayEmojis.put(LocalDate.of(year, 12, 31).toString(), "🎉"); // New Year's Eve
       LocalDate easter = calculateEasterSunday(year);
       holidayEmojis.put(easter.toString(), "🐰"); // Easter
+
+    } else if ("MEXICAN".equals(country)) {
+      // Mexican holidays with emojis
+      holidayEmojis.putAll(holidayService.getMexicanHolidaysWithEmoji(year));
+
+    } else if ("PAGAN".equals(country) || "WICCAN".equals(country)) {
+      // Pagan/Wiccan holidays with emojis
+      holidayEmojis.putAll(holidayService.getPaganHolidaysWithEmoji(year));
+
+    } else if ("HINDU".equals(country)) {
+      // Hindu holidays with emojis
+      holidayEmojis.putAll(holidayService.getHinduHolidaysWithEmoji(year));
+
+    } else if ("ISLAMIC".equals(country) || "MUSLIM".equals(country)) {
+      // Islamic holidays with emojis
+      holidayEmojis.putAll(holidayService.getIslamicHolidaysWithEmoji(year));
+
+    } else if ("CHINESE".equals(country) || "LUNAR".equals(country)) {
+      // Chinese holidays with emojis
+      holidayEmojis.putAll(holidayService.getChineseHolidaysWithEmoji(year));
+
+    } else if ("SECULAR".equals(country) || "FUN".equals(country)) {
+      // Secular holidays with emojis
+      holidayEmojis.putAll(holidayService.getSecularHolidaysWithEmoji(year));
     }
 
     return holidayEmojis;

@@ -903,6 +903,7 @@ import type {
   DisplayOptions,
   ColorSettings,
   HolidaySettings,
+  EmojiFontType,
 } from "../components/calendar/CreateWizardDrawer.vue";
 import { sessionFetch } from "../services/sessionService";
 import {
@@ -983,6 +984,8 @@ const config = ref({
   // Holiday settings
   holidaySets: [] as string[], // List of selected holiday set IDs
   eventDisplayMode: "small" as "small" | "large", // Display mode for events/holidays
+  // Emoji font settings
+  emojiFont: "noto-color" as "noto-color" | "noto-mono", // Emoji font style
 });
 
 // Theme options
@@ -1517,13 +1520,21 @@ const holidaySetOptions = computed(() => {
     ];
   } else {
     return [
-      { label: "US Holidays", value: "us" },
-      { label: "Jewish Holidays", value: "jewish" },
+      // Regional/National
+      { label: "US Federal Holidays", value: "us" },
       { label: "Canadian Holidays", value: "ca" },
-      { label: "UK Holidays", value: "uk" },
-      { label: "Mexican Holidays", value: "mx" },
-      { label: "Chinese Holidays", value: "cn" },
-      { label: "Indian Holidays", value: "in" },
+      { label: "UK Bank Holidays", value: "uk" },
+      { label: "Mexican Holidays", value: "mexican" },
+      // Religious
+      { label: "Jewish Holidays", value: "jewish" },
+      { label: "Christian Holidays", value: "christian" },
+      { label: "Islamic Holidays", value: "islamic" },
+      { label: "Hindu Holidays", value: "hindu" },
+      { label: "Pagan/Wiccan (Wheel of the Year)", value: "pagan" },
+      // Cultural
+      { label: "Chinese/Lunar Holidays", value: "chinese" },
+      { label: "Fun & Secular Holidays", value: "secular" },
+      // None
       { label: "No Holidays", value: "none" },
     ];
   }
@@ -1662,6 +1673,60 @@ const holidayData = {
     { date: "07-20", title: "Eid al-Adha", emoji: "🐑" },
     { date: "08-19", title: "Islamic New Year", emoji: "📅" },
     { date: "10-28", title: "Prophet's Birthday", emoji: "🕌" },
+  ],
+  pagan: [
+    { date: "02-01", title: "Imbolc", emoji: "🕯️" },
+    { date: "03-20", title: "Ostara (Spring Equinox)", emoji: "🐣" },
+    { date: "05-01", title: "Beltane", emoji: "🔥" },
+    { date: "06-21", title: "Litha (Summer Solstice)", emoji: "☀️" },
+    { date: "08-01", title: "Lughnasadh", emoji: "🌾" },
+    { date: "09-22", title: "Mabon (Autumn Equinox)", emoji: "🍂" },
+    { date: "10-31", title: "Samhain", emoji: "🎃" },
+    { date: "12-21", title: "Yule (Winter Solstice)", emoji: "🌲" },
+  ],
+  secular: [
+    { date: "02-02", title: "Groundhog Day", emoji: "🦫" },
+    { date: "02-14", title: "Valentine's Day", emoji: "❤️" },
+    { date: "03-17", title: "St. Patrick's Day", emoji: "☘️" },
+    { date: "04-01", title: "April Fools' Day", emoji: "🃏" },
+    { date: "04-22", title: "Earth Day", emoji: "🌍" },
+    { date: "05-05", title: "Cinco de Mayo", emoji: "🌮" },
+    { date: "05-12", title: "Mother's Day", emoji: "💐" },
+    { date: "06-01", title: "Pride Month", emoji: "🏳️‍🌈" },
+    { date: "06-15", title: "Father's Day", emoji: "👔" },
+    { date: "10-31", title: "Halloween", emoji: "🎃" },
+    { date: "11-29", title: "Black Friday", emoji: "🛒" },
+    { date: "12-26", title: "Kwanzaa", emoji: "🕯️" },
+    { date: "12-31", title: "New Year's Eve", emoji: "🎆" },
+  ],
+  mexican: [
+    { date: "01-06", title: "Día de los Reyes", emoji: "👑" },
+    { date: "02-05", title: "Día de la Constitución", emoji: "📜" },
+    { date: "03-21", title: "Natalicio de Benito Juárez", emoji: "⚖️" },
+    { date: "05-05", title: "Cinco de Mayo", emoji: "🇲🇽" },
+    { date: "09-16", title: "Día de la Independencia", emoji: "🎉" },
+    { date: "11-01", title: "Día de los Muertos", emoji: "💀" },
+    { date: "11-20", title: "Día de la Revolución", emoji: "🎖️" },
+    { date: "12-12", title: "Virgen de Guadalupe", emoji: "🌹" },
+    { date: "12-16", title: "Las Posadas", emoji: "🕯️" },
+  ],
+  hindu: [
+    { date: "01-14", title: "Makar Sankranti", emoji: "🪁" },
+    { date: "03-14", title: "Holi", emoji: "🎨" },
+    { date: "04-17", title: "Ram Navami", emoji: "🏹" },
+    { date: "08-26", title: "Janmashtami", emoji: "🪈" },
+    { date: "09-07", title: "Ganesh Chaturthi", emoji: "🐘" },
+    { date: "10-03", title: "Navaratri", emoji: "💃" },
+    { date: "10-12", title: "Dussehra", emoji: "🏹" },
+    { date: "11-01", title: "Diwali", emoji: "🪔" },
+  ],
+  chinese: [
+    { date: "01-29", title: "Chinese New Year", emoji: "🧧" },
+    { date: "02-12", title: "Lantern Festival", emoji: "🏮" },
+    { date: "04-04", title: "Qingming Festival", emoji: "🪦" },
+    { date: "06-10", title: "Dragon Boat Festival", emoji: "🐉" },
+    { date: "09-17", title: "Mid-Autumn Festival", emoji: "🥮" },
+    { date: "10-11", title: "Double Ninth Festival", emoji: "🏔️" },
   ],
 };
 
@@ -2011,6 +2076,7 @@ const generateCalendar = async () => {
       holidaySet: selectedHolidaySet.value,
       holidaySets: config.value.holidaySets,
       eventDisplayMode: config.value.eventDisplayMode,
+      emojiFont: config.value.emojiFont,
       showHolidays:
         selectedHolidaySet.value && selectedHolidaySet.value !== "none",
       locale: "en-US",
@@ -3188,6 +3254,7 @@ const handleWizardColorsChange = (colors: ColorSettings) => {
   config.value.dayNameColor = colors.dayNameColor;
   config.value.gridLineColor = colors.gridLineColor;
   config.value.holidayColor = colors.holidayColor;
+  config.value.emojiFont = colors.emojiFont;
 };
 
 // Handle holiday settings change from wizard
