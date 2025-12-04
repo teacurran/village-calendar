@@ -152,12 +152,12 @@
             @click="showRulers = !showRulers"
           />
           <Button
-            v-tooltip="'Download PDF (35&quot; x 22.5&quot;)'"
+            v-tooltip="'Download PDF'"
             icon="pi pi-download"
             text
             rounded
             :disabled="!generatedSVG"
-            @click="downloadCalendar"
+            @click="openAddToCartModal"
           />
           <Button
             v-tooltip="'Save Calendar'"
