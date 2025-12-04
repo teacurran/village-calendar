@@ -1292,25 +1292,14 @@ watch(
     v-model:visible="showPreviewModal"
     :header="previewCalendarName"
     :style="{ width: '90vw', maxWidth: '900px' }"
-    modal
-    dismissable-mask
+    :modal="true"
+    :dismissable-mask="true"
   >
     <div
-      class="calendar-preview-container"
-      style="
-        width: 100%;
-        height: 70vh;
-        overflow: auto;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      "
-    >
-      <div
-        style="max-width: 100%; height: auto"
-        v-html="previewCalendarSvg"
-      ></div>
-    </div>
+      v-if="previewCalendarSvg"
+      class="calendar-preview-content"
+      v-html="previewCalendarSvg"
+    />
   </Dialog>
 </template>
 
@@ -1712,5 +1701,18 @@ watch(
   .form-row.three {
     grid-template-columns: 1fr;
   }
+}
+
+/* Calendar preview modal - ensure SVG scales to fit */
+.calendar-preview-content {
+  background: white;
+  padding: 1rem;
+  border-radius: 0.5rem;
+}
+
+.calendar-preview-content :deep(svg) {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
 }
 </style>
