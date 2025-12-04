@@ -448,10 +448,15 @@ export async function fetchAllOrdersAdmin(
           query AllOrders($status: String, $limit: Int) {
             allOrders(status: $status, limit: $limit) {
               id
+              orderNumber
+              customerEmail
               status
               quantity
               unitPrice
               totalPrice
+              subtotal
+              shippingCost
+              taxAmount
               shippingAddress
               notes
               trackingNumber
@@ -461,6 +466,17 @@ export async function fetchAllOrdersAdmin(
               updated
               paidAt
               shippedAt
+              totalItemCount
+              items {
+                id
+                productType
+                productName
+                calendarYear
+                quantity
+                unitPrice
+                lineTotal
+                itemStatus
+              }
               calendar {
                 id
                 name

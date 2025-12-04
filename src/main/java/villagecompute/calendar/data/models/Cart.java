@@ -88,13 +88,17 @@ public class Cart extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Add item to cart or update quantity if already exists
+     * Add item to cart or update quantity if already exists.
+     * Items are considered the same if they have the same templateId, year, AND configuration.
+     * Different calendar designs (different configurations) are separate line items.
      */
     public CartItem addOrUpdateItem(String templateId, String templateName, int year,
                                     int quantity, BigDecimal unitPrice, String configuration) {
-        // Check if item already exists with same template and year
+        // Check if item already exists with same template, year, AND configuration
         CartItem existing = items.stream()
-            .filter(item -> item.templateId.equals(templateId) && item.year == year)
+            .filter(item -> item.templateId.equals(templateId)
+                && item.year == year
+                && configurationEquals(item.configuration, configuration))
             .findFirst()
             .orElse(null);
 
@@ -115,6 +119,20 @@ public class Cart extends DefaultPanacheEntityWithTimestamps {
             items.add(newItem);
             return newItem;
         }
+    }
+
+    /**
+     * Compare two configuration strings for equality.
+     * Handles null values - two null configurations are considered equal.
+     */
+    private boolean configurationEquals(String config1, String config2) {
+        if (config1 == null && config2 == null) {
+            return true;
+        }
+        if (config1 == null || config2 == null) {
+            return false;
+        }
+        return config1.equals(config2);
     }
 
     /**

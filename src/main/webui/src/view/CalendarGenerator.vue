@@ -1511,7 +1511,7 @@ const holidayData = {
     { date: "04-01", title: "April Fool's Day", emoji: "🤡" },
     { date: "05-27", title: "Memorial Day", emoji: "🇺🇸" },
     { date: "06-19", title: "Juneteenth", emoji: "🤎" },
-    { date: "07-04", title: "Independence Day", emoji: "🎆" },
+    { date: "07-04", title: "Independence Day", emoji: "🇺🇸" },
     { date: "09-02", title: "Labor Day", emoji: "👷" },
     { date: "10-31", title: "Halloween", emoji: "🎃" },
     { date: "11-11", title: "Veterans Day", emoji: "🎖️" },

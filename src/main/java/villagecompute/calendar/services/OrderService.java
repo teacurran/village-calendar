@@ -5,16 +5,23 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarOrder;
+import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.DelayedJob;
 import villagecompute.calendar.data.models.DelayedJobQueue;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.util.OrderNumberGenerator;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.Year;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -352,5 +359,243 @@ public class OrderService {
                 String.format("Invalid status transition from %s to %s", currentStatus, newStatus)
             );
         }
+    }
+
+    // ==================== Checkout / Payment Methods ====================
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * Process a completed checkout and create a single order with multiple items.
+     * This is called after Stripe payment is confirmed.
+     *
+     * @param paymentIntentId Stripe PaymentIntent ID
+     * @param email Customer email
+     * @param shippingAddress Shipping address map
+     * @param billingAddress Billing address map (optional)
+     * @param items Cart items (list of maps with item details)
+     * @param subtotal Order subtotal
+     * @param shippingCost Shipping cost
+     * @param taxAmount Tax amount
+     * @param totalAmount Total amount charged
+     * @return The order number
+     */
+    @Transactional
+    public String processCheckout(
+            String paymentIntentId,
+            String email,
+            Map<String, Object> shippingAddress,
+            Map<String, Object> billingAddress,
+            List<Map<String, Object>> items,
+            Double subtotal,
+            Double shippingCost,
+            Double taxAmount,
+            Double totalAmount
+    ) {
+        LOG.infof("Processing checkout for email %s with %d items, PaymentIntent: %s",
+                email, items != null ? items.size() : 0, paymentIntentId);
+
+        // Find or create user (guest user if not found)
+        CalendarUser user = findOrCreateGuestUser(email, shippingAddress);
+
+        // Generate order number
+        int currentYear = Year.now().getValue();
+        long orderCountThisYear = CalendarOrder.countOrdersByYear(currentYear);
+        String orderNumber = OrderNumberGenerator.generateOrderNumber(currentYear, orderCountThisYear);
+
+        // Convert addresses to JsonNode
+        JsonNode shippingAddressJson = objectMapper.valueToTree(shippingAddress);
+        JsonNode billingAddressJson = billingAddress != null ? objectMapper.valueToTree(billingAddress) : null;
+
+        // Create the order
+        CalendarOrder order = new CalendarOrder();
+        order.user = user;
+        order.customerEmail = email;
+        order.orderNumber = orderNumber;
+        order.shippingAddress = shippingAddressJson;
+        order.billingAddress = billingAddressJson;
+        order.stripePaymentIntentId = paymentIntentId;
+        order.subtotal = subtotal != null ? BigDecimal.valueOf(subtotal) : BigDecimal.ZERO;
+        order.shippingCost = shippingCost != null ? BigDecimal.valueOf(shippingCost) : BigDecimal.ZERO;
+        order.taxAmount = taxAmount != null ? BigDecimal.valueOf(taxAmount) : BigDecimal.ZERO;
+        order.totalPrice = totalAmount != null ? BigDecimal.valueOf(totalAmount) : BigDecimal.ZERO;
+        order.status = CalendarOrder.STATUS_PAID;
+        order.paidAt = Instant.now();
+
+        order.persist();
+
+        // Add items to the order
+        if (items != null && !items.isEmpty()) {
+            for (Map<String, Object> cartItem : items) {
+                CalendarOrderItem orderItem = createOrderItem(order, cartItem);
+                order.items.add(orderItem);
+            }
+        }
+
+        LOG.infof("Created order %s with %d items for PaymentIntent %s",
+                orderNumber, order.items.size(), paymentIntentId);
+
+        // Enqueue confirmation email
+        enqueueEmailJob(order, DelayedJobQueue.EMAIL_ORDER_CONFIRMATION);
+
+        return orderNumber;
+    }
+
+    /**
+     * Overload for backwards compatibility (without billingAddress)
+     */
+    @Transactional
+    public String processCheckout(
+            String paymentIntentId,
+            String email,
+            Map<String, Object> shippingAddress,
+            List<Map<String, Object>> items,
+            Double subtotal,
+            Double shippingCost,
+            Double taxAmount,
+            Double totalAmount
+    ) {
+        return processCheckout(paymentIntentId, email, shippingAddress, null, items,
+                subtotal, shippingCost, taxAmount, totalAmount);
+    }
+
+    /**
+     * Create an order item from cart item data
+     */
+    private CalendarOrderItem createOrderItem(CalendarOrder order, Map<String, Object> cartItem) {
+        // Extract cart item details
+        String templateName = (String) cartItem.get("templateName");
+        Integer year = cartItem.get("year") != null ? ((Number) cartItem.get("year")).intValue() : Year.now().getValue();
+        Integer quantity = cartItem.get("quantity") != null ? ((Number) cartItem.get("quantity")).intValue() : 1;
+        Double unitPrice = cartItem.get("unitPrice") != null ? ((Number) cartItem.get("unitPrice")).doubleValue() : 29.99;
+        Double lineTotal = cartItem.get("lineTotal") != null ? ((Number) cartItem.get("lineTotal")).doubleValue() : unitPrice * quantity;
+        String configurationStr = (String) cartItem.get("configuration");
+
+        // Determine product type from configuration or template name
+        String productType = CalendarOrderItem.TYPE_PRINT;
+        if (configurationStr != null) {
+            try {
+                JsonNode config = objectMapper.readTree(configurationStr);
+                if (config.has("productType")) {
+                    String pt = config.get("productType").asText();
+                    if ("pdf".equalsIgnoreCase(pt) || "digital".equalsIgnoreCase(pt)) {
+                        productType = CalendarOrderItem.TYPE_PDF;
+                    }
+                }
+            } catch (Exception e) {
+                LOG.warnf("Could not parse configuration for product type: %s", e.getMessage());
+            }
+        }
+        if (templateName != null && templateName.toLowerCase().contains("pdf")) {
+            productType = CalendarOrderItem.TYPE_PDF;
+        }
+
+        // Create a UserCalendar to store the calendar configuration
+        UserCalendar calendar = createCalendarFromConfig(order.user, templateName, year, configurationStr);
+
+        // Create the order item
+        CalendarOrderItem item = new CalendarOrderItem();
+        item.order = order;
+        item.calendar = calendar;
+        item.productType = productType;
+        item.productName = templateName;
+        item.calendarYear = year;
+        item.quantity = quantity;
+        item.unitPrice = BigDecimal.valueOf(unitPrice);
+        item.lineTotal = BigDecimal.valueOf(lineTotal);
+        item.itemStatus = CalendarOrderItem.STATUS_PENDING;
+
+        // Store configuration as JSON
+        if (configurationStr != null && !configurationStr.isEmpty()) {
+            try {
+                item.configuration = objectMapper.readTree(configurationStr);
+            } catch (Exception e) {
+                LOG.warnf("Failed to parse item configuration: %s", e.getMessage());
+            }
+        }
+
+        item.persist();
+
+        LOG.infof("Created order item: %s (%s) x%d @ $%.2f = $%.2f",
+                templateName, productType, quantity, unitPrice, lineTotal);
+
+        return item;
+    }
+
+    /**
+     * Find existing user by email or create a guest user.
+     */
+    @Transactional
+    public CalendarUser findOrCreateGuestUser(String email, Map<String, Object> addressInfo) {
+        // First try to find by email
+        Optional<CalendarUser> existingUser = CalendarUser.findByEmail(email);
+        if (existingUser.isPresent()) {
+            LOG.infof("Found existing user for email %s", email);
+            return existingUser.get();
+        }
+
+        // Create a guest user
+        LOG.infof("Creating guest user for email %s", email);
+        CalendarUser guestUser = new CalendarUser();
+        guestUser.email = email;
+        guestUser.oauthProvider = "GUEST";
+        guestUser.oauthSubject = "guest_" + email; // Use email as unique identifier
+
+        // Try to extract name from address info
+        if (addressInfo != null) {
+            String firstName = (String) addressInfo.get("firstName");
+            String lastName = (String) addressInfo.get("lastName");
+            if (firstName != null || lastName != null) {
+                guestUser.displayName = ((firstName != null ? firstName : "") + " " +
+                        (lastName != null ? lastName : "")).trim();
+            }
+        }
+
+        guestUser.isAdmin = false;
+        guestUser.persist();
+
+        return guestUser;
+    }
+
+    /**
+     * Create a UserCalendar from cart item configuration.
+     */
+    private UserCalendar createCalendarFromConfig(
+            CalendarUser user,
+            String name,
+            Integer year,
+            String configurationStr
+    ) {
+        UserCalendar calendar = new UserCalendar();
+        calendar.user = user;
+        calendar.name = name != null ? name : "Calendar " + year;
+        calendar.year = year;
+        calendar.isPublic = false; // Order calendars are private by default
+
+        // Parse configuration if provided
+        if (configurationStr != null && !configurationStr.isEmpty()) {
+            try {
+                JsonNode configJson = objectMapper.readTree(configurationStr);
+                calendar.configuration = configJson;
+
+                // Extract SVG if embedded in configuration
+                if (configJson.has("svgContent")) {
+                    calendar.generatedSvg = configJson.get("svgContent").asText();
+                } else if (configJson.has("generatedSvg")) {
+                    calendar.generatedSvg = configJson.get("generatedSvg").asText();
+                }
+            } catch (Exception e) {
+                LOG.warnf("Failed to parse calendar configuration: %s", e.getMessage());
+                // Store as-is in a wrapper
+                ObjectNode wrapper = objectMapper.createObjectNode();
+                wrapper.put("raw", configurationStr);
+                calendar.configuration = wrapper;
+            }
+        }
+
+        calendar.persist();
+        LOG.infof("Created UserCalendar %s for order", calendar.id);
+
+        return calendar;
     }
 }

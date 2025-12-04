@@ -50,8 +50,8 @@ const router = createRouter({
     {
       path: "/order/:orderId/confirmation",
       name: "order-confirmation",
-      component: () => import("./view/public/OrderConfirmation.vue"),
-      meta: { requiresAuth: true },
+      component: () => import("./view/OrderConfirmation.vue"),
+      meta: { requiresAuth: false },
     },
     {
       path: "/auth/callback",

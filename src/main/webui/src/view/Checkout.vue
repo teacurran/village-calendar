@@ -45,6 +45,29 @@ const isCalendarItem = (item: any) => {
   );
 };
 
+// Check if item is a digital product (PDF)
+const isDigitalItem = (item: any) => {
+  // Check by product ID
+  if (item.templateId === CALENDAR_PDF_PRODUCT_ID) {
+    return true;
+  }
+  // Also check configuration for productType
+  if (item.configuration) {
+    try {
+      const config =
+        typeof item.configuration === "string"
+          ? JSON.parse(item.configuration)
+          : item.configuration;
+      if (config.productType === "pdf" || config.productType === "PDF") {
+        return true;
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+  }
+  return false;
+};
+
 // Parse configuration and get calendar details
 const getCalendarConfig = (item: any) => {
   if (isCalendarItem(item) && item.configuration) {
@@ -331,6 +354,17 @@ const isLoggedIn = computed(() => userStore.isLoggedIn);
 const cartItems = computed(() => cartStore.items);
 const cartSubtotal = computed(() => cartStore.subtotal || 0);
 
+// Check if order contains only digital items (no shipping needed)
+const isDigitalOnlyOrder = computed(() => {
+  if (cartItems.value.length === 0) return false;
+  return cartItems.value.every((item: any) => isDigitalItem(item));
+});
+
+// Check if order has any physical items that need shipping
+const hasPhysicalItems = computed(() => {
+  return cartItems.value.some((item: any) => !isDigitalItem(item));
+});
+
 // Watch for cart changes to load calendar SVGs
 watch(
   cartItems,
@@ -339,9 +373,14 @@ watch(
   },
   { immediate: false },
 );
-const shippingCost = computed(
-  () => (selectedShippingMethod.value as ShippingMethod | null)?.price || 0,
-);
+
+// Shipping cost is 0 for digital-only orders
+const shippingCost = computed(() => {
+  if (isDigitalOnlyOrder.value) {
+    return 0;
+  }
+  return (selectedShippingMethod.value as ShippingMethod | null)?.price || 0;
+});
 const taxAmount = computed(() => {
   const taxRate = contactAndShipping.value.state === "MA" ? 0.0625 : 0;
   return (cartSubtotal.value + shippingCost.value) * taxRate;
@@ -375,7 +414,7 @@ onMounted(async () => {
     await loadCalendarSvgs();
 
     if (cartStore.isEmpty) {
-      router.push({ name: ROUTE_NAMES.STORE_PRODUCTS });
+      router.push({ name: "templates" });
       return;
     }
 
@@ -1006,7 +1045,7 @@ watch(
               <span class="summary-value">{{ contactAndShipping.email }}</span>
               <a class="summary-change" @click="currentStep = 1">Change</a>
             </div>
-            <div class="summary-row">
+            <div v-if="hasPhysicalItems" class="summary-row">
               <span class="summary-label">Ship to</span>
               <span class="summary-value">
                 {{ contactAndShipping.address1 }},
@@ -1017,9 +1056,33 @@ watch(
             </div>
           </div>
 
-          <h2>Shipping method</h2>
+          <h2>
+            {{ isDigitalOnlyOrder ? "Delivery method" : "Shipping method" }}
+          </h2>
 
-          <div class="shipping-methods">
+          <!-- Digital-only order - no shipping needed -->
+          <div v-if="isDigitalOnlyOrder" class="digital-order-notice">
+            <div class="notice-icon">
+              <i
+                class="pi pi-file-pdf"
+                style="font-size: 2rem; color: var(--primary-color)"
+              ></i>
+            </div>
+            <div class="notice-content">
+              <h3>Digital Delivery</h3>
+              <p>
+                Your order contains only digital products (PDF). No shipping is
+                required.
+              </p>
+              <p class="notice-detail">
+                You'll receive a download link via email after your purchase is
+                complete.
+              </p>
+            </div>
+          </div>
+
+          <!-- Physical items - show shipping options -->
+          <div v-else class="shipping-methods">
             <div
               v-for="method in shippingMethods"
               :key="method.id"
@@ -1262,7 +1325,10 @@ watch(
           </div>
           <div class="total-row">
             <span>Shipping</span>
-            <span>{{
+            <span v-if="isDigitalOnlyOrder" class="free-shipping"
+              >Free (Digital)</span
+            >
+            <span v-else>{{
               shippingCost > 0 ? formatCurrency(shippingCost) : "—"
             }}</span>
           </div>
@@ -1440,6 +1506,43 @@ watch(
 /* Shipping methods */
 .shipping-methods {
   margin-bottom: 1.5rem;
+}
+
+.digital-order-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.digital-order-notice .notice-icon {
+  flex-shrink: 0;
+  padding: 0.5rem;
+}
+
+.digital-order-notice .notice-content h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: #0369a1;
+}
+
+.digital-order-notice .notice-content p {
+  margin: 0 0 0.25rem 0;
+  color: #0c4a6e;
+}
+
+.digital-order-notice .notice-detail {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.free-shipping {
+  color: #16a34a;
+  font-weight: 500;
 }
 
 .shipping-option {

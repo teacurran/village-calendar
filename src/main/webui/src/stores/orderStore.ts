@@ -10,12 +10,28 @@ import {
 } from "../services/orderService";
 import type { OrderUpdateInput } from "../types/order";
 
+export interface CalendarOrderItem {
+  id: string;
+  productType: string;
+  productName?: string;
+  calendarYear?: number;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  itemStatus: string;
+}
+
 export interface CalendarOrder {
   id: string;
+  orderNumber?: string;
+  customerEmail?: string;
   status: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  subtotal?: number;
+  shippingCost?: number;
+  taxAmount?: number;
   shippingAddress: any;
   notes?: string;
   trackingNumber?: string;
@@ -26,7 +42,9 @@ export interface CalendarOrder {
   paidAt?: string;
   shippedAt?: string;
   deliveredAt?: string;
-  calendar: {
+  totalItemCount?: number;
+  items?: CalendarOrderItem[];
+  calendar?: {
     id: string;
     name: string;
     year: number;

@@ -13,6 +13,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,21 +40,76 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
     @Ignore  // GraphQL field resolver provided by OrderResolver.batchLoadUsers()
     public CalendarUser user;
 
-    @NotNull
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "calendar_id", nullable = false, foreignKey = @ForeignKey(name = "fk_calendar_orders_calendar"))
-    @Ignore  // GraphQL field resolver provided by OrderResolver.batchLoadCalendars()
+    /**
+     * Customer email (especially important for guest orders)
+     */
+    @Size(max = 255)
+    @Column(name = "customer_email", length = 255)
+    public String customerEmail;
+
+    // ==================== Order Items ====================
+
+    /**
+     * Line items in this order
+     */
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    public List<CalendarOrderItem> items = new ArrayList<>();
+
+    /**
+     * Shipments for this order
+     */
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    public List<Shipment> shipments = new ArrayList<>();
+
+    // ==================== Legacy Single-Item Fields (for backwards compatibility) ====================
+
+    /**
+     * @deprecated Use items list instead. Kept for backwards compatibility with existing orders.
+     */
+    @Deprecated
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "calendar_id", foreignKey = @ForeignKey(name = "fk_calendar_orders_calendar"))
+    @Ignore
     public UserCalendar calendar;
 
-    @NotNull
+    /**
+     * @deprecated Use items list instead. Kept for backwards compatibility.
+     */
+    @Deprecated
     @Min(1)
-    @Column(nullable = false)
+    @Column(nullable = true)
     public Integer quantity = 1;
 
-    @NotNull
+    /**
+     * @deprecated Use items list instead. Kept for backwards compatibility.
+     */
+    @Deprecated
     @DecimalMin("0.00")
-    @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
+    @Column(name = "unit_price", precision = 10, scale = 2)
     public BigDecimal unitPrice;
+
+    // ==================== Order Totals ====================
+
+    /**
+     * Subtotal (sum of all line items)
+     */
+    @DecimalMin("0.00")
+    @Column(name = "subtotal", precision = 10, scale = 2)
+    public BigDecimal subtotal;
+
+    /**
+     * Shipping cost
+     */
+    @DecimalMin("0.00")
+    @Column(name = "shipping_cost", precision = 10, scale = 2)
+    public BigDecimal shippingCost;
+
+    /**
+     * Tax amount
+     */
+    @DecimalMin("0.00")
+    @Column(name = "tax_amount", precision = 10, scale = 2)
+    public BigDecimal taxAmount;
 
     @NotNull
     @DecimalMin("0.00")
@@ -69,6 +125,11 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
     @Column(name = "shipping_address", columnDefinition = "jsonb")
     @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
     public JsonNode shippingAddress;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "billing_address", columnDefinition = "jsonb")
+    @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
+    public JsonNode billingAddress;
 
     @Size(max = 255)
     @Column(name = "stripe_payment_intent_id", length = 255)
@@ -215,5 +276,78 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
      */
     public boolean isTerminal() {
         return STATUS_DELIVERED.equals(status) || STATUS_CANCELLED.equals(status);
+    }
+
+    // ==================== Item Management ====================
+
+    /**
+     * Add an item to this order
+     */
+    public CalendarOrderItem addItem(CalendarOrderItem item) {
+        item.order = this;
+        items.add(item);
+        return item;
+    }
+
+    /**
+     * Get all physical items that require shipping
+     */
+    public List<CalendarOrderItem> getPhysicalItems() {
+        return items.stream()
+            .filter(CalendarOrderItem::requiresShipping)
+            .toList();
+    }
+
+    /**
+     * Get all digital items (PDFs)
+     */
+    public List<CalendarOrderItem> getDigitalItems() {
+        return items.stream()
+            .filter(CalendarOrderItem::isDigital)
+            .toList();
+    }
+
+    /**
+     * Get items that haven't been assigned to a shipment yet
+     */
+    public List<CalendarOrderItem> getUnshippedItems() {
+        return items.stream()
+            .filter(item -> item.requiresShipping() && item.shipment == null)
+            .toList();
+    }
+
+    /**
+     * Check if all items have been shipped or are digital
+     */
+    public boolean isFullyShipped() {
+        return getUnshippedItems().isEmpty();
+    }
+
+    /**
+     * Get total item count (sum of quantities)
+     */
+    public int getTotalItemCount() {
+        return items.stream()
+            .mapToInt(item -> item.quantity)
+            .sum();
+    }
+
+    /**
+     * Calculate and update subtotal from items
+     */
+    public void calculateSubtotal() {
+        this.subtotal = items.stream()
+            .map(item -> item.lineTotal)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Calculate and update total price from subtotal, shipping, and tax
+     */
+    public void calculateTotalPrice() {
+        BigDecimal sub = subtotal != null ? subtotal : BigDecimal.ZERO;
+        BigDecimal ship = shippingCost != null ? shippingCost : BigDecimal.ZERO;
+        BigDecimal tax = taxAmount != null ? taxAmount : BigDecimal.ZERO;
+        this.totalPrice = sub.add(ship).add(tax);
     }
 }

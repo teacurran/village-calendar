@@ -6,10 +6,12 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
+import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PaymentService;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -25,6 +27,9 @@ public class PaymentResource {
 
     @Inject
     PaymentService paymentService;
+
+    @Inject
+    OrderService orderService;
 
     /**
      * Get Stripe configuration (publishable key) for frontend
@@ -74,6 +79,7 @@ public class PaymentResource {
      */
     @POST
     @Path("/confirm-payment")
+    @SuppressWarnings("unchecked")
     public Response confirmPayment(ConfirmPaymentRequest request) {
         LOG.infof("Confirming payment for PaymentIntent: %s", request.paymentIntentId);
 
@@ -89,11 +95,44 @@ public class PaymentResource {
                         .build();
             }
 
-            // Generate order number
-            String orderNumber = "VC-" + System.currentTimeMillis();
+            // Extract order details from request
+            Map<String, Object> orderDetails = request.orderDetails;
+            if (orderDetails == null) {
+                LOG.warn("No order details provided in confirm-payment request");
+                orderDetails = new HashMap<>();
+            }
 
-            // TODO: Create order record in database with order details
-            // For now, just return success with order number
+            // Extract fields from orderDetails
+            String email = (String) orderDetails.get("email");
+            if (email == null || email.isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(Map.of("error", "Email is required"))
+                        .build();
+            }
+
+            Map<String, Object> shippingAddress = (Map<String, Object>) orderDetails.get("shippingAddress");
+            List<Map<String, Object>> items = (List<Map<String, Object>>) orderDetails.get("items");
+            Double subtotal = orderDetails.get("subtotal") != null ?
+                    ((Number) orderDetails.get("subtotal")).doubleValue() : null;
+            Double shippingCost = orderDetails.get("shippingCost") != null ?
+                    ((Number) orderDetails.get("shippingCost")).doubleValue() : null;
+            Double taxAmount = orderDetails.get("taxAmount") != null ?
+                    ((Number) orderDetails.get("taxAmount")).doubleValue() : null;
+            Double totalAmount = orderDetails.get("totalAmount") != null ?
+                    ((Number) orderDetails.get("totalAmount")).doubleValue() : null;
+
+            // Process checkout and create orders in database
+            String orderNumber = orderService.processCheckout(
+                    request.paymentIntentId,
+                    email,
+                    shippingAddress,
+                    items,
+                    subtotal,
+                    shippingCost,
+                    taxAmount,
+                    totalAmount
+            );
+
             LOG.infof("Payment confirmed, order %s created for PaymentIntent %s",
                     orderNumber, request.paymentIntentId);
 
@@ -109,9 +148,9 @@ public class PaymentResource {
                     .entity(Map.of("error", e.getMessage()))
                     .build();
         } catch (Exception e) {
-            LOG.errorf("Error confirming payment: %s", e.getMessage());
+            LOG.errorf(e, "Error confirming payment: %s", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(Map.of("error", "Failed to confirm payment"))
+                    .entity(Map.of("error", "Failed to confirm payment: " + e.getMessage()))
                     .build();
         }
     }

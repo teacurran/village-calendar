@@ -1,15 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { useI18n } from "vue-i18n";
-import { ROUTE_NAMES } from "../navigation/routes";
 import Breadcrumb from "primevue/breadcrumb";
 import Button from "primevue/button";
 import Card from "primevue/card";
 import Timeline from "primevue/timeline";
 import { homeBreadcrumb } from "../navigation/breadcrumbs";
 
-const { t } = useI18n({ useScope: "global" });
 const router = useRouter();
 
 const order = ref(null);
@@ -75,7 +72,7 @@ onMounted(() => {
     }
   } else {
     // Redirect if no order data
-    router.push({ name: ROUTE_NAMES.STORE_PRODUCTS });
+    router.push({ name: "templates" });
   }
 });
 
@@ -91,7 +88,7 @@ function printOrder() {
 }
 
 function continueShopping() {
-  router.push({ name: ROUTE_NAMES.STORE_PRODUCTS });
+  router.push({ name: "templates" });
 }
 </script>
 
@@ -205,7 +202,9 @@ function continueShopping() {
 
                   <!-- Product details -->
                   <div class="item-details flex-1">
-                    <h4 class="mb-1">{{ item.productName }}</h4>
+                    <h4 class="mb-1">
+                      {{ item.templateName || item.productName }}
+                    </h4>
                     <div class="text-sm text-gray-600 mb-2">
                       <span v-if="item.configuration">{{
                         item.configuration

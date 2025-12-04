@@ -359,11 +359,13 @@ onMounted(async () => {
         <div class="text-center py-4">No orders found</div>
       </template>
 
-      <Column field="id" header="Order ID" style="width: 10%">
+      <Column field="orderNumber" header="Order" style="width: 12%">
         <template #body="{ data }">
-          <span class="font-mono text-sm"
-            >{{ data.id.substring(0, 8) }}...</span
-          >
+          <div>
+            <span class="font-mono font-semibold">{{
+              data.orderNumber || data.id.substring(0, 8)
+            }}</span>
+          </div>
         </template>
       </Column>
 
@@ -378,20 +380,28 @@ onMounted(async () => {
         </template>
       </Column>
 
-      <Column field="calendar.name" header="Calendar" style="width: 15%">
+      <Column header="Items" style="width: 20%">
         <template #body="{ data }">
-          <div>
-            <div>{{ data.calendar.name }}</div>
-            <div class="text-sm text-surface-600">
-              Year: {{ data.calendar.year }}
+          <div v-if="data.items && data.items.length > 0">
+            <div v-for="item in data.items" :key="item.id" class="mb-1">
+              <div class="flex items-center gap-2">
+                <Tag
+                  :severity="item.productType === 'PDF' ? 'info' : 'success'"
+                  :value="item.productType"
+                  class="text-xs"
+                />
+                <span>{{ item.productName || "Calendar" }}</span>
+                <span class="text-surface-600">x{{ item.quantity }}</span>
+              </div>
             </div>
           </div>
-        </template>
-      </Column>
-
-      <Column field="quantity" header="Qty" sortable style="width: 5%">
-        <template #body="{ data }">
-          {{ data.quantity }}
+          <div v-else-if="data.calendar">
+            <div>{{ data.calendar.name }}</div>
+            <div class="text-sm text-surface-600">
+              Year: {{ data.calendar.year }} (x{{ data.quantity }})
+            </div>
+          </div>
+          <div v-else class="text-surface-500">-</div>
         </template>
       </Column>
 
@@ -466,21 +476,62 @@ onMounted(async () => {
           <h3 class="font-semibold mb-2">Order Details</h3>
           <div class="grid grid-cols-2 gap-2 text-sm">
             <div>
+              <span class="text-surface-600">Order Number:</span>
+              <span class="font-semibold ml-2 font-mono">{{
+                editingOrder.orderNumber || editingOrder.id.substring(0, 8)
+              }}</span>
+            </div>
+            <div>
               <span class="text-surface-600">Customer:</span>
               <span class="font-semibold ml-2">{{
-                editingOrder.user.email
+                editingOrder.customerEmail || editingOrder.user?.email
+              }}</span>
+            </div>
+            <div class="col-span-2">
+              <span class="text-surface-600">Items:</span>
+              <div
+                v-if="editingOrder.items && editingOrder.items.length > 0"
+                class="ml-2 mt-1"
+              >
+                <div
+                  v-for="item in editingOrder.items"
+                  :key="item.id"
+                  class="flex items-center gap-2 mb-1"
+                >
+                  <Tag
+                    :severity="item.productType === 'PDF' ? 'info' : 'success'"
+                    :value="item.productType"
+                    class="text-xs"
+                  />
+                  <span class="font-semibold">{{
+                    item.productName || "Calendar"
+                  }}</span>
+                  <span>x{{ item.quantity }}</span>
+                  <span class="text-surface-600"
+                    >@ {{ formatCurrency(item.unitPrice) }}</span
+                  >
+                </div>
+              </div>
+              <div v-else-if="editingOrder.calendar" class="font-semibold ml-2">
+                {{ editingOrder.calendar.name }} x{{ editingOrder.quantity }}
+              </div>
+            </div>
+            <div>
+              <span class="text-surface-600">Subtotal:</span>
+              <span class="font-semibold ml-2">{{
+                formatCurrency(editingOrder.subtotal || editingOrder.totalPrice)
               }}</span>
             </div>
             <div>
-              <span class="text-surface-600">Calendar:</span>
+              <span class="text-surface-600">Shipping:</span>
               <span class="font-semibold ml-2">{{
-                editingOrder.calendar.name
+                formatCurrency(editingOrder.shippingCost || 0)
               }}</span>
             </div>
             <div>
-              <span class="text-surface-600">Quantity:</span>
+              <span class="text-surface-600">Tax:</span>
               <span class="font-semibold ml-2">{{
-                editingOrder.quantity
+                formatCurrency(editingOrder.taxAmount || 0)
               }}</span>
             </div>
             <div>
