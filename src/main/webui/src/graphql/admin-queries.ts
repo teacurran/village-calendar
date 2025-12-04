@@ -44,7 +44,7 @@ export const ALL_ORDERS_QUERY = `
  * Requires ADMIN role in JWT
  */
 export const UPDATE_ORDER_STATUS_MUTATION = `
-  mutation UpdateOrderStatus($id: ID!, $input: OrderUpdateInput!) {
+  mutation UpdateOrderStatus($id: String!, $input: OrderUpdateInput!) {
     updateOrderStatus(id: $id, input: $input) {
       id
       status
@@ -80,7 +80,7 @@ export const UPDATE_ORDER_STATUS_MUTATION = `
  * Users can only cancel their own orders
  */
 export const CANCEL_ORDER_MUTATION = `
-  mutation CancelOrder($orderId: ID!, $reason: String) {
+  mutation CancelOrder($orderId: String!, $reason: String) {
     cancelOrder(orderId: $orderId, reason: $reason) {
       id
       status
@@ -95,7 +95,7 @@ export const CANCEL_ORDER_MUTATION = `
  * Admin can view any order, users can view their own
  */
 export const GET_ORDER_QUERY = `
-  query GetOrder($id: ID!) {
+  query GetOrder($id: String!) {
     order(id: $id) {
       id
       quantity
@@ -135,7 +135,7 @@ export const GET_ORDER_QUERY = `
  * Query: Get orders for specific user (admin only)
  */
 export const USER_ORDERS_QUERY = `
-  query UserOrders($userId: ID!, $status: OrderStatus) {
+  query UserOrders($userId: String!, $status: String) {
     orders(userId: $userId, status: $status) {
       id
       status
@@ -176,7 +176,7 @@ export const ALL_USERS_QUERY = `
  * Cannot remove admin from self to prevent lockout
  */
 export const UPDATE_USER_ADMIN_MUTATION = `
-  mutation UpdateUserAdmin($userId: ID!, $isAdmin: Boolean!) {
+  mutation UpdateUserAdmin($userId: String!, $isAdmin: Boolean!) {
     updateUserAdmin(userId: $userId, isAdmin: $isAdmin) {
       id
       email

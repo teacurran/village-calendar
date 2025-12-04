@@ -18,7 +18,7 @@ import {
   loadStripe,
   Stripe,
   StripeElements,
-  StripeCardElement,
+  StripePaymentElement,
 } from "@stripe/stripe-js";
 
 // const { t } = useI18n({ useScope: 'global' })
@@ -189,11 +189,11 @@ const loadingShipping = ref(false);
 // Payment - Stripe
 const stripe = ref<Stripe | null>(null);
 const stripeElements = ref<StripeElements | null>(null);
-const stripeCardElement = ref<StripeCardElement | null>(null);
+const stripePaymentElement = ref<StripePaymentElement | null>(null);
 const stripeElementsContainer = ref<HTMLElement | null>(null);
 const paymentIntentClientSecret = ref<string | null>(null);
 const stripePublishableKey = ref<string | null>(null);
-
+const paymentElementReady = ref(false);
 
 // Countries list
 const countries = [
@@ -548,9 +548,11 @@ function validatePayment() {
   return true;
 }
 
-// Initialize Stripe
+// Initialize Stripe with Payment Element
 async function initializeStripe() {
   try {
+    paymentElementReady.value = false;
+
     // Fetch Stripe configuration from backend
     const configResponse = await fetch("/api/payment/config");
     if (!configResponse.ok) {
@@ -567,10 +569,7 @@ async function initializeStripe() {
       throw new Error("Failed to load Stripe");
     }
 
-    // Create Elements instance
-    stripeElements.value = stripe.value.elements();
-
-    // Create a Payment Intent
+    // Create a Payment Intent first (needed for Payment Element)
     const intentResponse = await fetch("/api/payment/create-payment-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -587,38 +586,43 @@ async function initializeStripe() {
     const intentData = await intentResponse.json();
     paymentIntentClientSecret.value = intentData.clientSecret;
 
-    // Create and mount the Card Element
+    // Create Elements instance WITH the client secret (required for Payment Element)
+    const appearance = {
+      theme: "stripe" as const,
+      variables: {
+        colorPrimary: "#0570de",
+        colorBackground: "#ffffff",
+        colorText: "#30313d",
+        colorDanger: "#df1b41",
+        fontFamily: "system-ui, sans-serif",
+        borderRadius: "4px",
+      },
+    };
+
+    stripeElements.value = stripe.value.elements({
+      clientSecret: paymentIntentClientSecret.value,
+      appearance,
+    });
+
+    // Create and mount the Payment Element
     await nextTick();
     if (stripeElementsContainer.value && stripeElements.value) {
-      const cardElementOptions = {
-        style: {
-          base: {
-            fontSize: "16px",
-            color: "#374151",
-            "::placeholder": {
-              color: "#9CA3AF",
-            },
-          },
-          invalid: {
-            color: "#EF4444",
-            iconColor: "#EF4444",
-          },
-        },
-      };
+      stripePaymentElement.value = stripeElements.value.create("payment", {
+        layout: "tabs",
+      });
 
-      stripeCardElement.value = stripeElements.value.create(
-        "card",
-        cardElementOptions,
-      );
-      stripeCardElement.value.mount(stripeElementsContainer.value);
+      stripePaymentElement.value.mount(stripeElementsContainer.value);
 
-      // Add event listener for errors
-      stripeCardElement.value.on("change", (event) => {
-        const displayError = document.getElementById("card-errors");
+      // Listen for when the element is ready
+      stripePaymentElement.value.on("ready", () => {
+        paymentElementReady.value = true;
+      });
+
+      // Listen for validation errors
+      stripePaymentElement.value.on("change", (event) => {
+        const displayError = document.getElementById("payment-errors");
         if (displayError) {
-          if (event.error) {
-            displayError.textContent = event.error.message;
-          } else {
+          if (event.complete) {
             displayError.textContent = "";
           }
         }
@@ -647,25 +651,41 @@ async function submitOrder() {
     // Check if Stripe is initialized
     if (
       !stripe.value ||
-      !stripeCardElement.value ||
+      !stripeElements.value ||
       !paymentIntentClientSecret.value
     ) {
       throw new Error("Payment system not initialized");
     }
 
-    // Confirm the payment with Stripe
-    const { error, paymentIntent } = await stripe.value.confirmCardPayment(
-      paymentIntentClientSecret.value,
-      {
-        payment_method: {
-          card: stripeCardElement.value,
+    // Store order info before payment (in case of redirect)
+    const orderInfo = {
+      email: contactAndShipping.value.email,
+      shippingAddress: contactAndShipping.value,
+      billingAddress: sameAsShipping.value
+        ? contactAndShipping.value
+        : billingAddress.value,
+      shippingMethod: selectedShippingMethod.value,
+      items: cartItems.value,
+      subtotal: cartSubtotal.value,
+      shippingCost: shippingCost.value,
+      taxAmount: taxAmount.value,
+      totalAmount: orderTotal.value,
+    };
+    sessionStorage.setItem("pendingOrderInfo", JSON.stringify(orderInfo));
+
+    // Confirm the payment with Stripe Payment Element
+    const { error, paymentIntent } = await stripe.value.confirmPayment({
+      elements: stripeElements.value,
+      confirmParams: {
+        return_url: `${window.location.origin}/order-confirmation`,
+        payment_method_data: {
           billing_details: {
             name: `${contactAndShipping.value.firstName} ${contactAndShipping.value.lastName}`,
             email: contactAndShipping.value.email,
             phone: contactAndShipping.value.phone,
             address: {
               line1: contactAndShipping.value.address1,
-              line2: contactAndShipping.value.address2,
+              line2: contactAndShipping.value.address2 || undefined,
               city: contactAndShipping.value.city,
               state: contactAndShipping.value.state,
               postal_code: contactAndShipping.value.postalCode,
@@ -674,7 +694,8 @@ async function submitOrder() {
           },
         },
       },
-    );
+      redirect: "if_required",
+    });
 
     if (error) {
       // Show error to customer
@@ -687,56 +708,44 @@ async function submitOrder() {
       return;
     }
 
-    // Payment succeeded, create order in backend
-    const orderResponse = await fetch("/api/payment/confirm-payment", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        paymentIntentId: paymentIntent.id,
-        orderDetails: {
-          email: contactAndShipping.value.email,
-          shippingAddress: contactAndShipping.value,
-          billingAddress: sameAsShipping.value
-            ? contactAndShipping.value
-            : billingAddress.value,
-          shippingMethod: selectedShippingMethod.value,
-          items: cartItems.value,
-          subtotal: cartSubtotal.value,
-          shippingCost: shippingCost.value,
-          taxAmount: taxAmount.value,
-          totalAmount: orderTotal.value,
-        },
-      }),
-    });
+    // Payment succeeded (no redirect required), create order in backend
+    if (paymentIntent && paymentIntent.status === "succeeded") {
+      const orderResponse = await fetch("/api/payment/confirm-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentIntentId: paymentIntent.id,
+          orderDetails: orderInfo,
+        }),
+      });
 
-    if (!orderResponse.ok) {
-      throw new Error("Failed to create order");
+      if (!orderResponse.ok) {
+        throw new Error("Failed to create order");
+      }
+
+      const orderData = await orderResponse.json();
+
+      const orderNumber = orderData.orderNumber || "VC-" + Date.now();
+
+      // Store order info for confirmation page
+      sessionStorage.setItem(
+        "lastOrder",
+        JSON.stringify({
+          orderNumber,
+          ...orderInfo,
+        }),
+      );
+
+      // Clear pending order info
+      sessionStorage.removeItem("pendingOrderInfo");
+
+      // Clear cart and redirect to confirmation
+      await cartStore.clearCart();
+      router.push({
+        name: ROUTE_NAMES.ORDER_CONFIRMATION,
+        params: { orderId: orderNumber },
+      });
     }
-
-    const orderData = await orderResponse.json();
-
-    // Store order info for confirmation page
-    sessionStorage.setItem(
-      "lastOrder",
-      JSON.stringify({
-        orderNumber: orderData.orderNumber || "VC-" + Date.now(),
-        email: contactAndShipping.value.email,
-        shippingAddress: contactAndShipping.value,
-        billingAddress: sameAsShipping.value
-          ? contactAndShipping.value
-          : billingAddress.value,
-        shippingMethod: selectedShippingMethod.value,
-        items: cartItems.value,
-        subtotal: cartSubtotal.value,
-        shippingCost: shippingCost.value,
-        taxAmount: taxAmount.value,
-        totalAmount: orderTotal.value,
-      }),
-    );
-
-    // Clear cart and redirect to confirmation
-    await cartStore.clearCart();
-    router.push({ name: ROUTE_NAMES.ORDER_CONFIRMATION });
   } catch (error: any) {
     console.error("Order submission error:", error);
     toast.add({
@@ -1083,26 +1092,13 @@ watch(
           <p class="payment-desc">All transactions are secure and encrypted.</p>
 
           <div class="payment-method">
-            <div class="payment-option selected">
-              <RadioButton
-                model-value="card"
-                value="card"
-                input-id="pay-card"
-                checked
-              />
-              <label for="pay-card" class="ml-2">Credit card</label>
-              <div class="payment-icons">
-                <i class="pi pi-credit-card"></i>
-              </div>
-            </div>
-
-            <!-- Stripe Card Element -->
-            <div class="card-fields">
+            <!-- Stripe Payment Element -->
+            <div class="payment-element-container">
               <div ref="stripeElementsContainer" class="stripe-element"></div>
-              <div id="card-errors" class="text-red-500 text-sm mt-2"></div>
-              <p v-if="!stripe" class="text-sm text-gray-600 mt-2">
+              <div id="payment-errors" class="text-red-500 text-sm mt-2"></div>
+              <p v-if="!paymentElementReady" class="text-sm text-gray-600 mt-2">
                 <i class="pi pi-spinner pi-spin mr-1"></i>
-                Loading payment form...
+                Loading payment options...
               </p>
             </div>
           </div>
@@ -1511,17 +1507,15 @@ watch(
   margin-left: auto;
 }
 
-.card-fields {
+.payment-element-container {
   padding: 1rem;
   background: #fafafa;
+  border-radius: 4px;
 }
 
 .stripe-element {
-  padding: 12px;
   background: var(--p-surface-0);
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  min-height: 44px;
+  min-height: 100px;
 }
 
 .stripe-element--focus {

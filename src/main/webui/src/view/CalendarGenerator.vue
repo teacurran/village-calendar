@@ -188,66 +188,66 @@
       </div>
 
       <!-- Preview Panel -->
-          <div ref="previewContainer" class="calendar-preview">
-            <div v-if="!generatedSVG" class="text-center py-12 text-gray-500">
-              <ProgressSpinner />
-              <p class="mt-4">Generating calendar...</p>
-            </div>
+      <div ref="previewContainer" class="calendar-preview">
+        <div v-if="!generatedSVG" class="text-center py-12 text-gray-500">
+          <ProgressSpinner />
+          <p class="mt-4">Generating calendar...</p>
+        </div>
+        <div
+          v-else
+          class="ruler-wrapper"
+          :class="{ 'show-rulers': showRulers }"
+        >
+          <!-- Scaled container - width/height set to match visual size after scale -->
+          <div
+            class="scaled-wrapper"
+            :style="{
+              width: `${3500 * zoomLevel}px`,
+              height: `${2250 * zoomLevel}px`,
+            }"
+          >
             <div
-              v-else
-              class="ruler-wrapper"
-              :class="{ 'show-rulers': showRulers }"
+              class="svg-container"
+              :style="{
+                transform: `scale(${zoomLevel})`,
+                transformOrigin: 'top left',
+              }"
             >
-              <!-- Scaled container - width/height set to match visual size after scale -->
-              <div
-                class="scaled-wrapper"
-                :style="{
-                  width: `${3500 * zoomLevel}px`,
-                  height: `${2250 * zoomLevel}px`,
-                }"
-              >
-                <div
-                  class="svg-container"
-                  :style="{
-                    transform: `scale(${zoomLevel})`,
-                    transformOrigin: 'top left',
-                  }"
-                >
-                  <div class="page-border">
-                    <div v-html="generatedSVG"></div>
-                  </div>
-                </div>
-              </div>
-              <!-- Bottom ruler -->
-              <div v-if="showRulers" class="ruler ruler-bottom">
-                <div
-                  v-for="inch in 35"
-                  :key="'b' + inch"
-                  class="ruler-mark"
-                  :style="{ width: `${100 * zoomLevel}px` }"
-                >
-                  <span class="ruler-label">{{ inch }}"</span>
-                </div>
-              </div>
-              <!-- Right ruler (22.5 inches total) -->
-              <div v-if="showRulers" class="ruler ruler-right">
-                <div
-                  v-for="inch in 22"
-                  :key="'r' + inch"
-                  class="ruler-mark"
-                  :style="{ height: `${100 * zoomLevel}px` }"
-                >
-                  <span class="ruler-label">{{ inch }}"</span>
-                </div>
-                <div
-                  class="ruler-mark ruler-mark-half"
-                  :style="{ height: `${50 * zoomLevel}px` }"
-                >
-                  <span class="ruler-label">22½"</span>
-                </div>
+              <div class="page-border">
+                <div v-html="generatedSVG"></div>
               </div>
             </div>
           </div>
+          <!-- Bottom ruler -->
+          <div v-if="showRulers" class="ruler ruler-bottom">
+            <div
+              v-for="inch in 35"
+              :key="'b' + inch"
+              class="ruler-mark"
+              :style="{ width: `${100 * zoomLevel}px` }"
+            >
+              <span class="ruler-label">{{ inch }}"</span>
+            </div>
+          </div>
+          <!-- Right ruler (22.5 inches total) -->
+          <div v-if="showRulers" class="ruler ruler-right">
+            <div
+              v-for="inch in 22"
+              :key="'r' + inch"
+              class="ruler-mark"
+              :style="{ height: `${100 * zoomLevel}px` }"
+            >
+              <span class="ruler-label">{{ inch }}"</span>
+            </div>
+            <div
+              class="ruler-mark ruler-mark-half"
+              :style="{ height: `${50 * zoomLevel}px` }"
+            >
+              <span class="ruler-label">22½"</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1852,7 +1852,9 @@ onMounted(async () => {
   // Check if manage templates dialog should open from query param
   if (route.query["manage-templates"] === "true") {
     showTemplatesDialog.value = true;
-    router.replace({ query: { ...route.query, "manage-templates": undefined } });
+    router.replace({
+      query: { ...route.query, "manage-templates": undefined },
+    });
   }
 });
 
@@ -1873,7 +1875,9 @@ watch(
   (manageTemplates) => {
     if (manageTemplates === "true") {
       showTemplatesDialog.value = true;
-      router.replace({ query: { ...route.query, "manage-templates": undefined } });
+      router.replace({
+        query: { ...route.query, "manage-templates": undefined },
+      });
     }
   },
 );

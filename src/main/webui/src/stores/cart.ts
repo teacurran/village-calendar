@@ -207,7 +207,7 @@ export const useCartStore = defineStore("cart", {
           },
           body: JSON.stringify({
             query: `
-              mutation UpdateCartItemQuantity($itemId: ID!, $quantity: Int!) {
+              mutation UpdateCartItemQuantity($itemId: String!, $quantity: Int!) {
                 updateCartItemQuantity(itemId: $itemId, quantity: $quantity) {
                   id
                   subtotal
@@ -268,7 +268,7 @@ export const useCartStore = defineStore("cart", {
           },
           body: JSON.stringify({
             query: `
-              mutation RemoveFromCart($itemId: ID!) {
+              mutation RemoveFromCart($itemId: String!) {
                 removeFromCart(itemId: $itemId) {
                   id
                   subtotal

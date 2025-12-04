@@ -118,7 +118,7 @@ export async function fetchTemplate(
   id: string,
 ): Promise<ServiceResponse<CalendarTemplate>> {
   const query = `
-    query Template($id: ID!) {
+    query Template($id: String!) {
       template(id: $id) {
         id
         name
@@ -198,7 +198,7 @@ export async function updateTemplate(
   input: TemplateInput,
 ): Promise<ServiceResponse<CalendarTemplate>> {
   const query = `
-    mutation UpdateTemplate($id: ID!, $input: TemplateInput!) {
+    mutation UpdateTemplate($id: String!, $input: TemplateInput!) {
       updateTemplate(id: $id, input: $input) {
         id
         name
@@ -238,7 +238,7 @@ export async function deleteTemplate(
   id: string,
 ): Promise<ServiceResponse<boolean>> {
   const query = `
-    mutation DeleteTemplate($id: ID!) {
+    mutation DeleteTemplate($id: String!) {
       deleteTemplate(id: $id)
     }
   `;

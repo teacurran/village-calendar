@@ -33,7 +33,7 @@ export const PLACE_ORDER_MUTATION = `
  */
 export const CREATE_ORDER_MUTATION = `
   mutation CreateOrder(
-    $calendarId: ID!
+    $calendarId: String!
     $quantity: Int!
     $shippingAddress: AddressInput!
   ) {
@@ -58,7 +58,7 @@ export const CREATE_ORDER_MUTATION = `
  * Initiates refund for paid orders.
  */
 export const CANCEL_ORDER_MUTATION = `
-  mutation CancelOrder($orderId: ID!, $reason: String) {
+  mutation CancelOrder($orderId: String!, $reason: String) {
     cancelOrder(orderId: $orderId, reason: $reason) {
       id
       status
@@ -97,7 +97,7 @@ export const MY_ORDERS_QUERY = `
  * Query to fetch a specific order by ID.
  */
 export const ORDER_QUERY = `
-  query GetOrder($id: ID!) {
+  query GetOrder($id: String!) {
     order(id: $id) {
       id
       status

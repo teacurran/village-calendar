@@ -35,7 +35,7 @@ export interface CreateOrderInput {
 
 /**
  * Initialize Stripe
- * Loads Stripe.js using the publishable key from environment variables
+ * Loads Stripe.js using the publishable key from backend
  */
 export async function initializeStripe(): Promise<Stripe> {
   if (stripeInstance) {
@@ -43,20 +43,21 @@ export async function initializeStripe(): Promise<Stripe> {
   }
 
   try {
-    // Get Stripe publishable key from environment variable
-    const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+    // Fetch Stripe publishable key from backend
+    const configResponse = await fetch("/api/payment/config");
+    if (!configResponse.ok) {
+      throw new Error("Failed to fetch payment configuration");
+    }
+    const config = await configResponse.json();
 
-    if (!publishableKey) {
-      throw new Error(
-        "Stripe publishable key not configured. " +
-          "Please set VITE_STRIPE_PUBLISHABLE_KEY in your .env file.",
-      );
+    if (!config.publishableKey) {
+      throw new Error("Stripe publishable key not configured on server");
     }
 
-    stripePublishableKey = publishableKey;
+    stripePublishableKey = config.publishableKey;
 
     // Load Stripe.js
-    const stripe = await loadStripe(publishableKey);
+    const stripe = await loadStripe(config.publishableKey);
     if (!stripe) {
       throw new Error("Failed to load Stripe");
     }
@@ -87,7 +88,7 @@ export async function createOrder(
       body: JSON.stringify({
         query: `
           mutation CreateOrder(
-            $calendarId: ID!
+            $calendarId: String!
             $quantity: Int!
             $shippingAddress: AddressInput!
           ) {
@@ -180,7 +181,7 @@ export async function fetchOrderById(
       },
       body: JSON.stringify({
         query: `
-          query GetOrder($id: ID!) {
+          query GetOrder($id: String!) {
             order(id: $id) {
               id
               quantity
@@ -190,7 +191,6 @@ export async function fetchOrderById(
               shippingAddress
               paidAt
               shippedAt
-              deliveredAt
               trackingNumber
               created
               updated
@@ -255,7 +255,6 @@ export async function fetchUserOrders(authToken: string): Promise<any[]> {
               status
               paidAt
               shippedAt
-              deliveredAt
               trackingNumber
               created
               calendar {
@@ -376,7 +375,6 @@ export async function fetchOrderByPaymentIntent(
               shippingAddress
               paidAt
               shippedAt
-              deliveredAt
               trackingNumber
               created
               updated
@@ -447,7 +445,7 @@ export async function fetchAllOrdersAdmin(
       },
       body: JSON.stringify({
         query: `
-          query AllOrders($status: OrderStatus, $limit: Int) {
+          query AllOrders($status: String, $limit: Int) {
             allOrders(status: $status, limit: $limit) {
               id
               status
@@ -463,7 +461,6 @@ export async function fetchAllOrdersAdmin(
               updated
               paidAt
               shippedAt
-              deliveredAt
               calendar {
                 id
                 name
@@ -515,7 +512,7 @@ export async function updateOrderStatusAdmin(
       },
       body: JSON.stringify({
         query: `
-          mutation UpdateOrderStatus($id: ID!, $input: OrderUpdateInput!) {
+          mutation UpdateOrderStatus($id: String!, $input: OrderUpdateInput!) {
             updateOrderStatus(id: $id, input: $input) {
               id
               status
@@ -531,7 +528,6 @@ export async function updateOrderStatusAdmin(
               updated
               paidAt
               shippedAt
-              deliveredAt
               calendar {
                 id
                 name

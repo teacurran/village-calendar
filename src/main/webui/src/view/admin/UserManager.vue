@@ -169,7 +169,9 @@ async function updateUserAdmin(user: AdminUser, newAdminStatus: boolean) {
  */
 function confirmToggleAdmin(user: AdminUser) {
   const newStatus = !user.isAdmin;
-  const action = newStatus ? "grant admin privileges to" : "remove admin privileges from";
+  const action = newStatus
+    ? "grant admin privileges to"
+    : "remove admin privileges from";
 
   // Prevent removing own admin status
   if (user.id === currentUserId.value && !newStatus) {
@@ -255,8 +257,8 @@ onMounted(async () => {
         label="Refresh"
         severity="secondary"
         outlined
-        @click="fetchUsers"
         :loading="loading"
+        @click="fetchUsers"
       />
     </div>
 
@@ -355,18 +357,30 @@ onMounted(async () => {
         </template>
       </Column>
 
-      <Column header="Provider" sortable sort-field="oauthProvider" style="width: 12%">
+      <Column
+        header="Provider"
+        sortable
+        sort-field="oauthProvider"
+        style="width: 12%"
+      >
         <template #body="{ data }">
           <div class="flex items-center gap-2">
             <i :class="getProviderIcon(data.oauthProvider)"></i>
-            <span class="capitalize">{{ data.oauthProvider?.toLowerCase() }}</span>
+            <span class="capitalize">{{
+              data.oauthProvider?.toLowerCase()
+            }}</span>
           </div>
         </template>
       </Column>
 
       <Column header="Role" sortable sort-field="isAdmin" style="width: 12%">
         <template #body="{ data }">
-          <Tag v-if="data.isAdmin" severity="warning" value="Admin" icon="pi pi-shield" />
+          <Tag
+            v-if="data.isAdmin"
+            severity="warning"
+            value="Admin"
+            icon="pi pi-shield"
+          />
           <Tag v-else severity="secondary" value="User" icon="pi pi-user" />
         </template>
       </Column>
@@ -375,16 +389,25 @@ onMounted(async () => {
         <template #body="{ data }">
           <div>
             <div>{{ formatRelativeTime(data.created) }}</div>
-            <div class="text-xs text-surface-500">{{ formatDate(data.created) }}</div>
+            <div class="text-xs text-surface-500">
+              {{ formatDate(data.created) }}
+            </div>
           </div>
         </template>
       </Column>
 
-      <Column header="Last Login" sortable sort-field="lastLoginAt" style="width: 15%">
+      <Column
+        header="Last Login"
+        sortable
+        sort-field="lastLoginAt"
+        style="width: 15%"
+      >
         <template #body="{ data }">
           <div>
             <div>{{ formatRelativeTime(data.lastLoginAt) }}</div>
-            <div class="text-xs text-surface-500">{{ formatDate(data.lastLoginAt) }}</div>
+            <div class="text-xs text-surface-500">
+              {{ formatDate(data.lastLoginAt) }}
+            </div>
           </div>
         </template>
       </Column>
@@ -403,7 +426,11 @@ onMounted(async () => {
             />
             <Button
               v-else
-              v-tooltip.top="data.id === currentUserId ? 'Cannot remove own admin' : 'Remove Admin'"
+              v-tooltip.top="
+                data.id === currentUserId
+                  ? 'Cannot remove own admin'
+                  : 'Remove Admin'
+              "
               icon="pi pi-user"
               size="small"
               severity="warning"

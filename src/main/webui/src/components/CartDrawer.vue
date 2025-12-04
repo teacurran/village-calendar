@@ -390,25 +390,14 @@ const viewFullCart = () => {
     v-model:visible="showPreviewModal"
     :header="previewCalendarName"
     :style="{ width: '90vw', maxWidth: '900px' }"
-    modal
-    dismissable-mask
+    :modal="true"
+    :dismissable-mask="true"
   >
     <div
-      class="calendar-preview-container"
-      style="
-        width: 100%;
-        height: 70vh;
-        overflow: auto;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      "
-    >
-      <div
-        style="max-width: 100%; height: auto"
-        v-html="previewCalendarSvg"
-      ></div>
-    </div>
+      v-if="previewCalendarSvg"
+      class="calendar-preview-content"
+      v-html="previewCalendarSvg"
+    />
   </Dialog>
 </template>
 
@@ -570,5 +559,17 @@ const viewFullCart = () => {
   .cart-drawer {
     --drawer-width: 100vw;
   }
+}
+
+/* Calendar preview modal - scale SVG to fit */
+.calendar-preview-content {
+  margin: -1rem;
+}
+
+.calendar-preview-content :deep(svg) {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  display: block;
 }
 </style>

@@ -32,6 +32,11 @@
     google_client_id: "{{ lookup('env', 'GOOGLE_CLIENT_ID') }}"
     google_client_secret: "{{ lookup('env', 'GOOGLE_CLIENT_SECRET') }}"
 
+    # Stripe configuration
+    stripe_secret_key: "{{ lookup('env', 'STRIPE_SECRET_KEY') }}"
+    stripe_publishable_key: "{{ lookup('env', 'STRIPE_PUBLISHABLE_KEY') }}"
+    stripe_webhook_secret: "{{ lookup('env', 'STRIPE_WEBHOOK_SECRET') | default('', true) }}"
+
     # Kubernetes namespace (overridden by -e k8s_namespace=calendar-beta)
     k8s_namespace: "calendar-beta"
 
@@ -110,6 +115,16 @@
         {{ kubectl }} create secret generic calendar-google-oauth-secret \
           --from-literal=client-id='{{ google_client_id }}' \
           --from-literal=client-secret='{{ google_client_secret }}' \
+          --namespace={{ k8s_namespace }} \
+          --dry-run=client -o yaml | {{ kubectl }} apply -f -
+      no_log: true
+
+    - name: Create Stripe secret
+      shell: |
+        {{ kubectl }} create secret generic calendar-stripe-secret \
+          --from-literal=secret-key='{{ stripe_secret_key }}' \
+          --from-literal=publishable-key='{{ stripe_publishable_key }}' \
+          --from-literal=webhook-secret='{{ stripe_webhook_secret }}' \
           --namespace={{ k8s_namespace }} \
           --dry-run=client -o yaml | {{ kubectl }} apply -f -
       no_log: true
@@ -231,6 +246,23 @@
                           secretKeyRef:
                             name: calendar-google-oauth-secret
                             key: client-secret
+
+                      # Stripe configuration
+                      - name: STRIPE_SECRET_KEY
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-stripe-secret
+                            key: secret-key
+                      - name: STRIPE_PUBLISHABLE_KEY
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-stripe-secret
+                            key: publishable-key
+                      - name: STRIPE_WEBHOOK_SECRET
+                        valueFrom:
+                          secretKeyRef:
+                            name: calendar-stripe-secret
+                            key: webhook-secret
 
                       # Application settings
                       - name: QUARKUS_PROFILE
