@@ -327,9 +327,9 @@ watch(
                     >
                       <div
                         style="
-                          width: 800px;
-                          height: 800px;
-                          transform: scale(0.16);
+                          width: 3500px;
+                          height: 2250px;
+                          transform: scale(0.0514);
                           transform-origin: top left;
                           pointer-events: none;
                           position: absolute;
@@ -503,8 +503,7 @@ watch(
 </template>
 
 <style scoped>
-/* Larger thumbnails for full cart page */
-.calendar-thumbnail,
+/* Thumbnails for full cart page */
 .product-thumbnail,
 .product-thumbnail-placeholder {
   width: 128px;
@@ -519,9 +518,18 @@ watch(
   overflow: hidden;
 }
 
+/* Calendar thumbnail shows full design with correct aspect ratio (3500:2250) */
 .calendar-thumbnail {
+  width: 180px;
+  height: 116px;
   background: white;
-  border-color: #90caf9;
+  border: 1px solid #90caf9;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
   cursor: pointer;
 }
 
