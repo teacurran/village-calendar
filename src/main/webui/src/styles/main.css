@@ -825,6 +825,16 @@ h2 {
   border-color: var(--theme-hover, var(--p-primary-hover-color)) !important;
 }
 
+/* RadioButton - solid filled dot when selected (no white center) */
+.p-radiobutton.p-radiobutton-checked .p-radiobutton-box .p-radiobutton-icon {
+  visibility: hidden !important;
+}
+
+.p-radiobutton.p-radiobutton-checked .p-radiobutton-box {
+  background-color: var(--theme-button-primary, var(--p-primary-color)) !important;
+  border-color: var(--theme-button-primary, var(--p-primary-color)) !important;
+}
+
 /* Theme-aware switches/toggles */
 .p-inputswitch-checked .p-inputswitch-slider {
   background-color: var(--theme-success, var(--p-primary-color)) !important;
