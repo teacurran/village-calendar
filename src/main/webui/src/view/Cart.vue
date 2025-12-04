@@ -29,10 +29,7 @@ const loading = ref(false);
 const allUserCalendars = ref<any[]>([]); // Add missing ref
 
 // Breadcrumbs
-const breadcrumbItems = computed(() => [
-  { label: "Store", url: "/store" },
-  { label: "Cart" },
-]);
+const breadcrumbItems = computed(() => [{ label: "Cart" }]);
 
 // Cart items
 const cartItems = computed(() => cartStore.items || []);
@@ -235,12 +232,12 @@ async function clearCart() {
 
 // Continue shopping
 function continueShopping() {
-  router.push("/store");
+  router.push("/");
 }
 
 // Proceed to checkout
 function proceedToCheckout() {
-  router.push("/store/checkout");
+  router.push("/checkout");
 }
 
 // Initialize

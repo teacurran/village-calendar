@@ -337,10 +337,7 @@ const orderTotal = computed(
 
 // Breadcrumbs
 const breadcrumbItems = computed(() => {
-  const items = [
-    { label: "Store", url: "/store" },
-    { label: "Cart", url: "/store/cart" },
-  ];
+  const items = [{ label: "Cart", url: "/cart" }];
 
   if (currentStep.value === 1) {
     items.push({ label: "Information" });
