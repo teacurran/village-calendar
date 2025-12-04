@@ -163,6 +163,7 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
     public static final String STATUS_PENDING = "PENDING";
     public static final String STATUS_PAID = "PAID";
     public static final String STATUS_PROCESSING = "PROCESSING";
+    public static final String STATUS_PRINTED = "PRINTED";
     public static final String STATUS_SHIPPED = "SHIPPED";
     public static final String STATUS_DELIVERED = "DELIVERED";
     public static final String STATUS_CANCELLED = "CANCELLED";

@@ -476,11 +476,13 @@ export async function fetchAllOrdersAdmin(
                 unitPrice
                 lineTotal
                 itemStatus
+                configuration
               }
               calendar {
                 id
                 name
                 year
+                generatedSvg
               }
               user {
                 id

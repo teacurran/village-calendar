@@ -564,15 +564,21 @@ public class OrderService {
      */
     private void validateStatusTransition(String currentStatus, String newStatus) {
         // Define allowed transitions
+        // Flow: PENDING -> PAID -> PROCESSING -> PRINTED -> SHIPPED -> DELIVERED
         boolean isValid = switch (currentStatus) {
             case CalendarOrder.STATUS_PENDING ->
                 newStatus.equals(CalendarOrder.STATUS_PAID) ||
                 newStatus.equals(CalendarOrder.STATUS_CANCELLED);
             case CalendarOrder.STATUS_PAID ->
                 newStatus.equals(CalendarOrder.STATUS_PROCESSING) ||
+                newStatus.equals(CalendarOrder.STATUS_PRINTED) ||
                 newStatus.equals(CalendarOrder.STATUS_SHIPPED) ||
                 newStatus.equals(CalendarOrder.STATUS_CANCELLED);
             case CalendarOrder.STATUS_PROCESSING ->
+                newStatus.equals(CalendarOrder.STATUS_PRINTED) ||
+                newStatus.equals(CalendarOrder.STATUS_SHIPPED) ||
+                newStatus.equals(CalendarOrder.STATUS_CANCELLED);
+            case CalendarOrder.STATUS_PRINTED ->
                 newStatus.equals(CalendarOrder.STATUS_SHIPPED) ||
                 newStatus.equals(CalendarOrder.STATUS_CANCELLED);
             case CalendarOrder.STATUS_SHIPPED ->

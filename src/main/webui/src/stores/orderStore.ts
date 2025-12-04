@@ -19,6 +19,7 @@ export interface CalendarOrderItem {
   unitPrice: number;
   lineTotal: number;
   itemStatus: string;
+  configuration?: any;
 }
 
 export interface CalendarOrder {
@@ -48,6 +49,7 @@ export interface CalendarOrder {
     id: string;
     name: string;
     year: number;
+    generatedSvg?: string;
   };
   user: {
     id: string;

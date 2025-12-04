@@ -52,6 +52,7 @@ const statusOptions = [
   { label: "Pending", value: "PENDING" },
   { label: "Paid", value: "PAID" },
   { label: "Processing", value: "PROCESSING" },
+  { label: "Printed", value: "PRINTED" },
   { label: "Shipped", value: "SHIPPED" },
   { label: "Delivered", value: "DELIVERED" },
   { label: "Cancelled", value: "CANCELLED" },
@@ -72,11 +73,18 @@ const statusTransitions = [
   { label: "Pending", value: "PENDING" },
   { label: "Paid", value: "PAID" },
   { label: "Processing", value: "PROCESSING" },
+  { label: "Printed", value: "PRINTED" },
   { label: "Shipped", value: "SHIPPED" },
   { label: "Delivered", value: "DELIVERED" },
   { label: "Cancelled", value: "CANCELLED" },
   { label: "Refunded", value: "REFUNDED" },
 ];
+
+// Order details dialog
+const detailsDialog = ref(false);
+const viewingOrder = ref<CalendarOrder | null>(null);
+const previewDialogVisible = ref(false);
+const previewSvgContent = ref("");
 
 // Validation errors
 const validationErrors = ref<string[]>([]);
@@ -110,6 +118,125 @@ function openUpdateStatus(order: CalendarOrder) {
   };
   validationErrors.value = [];
   updateStatusDialog.value = true;
+}
+
+/**
+ * Open order details dialog
+ */
+function openDetails(order: CalendarOrder) {
+  viewingOrder.value = order;
+  detailsDialog.value = true;
+}
+
+/**
+ * Get calendar SVG content from order
+ * Checks calendar.generatedSvg first, then item configurations
+ */
+function getCalendarSvg(order: CalendarOrder | null): string | null {
+  if (!order) return null;
+
+  // Try calendar.generatedSvg first
+  if (order.calendar?.generatedSvg) {
+    return order.calendar.generatedSvg;
+  }
+
+  // Try to find SVG in item configurations
+  if (order.items && order.items.length > 0) {
+    for (const item of order.items) {
+      const config = item.configuration;
+      if (config) {
+        // Configuration might be a string or object
+        let configObj = config;
+        if (typeof config === "string") {
+          try {
+            configObj = JSON.parse(config);
+          } catch {
+            continue;
+          }
+        }
+        if (configObj?.svgContent) {
+          return configObj.svgContent;
+        }
+        if (configObj?.generatedSvg) {
+          return configObj.generatedSvg;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Show calendar preview in modal
+ */
+function showCalendarPreview(order: CalendarOrder) {
+  const svg = getCalendarSvg(order);
+  if (svg) {
+    previewSvgContent.value = svg;
+    previewDialogVisible.value = true;
+  }
+}
+
+/**
+ * Get customer name (first initial + last name) for filename
+ */
+function getCustomerNameForFilename(order: CalendarOrder): string {
+  // Try shipping address first
+  const addr = order.shippingAddress;
+  if (addr?.firstName && addr?.lastName) {
+    const firstInitial = addr.firstName.charAt(0).toUpperCase();
+    return `${firstInitial}${addr.lastName}`;
+  }
+
+  // Try user display name
+  if (order.user?.displayName) {
+    const parts = order.user.displayName.split(" ");
+    if (parts.length > 1) {
+      const firstInitial = parts[0].charAt(0).toUpperCase();
+      const lastName = parts[parts.length - 1];
+      return `${firstInitial}${lastName}`;
+    }
+    return parts[0];
+  }
+
+  // Fallback to email prefix
+  if (order.customerEmail || order.user?.email) {
+    return (order.customerEmail || order.user?.email || "").split("@")[0];
+  }
+
+  return "customer";
+}
+
+/**
+ * Download PDF with order ID and customer name in filename
+ */
+function downloadPdf(order: CalendarOrder) {
+  const svg = getCalendarSvg(order);
+  if (!svg) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "No calendar content available for download",
+      life: 3000,
+    });
+    return;
+  }
+
+  const orderNumber = order.orderNumber || order.id.substring(0, 8);
+  const customerName = getCustomerNameForFilename(order);
+  const year = order.calendar?.year || new Date().getFullYear();
+
+  // Download as SVG (in production would call PDF generation endpoint)
+  const blob = new Blob([svg], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `calendar-${orderNumber}-${customerName}-${year}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 /**
@@ -436,6 +563,14 @@ onMounted(async () => {
         <template #body="{ data }">
           <div class="flex gap-2">
             <Button
+              v-tooltip.top="'View Details'"
+              icon="pi pi-eye"
+              size="small"
+              text
+              severity="info"
+              @click="openDetails(data)"
+            />
+            <Button
               v-tooltip.top="'Update Status'"
               icon="pi pi-pencil"
               size="small"
@@ -444,12 +579,13 @@ onMounted(async () => {
               @click="openUpdateStatus(data)"
             />
             <Button
-              v-tooltip.top="'View Details'"
-              icon="pi pi-eye"
+              v-if="getCalendarSvg(data)"
+              v-tooltip.top="'Download PDF'"
+              icon="pi pi-download"
               size="small"
               text
-              severity="info"
-              @click="openUpdateStatus(data)"
+              severity="success"
+              @click="downloadPdf(data)"
             />
           </div>
         </template>
@@ -629,6 +765,241 @@ onMounted(async () => {
         />
       </template>
     </Dialog>
+
+    <!-- Order Details Dialog -->
+    <Dialog
+      v-model:visible="detailsDialog"
+      :style="{ width: '800px' }"
+      :header="`Order Details - ${viewingOrder?.orderNumber || viewingOrder?.id?.substring(0, 8) || ''}`"
+      :modal="true"
+    >
+      <div v-if="viewingOrder" class="order-details-content">
+        <!-- Calendar Preview Section -->
+        <div class="bg-surface-100 p-4 rounded-lg mb-4">
+          <h3 class="font-semibold text-lg mb-3">Calendar</h3>
+          <div class="flex gap-4">
+            <!-- Thumbnail -->
+            <div class="calendar-thumbnail-container">
+              <div
+                v-if="getCalendarSvg(viewingOrder)"
+                class="calendar-thumbnail"
+                @click="showCalendarPreview(viewingOrder)"
+                v-html="getCalendarSvg(viewingOrder)"
+              ></div>
+              <div v-else class="calendar-thumbnail-placeholder">
+                <i class="pi pi-calendar text-2xl text-surface-400"></i>
+              </div>
+            </div>
+
+            <!-- Calendar Details & Actions -->
+            <div class="flex-1">
+              <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+                <div>
+                  <span class="text-surface-600">Name:</span>
+                  <span class="font-semibold ml-2">{{
+                    viewingOrder.calendar?.name || "Calendar"
+                  }}</span>
+                </div>
+                <div>
+                  <span class="text-surface-600">Year:</span>
+                  <span class="font-semibold ml-2">{{
+                    viewingOrder.calendar?.year || "-"
+                  }}</span>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <Button
+                  v-if="getCalendarSvg(viewingOrder)"
+                  label="Preview"
+                  icon="pi pi-eye"
+                  size="small"
+                  outlined
+                  @click="showCalendarPreview(viewingOrder)"
+                />
+                <Button
+                  v-if="getCalendarSvg(viewingOrder)"
+                  label="Download PDF"
+                  icon="pi pi-download"
+                  size="small"
+                  @click="downloadPdf(viewingOrder)"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Information -->
+        <div class="bg-surface-50 p-4 rounded-lg mb-4">
+          <h3 class="font-semibold text-lg mb-3">Order Information</h3>
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span class="text-surface-600">Order Number:</span>
+              <span class="font-mono font-semibold ml-2">{{
+                viewingOrder.orderNumber || viewingOrder.id.substring(0, 8)
+              }}</span>
+            </div>
+            <div>
+              <span class="text-surface-600">Status:</span>
+              <Tag
+                class="ml-2"
+                :severity="getOrderStatusSeverity(viewingOrder.status)"
+                :value="formatOrderStatus(viewingOrder.status)"
+              />
+            </div>
+            <div>
+              <span class="text-surface-600">Created:</span>
+              <span class="ml-2">{{
+                formatDateTime(viewingOrder.created)
+              }}</span>
+            </div>
+            <div>
+              <span class="text-surface-600">Paid At:</span>
+              <span class="ml-2">{{
+                formatDateTime(viewingOrder.paidAt)
+              }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customer Information -->
+        <div class="bg-surface-50 p-4 rounded-lg mb-4">
+          <h3 class="font-semibold text-lg mb-3">Customer</h3>
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span class="text-surface-600">Name:</span>
+              <span class="font-semibold ml-2">{{
+                viewingOrder.user?.displayName || "-"
+              }}</span>
+            </div>
+            <div>
+              <span class="text-surface-600">Email:</span>
+              <span class="ml-2">{{
+                viewingOrder.customerEmail || viewingOrder.user?.email
+              }}</span>
+            </div>
+            <div class="col-span-2">
+              <span class="text-surface-600">Shipping Address:</span>
+              <div class="font-semibold ml-2 mt-1">
+                {{ formatAddress(viewingOrder.shippingAddress) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Items & Totals -->
+        <div class="bg-surface-50 p-4 rounded-lg mb-4">
+          <h3 class="font-semibold text-lg mb-3">Order Items</h3>
+          <div
+            v-if="viewingOrder.items && viewingOrder.items.length > 0"
+            class="mb-3"
+          >
+            <div
+              v-for="item in viewingOrder.items"
+              :key="item.id"
+              class="flex items-center gap-2 mb-2 pb-2 border-bottom-1 border-surface-200"
+            >
+              <Tag
+                :severity="item.productType === 'PDF' ? 'info' : 'success'"
+                :value="item.productType"
+                class="text-xs"
+              />
+              <span class="font-semibold flex-1">{{
+                item.productName || "Calendar"
+              }}</span>
+              <span>x{{ item.quantity }}</span>
+              <span class="text-surface-600"
+                >@ {{ formatCurrency(item.unitPrice) }}</span
+              >
+              <span class="font-semibold">{{
+                formatCurrency(item.lineTotal)
+              }}</span>
+            </div>
+          </div>
+          <div
+            class="grid grid-cols-2 gap-2 text-sm border-top-1 border-surface-300 pt-3"
+          >
+            <div>
+              <span class="text-surface-600">Subtotal:</span>
+              <span class="font-semibold ml-2">{{
+                formatCurrency(viewingOrder.subtotal || viewingOrder.totalPrice)
+              }}</span>
+            </div>
+            <div>
+              <span class="text-surface-600">Shipping:</span>
+              <span class="font-semibold ml-2">{{
+                formatCurrency(viewingOrder.shippingCost || 0)
+              }}</span>
+            </div>
+            <div>
+              <span class="text-surface-600">Tax:</span>
+              <span class="font-semibold ml-2">{{
+                formatCurrency(viewingOrder.taxAmount || 0)
+              }}</span>
+            </div>
+            <div>
+              <span class="text-surface-600">Total:</span>
+              <span class="font-bold text-lg ml-2">{{
+                formatCurrency(viewingOrder.totalPrice)
+              }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shipping Info (if shipped) -->
+        <div
+          v-if="viewingOrder.trackingNumber || viewingOrder.shippedAt"
+          class="bg-surface-50 p-4 rounded-lg mb-4"
+        >
+          <h3 class="font-semibold text-lg mb-3">Shipping</h3>
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div v-if="viewingOrder.shippedAt">
+              <span class="text-surface-600">Shipped At:</span>
+              <span class="ml-2">{{
+                formatDateTime(viewingOrder.shippedAt)
+              }}</span>
+            </div>
+            <div v-if="viewingOrder.trackingNumber">
+              <span class="text-surface-600">Tracking:</span>
+              <span class="font-mono ml-2">{{
+                viewingOrder.trackingNumber
+              }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div v-if="viewingOrder.notes" class="bg-surface-50 p-4 rounded-lg">
+          <h3 class="font-semibold text-lg mb-3">Notes</h3>
+          <p class="text-sm whitespace-pre-wrap">{{ viewingOrder.notes }}</p>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button
+          label="Close"
+          icon="pi pi-times"
+          class="p-button-text"
+          @click="detailsDialog = false"
+        />
+        <Button
+          v-if="viewingOrder && getCalendarSvg(viewingOrder)"
+          label="Download PDF"
+          icon="pi pi-download"
+          @click="downloadPdf(viewingOrder)"
+        />
+      </template>
+    </Dialog>
+
+    <!-- Calendar Preview Dialog -->
+    <Dialog
+      v-model:visible="previewDialogVisible"
+      modal
+      header="Calendar Preview"
+      :style="{ width: '90vw', maxWidth: '1200px' }"
+      :dismissable-mask="true"
+    >
+      <div class="preview-container" v-html="previewSvgContent"></div>
+    </Dialog>
   </div>
 </template>
 
@@ -650,6 +1021,62 @@ onMounted(async () => {
 .field label {
   display: block;
   margin-bottom: 0.5rem;
+}
+
+/* Order details dialog */
+.order-details-content {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Calendar thumbnail */
+.calendar-thumbnail-container {
+  flex-shrink: 0;
+}
+
+.calendar-thumbnail {
+  width: 150px;
+  height: 97px;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid var(--p-surface-200);
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.calendar-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.calendar-thumbnail :deep(svg) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.calendar-thumbnail-placeholder {
+  width: 150px;
+  height: 97px;
+  background-color: var(--p-surface-100);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Preview dialog */
+.preview-container {
+  width: 100%;
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.preview-container :deep(svg) {
+  width: 100%;
+  height: auto;
 }
 
 @media (max-width: 768px) {

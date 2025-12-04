@@ -1151,7 +1151,9 @@ onMounted(() => {
                     </div>
                     <div class="event-info">
                       <div class="event-name">Color Only</div>
-                      <div class="event-description">Date color changes, no emoji</div>
+                      <div class="event-description">
+                        Date color changes, no emoji
+                      </div>
                     </div>
                   </div>
                 </div>

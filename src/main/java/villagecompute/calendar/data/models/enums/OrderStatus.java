@@ -5,7 +5,7 @@ package villagecompute.calendar.data.models.enums;
  *
  * <p>Status transitions typically follow this flow:
  * <pre>
- * PENDING -> PAID -> PROCESSING -> SHIPPED -> DELIVERED
+ * PENDING -> PAID -> PROCESSING -> PRINTED -> SHIPPED -> DELIVERED
  *    |        |
  *    v        v
  * CANCELLED REFUNDED
@@ -26,6 +26,11 @@ public enum OrderStatus {
      * Calendar is being printed and prepared for shipment.
      */
     PROCESSING,
+
+    /**
+     * Calendar has been printed and is ready for shipping.
+     */
+    PRINTED,
 
     /**
      * Order has been shipped to customer with tracking number.

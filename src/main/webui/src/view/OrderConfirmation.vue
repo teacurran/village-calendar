@@ -1,25 +1,27 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import Breadcrumb from "primevue/breadcrumb";
 import Button from "primevue/button";
 import Card from "primevue/card";
 import Dialog from "primevue/dialog";
 import Timeline from "primevue/timeline";
 import Tag from "primevue/tag";
+import ProgressSpinner from "primevue/progressspinner";
 import { homeBreadcrumb } from "../navigation/breadcrumbs";
+import { useAuthStore } from "../stores/authStore";
 
 const router = useRouter();
+const route = useRoute();
+const authStore = useAuthStore();
 
-const order = ref(null);
+const order = ref<any>(null);
+const loading = ref(true);
 const estimatedDelivery = ref(null);
 const previewDialogVisible = ref(false);
 const previewSvgContent = ref("");
 
-const breadcrumbs = ref([
-  { label: "Store", url: "/store/products" },
-  { label: "Order Confirmation" },
-]);
+const breadcrumbs = ref([{ label: "Order Confirmation" }]);
 
 const orderTimeline = ref([
   {
@@ -34,6 +36,13 @@ const orderTimeline = ref([
     date: "In Progress",
     icon: "pi-cog",
     color: "#673AB7",
+    completed: false,
+  },
+  {
+    status: "Printed",
+    date: "Pending",
+    icon: "pi-print",
+    color: "#2196F3",
     completed: false,
   },
   {
@@ -52,21 +61,48 @@ const orderTimeline = ref([
   },
 ]);
 
-onMounted(() => {
+onMounted(async () => {
   // Scroll to top
   window.scrollTo({ top: 0, behavior: "smooth" });
 
-  // Get order data from session
-  const orderData = sessionStorage.getItem("lastOrder");
-  if (orderData) {
-    order.value = JSON.parse(orderData);
-    sessionStorage.removeItem("lastOrder");
+  try {
+    // Try to get order data from session first (direct checkout flow)
+    const orderData = sessionStorage.getItem("lastOrder");
+    const pendingOrderInfo = sessionStorage.getItem("pendingOrderInfo");
+
+    if (orderData) {
+      // Direct flow - order info stored after payment in Checkout.vue
+      order.value = JSON.parse(orderData);
+      sessionStorage.removeItem("lastOrder");
+    } else if (pendingOrderInfo) {
+      // Redirect flow - restore pending order info saved before Stripe redirect
+      const pendingOrder = JSON.parse(pendingOrderInfo);
+      const orderId = route.params.orderId as string;
+      order.value = {
+        orderNumber: orderId,
+        ...pendingOrder,
+      };
+      sessionStorage.removeItem("pendingOrderInfo");
+    } else if (route.params.orderId) {
+      // Fetch from backend if no session data
+      const orderId = route.params.orderId as string;
+      const fetchedOrder = await fetchOrderFromBackend(orderId);
+      if (fetchedOrder) {
+        order.value = fetchedOrder;
+      }
+    }
+
+    if (!order.value) {
+      // Redirect if no order data available
+      router.push({ name: "templates" });
+      return;
+    }
 
     // Calculate estimated delivery
-    if (order.value.shippingMethod) {
+    if (order.value.shippingMethod?.estimatedDays) {
       const days = order.value.shippingMethod.estimatedDays;
       const deliveryDate = new Date();
-      deliveryDate.setDate(deliveryDate.getDate() + days[1]);
+      deliveryDate.setDate(deliveryDate.getDate() + (days[1] || days));
       estimatedDelivery.value = deliveryDate.toLocaleDateString("en-US", {
         weekday: "long",
         year: "numeric",
@@ -74,11 +110,80 @@ onMounted(() => {
         day: "numeric",
       });
     }
-  } else {
-    // Redirect if no order data
-    router.push({ name: "templates" });
+  } catch (err) {
+    console.error("Error loading order:", err);
+  } finally {
+    loading.value = false;
   }
 });
+
+// Fetch order from backend API
+async function fetchOrderFromBackend(orderId: string) {
+  try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (authStore.token) {
+      headers["Authorization"] = `Bearer ${authStore.token}`;
+    }
+
+    const response = await fetch("/graphql", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        query: `
+          query GetOrder($orderNumber: String!) {
+            orderByNumber(orderNumber: $orderNumber) {
+              id
+              orderNumber
+              status
+              customerEmail
+              subtotal
+              shippingCost
+              taxAmount
+              totalPrice
+              shippingAddress
+              items {
+                id
+                productType
+                productName
+                calendarYear
+                quantity
+                unitPrice
+                lineTotal
+                configuration
+                itemStatus
+              }
+            }
+          }
+        `,
+        variables: { orderNumber: orderId },
+      }),
+    });
+
+    if (!response.ok) return null;
+
+    const result = await response.json();
+    if (result.errors || !result.data?.orderByNumber) return null;
+
+    const backendOrder = result.data.orderByNumber;
+
+    // Map backend fields to expected format
+    return {
+      orderNumber: backendOrder.orderNumber,
+      email: backendOrder.customerEmail,
+      items: backendOrder.items,
+      subtotal: backendOrder.subtotal,
+      shippingCost: backendOrder.shippingCost,
+      taxAmount: backendOrder.taxAmount,
+      totalAmount: backendOrder.totalPrice,
+      shippingAddress: backendOrder.shippingAddress,
+    };
+  } catch (err) {
+    console.error("Failed to fetch order:", err);
+    return null;
+  }
+}
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat("en-US", {
@@ -137,7 +242,9 @@ function hasPdfAccess(item: any) {
 // Get the calendar year from item
 function getItemYear(item: any) {
   const config = parseItemConfig(item);
-  return config?.year || config?.configuration?.year || new Date().getFullYear();
+  return (
+    config?.year || config?.configuration?.year || new Date().getFullYear()
+  );
 }
 
 // Get SVG content from item for preview
@@ -155,6 +262,26 @@ function showPreview(item: any) {
   }
 }
 
+// Get customer name parts from order for filename
+function getCustomerNameForFilename(): string {
+  if (!order.value) return "customer";
+
+  // Try shipping address first
+  const addr = order.value.shippingAddress;
+  if (addr?.firstName && addr?.lastName) {
+    const firstInitial = addr.firstName.charAt(0).toUpperCase();
+    const lastName = addr.lastName;
+    return `${firstInitial}${lastName}`;
+  }
+
+  // Fallback to email prefix
+  if (order.value.email) {
+    return order.value.email.split("@")[0];
+  }
+
+  return "customer";
+}
+
 // Download PDF for item
 function downloadPdf(item: any) {
   const svg = getItemSvgContent(item);
@@ -164,6 +291,8 @@ function downloadPdf(item: any) {
   }
 
   const year = getItemYear(item);
+  const orderNumber = order.value?.orderNumber || "order";
+  const customerName = getCustomerNameForFilename();
 
   // Create a blob from SVG and trigger download
   // For now, we'll download the SVG - in production this would call a PDF generation endpoint
@@ -171,7 +300,7 @@ function downloadPdf(item: any) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `calendar-${year}.svg`;
+  a.download = `calendar-${orderNumber}-${customerName}-${year}.pdf`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -182,7 +311,16 @@ function downloadPdf(item: any) {
 <template>
   <Breadcrumb :home="homeBreadcrumb" :model="breadcrumbs" class="mb-4" />
 
-  <div class="order-confirmation-container">
+  <!-- Loading State -->
+  <div
+    v-if="loading"
+    class="flex justify-content-center align-items-center"
+    style="min-height: 400px"
+  >
+    <ProgressSpinner />
+  </div>
+
+  <div v-else class="order-confirmation-container">
     <!-- Success message -->
     <Card class="confirmation-header mb-4">
       <template #content>
@@ -457,11 +595,11 @@ function downloadPdf(item: any) {
               </div>
 
               <div class="flex align-items-start gap-3">
-                <i class="pi pi-phone text-primary"></i>
+                <i class="pi pi-at text-primary"></i>
                 <div>
                   <div class="font-semibold mb-1">Need Help?</div>
                   <div class="text-sm text-gray-600">
-                    Contact us at (617) 776-4948 or support@villagecompute.com
+                    Contact us at support@villagecompute.com
                   </div>
                 </div>
               </div>
@@ -602,7 +740,9 @@ function downloadPdf(item: any) {
   border-radius: 4px;
   border: 1px solid var(--surface-200);
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .calendar-thumbnail:hover {
