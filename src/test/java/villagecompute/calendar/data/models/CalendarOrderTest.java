@@ -119,33 +119,29 @@ class CalendarOrderTest {
     }
 
     @Test
-    void testInvalidEntity_NullCalendar() {
-        // Given
+    void testValidEntity_NullCalendar() {
+        // Given - calendar is now nullable (new orders use items list instead)
         CalendarOrder order = createValidOrder();
         order.calendar = null;
 
         // When
         Set<ConstraintViolation<CalendarOrder>> violations = validator.validate(order);
 
-        // Then
-        assertEquals(1, violations.size());
-        ConstraintViolation<CalendarOrder> violation = violations.iterator().next();
-        assertEquals("calendar", violation.getPropertyPath().toString());
+        // Then - no violations for null calendar
+        assertEquals(0, violations.size());
     }
 
     @Test
-    void testInvalidEntity_NullQuantity() {
-        // Given
+    void testValidEntity_NullQuantity() {
+        // Given - quantity is now nullable (new orders use items list instead)
         CalendarOrder order = createValidOrder();
         order.quantity = null;
 
         // When
         Set<ConstraintViolation<CalendarOrder>> violations = validator.validate(order);
 
-        // Then
-        assertEquals(1, violations.size());
-        ConstraintViolation<CalendarOrder> violation = violations.iterator().next();
-        assertEquals("quantity", violation.getPropertyPath().toString());
+        // Then - no violations for null quantity
+        assertEquals(0, violations.size());
     }
 
     @Test
@@ -164,18 +160,16 @@ class CalendarOrderTest {
     }
 
     @Test
-    void testInvalidEntity_NullUnitPrice() {
-        // Given
+    void testValidEntity_NullUnitPrice() {
+        // Given - unitPrice is now nullable (new orders use items list instead)
         CalendarOrder order = createValidOrder();
         order.unitPrice = null;
 
         // When
         Set<ConstraintViolation<CalendarOrder>> violations = validator.validate(order);
 
-        // Then
-        assertEquals(1, violations.size());
-        ConstraintViolation<CalendarOrder> violation = violations.iterator().next();
-        assertEquals("unitPrice", violation.getPropertyPath().toString());
+        // Then - no violations for null unitPrice
+        assertEquals(0, violations.size());
     }
 
     @Test

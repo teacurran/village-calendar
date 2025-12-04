@@ -108,7 +108,7 @@ class OrderServiceTest {
         assertNotNull(order.shippingAddress);
         assertNull(order.paidAt);
         assertNotNull(order.orderNumber, "Order number should be generated");
-        assertTrue(order.orderNumber.matches("VC-\\d{4}-\\d{5}"), "Order number should match format VC-YYYY-NNNNN");
+        assertTrue(order.orderNumber.matches("VC-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}"), "Order number should match format VC-XXXX-XXXX");
     }
 
     @Test
@@ -350,9 +350,9 @@ class OrderServiceTest {
         assertNotNull(order3.orderNumber);
 
         // Verify format
-        assertTrue(order1.orderNumber.matches("VC-\\d{4}-\\d{5}"));
-        assertTrue(order2.orderNumber.matches("VC-\\d{4}-\\d{5}"));
-        assertTrue(order3.orderNumber.matches("VC-\\d{4}-\\d{5}"));
+        assertTrue(order1.orderNumber.matches("VC-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}"));
+        assertTrue(order2.orderNumber.matches("VC-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}"));
+        assertTrue(order3.orderNumber.matches("VC-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}"));
 
         // Verify uniqueness
         assertNotEquals(order1.orderNumber, order2.orderNumber);
@@ -580,7 +580,7 @@ class OrderServiceTest {
         // Verify all match the format
         orders.forEach(order -> {
             assertNotNull(order.orderNumber);
-            assertTrue(order.orderNumber.matches("VC-\\d{4}-\\d{5}"));
+            assertTrue(order.orderNumber.matches("VC-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}"));
         });
     }
 

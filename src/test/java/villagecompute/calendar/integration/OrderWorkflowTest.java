@@ -182,8 +182,8 @@ class OrderWorkflowTest {
 
         // Verify order number was generated
         assertNotNull(order.orderNumber, "Order number should be generated");
-        assertTrue(order.orderNumber.matches("VC-\\d{4}-\\d{5}"),
-            "Order number should match format VC-YYYY-NNNNN, got: " + order.orderNumber);
+        assertTrue(order.orderNumber.matches("VC-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}"),
+            "Order number should match format VC-XXXX-XXXX, got: " + order.orderNumber);
     }
 
     // ============================================================================
