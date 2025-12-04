@@ -207,8 +207,10 @@ public class PaymentService {
         // Find the order
         Optional<CalendarOrder> orderOpt = orderService.findByStripePaymentIntent(paymentIntentId);
         if (orderOpt.isEmpty()) {
-            LOG.errorf("Order not found for PaymentIntent: %s", paymentIntentId);
-            throw new IllegalStateException("Order not found for PaymentIntent: " + paymentIntentId);
+            // Order may not be created yet (race condition between frontend order creation and webhook)
+            // Throw exception so webhook returns 500 and Stripe will retry automatically
+            LOG.warnf("Order not found for PaymentIntent: %s (race condition - Stripe will retry)", paymentIntentId);
+            throw new IllegalStateException("Order not found for PaymentIntent: " + paymentIntentId + " (Stripe will retry)");
         }
 
         CalendarOrder order = orderOpt.get();
