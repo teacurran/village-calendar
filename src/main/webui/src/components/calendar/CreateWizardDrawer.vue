@@ -1433,13 +1433,6 @@ onMounted(() => {
                       >
                     </li>
                     <li>
-                      <i class="pi pi-calendar-plus"></i>
-                      <span
-                        ><strong>Add custom events</strong> - Mark birthdays,
-                        anniversaries, and special dates</span
-                      >
-                    </li>
-                    <li>
                       <i class="pi pi-shopping-cart"></i>
                       <span
                         ><strong>Order a print</strong> - Get a professionally
