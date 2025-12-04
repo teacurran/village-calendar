@@ -7,6 +7,7 @@ import Step from "primevue/step";
 import StepPanel from "primevue/steppanel";
 import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
+import RadioButton from "primevue/radiobutton";
 import ProgressSpinner from "primevue/progressspinner";
 import Select from "primevue/select";
 import { VSwatches } from "vue3-swatches";
@@ -102,7 +103,7 @@ export interface ColorSettings {
   emojiFont: EmojiFontType;
 }
 
-export type EventDisplayMode = "small" | "large";
+export type EventDisplayMode = "small" | "large" | "none";
 
 export interface HolidaySettings {
   selectedSets: string[];
@@ -973,6 +974,13 @@ onMounted(() => {
                     }"
                     @click="!isMoonSizeDisabled && selectMoonStyle(moon.id)"
                   >
+                    <RadioButton
+                      v-model="selectedMoonStyle"
+                      :input-id="'moon-' + moon.id"
+                      :value="moon.id"
+                      name="moonSize"
+                      :disabled="isMoonSizeDisabled"
+                    />
                     <div class="moon-preview">
                       <div
                         class="preview-cell"
@@ -983,16 +991,6 @@ onMounted(() => {
                     <div class="moon-info">
                       <div class="moon-name">{{ moon.name }}</div>
                       <div class="moon-description">{{ moon.description }}</div>
-                    </div>
-
-                    <div class="selection-indicator">
-                      <i
-                        v-if="
-                          selectedMoonStyle === moon.id && !isMoonSizeDisabled
-                        "
-                        class="pi pi-check-circle"
-                      ></i>
-                      <i v-else class="pi pi-circle"></i>
                     </div>
                   </div>
                 </div>
@@ -1074,53 +1072,86 @@ onMounted(() => {
 
               <!-- Event Display Mode -->
               <div class="display-mode-section">
-                <h4 class="section-title">Event & Holiday Display</h4>
-                <p class="section-description">
-                  Choose how events and holidays appear in calendar cells.
+                <h4 class="subsection-title">Event & Holiday Display</h4>
+                <p class="step-description">
+                  Choose how events and holidays appear in calendar cells
                 </p>
 
-                <div class="display-mode-options">
+                <div class="event-display-options">
                   <div
-                    class="display-mode-card"
+                    class="event-display-option"
                     :class="{ selected: eventDisplayMode === 'small' }"
                     @click="
                       eventDisplayMode = 'small';
                       emitHolidaySettings();
                     "
                   >
-                    <div class="mode-icon small-mode">
-                      <div class="mode-cell">
-                        <span class="mode-emoji small">🎄</span>
-                        <span class="mode-text small">Christmas</span>
+                    <RadioButton
+                      v-model="eventDisplayMode"
+                      input-id="event-small"
+                      value="small"
+                      name="eventDisplayMode"
+                    />
+                    <div class="event-preview">
+                      <div class="event-preview-cell">
+                        <span class="cell-day">25</span>
+                        <span class="cell-emoji small">🎄</span>
                       </div>
                     </div>
-                    <div class="mode-info">
-                      <span class="mode-name">Compact</span>
-                      <span class="mode-desc"
-                        >Small emoji in corner, text at bottom</span
-                      >
+                    <div class="event-info">
+                      <div class="event-name">Compact</div>
+                      <div class="event-description">Small emoji in corner</div>
                     </div>
                   </div>
 
                   <div
-                    class="display-mode-card"
+                    class="event-display-option"
                     :class="{ selected: eventDisplayMode === 'large' }"
                     @click="
                       eventDisplayMode = 'large';
                       emitHolidaySettings();
                     "
                   >
-                    <div class="mode-icon large-mode">
-                      <div class="mode-cell">
-                        <span class="mode-emoji large">🎄</span>
-                        <span class="mode-text large">Christmas</span>
+                    <RadioButton
+                      v-model="eventDisplayMode"
+                      input-id="event-large"
+                      value="large"
+                      name="eventDisplayMode"
+                    />
+                    <div class="event-preview">
+                      <div class="event-preview-cell">
+                        <span class="cell-day">25</span>
+                        <span class="cell-emoji large">🎄</span>
                       </div>
                     </div>
-                    <div class="mode-info">
-                      <span class="mode-name">Prominent</span>
-                      <span class="mode-desc"
-                        >Centered emoji with text below</span
-                      >
+                    <div class="event-info">
+                      <div class="event-name">Prominent</div>
+                      <div class="event-description">Large centered emoji</div>
+                    </div>
+                  </div>
+
+                  <div
+                    class="event-display-option"
+                    :class="{ selected: eventDisplayMode === 'none' }"
+                    @click="
+                      eventDisplayMode = 'none';
+                      emitHolidaySettings();
+                    "
+                  >
+                    <RadioButton
+                      v-model="eventDisplayMode"
+                      input-id="event-none"
+                      value="none"
+                      name="eventDisplayMode"
+                    />
+                    <div class="event-preview">
+                      <div class="event-preview-cell">
+                        <span class="cell-day holiday-color">25</span>
+                      </div>
+                    </div>
+                    <div class="event-info">
+                      <div class="event-name">Color Only</div>
+                      <div class="event-description">Date color changes, no emoji</div>
                     </div>
                   </div>
                 </div>
@@ -2015,17 +2046,18 @@ onMounted(() => {
   margin-bottom: 1rem;
 }
 
-.display-mode-options {
+/* Event Display Options - similar to moon options */
+.event-display-options {
   display: flex;
+  flex-direction: column;
   gap: 0.75rem;
 }
 
-.display-mode-card {
-  flex: 1;
+.event-display-option {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 1rem;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
   border: 2px solid var(--surface-200);
   border-radius: 8px;
   cursor: pointer;
@@ -2033,91 +2065,85 @@ onMounted(() => {
   background: var(--surface-0);
 }
 
-.display-mode-card:hover {
+.event-display-option:hover {
   border-color: var(--primary-300);
   background: var(--surface-50);
 }
 
-.display-mode-card.selected {
+.event-display-option.selected {
   border-color: var(--primary-color);
   background: var(--primary-50);
 }
 
-.mode-icon {
-  width: 80px;
-  height: 60px;
+.event-preview {
+  flex-shrink: 0;
+  width: 60px;
+  height: 70px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--surface-200);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0.75rem;
 }
 
-.mode-cell {
-  width: 100%;
-  height: 100%;
-  background: var(--surface-100);
+.event-preview-cell {
+  width: 55px;
+  height: 65px;
+  background: var(--surface-50);
   border: 1px solid var(--surface-300);
-  border-radius: 4px;
-  display: flex;
-  flex-direction: column;
+  border-radius: 2px;
   position: relative;
-  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.mode-emoji {
+.cell-day {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.cell-day.holiday-color {
+  color: #ff5252;
+}
+
+.cell-emoji {
   position: absolute;
 }
 
-.mode-emoji.small {
-  font-size: 12px;
-  bottom: 14px;
-  left: 4px;
+.cell-emoji.small {
+  bottom: 6px;
+  left: 6px;
+  font-size: 14px;
 }
 
-.mode-emoji.large {
-  font-size: 24px;
+.cell-emoji.large {
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -60%);
+  transform: translate(-50%, -30%);
+  font-size: 24px;
 }
 
-.mode-text {
-  position: absolute;
-  font-size: 6px;
-  color: var(--text-color-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.event-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.mode-text.small {
-  bottom: 2px;
-  left: 4px;
-  right: 4px;
-}
-
-.mode-text.large {
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 7px;
-  font-weight: 500;
-}
-
-.mode-info {
-  text-align: center;
-}
-
-.mode-name {
-  display: block;
+.event-name {
   font-weight: 600;
   font-size: 0.875rem;
   color: var(--text-color);
   margin-bottom: 0.25rem;
 }
 
-.mode-desc {
-  display: block;
+.event-description {
   font-size: 0.75rem;
   color: var(--text-color-secondary);
 }
