@@ -2,138 +2,125 @@ package villagecompute.calendar.util;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.regex.Pattern;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for OrderNumberGenerator utility.
+ * Order numbers follow format VC-XXXX-XXXX where X is alphanumeric (non-guessable).
  */
 class OrderNumberGeneratorTest {
 
-    @Test
-    void testGenerateOrderNumberWithYearAndCount() {
-        // Given
-        int year = 2025;
-        long orderCount = 0;
-
-        // When
-        String orderNumber = OrderNumberGenerator.generateOrderNumber(year, orderCount);
-
-        // Then
-        assertEquals("VC-2025-00001", orderNumber);
-    }
+    // Pattern for new secure format: VC-XXXX-XXXX (12 chars total)
+    // Uses chars: 23456789ABCDEFGHJKLMNPQRSTUVWXYZ (no 0, 1, I, O, l)
+    private static final Pattern ORDER_NUMBER_PATTERN =
+        Pattern.compile("^VC-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}$");
 
     @Test
-    void testGenerateOrderNumberSequential() {
-        // Given
-        int year = 2025;
-
+    void testGenerateSecureOrderNumber() {
         // When
-        String order1 = OrderNumberGenerator.generateOrderNumber(year, 0);
-        String order2 = OrderNumberGenerator.generateOrderNumber(year, 1);
-        String order3 = OrderNumberGenerator.generateOrderNumber(year, 2);
-
-        // Then
-        assertEquals("VC-2025-00001", order1);
-        assertEquals("VC-2025-00002", order2);
-        assertEquals("VC-2025-00003", order3);
-    }
-
-    @Test
-    void testGenerateOrderNumberWith100thOrder() {
-        // Given
-        int year = 2025;
-        long orderCount = 99; // 100th order
-
-        // When
-        String orderNumber = OrderNumberGenerator.generateOrderNumber(year, orderCount);
-
-        // Then
-        assertEquals("VC-2025-00100", orderNumber);
-    }
-
-    @Test
-    void testGenerateOrderNumberWith1000thOrder() {
-        // Given
-        int year = 2025;
-        long orderCount = 999; // 1000th order
-
-        // When
-        String orderNumber = OrderNumberGenerator.generateOrderNumber(year, orderCount);
-
-        // Then
-        assertEquals("VC-2025-01000", orderNumber);
-    }
-
-    @Test
-    void testGenerateOrderNumberYearRollover() {
-        // Given
-        int year2024 = 2024;
-        int year2025 = 2025;
-        long lastOrderOf2024 = 99999; // Last possible order of 2024
-        long firstOrderOf2025 = 0; // First order of 2025
-
-        // When
-        String order2024 = OrderNumberGenerator.generateOrderNumber(year2024, lastOrderOf2024);
-        String order2025 = OrderNumberGenerator.generateOrderNumber(year2025, firstOrderOf2025);
-
-        // Then
-        assertEquals("VC-2024-100000", order2024);
-        assertEquals("VC-2025-00001", order2025); // Sequence resets for new year
-    }
-
-    @Test
-    void testGenerateOrderNumberDifferentYears() {
-        // Given
-        long orderCount = 42;
-
-        // When
-        String order2023 = OrderNumberGenerator.generateOrderNumber(2023, orderCount);
-        String order2024 = OrderNumberGenerator.generateOrderNumber(2024, orderCount);
-        String order2025 = OrderNumberGenerator.generateOrderNumber(2025, orderCount);
-
-        // Then
-        assertEquals("VC-2023-00043", order2023);
-        assertEquals("VC-2024-00043", order2024);
-        assertEquals("VC-2025-00043", order2025);
-    }
-
-    @Test
-    void testGenerateOrderNumberWithoutYearParameter() {
-        // Given
-        long orderCount = 5;
-
-        // When
-        String orderNumber = OrderNumberGenerator.generateOrderNumber(orderCount);
+        String orderNumber = OrderNumberGenerator.generateSecureOrderNumber();
 
         // Then
         assertNotNull(orderNumber);
-        assertTrue(orderNumber.matches("VC-\\d{4}-\\d{5}"), "Should match format VC-YYYY-NNNNN");
-        assertTrue(orderNumber.contains("-00006"), "Should be 6th order (count + 1)");
+        assertTrue(ORDER_NUMBER_PATTERN.matcher(orderNumber).matches(),
+            "Order number should match format VC-XXXX-XXXX, got: " + orderNumber);
+        assertEquals(12, orderNumber.length()); // VC-XXXX-XXXX = 2+1+4+1+4 = 12
     }
 
     @Test
-    void testOrderNumberFormat() {
-        // Given
-        int year = 2025;
-        long orderCount = 123;
+    void testGenerateOrderNumberWithYearAndCount() {
+        // Year and count are ignored in secure implementation (kept for API compatibility)
+        String orderNumber = OrderNumberGenerator.generateOrderNumber(2025, 0);
 
-        // When
-        String orderNumber = OrderNumberGenerator.generateOrderNumber(year, orderCount);
+        assertNotNull(orderNumber);
+        assertTrue(ORDER_NUMBER_PATTERN.matcher(orderNumber).matches(),
+            "Order number should match format VC-XXXX-XXXX, got: " + orderNumber);
+    }
 
-        // Then
-        // Verify format: VC-YYYY-NNNNN
-        assertTrue(orderNumber.matches("VC-\\d{4}-\\d{5}"));
+    @Test
+    void testGenerateOrderNumberWithCountOnly() {
+        // Count is ignored in secure implementation (kept for API compatibility)
+        String orderNumber = OrderNumberGenerator.generateOrderNumber(5);
+
+        assertNotNull(orderNumber);
+        assertTrue(ORDER_NUMBER_PATTERN.matcher(orderNumber).matches(),
+            "Order number should match format VC-XXXX-XXXX, got: " + orderNumber);
+    }
+
+    @Test
+    void testOrderNumbersAreUnique() {
+        // Generate many order numbers and verify uniqueness
+        Set<String> orderNumbers = new HashSet<>();
+        int count = 1000;
+
+        for (int i = 0; i < count; i++) {
+            String orderNumber = OrderNumberGenerator.generateSecureOrderNumber();
+            assertTrue(orderNumbers.add(orderNumber),
+                "Duplicate order number generated: " + orderNumber);
+        }
+
+        assertEquals(count, orderNumbers.size());
+    }
+
+    @Test
+    void testOrderNumberStartsWithVC() {
+        String orderNumber = OrderNumberGenerator.generateSecureOrderNumber();
         assertTrue(orderNumber.startsWith("VC-"));
-        assertEquals(13, orderNumber.length()); // VC-YYYY-NNNNN = 13 chars (2+1+4+1+5)
     }
 
     @Test
-    void testOrderNumberZeroPadding() {
-        // Test that sequence numbers are zero-padded to 5 digits
-        assertEquals("VC-2025-00001", OrderNumberGenerator.generateOrderNumber(2025, 0));
-        assertEquals("VC-2025-00010", OrderNumberGenerator.generateOrderNumber(2025, 9));
-        assertEquals("VC-2025-00100", OrderNumberGenerator.generateOrderNumber(2025, 99));
-        assertEquals("VC-2025-01000", OrderNumberGenerator.generateOrderNumber(2025, 999));
-        assertEquals("VC-2025-10000", OrderNumberGenerator.generateOrderNumber(2025, 9999));
+    void testOrderNumberHasCorrectStructure() {
+        String orderNumber = OrderNumberGenerator.generateSecureOrderNumber();
+
+        String[] parts = orderNumber.split("-");
+        assertEquals(3, parts.length, "Should have 3 parts separated by dashes");
+        assertEquals("VC", parts[0], "First part should be VC");
+        assertEquals(4, parts[1].length(), "Second part should be 4 chars");
+        assertEquals(4, parts[2].length(), "Third part should be 4 chars");
+    }
+
+    @Test
+    void testOrderNumberDoesNotContainConfusingCharacters() {
+        // Generate many and check none contain 0, O, I, l, 1
+        for (int i = 0; i < 100; i++) {
+            String orderNumber = OrderNumberGenerator.generateSecureOrderNumber();
+            String randomPart = orderNumber.substring(3); // Remove "VC-"
+
+            assertFalse(randomPart.contains("0"), "Should not contain 0");
+            assertFalse(randomPart.contains("O"), "Should not contain O");
+            assertFalse(randomPart.contains("I"), "Should not contain I");
+            assertFalse(randomPart.contains("l"), "Should not contain l");
+            assertFalse(randomPart.contains("1"), "Should not contain 1");
+        }
+    }
+
+    @Test
+    void testOrderNumberIsNonGuessable() {
+        // Generate two consecutive order numbers - they should be completely different
+        String order1 = OrderNumberGenerator.generateSecureOrderNumber();
+        String order2 = OrderNumberGenerator.generateSecureOrderNumber();
+
+        assertNotEquals(order1, order2, "Consecutive order numbers should be different");
+
+        // The random parts should be completely different (not sequential)
+        String random1 = order1.substring(3);
+        String random2 = order2.substring(3);
+        assertNotEquals(random1, random2);
+    }
+
+    @Test
+    void testLegacyMethodsStillWork() {
+        // Ensure the legacy method signatures still work (for backwards compatibility)
+        String order1 = OrderNumberGenerator.generateOrderNumber(2025, 100);
+        String order2 = OrderNumberGenerator.generateOrderNumber(50);
+
+        assertNotNull(order1);
+        assertNotNull(order2);
+        assertTrue(ORDER_NUMBER_PATTERN.matcher(order1).matches());
+        assertTrue(ORDER_NUMBER_PATTERN.matcher(order2).matches());
     }
 }
