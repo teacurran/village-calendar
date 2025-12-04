@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import Breadcrumb from "primevue/breadcrumb";
 import Button from "primevue/button";
 import Card from "primevue/card";
+import Dialog from "primevue/dialog";
 import Timeline from "primevue/timeline";
+import Tag from "primevue/tag";
 import { homeBreadcrumb } from "../navigation/breadcrumbs";
 
 const router = useRouter();
 
 const order = ref(null);
 const estimatedDelivery = ref(null);
+const previewDialogVisible = ref(false);
+const previewSvgContent = ref("");
 
 const breadcrumbs = ref([
   { label: "Store", url: "/store/products" },
@@ -89,6 +93,89 @@ function printOrder() {
 
 function continueShopping() {
   router.push({ name: "templates" });
+}
+
+// Parse item configuration - it may be a string or object
+function parseItemConfig(item: any) {
+  if (!item.configuration) return null;
+  if (typeof item.configuration === "string") {
+    try {
+      return JSON.parse(item.configuration);
+    } catch {
+      return null;
+    }
+  }
+  return item.configuration;
+}
+
+// Get product type display info
+function getProductTypeInfo(item: any) {
+  const config = parseItemConfig(item);
+  const productType = config?.productType || "print";
+
+  if (productType === "pdf") {
+    return {
+      label: "Digital PDF",
+      icon: "pi-file-pdf",
+      severity: "info",
+    };
+  }
+  return {
+    label: "Printed Calendar",
+    icon: "pi-print",
+    severity: "success",
+  };
+}
+
+// Check if item includes PDF access (PDF product or print includes free PDF)
+function hasPdfAccess(item: any) {
+  const config = parseItemConfig(item);
+  // Both PDF products and printed calendars include PDF access
+  return config?.productType === "pdf" || config?.productType === "print";
+}
+
+// Get the calendar year from item
+function getItemYear(item: any) {
+  const config = parseItemConfig(item);
+  return config?.year || config?.configuration?.year || new Date().getFullYear();
+}
+
+// Get SVG content from item for preview
+function getItemSvgContent(item: any) {
+  const config = parseItemConfig(item);
+  return config?.svgContent || null;
+}
+
+// Show calendar preview
+function showPreview(item: any) {
+  const svg = getItemSvgContent(item);
+  if (svg) {
+    previewSvgContent.value = svg;
+    previewDialogVisible.value = true;
+  }
+}
+
+// Download PDF for item
+function downloadPdf(item: any) {
+  const svg = getItemSvgContent(item);
+  if (!svg) {
+    console.error("No SVG content available for PDF download");
+    return;
+  }
+
+  const year = getItemYear(item);
+
+  // Create a blob from SVG and trigger download
+  // For now, we'll download the SVG - in production this would call a PDF generation endpoint
+  const blob = new Blob([svg], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `calendar-${year}.svg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 </script>
 
@@ -191,25 +278,52 @@ function continueShopping() {
                 class="order-item pb-3 mb-3 border-bottom-1 border-gray-200"
               >
                 <div class="flex gap-3">
-                  <!-- Product image placeholder -->
+                  <!-- Calendar preview thumbnail -->
                   <div class="item-image">
                     <div
+                      v-if="getItemSvgContent(item)"
+                      class="calendar-thumbnail"
+                      @click="showPreview(item)"
+                      v-html="getItemSvgContent(item)"
+                    ></div>
+                    <div
+                      v-else
                       class="w-5rem h-5rem bg-gray-100 border-round flex align-items-center justify-content-center"
                     >
-                      <i class="pi pi-box text-2xl text-gray-400"></i>
+                      <i class="pi pi-calendar text-2xl text-gray-400"></i>
                     </div>
                   </div>
 
                   <!-- Product details -->
                   <div class="item-details flex-1">
-                    <h4 class="mb-1">
-                      {{ item.templateName || item.productName }}
-                    </h4>
-                    <div class="text-sm text-gray-600 mb-2">
-                      <span v-if="item.configuration">{{
-                        item.configuration
-                      }}</span>
+                    <div class="flex align-items-center gap-2 mb-2">
+                      <h4 class="m-0">{{ getItemYear(item) }} Calendar</h4>
+                      <Tag
+                        :value="getProductTypeInfo(item).label"
+                        :severity="getProductTypeInfo(item).severity"
+                        :icon="'pi ' + getProductTypeInfo(item).icon"
+                      />
                     </div>
+
+                    <div class="flex gap-2 mb-2">
+                      <Button
+                        v-if="getItemSvgContent(item)"
+                        label="Preview"
+                        icon="pi pi-eye"
+                        size="small"
+                        text
+                        @click="showPreview(item)"
+                      />
+                      <Button
+                        v-if="hasPdfAccess(item)"
+                        label="Download PDF"
+                        icon="pi pi-download"
+                        size="small"
+                        text
+                        @click="downloadPdf(item)"
+                      />
+                    </div>
+
                     <div
                       class="flex justify-content-between align-items-center"
                     >
@@ -390,6 +504,17 @@ function continueShopping() {
         </Card>
       </div>
     </div>
+
+    <!-- Calendar Preview Dialog -->
+    <Dialog
+      v-model:visible="previewDialogVisible"
+      modal
+      header="Calendar Preview"
+      :style="{ width: '90vw', maxWidth: '1200px' }"
+      :dismissable-mask="true"
+    >
+      <div class="preview-container" v-html="previewSvgContent"></div>
+    </Dialog>
   </div>
 </template>
 
@@ -467,6 +592,40 @@ function continueShopping() {
   border-bottom: none !important;
   margin-bottom: 0 !important;
   padding-bottom: 0 !important;
+}
+
+/* Calendar thumbnail */
+.calendar-thumbnail {
+  width: 100px;
+  height: 65px;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid var(--surface-200);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.calendar-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.calendar-thumbnail :deep(svg) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Preview dialog */
+.preview-container {
+  width: 100%;
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.preview-container :deep(svg) {
+  width: 100%;
+  height: auto;
 }
 
 /* Estimated delivery */
