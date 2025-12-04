@@ -82,7 +82,34 @@ public class PaymentService {
         String currency,
         String orderId
     ) throws StripeException {
-        LOG.infof("Creating payment intent for order %s, amount $%.2f", orderId, amount);
+        return createPaymentIntent(amount, currency, orderId, null, null, null, null);
+    }
+
+    /**
+     * Create a PaymentIntent for an order with full breakdown for Stripe reporting.
+     * Includes subtotal, tax, and shipping in metadata for tax reporting.
+     *
+     * @param amount Total amount to charge
+     * @param currency Currency code (default: "usd")
+     * @param orderId Order ID for metadata
+     * @param subtotal Subtotal before tax and shipping (optional)
+     * @param taxAmount Tax amount (optional)
+     * @param shippingCost Shipping cost (optional)
+     * @param orderNumber Human-readable order number (optional)
+     * @return Map with clientSecret and paymentIntentId
+     * @throws StripeException if Stripe API call fails
+     */
+    public Map<String, String> createPaymentIntent(
+        BigDecimal amount,
+        String currency,
+        String orderId,
+        BigDecimal subtotal,
+        BigDecimal taxAmount,
+        BigDecimal shippingCost,
+        String orderNumber
+    ) throws StripeException {
+        LOG.infof("Creating payment intent for order %s, amount $%.2f (tax: $%.2f)",
+            orderId, amount, taxAmount != null ? taxAmount : BigDecimal.ZERO);
 
         // Convert BigDecimal to cents (Stripe uses smallest currency unit)
         long amountInCents = amount.multiply(BigDecimal.valueOf(100)).longValue();
@@ -90,16 +117,42 @@ public class PaymentService {
         // Generate idempotency key to prevent duplicate charges
         String idempotencyKey = "order_" + orderId + "_" + System.currentTimeMillis();
 
-        PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
+        // Build description
+        String description = orderNumber != null
+            ? String.format("Village Calendar Order %s", orderNumber)
+            : String.format("Village Calendar Order");
+
+        PaymentIntentCreateParams.Builder paramsBuilder = PaymentIntentCreateParams.builder()
             .setAmount(amountInCents)
             .setCurrency(currency != null ? currency : "usd")
+            .setDescription(description)
             .putMetadata("orderId", orderId)
             .setAutomaticPaymentMethods(
                 PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
                     .setEnabled(true)
                     .build()
-            )
-            .build();
+            );
+
+        // Add order number to metadata if available
+        if (orderNumber != null) {
+            paramsBuilder.putMetadata("orderNumber", orderNumber);
+        }
+
+        // Add financial breakdown to metadata for Stripe reporting
+        if (subtotal != null) {
+            long subtotalCents = subtotal.multiply(BigDecimal.valueOf(100)).longValue();
+            paramsBuilder.putMetadata("subtotal", String.valueOf(subtotalCents));
+        }
+        if (taxAmount != null && taxAmount.compareTo(BigDecimal.ZERO) > 0) {
+            long taxCents = taxAmount.multiply(BigDecimal.valueOf(100)).longValue();
+            paramsBuilder.putMetadata("tax_amount", String.valueOf(taxCents));
+        }
+        if (shippingCost != null && shippingCost.compareTo(BigDecimal.ZERO) > 0) {
+            long shippingCents = shippingCost.multiply(BigDecimal.valueOf(100)).longValue();
+            paramsBuilder.putMetadata("shipping_cost", String.valueOf(shippingCents));
+        }
+
+        PaymentIntentCreateParams params = paramsBuilder.build();
 
         // Create PaymentIntent with idempotency key
         PaymentIntent intent = PaymentIntent.create(params,
@@ -112,7 +165,8 @@ public class PaymentService {
         response.put("clientSecret", intent.getClientSecret());
         response.put("paymentIntentId", intent.getId());
 
-        LOG.infof("Created PaymentIntent %s for order %s", intent.getId(), orderId);
+        LOG.infof("Created PaymentIntent %s for order %s (tax: %s cents)",
+            intent.getId(), orderId, taxAmount != null ? taxAmount.multiply(BigDecimal.valueOf(100)).longValue() : 0);
 
         return response;
     }

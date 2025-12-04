@@ -84,6 +84,11 @@ public class OrderService {
         BigDecimal tax = calculateTax(order);
         BigDecimal shipping = calculateShipping(order);
 
+        // Store the breakdown for Stripe reporting
+        order.subtotal = subtotal;
+        order.taxAmount = tax;
+        order.shippingCost = shipping;
+
         // Calculate total price: subtotal + tax + shipping
         BigDecimal totalPrice = subtotal.add(tax).add(shipping);
         order.totalPrice = totalPrice;

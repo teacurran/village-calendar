@@ -345,12 +345,19 @@ public class OrderGraphQL {
             shippingAddressJson
         );
 
-        // Create Stripe PaymentIntent
+        // Create Stripe PaymentIntent with full breakdown for tax reporting
         try {
+            // Calculate subtotal (unit price * quantity)
+            BigDecimal subtotal = order.unitPrice.multiply(BigDecimal.valueOf(order.quantity));
+
             Map<String, String> paymentDetails = paymentService.createPaymentIntent(
                 order.totalPrice,
                 "usd",
-                order.id.toString()
+                order.id.toString(),
+                subtotal,
+                order.taxAmount,
+                order.shippingCost,
+                order.orderNumber
             );
 
             // Update order with Stripe payment intent ID

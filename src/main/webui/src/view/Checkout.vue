@@ -609,12 +609,16 @@ async function initializeStripe() {
     }
 
     // Create a Payment Intent first (needed for Payment Element)
+    // Include breakdown for Stripe tax reporting
     const intentResponse = await fetch("/api/payment/create-payment-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         amount: orderTotal.value,
         currency: "usd",
+        subtotal: cartSubtotal.value,
+        taxAmount: taxAmount.value,
+        shippingCost: shippingCost.value,
       }),
     });
 

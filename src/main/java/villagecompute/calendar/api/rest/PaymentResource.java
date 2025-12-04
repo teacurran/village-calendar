@@ -44,11 +44,13 @@ public class PaymentResource {
 
     /**
      * Create a PaymentIntent for checkout
+     * Accepts optional breakdown (subtotal, tax, shipping) for Stripe tax reporting
      */
     @POST
     @Path("/create-payment-intent")
     public Response createPaymentIntent(PaymentIntentRequest request) {
-        LOG.infof("Creating payment intent for amount: %s %s", request.amount, request.currency);
+        LOG.infof("Creating payment intent for amount: %s %s (tax: %s)",
+            request.amount, request.currency, request.taxAmount);
 
         try {
             // Generate a temporary order ID for the payment intent
@@ -58,7 +60,20 @@ public class PaymentResource {
             BigDecimal amount = BigDecimal.valueOf(request.amount);
             String currency = request.currency != null ? request.currency : "usd";
 
-            Map<String, String> result = paymentService.createPaymentIntent(amount, currency, tempOrderId);
+            // Convert optional breakdown to BigDecimal
+            BigDecimal subtotal = request.subtotal != null ? BigDecimal.valueOf(request.subtotal) : null;
+            BigDecimal taxAmount = request.taxAmount != null ? BigDecimal.valueOf(request.taxAmount) : null;
+            BigDecimal shippingCost = request.shippingCost != null ? BigDecimal.valueOf(request.shippingCost) : null;
+
+            Map<String, String> result = paymentService.createPaymentIntent(
+                amount,
+                currency,
+                tempOrderId,
+                subtotal,
+                taxAmount,
+                shippingCost,
+                null  // No order number yet - will be created after payment
+            );
 
             return Response.ok(result).build();
         } catch (StripeException e) {
@@ -157,10 +172,15 @@ public class PaymentResource {
 
     /**
      * Request object for creating a PaymentIntent
+     * Includes optional breakdown fields for Stripe tax reporting
      */
     public static class PaymentIntentRequest {
         public double amount;
         public String currency;
+        // Optional breakdown for tax reporting
+        public Double subtotal;
+        public Double taxAmount;
+        public Double shippingCost;
     }
 
     /**
