@@ -924,24 +924,24 @@ public class CalendarRenderingService {
           ));
         }
 
-        // Moon phase
-        if (config.showMoonPhases || config.showMoonIllumination) {
-          MoonPhase phase = calculateMoonPhase(date);
-          if (config.showMoonPhases) {
-            String moonSymbol = getMoonPhaseSymbol(phase);
-            if (moonSymbol != null) {
-              svg.append(String.format(
-                "<text x=\"%d\" y=\"%d\" style=\"font-size: 14px; text-anchor: middle;\">%s</text>%n",
-                cellX + cellWidth / 2, cellY + cellHeight - 10, moonSymbol
-              ));
-            }
-          }
+        // Moon display (illumination, phase symbols, or full moon only)
+        // Use same logic as regular grid layout for consistency
+        boolean shouldShowMoon = config.showMoonIllumination ||
+          (config.showMoonPhases && isMoonPhaseDay(date)) ||
+          (config.showFullMoonOnly && isFullMoonDay(date));
 
-          if (config.showMoonIllumination) {
-            // Use X/Y offset settings for precise positioning
-            int moonX = cellX + config.moonOffsetX;
-            int moonY = cellY + config.moonOffsetY;
+        if (shouldShowMoon) {
+          // Use X/Y offset settings for precise positioning
+          int moonX = cellX + config.moonOffsetX;
+          int moonY = cellY + config.moonOffsetY;
 
+          // For moon phases, only show on phase days
+          if (config.showMoonPhases && !isMoonPhaseDay(date)) {
+            // Skip non-phase days
+          } else if (config.showFullMoonOnly && !isFullMoonDay(date)) {
+            // Skip non-full-moon days
+          } else {
+            // Use generateMoonIlluminationSVG for proper rendering with user settings
             svg.append(generateMoonIlluminationSVG(date, moonX, moonY,
               config.latitude, config.longitude, config));
           }
