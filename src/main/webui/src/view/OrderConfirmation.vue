@@ -127,9 +127,9 @@ function continueShopping() {
       </template>
     </Card>
 
-    <div class="grid">
+    <div class="order-grid">
       <!-- Order details -->
-      <div class="col-12 lg:col-8">
+      <div class="order-main">
         <!-- Order timeline -->
         <Card class="mb-4">
           <template #title>
@@ -313,7 +313,7 @@ function continueShopping() {
       </div>
 
       <!-- Actions sidebar -->
-      <div class="col-12 lg:col-4">
+      <div class="order-sidebar">
         <!-- Quick actions -->
         <Card class="mb-4">
           <template #title>
@@ -398,6 +398,22 @@ function continueShopping() {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
+}
+
+/* Two-column grid layout */
+.order-grid {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.order-main {
+  flex: 2;
+  min-width: 0;
+}
+
+.order-sidebar {
+  flex: 1;
+  min-width: 280px;
 }
 
 .success-icon {
@@ -486,6 +502,14 @@ function continueShopping() {
 @media (max-width: 991px) {
   .order-confirmation-container {
     padding: 1rem;
+  }
+
+  .order-grid {
+    flex-direction: column;
+  }
+
+  .order-sidebar {
+    min-width: 100%;
   }
 
   .order-timeline :deep(.p-timeline) {
