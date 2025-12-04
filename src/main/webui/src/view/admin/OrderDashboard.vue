@@ -209,9 +209,9 @@ function getCustomerNameForFilename(order: CalendarOrder): string {
 }
 
 /**
- * Download PDF with order ID and customer name in filename
+ * Download PDF with order ID and customer name in filename via backend conversion
  */
-function downloadPdf(order: CalendarOrder) {
+async function downloadPdf(order: CalendarOrder) {
   const svg = getCalendarSvg(order);
   if (!svg) {
     toast.add({
@@ -226,17 +226,61 @@ function downloadPdf(order: CalendarOrder) {
   const orderNumber = order.orderNumber || order.id.substring(0, 8);
   const customerName = getCustomerNameForFilename(order);
   const year = order.calendar?.year || new Date().getFullYear();
+  const filename = `calendar-${orderNumber}-${customerName}-${year}.pdf`;
 
-  // Download as SVG (in production would call PDF generation endpoint)
-  const blob = new Blob([svg], { type: "image/svg+xml" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `calendar-${orderNumber}-${customerName}-${year}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  try {
+    // Call backend to convert SVG to PDF
+    const response = await fetch("/api/calendar/svg-to-pdf", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        svgContent: svg,
+        year: year,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate PDF: ${response.status}`);
+    }
+
+    // Download the PDF blob
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast.add({
+      severity: "success",
+      summary: "Downloaded",
+      detail: `PDF saved as ${filename}`,
+      life: 3000,
+    });
+  } catch (error) {
+    console.error("Failed to generate PDF:", error);
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to generate PDF. Downloading as SVG instead.",
+      life: 3000,
+    });
+    // Fallback: download as SVG
+    const blob = new Blob([svg], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename.replace(".pdf", ".svg");
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 }
 
 /**

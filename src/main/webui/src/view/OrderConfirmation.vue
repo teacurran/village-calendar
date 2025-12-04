@@ -282,8 +282,8 @@ function getCustomerNameForFilename(): string {
   return "customer";
 }
 
-// Download PDF for item
-function downloadPdf(item: any) {
+// Download PDF for item via backend conversion
+async function downloadPdf(item: any) {
   const svg = getItemSvgContent(item);
   if (!svg) {
     console.error("No SVG content available for PDF download");
@@ -293,18 +293,48 @@ function downloadPdf(item: any) {
   const year = getItemYear(item);
   const orderNumber = order.value?.orderNumber || "order";
   const customerName = getCustomerNameForFilename();
+  const filename = `calendar-${orderNumber}-${customerName}-${year}.pdf`;
 
-  // Create a blob from SVG and trigger download
-  // For now, we'll download the SVG - in production this would call a PDF generation endpoint
-  const blob = new Blob([svg], { type: "image/svg+xml" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `calendar-${orderNumber}-${customerName}-${year}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  try {
+    // Call backend to convert SVG to PDF
+    const response = await fetch("/api/calendar/svg-to-pdf", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        svgContent: svg,
+        year: year,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate PDF: ${response.status}`);
+    }
+
+    // Download the PDF blob
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Failed to generate PDF:", error);
+    // Fallback: download as SVG if PDF generation fails
+    const blob = new Blob([svg], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename.replace(".pdf", ".svg");
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 }
 </script>
 

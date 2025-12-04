@@ -10,6 +10,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.services.HebrewCalendarService;
+import villagecompute.calendar.services.PDFRenderingService;
 
 import java.time.DayOfWeek;
 import java.util.HashMap;
@@ -30,6 +31,9 @@ public class CalendarResource {
 
   @Inject
   villagecompute.calendar.services.HolidayService holidayService;
+
+  @Inject
+  PDFRenderingService pdfRenderingService;
 
   // Request/Response types
   public static class CalendarRequest {
@@ -89,6 +93,14 @@ public class CalendarResource {
   public static class HolidayResponse {
     public Set<String> holidays;
     public Map<String, String> holidayNames;
+  }
+
+  /**
+   * Request for converting SVG to PDF directly
+   */
+  public static class SvgToPdfRequest {
+    public String svgContent;
+    public Integer year;
   }
 
   @POST
@@ -186,6 +198,44 @@ public class CalendarResource {
       .header("Content-Type", "application/pdf")
       .header("Content-Disposition", "attachment; filename=\"calendar-" + config.year + ".pdf\"")
       .build();
+  }
+
+  /**
+   * Convert SVG content to PDF directly.
+   * Used for downloading PDFs from stored SVG content (e.g., order confirmations).
+   */
+  @POST
+  @Path("/svg-to-pdf")
+  @Produces("application/pdf")
+  public Response svgToPdf(SvgToPdfRequest request) {
+    if (request.svgContent == null || request.svgContent.isEmpty()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+        .entity("SVG content is required")
+        .build();
+    }
+
+    int year = request.year != null ? request.year : java.time.LocalDate.now().getYear();
+
+    try {
+      // Convert SVG to PDF using PDFRenderingService
+      byte[] pdf = pdfRenderingService.renderSVGToPDF(request.svgContent, year);
+
+      if (pdf == null || pdf.length == 0) {
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+          .entity("Failed to generate PDF")
+          .build();
+      }
+
+      return Response.ok(pdf)
+        .header("Content-Type", "application/pdf")
+        .header("Content-Disposition", "attachment; filename=\"calendar-" + year + ".pdf\"")
+        .build();
+
+    } catch (Exception e) {
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+        .entity("PDF generation failed: " + e.getMessage())
+        .build();
+    }
   }
 
   @GET
