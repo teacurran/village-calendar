@@ -181,39 +181,35 @@ export const useAuthStore = defineStore("auth", {
         throw new Error("Authentication required to convert guest session");
       }
 
-      try {
-        const response = await fetch("/graphql", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${this.token}`,
-          },
-          body: JSON.stringify({
-            query: `
-              mutation ConvertGuestSession($sessionId: String!) {
-                convertGuestSession(sessionId: $sessionId)
-              }
-            `,
-            variables: { sessionId },
-          }),
-        });
+      const response = await fetch("/graphql", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.token}`,
+        },
+        body: JSON.stringify({
+          query: `
+            mutation ConvertGuestSession($sessionId: String!) {
+              convertGuestSession(sessionId: $sessionId)
+            }
+          `,
+          variables: { sessionId },
+        }),
+      });
 
-        if (!response.ok) {
-          throw new Error("Failed to convert guest session");
-        }
-
-        const result = await response.json();
-
-        if (result.errors) {
-          throw new Error(
-            result.errors[0]?.message || "GraphQL error during conversion",
-          );
-        }
-
-        return result.data?.convertGuestSession || 0;
-      } catch (err: any) {
-        throw err;
+      if (!response.ok) {
+        throw new Error("Failed to convert guest session");
       }
+
+      const result = await response.json();
+
+      if (result.errors) {
+        throw new Error(
+          result.errors[0]?.message || "GraphQL error during conversion",
+        );
+      }
+
+      return result.data?.convertGuestSession || 0;
     },
 
     /**
