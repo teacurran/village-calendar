@@ -106,9 +106,21 @@ const loadCalendarSvgs = async () => {
   // Process each cart item
   for (const item of cartStore.items) {
     const config = getCalendarConfig(item);
-    if (config && config.calendarId) {
-      // This will now use the cached calendars
-      await fetchCalendarSvg(config.calendarId);
+    if (config) {
+      const calendarKey = item.id;
+
+      // Check for embedded SVG content first
+      if (config.svgContent) {
+        calendarSvgs.value[calendarKey] = config.svgContent;
+      } else if (config.generatedSvg) {
+        calendarSvgs.value[calendarKey] = config.generatedSvg;
+      } else if (config.calendarId) {
+        // Fall back to fetching from server
+        const svg = await fetchCalendarSvg(config.calendarId);
+        if (svg) {
+          calendarSvgs.value[calendarKey] = svg;
+        }
+      }
     }
   }
 };
@@ -116,10 +128,13 @@ const loadCalendarSvgs = async () => {
 // Show calendar preview
 const showCalendarPreview = (item: any) => {
   const config = getCalendarConfig(item);
-  if (config && config.calendarId && calendarSvgs.value[config.calendarId]) {
-    previewCalendarSvg.value = calendarSvgs.value[config.calendarId];
-    previewCalendarName.value = config.name || `${config.year} Calendar`;
-    showPreviewModal.value = true;
+  if (config) {
+    const calendarKey = item.id;
+    if (calendarSvgs.value[calendarKey]) {
+      previewCalendarSvg.value = calendarSvgs.value[calendarKey];
+      previewCalendarName.value = config.name || `${config.year} Calendar`;
+      showPreviewModal.value = true;
+    }
   }
 };
 
@@ -1161,7 +1176,7 @@ watch(
                   "
                 >
                   <div
-                    v-if="calendarSvgs[getCalendarConfig(item).calendarId]"
+                    v-if="calendarSvgs[item.id]"
                     style="
                       width: 800px;
                       height: 800px;
@@ -1172,7 +1187,7 @@ watch(
                       top: 0;
                       left: 0;
                     "
-                    v-html="calendarSvgs[getCalendarConfig(item).calendarId]"
+                    v-html="calendarSvgs[item.id]"
                   ></div>
                   <div
                     v-else
