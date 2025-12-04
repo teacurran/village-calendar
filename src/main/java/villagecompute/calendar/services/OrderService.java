@@ -9,6 +9,7 @@ import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.DelayedJob;
 import villagecompute.calendar.data.models.DelayedJobQueue;
+import villagecompute.calendar.data.models.Shipment;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.util.OrderNumberGenerator;
 
@@ -280,6 +281,233 @@ public class OrderService {
         LOG.infof("Cancelled order %s from status %s", orderId, oldStatus);
 
         return order;
+    }
+
+    // ==================== Item Shipping Methods ====================
+
+    /**
+     * Mark a single order item as shipped.
+     * For PDF items, this can be done immediately without a physical shipment.
+     * For print items, this typically happens as part of a shipment.
+     *
+     * @param itemId Order item ID
+     * @return Updated order item
+     */
+    @Transactional
+    public CalendarOrderItem markItemAsShipped(UUID itemId) {
+        LOG.infof("Marking order item %s as shipped", itemId);
+
+        Optional<CalendarOrderItem> itemOpt = CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
+        if (itemOpt.isEmpty()) {
+            throw new IllegalArgumentException("Order item not found: " + itemId);
+        }
+
+        CalendarOrderItem item = itemOpt.get();
+        item.itemStatus = CalendarOrderItem.STATUS_SHIPPED;
+        item.persist();
+
+        // Check if all items in the order are shipped
+        updateOrderShippingStatus(item.order);
+
+        LOG.infof("Marked order item %s as shipped", itemId);
+        return item;
+    }
+
+    /**
+     * Mark a single order item as delivered.
+     *
+     * @param itemId Order item ID
+     * @return Updated order item
+     */
+    @Transactional
+    public CalendarOrderItem markItemAsDelivered(UUID itemId) {
+        LOG.infof("Marking order item %s as delivered", itemId);
+
+        Optional<CalendarOrderItem> itemOpt = CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
+        if (itemOpt.isEmpty()) {
+            throw new IllegalArgumentException("Order item not found: " + itemId);
+        }
+
+        CalendarOrderItem item = itemOpt.get();
+        item.itemStatus = CalendarOrderItem.STATUS_DELIVERED;
+        item.persist();
+
+        // Check if all items in the order are delivered
+        updateOrderDeliveryStatus(item.order);
+
+        LOG.infof("Marked order item %s as delivered", itemId);
+        return item;
+    }
+
+    /**
+     * Create a shipment for selected items in an order.
+     *
+     * @param orderId Order ID
+     * @param itemIds List of item IDs to include in the shipment
+     * @param carrier Shipping carrier (USPS, UPS, FEDEX)
+     * @param trackingNumber Tracking number
+     * @return Created shipment
+     */
+    @Transactional
+    public Shipment createShipment(UUID orderId, List<UUID> itemIds, String carrier, String trackingNumber) {
+        LOG.infof("Creating shipment for order %s with %d items", orderId, itemIds.size());
+
+        Optional<CalendarOrder> orderOpt = CalendarOrder.<CalendarOrder>findByIdOptional(orderId);
+        if (orderOpt.isEmpty()) {
+            throw new IllegalArgumentException("Order not found: " + orderId);
+        }
+
+        CalendarOrder order = orderOpt.get();
+
+        // Create the shipment
+        Shipment shipment = new Shipment();
+        shipment.order = order;
+        shipment.carrier = carrier;
+        shipment.trackingNumber = trackingNumber;
+        shipment.trackingUrl = shipment.generateTrackingUrl();
+        shipment.status = Shipment.STATUS_LABEL_CREATED;
+        shipment.labelCreatedAt = Instant.now();
+        shipment.persist();
+
+        // Add items to the shipment
+        for (UUID itemId : itemIds) {
+            Optional<CalendarOrderItem> itemOpt = CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
+            if (itemOpt.isPresent()) {
+                CalendarOrderItem item = itemOpt.get();
+                if (item.order.id.equals(orderId)) {
+                    shipment.addItem(item);
+                } else {
+                    LOG.warnf("Item %s does not belong to order %s", itemId, orderId);
+                }
+            }
+        }
+
+        LOG.infof("Created shipment %s with %d items for order %s",
+                shipment.id, shipment.items.size(), orderId);
+
+        return shipment;
+    }
+
+    /**
+     * Mark a shipment as shipped (package handed to carrier).
+     *
+     * @param shipmentId Shipment ID
+     * @return Updated shipment
+     */
+    @Transactional
+    public Shipment markShipmentAsShipped(UUID shipmentId) {
+        LOG.infof("Marking shipment %s as shipped", shipmentId);
+
+        Optional<Shipment> shipmentOpt = Shipment.<Shipment>findByIdOptional(shipmentId);
+        if (shipmentOpt.isEmpty()) {
+            throw new IllegalArgumentException("Shipment not found: " + shipmentId);
+        }
+
+        Shipment shipment = shipmentOpt.get();
+        shipment.markAsShipped();
+
+        // Update order status
+        updateOrderShippingStatus(shipment.order);
+
+        // Enqueue shipping notification email
+        enqueueEmailJob(shipment.order, DelayedJobQueue.EMAIL_SHIPPING_NOTIFICATION);
+
+        LOG.infof("Marked shipment %s as shipped", shipmentId);
+        return shipment;
+    }
+
+    /**
+     * Auto-ship all digital (PDF) items in an order.
+     * Call this when an order is paid to immediately mark PDF items as shipped.
+     *
+     * @param orderId Order ID
+     * @return Number of items auto-shipped
+     */
+    @Transactional
+    public int autoShipDigitalItems(UUID orderId) {
+        LOG.infof("Auto-shipping digital items for order %s", orderId);
+
+        Optional<CalendarOrder> orderOpt = CalendarOrder.<CalendarOrder>findByIdOptional(orderId);
+        if (orderOpt.isEmpty()) {
+            throw new IllegalArgumentException("Order not found: " + orderId);
+        }
+
+        CalendarOrder order = orderOpt.get();
+        int shippedCount = 0;
+
+        for (CalendarOrderItem item : order.items) {
+            if (item.isDigital() && CalendarOrderItem.STATUS_PENDING.equals(item.itemStatus)) {
+                item.itemStatus = CalendarOrderItem.STATUS_SHIPPED;
+                item.persist();
+                shippedCount++;
+                LOG.infof("Auto-shipped PDF item %s", item.id);
+            }
+        }
+
+        // Update order status if needed
+        if (shippedCount > 0) {
+            updateOrderShippingStatus(order);
+        }
+
+        LOG.infof("Auto-shipped %d digital items for order %s", shippedCount, orderId);
+        return shippedCount;
+    }
+
+    /**
+     * Update order status based on item shipping status.
+     * If all items are shipped, mark order as shipped.
+     */
+    private void updateOrderShippingStatus(CalendarOrder order) {
+        // Refresh order to get current items
+        order = CalendarOrder.<CalendarOrder>findById(order.id);
+
+        boolean allShipped = true;
+        boolean anyShipped = false;
+
+        for (CalendarOrderItem item : order.items) {
+            if (CalendarOrderItem.STATUS_SHIPPED.equals(item.itemStatus) ||
+                CalendarOrderItem.STATUS_DELIVERED.equals(item.itemStatus)) {
+                anyShipped = true;
+            } else if (!CalendarOrderItem.STATUS_CANCELLED.equals(item.itemStatus)) {
+                allShipped = false;
+            }
+        }
+
+        if (allShipped && anyShipped && !CalendarOrder.STATUS_SHIPPED.equals(order.status)) {
+            order.status = CalendarOrder.STATUS_SHIPPED;
+            order.shippedAt = Instant.now();
+            order.persist();
+            LOG.infof("Order %s fully shipped", order.id);
+        } else if (anyShipped && CalendarOrder.STATUS_PAID.equals(order.status)) {
+            order.status = CalendarOrder.STATUS_PROCESSING;
+            order.persist();
+            LOG.infof("Order %s partially shipped, moved to PROCESSING", order.id);
+        }
+    }
+
+    /**
+     * Update order status based on item delivery status.
+     * If all items are delivered, mark order as delivered.
+     */
+    private void updateOrderDeliveryStatus(CalendarOrder order) {
+        // Refresh order to get current items
+        order = CalendarOrder.<CalendarOrder>findById(order.id);
+
+        boolean allDelivered = true;
+
+        for (CalendarOrderItem item : order.items) {
+            if (!CalendarOrderItem.STATUS_DELIVERED.equals(item.itemStatus) &&
+                !CalendarOrderItem.STATUS_CANCELLED.equals(item.itemStatus)) {
+                allDelivered = false;
+                break;
+            }
+        }
+
+        if (allDelivered && !CalendarOrder.STATUS_DELIVERED.equals(order.status)) {
+            order.status = CalendarOrder.STATUS_DELIVERED;
+            order.persist();
+            LOG.infof("Order %s fully delivered", order.id);
+        }
     }
 
     /**
