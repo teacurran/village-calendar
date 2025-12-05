@@ -43,6 +43,16 @@ FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /deployments
 
+# Install fonts required for PDF generation with emojis
+# - font-noto-emoji: Noto Emoji (monochrome) for emoji support in PDFs
+# - ttf-dejavu: DejaVu fonts with wide Unicode coverage
+# - fontconfig: Font configuration and cache
+RUN apk add --no-cache \
+    fontconfig \
+    ttf-dejavu \
+    font-noto-emoji \
+    && fc-cache -f
+
 # Create a non-root user to run the application
 RUN addgroup -S quarkus && adduser -S quarkus -G quarkus
 

@@ -107,10 +107,13 @@ public class CalendarRenderingService {
   private static String getEmojiFontFamily(CalendarConfig config) {
     if ("noto-mono".equals(config.emojiFont)) {
       // Noto Emoji (monochrome version) - black and white outline style
-      return "'Noto Emoji', 'Segoe UI Symbol', sans-serif";
+      // Include DejaVu Sans as fallback which has wide Unicode coverage on Linux servers
+      return "'Noto Emoji', 'DejaVu Sans', 'Segoe UI Symbol', 'Symbola', sans-serif";
     }
     // Default: Noto Color Emoji (full color, Apache 2.0 licensed)
-    return "'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
+    // For PDF rendering (Apache Batik), color emoji fonts may not work, so include fallbacks
+    // that support emoji as outline glyphs for better PDF compatibility
+    return "'Noto Color Emoji', 'Noto Emoji', 'DejaVu Sans', 'Segoe UI Emoji', 'Apple Color Emoji', 'Symbola', sans-serif";
   }
 
   // Emoji substitutions for monochrome mode (newer emojis -> older compatible ones)
@@ -755,11 +758,19 @@ public class CalendarRenderingService {
           }
         }
 
-        // Day number
+        // Day number - use inline styles for better PDF compatibility
         if (config.showDayNumbers) {
+          String dayFill = config.dayTextColor != null ? config.dayTextColor : theme.text;
+          String fontWeight = "normal";
+          if (isHoliday && config.holidayColor != null) {
+            dayFill = config.holidayColor;
+            fontWeight = "bold";
+          } else if (config.customDates.containsKey(dateStr) && config.customDateColor != null) {
+            dayFill = config.customDateColor;
+          }
           svg.append(String.format(
-            "<text x=\"%d\" y=\"%d\" class=\"%s\">%s</text>%n",
-            cellX + 5, cellY + 14, dayClass, dayText
+            "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-weight=\"%s\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"12px\">%s</text>%n",
+            cellX + 5, cellY + 14, dayFill, fontWeight, dayText
           ));
         }
 
@@ -886,12 +897,19 @@ public class CalendarRenderingService {
         String holidayEmoji = config.holidayEmojis != null ?
             substituteEmojiForMonochrome(config.holidayEmojis.getOrDefault(dateStr, ""), config) : "";
 
-        // Day number - positioned at top-left like grid layout
+        // Day number - positioned at top-left like grid layout, use inline styles for PDF compatibility
         if (config.showDayNumbers) {
-          String dayClass = isHoliday ? "holiday" : (isCustomDate ? "custom-date" : "day-text");
+          String dayFill = config.dayTextColor != null ? config.dayTextColor : theme.text;
+          String fontWeight = "normal";
+          if (isHoliday && config.holidayColor != null) {
+            dayFill = config.holidayColor;
+            fontWeight = "bold";
+          } else if (isCustomDate && config.customDateColor != null) {
+            dayFill = config.customDateColor;
+          }
           svg.append(String.format(
-            "<text x=\"%d\" y=\"%d\" class=\"%s\">%d</text>%n",
-            cellX + 5, cellY + 14, dayClass, day
+            "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-weight=\"%s\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"12px\">%d</text>%n",
+            cellX + 5, cellY + 14, dayFill, fontWeight, day
           ));
         }
 
