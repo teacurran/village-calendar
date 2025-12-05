@@ -44,11 +44,14 @@ public class PDFRenderingService {
             LOG.debugf("Rendering SVG to PDF (SVG length: %d bytes)", svgContent.length());
 
             // Create transcoder for PDF
-            Transcoder transcoder = new PDFTranscoder();
+            PDFTranscoder transcoder = new PDFTranscoder();
 
             // Set PDF page size
             transcoder.addTranscodingHint(PDFTranscoder.KEY_WIDTH, PDF_WIDTH_POINTS);
             transcoder.addTranscodingHint(PDFTranscoder.KEY_HEIGHT, PDF_HEIGHT_POINTS);
+
+            // Enable auto-font detection to use system fonts (Noto Emoji, DejaVu Sans, etc.)
+            transcoder.addTranscodingHint(PDFTranscoder.KEY_AUTO_FONTS, Boolean.TRUE);
 
             // Create input and output
             StringReader reader = new StringReader(svgContent);

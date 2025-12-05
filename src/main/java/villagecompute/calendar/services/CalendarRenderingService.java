@@ -110,10 +110,12 @@ public class CalendarRenderingService {
       // Include DejaVu Sans as fallback which has wide Unicode coverage on Linux servers
       return "'Noto Emoji', 'DejaVu Sans', 'Segoe UI Symbol', 'Symbola', sans-serif";
     }
-    // Default: Noto Color Emoji (full color, Apache 2.0 licensed)
-    // For PDF rendering (Apache Batik), color emoji fonts may not work, so include fallbacks
-    // that support emoji as outline glyphs for better PDF compatibility
-    return "'Noto Color Emoji', 'Noto Emoji', 'DejaVu Sans', 'Segoe UI Emoji', 'Apple Color Emoji', 'Symbola', sans-serif";
+    // Default: Noto Color Emoji (Apache 2.0 licensed, safe for commercial printing)
+    // IMPORTANT: Only use Noto fonts for licensing compliance
+    // - Noto Color Emoji: Full color emoji (primary)
+    // - Noto Emoji: Monochrome fallback for PDF rendering where color fonts don't work
+    // - DejaVu Sans: Wide Unicode coverage fallback
+    return "'Noto Color Emoji', 'Noto Emoji', 'DejaVu Sans', 'Symbola', sans-serif";
   }
 
   // Emoji substitutions for monochrome mode (newer emojis -> older compatible ones)
@@ -1040,7 +1042,11 @@ public class CalendarRenderingService {
     svg.append(String.format(".calendar-text { fill: %s; font-family: Arial, sans-serif; font-size: 12px; }%n", config.dayTextColor != null ? config.dayTextColor : theme.text));
     svg.append(String.format(".month-header { fill: %s; font-weight: bold; font-size: 14px; }%n", config.monthColor != null ? config.monthColor : theme.monthHeader));
     svg.append(String.format(".weekday-header { fill: %s; font-size: 10px; }%n", config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader));
-    svg.append(String.format(".weekend { fill: %s; }%n", config.weekendBgColor != null && !config.weekendBgColor.isEmpty() ? config.weekendBgColor : theme.weekendBackground));
+    // Use "none" as fallback if weekendBgColor is null to avoid invalid CSS
+    String weekendBgYear = config.weekendBgColor != null && !config.weekendBgColor.isEmpty()
+        ? config.weekendBgColor
+        : (theme.weekendBackground != null ? theme.weekendBackground : "none");
+    svg.append(String.format(".weekend { fill: %s; }%n", weekendBgYear));
     svg.append(String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
     svg.append(String.format(".custom-date { fill: %s; }%n", config.customDateColor));
 //        svg.append(".today { stroke: #2196f3; stroke-width: 2; fill: none; }%n");
