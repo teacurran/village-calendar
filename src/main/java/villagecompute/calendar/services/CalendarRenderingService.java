@@ -433,7 +433,11 @@ public class CalendarRenderingService {
     svg.append(String.format(".day-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 12px; }%n", config.dayTextColor != null ? config.dayTextColor : theme.text));
     svg.append(String.format(".day-name { fill: %s; font-family: Arial, sans-serif; font-size: 8px; }%n", config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader));
     svg.append(String.format(".grid-line { stroke: %s; stroke-width: 1; fill: none; }%n", config.gridLineColor));
-    svg.append(String.format(".weekend-bg { fill: %s; }%n", config.weekendBgColor != null && !config.weekendBgColor.isEmpty() ? config.weekendBgColor : theme.weekendBackground));
+    // Use "none" as fallback if weekendBgColor is null to avoid invalid CSS
+    String weekendBg = config.weekendBgColor != null && !config.weekendBgColor.isEmpty()
+        ? config.weekendBgColor
+        : (theme.weekendBackground != null ? theme.weekendBackground : "none");
+    svg.append(String.format(".weekend-bg { fill: %s; }%n", weekendBg));
     svg.append(String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
     svg.append(String.format(".custom-date { fill: %s; }%n", config.customDateColor));
 //        svg.append(".today { stroke: #2196f3; stroke-width: 2; fill: none; }%n");
@@ -664,8 +668,8 @@ public class CalendarRenderingService {
             }
 
             svg.append(String.format(
-              "<text x=\"%d\" y=\"%d\" style=\"font-size: 12px;\">%s</text>%n",
-              emojiX, emojiY, customEmoji
+              "<text x=\"%d\" y=\"%d\" style=\"font-size: 12px; font-family: %s;\">%s</text>%n",
+              emojiX, emojiY, getEmojiFontFamily(config), customEmoji
             ));
           }
         }
@@ -830,7 +834,11 @@ public class CalendarRenderingService {
     svg.append(String.format(".day-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 12px; }%n", config.dayTextColor != null ? config.dayTextColor : theme.text));
     svg.append(String.format(".day-name { fill: %s; font-family: Arial, sans-serif; font-size: 8px; }%n", config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader));
     svg.append(String.format(".grid-line { stroke: %s; stroke-width: 1; fill: none; }%n", config.gridLineColor));
-    svg.append(String.format(".weekend-bg { fill: %s; }%n", config.weekendBgColor != null && !config.weekendBgColor.isEmpty() ? config.weekendBgColor : theme.weekendBackground));
+    // Use "none" as fallback if weekendBgColor is null to avoid invalid CSS
+    String weekendBg = config.weekendBgColor != null && !config.weekendBgColor.isEmpty()
+        ? config.weekendBgColor
+        : (theme.weekendBackground != null ? theme.weekendBackground : "none");
+    svg.append(String.format(".weekend-bg { fill: %s; }%n", weekendBg));
     svg.append(String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
     svg.append(String.format(".custom-date { fill: %s; }%n", config.customDateColor));
 //        svg.append(".today { stroke: #2196f3; stroke-width: 2; fill: none; }%n");
