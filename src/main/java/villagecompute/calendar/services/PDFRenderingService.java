@@ -173,10 +173,51 @@ public class PDFRenderingService {
      * @return Fixed SVG content
      */
     private String fixCSSUriReferences(String svgContent) {
-        // For now, just log that we're processing CSS URI references
-        // The main fix is changing the base URI to a data URI scheme
         if (svgContent.contains("url(#")) {
-            LOG.debug("SVG contains CSS URI references - using data URI base to prevent resolution issues");
+            LOG.debug("SVG contains CSS URI references - fixing clip-path and similar properties");
+            
+            // The specific issue is with clip-path attributes that use url(#id)
+            // We need to handle patterns like: clip-path="url(#SVGID_2_)"
+            // Batik tries to resolve these as external URIs which fails
+            
+            // Pattern for clip-path with url() references
+            java.util.regex.Pattern clipPathPattern = java.util.regex.Pattern.compile(
+                "clip-path\\s*=\\s*[\"']url\\(#([^)]+)\\)[\"']", 
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            
+            java.util.regex.Matcher matcher = clipPathPattern.matcher(svgContent);
+            StringBuffer result = new StringBuffer();
+            
+            while (matcher.find()) {
+                String idRef = matcher.group(1);
+                // Replace url(#id) with just #id for internal references
+                String replacement = "clip-path=\"#" + idRef + "\"";
+                matcher.appendReplacement(result, replacement);
+                LOG.debugf("Fixed clip-path reference: url(#%s) -> #%s", idRef, idRef);
+            }
+            matcher.appendTail(result);
+            svgContent = result.toString();
+            
+            // Also handle style attributes with clip-path
+            java.util.regex.Pattern styleClipPathPattern = java.util.regex.Pattern.compile(
+                "(style\\s*=\\s*[\"'][^\"']*?)clip-path\\s*:\\s*url\\(#([^)]+)\\)([^\"']*[\"'])", 
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+            
+            matcher = styleClipPathPattern.matcher(svgContent);
+            result = new StringBuffer();
+            
+            while (matcher.find()) {
+                String beforeClipPath = matcher.group(1);
+                String idRef = matcher.group(2);
+                String afterClipPath = matcher.group(3);
+                String replacement = beforeClipPath + "clip-path:#" + idRef + afterClipPath;
+                matcher.appendReplacement(result, replacement);
+                LOG.debugf("Fixed style clip-path reference: url(#%s) -> #%s", idRef, idRef);
+            }
+            matcher.appendTail(result);
+            svgContent = result.toString();
         }
         
         return svgContent;
