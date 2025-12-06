@@ -129,7 +129,8 @@ public class EmojiSvgService {
             String filename = entry.getValue();
             String svgContent = loadSvgFromResources(filename);
             if (svgContent != null) {
-                emojiSvgCache.put(emoji, svgContent);
+                // Normalize the emoji key when storing in cache to match lookup behavior
+                emojiSvgCache.put(normalizeEmoji(emoji), svgContent);
                 loaded++;
             } else {
                 failed++;
