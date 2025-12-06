@@ -87,6 +87,35 @@ public class EmojiSvgService {
         EMOJI_TO_FILENAME.put("🌾", "emoji_u1f33e");  // Sheaf of Rice (Lughnasadh)
         EMOJI_TO_FILENAME.put("🍂", "emoji_u1f342");  // Fallen Leaf (Mabon)
         EMOJI_TO_FILENAME.put("🌲", "emoji_u1f332");  // Evergreen Tree (Yule)
+        EMOJI_TO_FILENAME.put("🌿", "emoji_u1f33f");  // Herb (Sukkot)
+
+        // Jewish Holidays (additional)
+        EMOJI_TO_FILENAME.put("🍎", "emoji_u1f34e");  // Red Apple (Rosh Hashanah)
+        EMOJI_TO_FILENAME.put("🍷", "emoji_u1f377");  // Wine Glass (Passover)
+        EMOJI_TO_FILENAME.put("📜", "emoji_u1f4dc");  // Scroll (Shavuot, Simchat Torah)
+        EMOJI_TO_FILENAME.put("🎭", "emoji_u1f3ad");  // Performing Arts (Purim)
+
+        // Mexican Holidays
+        EMOJI_TO_FILENAME.put("🇲🇽", "emoji_u1f1f2_1f1fd");  // Mexico Flag
+        EMOJI_TO_FILENAME.put("👑", "emoji_u1f451");  // Crown (Día de los Reyes)
+        EMOJI_TO_FILENAME.put("⚖️", "emoji_u2696");   // Balance Scale (Benito Juárez)
+        EMOJI_TO_FILENAME.put("🌮", "emoji_u1f32e");  // Taco (Cinco de Mayo alternate)
+        EMOJI_TO_FILENAME.put("💃", "emoji_u1f483");  // Woman Dancing
+
+        // Various Holidays
+        EMOJI_TO_FILENAME.put("✨", "emoji_u2728");   // Sparkles
+        EMOJI_TO_FILENAME.put("🌹", "emoji_u1f339");  // Rose (Valentine's alternate)
+        EMOJI_TO_FILENAME.put("💐", "emoji_u1f490");  // Bouquet (Mother's Day)
+        EMOJI_TO_FILENAME.put("👔", "emoji_u1f454");  // Necktie (Father's Day)
+        EMOJI_TO_FILENAME.put("🍾", "emoji_u1f37e");  // Champagne (New Year)
+        EMOJI_TO_FILENAME.put("🎨", "emoji_u1f3a8");  // Artist Palette
+        EMOJI_TO_FILENAME.put("🏹", "emoji_u1f3f9");  // Bow and Arrow
+        EMOJI_TO_FILENAME.put("🐉", "emoji_u1f409");  // Dragon (Chinese New Year)
+        EMOJI_TO_FILENAME.put("🐑", "emoji_u1f411");  // Sheep/Ram (Eid)
+        EMOJI_TO_FILENAME.put("🐘", "emoji_u1f418");  // Elephant (Diwali/Hindu)
+        EMOJI_TO_FILENAME.put("🦅", "emoji_u1f985");  // Eagle (July 4th alternate)
+        EMOJI_TO_FILENAME.put("🛒", "emoji_u1f6d2");  // Shopping Cart (Black Friday)
+        EMOJI_TO_FILENAME.put("🃏", "emoji_u1f0cf");  // Joker (April Fools)
     }
 
     @PostConstruct
