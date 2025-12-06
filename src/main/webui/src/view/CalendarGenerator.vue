@@ -2921,51 +2921,9 @@ const loadCalendarFromUrl = async () => {
     } catch (error) {
       console.error("Failed to create from template:", error);
     }
-  } else {
-    // No URL params - check for existing session calendar
-    try {
-      const response = await sessionFetch("/api/session-calendar/current");
-      if (response.ok) {
-        const data = await response.json();
-        currentCalendarId.value = data.id;
-
-        // Update URL with calendar ID
-        router.replace({
-          path: route.path,
-          query: { id: data.id },
-        });
-
-        // Load configuration
-        if (data.configuration) {
-          Object.assign(config.value, data.configuration);
-
-          // Load custom events
-          if (data.configuration.customDates) {
-            customEvents.value = Object.entries(
-              data.configuration.customDates,
-            ).map(([date, eventData]) => {
-              const isNewFormat =
-                typeof eventData === "object" && eventData !== null;
-              return {
-                date: new Date(date),
-                emoji: isNewFormat ? eventData.emoji : eventData,
-                title: data.configuration.eventTitles?.[date] || "",
-                showTitle: !!data.configuration.eventTitles?.[date],
-                displaySettings: isNewFormat ? eventData.displaySettings : {},
-                id: Date.now() + Math.random(),
-              };
-            });
-          }
-        }
-
-        generateCalendar();
-        return true;
-      }
-    } catch {
-      // No existing session calendar, that's ok
-    }
   }
 
+  // No URL params - start fresh with defaults
   return false;
 };
 
