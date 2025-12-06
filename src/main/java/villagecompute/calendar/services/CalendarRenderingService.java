@@ -466,7 +466,7 @@ public class CalendarRenderingService {
 
     StringBuilder svg = new StringBuilder();
     svg.append(String.format(
-      "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid meet\">%n",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid meet\">%n",
       svgWidth, svgHeight, svgWidth, svgHeight
     ));
 
@@ -859,7 +859,7 @@ public class CalendarRenderingService {
 
     StringBuilder svg = new StringBuilder();
     svg.append(String.format(
-      "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid meet\">%n",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid meet\">%n",
       svgWidth, svgHeight, svgWidth, svgHeight
     ));
 
@@ -1061,7 +1061,7 @@ public class CalendarRenderingService {
 
     StringBuilder svg = new StringBuilder();
     svg.append(String.format(
-      "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\">%n",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\">%n",
       svgWidth, svgHeight, svgWidth, svgHeight
     ));
 
@@ -1649,7 +1649,7 @@ public class CalendarRenderingService {
     StringBuilder wrapper = new StringBuilder();
     wrapper.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     wrapper.append(String.format(
-      "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%.0f\" height=\"%.0f\" viewBox=\"0 0 %.0f %.0f\">\n",
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%.0f\" height=\"%.0f\" viewBox=\"0 0 %.0f %.0f\">\n",
       pageWidth, pageHeight, pageWidth, pageHeight
     ));
 

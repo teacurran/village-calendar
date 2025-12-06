@@ -221,13 +221,17 @@ public class EmojiSvgService {
             return null;
         }
 
+        // Make IDs unique per embedded SVG to avoid conflicts and resolution issues
+        String uniquePrefix = String.format("e%.0f_%.0f_", x, y);
+        innerContent = makeIdsUnique(innerContent, uniquePrefix);
+
         // Noto Emoji SVGs are typically 128x128 viewBox
         // We embed as a nested <svg> element with proper positioning and scaling
         // Include xlink namespace for SVGs that use xlink:href attributes
         if (monochrome) {
             // Apply grayscale filter for monochrome mode
             // Using a unique filter ID based on position to avoid conflicts
-            String filterId = String.format("grayscale_%.0f_%.0f", x, y);
+            String filterId = uniquePrefix + "grayscale";
             return String.format(
                 "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"0 0 128 128\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
                 "<defs><filter id=\"%s\"><feColorMatrix type=\"saturate\" values=\"0\"/></filter></defs>" +
@@ -240,6 +244,39 @@ public class EmojiSvgService {
                 x, y, size, size, innerContent
             );
         }
+    }
+
+    /**
+     * Make all IDs in SVG content unique by adding a prefix.
+     * This prevents ID collisions when multiple emoji SVGs are embedded in the same document.
+     * Updates both id="..." definitions and url(#...) / xlink:href="#..." references.
+     */
+    private String makeIdsUnique(String svgContent, String prefix) {
+        // Find all IDs used in the SVG and replace them with prefixed versions
+        // Pattern matches: id="something" and id='something'
+        java.util.regex.Pattern idPattern = java.util.regex.Pattern.compile("id=\"([^\"]+)\"");
+        java.util.regex.Matcher matcher = idPattern.matcher(svgContent);
+
+        java.util.Set<String> foundIds = new java.util.HashSet<>();
+        while (matcher.find()) {
+            foundIds.add(matcher.group(1));
+        }
+
+        // Replace each ID and its references
+        String result = svgContent;
+        for (String id : foundIds) {
+            String newId = prefix + id;
+            // Replace id definitions
+            result = result.replace("id=\"" + id + "\"", "id=\"" + newId + "\"");
+            // Replace url(#id) references
+            result = result.replace("url(#" + id + ")", "url(#" + newId + ")");
+            // Replace xlink:href="#id" references
+            result = result.replace("xlink:href=\"#" + id + "\"", "xlink:href=\"#" + newId + "\"");
+            // Replace href="#id" references (SVG2 style)
+            result = result.replace("href=\"#" + id + "\"", "href=\"#" + newId + "\"");
+        }
+
+        return result;
     }
 
     /**
