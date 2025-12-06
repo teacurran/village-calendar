@@ -34,6 +34,10 @@ interface CalendarConfig {
   dayTextColor?: string;
   dayNameColor?: string;
   gridLineColor?: string;
+  holidayColor?: string;
+  emojiFont?: string;
+  holidaySets?: string[];
+  eventDisplayMode?: string;
 }
 
 interface Props {
@@ -817,6 +821,22 @@ const initializeFromConfig = () => {
   }
   if (props.config.emojiFont) {
     emojiFont.value = props.config.emojiFont;
+  }
+
+  // Initialize holiday sets from config
+  if (props.config.holidaySets && props.config.holidaySets.length > 0) {
+    // First item goes to primary dropdown, rest go to additional list
+    primaryHolidaySet.value = props.config.holidaySets[0];
+    additionalHolidaySets.value = props.config.holidaySets.slice(1);
+  } else {
+    // No holidays selected - reset to defaults
+    primaryHolidaySet.value = "none";
+    additionalHolidaySets.value = [];
+  }
+
+  // Initialize event display mode
+  if (props.config.eventDisplayMode) {
+    eventDisplayMode.value = props.config.eventDisplayMode as EventDisplayMode;
   }
 };
 
