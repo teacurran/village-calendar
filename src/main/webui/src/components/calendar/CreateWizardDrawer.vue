@@ -2207,8 +2207,10 @@ onMounted(() => {
 }
 
 .emoji-preview.monochrome {
-  font-family: "Noto Emoji", "Segoe UI Symbol", sans-serif;
-  filter: grayscale(100%);
+  /* Use color emoji font but apply grayscale filter for monochrome preview */
+  font-family:
+    "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  filter: grayscale(100%) contrast(1.2);
 }
 
 .emoji-font-info {
