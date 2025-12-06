@@ -174,50 +174,56 @@ public class PDFRenderingService {
      */
     private String fixCSSUriReferences(String svgContent) {
         if (svgContent.contains("url(#")) {
-            LOG.debug("SVG contains CSS URI references - fixing clip-path and similar properties");
+            LOG.debug("SVG contains CSS URI references - fixing paint and path properties");
             
-            // The specific issue is with clip-path attributes that use url(#id)
-            // We need to handle patterns like: clip-path="url(#SVGID_2_)"
+            // The issue affects multiple CSS properties that use url(#id) syntax:
+            // clip-path, fill, stroke, filter, mask, marker-start, marker-mid, marker-end
             // Batik tries to resolve these as external URIs which fails
             
-            // Pattern for clip-path with url() references
-            java.util.regex.Pattern clipPathPattern = java.util.regex.Pattern.compile(
-                "clip-path\\s*=\\s*[\"']url\\(#([^)]+)\\)[\"']", 
-                java.util.regex.Pattern.CASE_INSENSITIVE
-            );
+            String[] cssProperties = {
+                "clip-path", "fill", "stroke", "filter", "mask", 
+                "marker-start", "marker-mid", "marker-end"
+            };
             
-            java.util.regex.Matcher matcher = clipPathPattern.matcher(svgContent);
-            StringBuffer result = new StringBuffer();
-            
-            while (matcher.find()) {
-                String idRef = matcher.group(1);
-                // Replace url(#id) with just #id for internal references
-                String replacement = "clip-path=\"#" + idRef + "\"";
-                matcher.appendReplacement(result, replacement);
-                LOG.debugf("Fixed clip-path reference: url(#%s) -> #%s", idRef, idRef);
+            for (String property : cssProperties) {
+                // Handle attribute form: property="url(#id)"
+                java.util.regex.Pattern attributePattern = java.util.regex.Pattern.compile(
+                    property + "\\s*=\\s*[\"']url\\(#([^)]+)\\)[\"']", 
+                    java.util.regex.Pattern.CASE_INSENSITIVE
+                );
+                
+                java.util.regex.Matcher matcher = attributePattern.matcher(svgContent);
+                StringBuffer result = new StringBuffer();
+                
+                while (matcher.find()) {
+                    String idRef = matcher.group(1);
+                    String replacement = property + "=\"#" + idRef + "\"";
+                    matcher.appendReplacement(result, replacement);
+                    LOG.debugf("Fixed %s attribute: url(#%s) -> #%s", property, idRef, idRef);
+                }
+                matcher.appendTail(result);
+                svgContent = result.toString();
+                
+                // Handle style form: style="...property:url(#id)..."
+                java.util.regex.Pattern stylePattern = java.util.regex.Pattern.compile(
+                    "(style\\s*=\\s*[\"'][^\"']*?)" + property + "\\s*:\\s*url\\(#([^)]+)\\)([^\"']*[\"'])", 
+                    java.util.regex.Pattern.CASE_INSENSITIVE
+                );
+                
+                matcher = stylePattern.matcher(svgContent);
+                result = new StringBuffer();
+                
+                while (matcher.find()) {
+                    String beforeProperty = matcher.group(1);
+                    String idRef = matcher.group(2);
+                    String afterProperty = matcher.group(3);
+                    String replacement = beforeProperty + property + ":#" + idRef + afterProperty;
+                    matcher.appendReplacement(result, replacement);
+                    LOG.debugf("Fixed %s style: url(#%s) -> #%s", property, idRef, idRef);
+                }
+                matcher.appendTail(result);
+                svgContent = result.toString();
             }
-            matcher.appendTail(result);
-            svgContent = result.toString();
-            
-            // Also handle style attributes with clip-path
-            java.util.regex.Pattern styleClipPathPattern = java.util.regex.Pattern.compile(
-                "(style\\s*=\\s*[\"'][^\"']*?)clip-path\\s*:\\s*url\\(#([^)]+)\\)([^\"']*[\"'])", 
-                java.util.regex.Pattern.CASE_INSENSITIVE
-            );
-            
-            matcher = styleClipPathPattern.matcher(svgContent);
-            result = new StringBuffer();
-            
-            while (matcher.find()) {
-                String beforeClipPath = matcher.group(1);
-                String idRef = matcher.group(2);
-                String afterClipPath = matcher.group(3);
-                String replacement = beforeClipPath + "clip-path:#" + idRef + afterClipPath;
-                matcher.appendReplacement(result, replacement);
-                LOG.debugf("Fixed style clip-path reference: url(#%s) -> #%s", idRef, idRef);
-            }
-            matcher.appendTail(result);
-            svgContent = result.toString();
         }
         
         return svgContent;
