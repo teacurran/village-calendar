@@ -282,31 +282,27 @@ function getCustomerNameForFilename(): string {
   return "customer";
 }
 
-// Download PDF for item via backend conversion
+// Download PDF for item via secure backend endpoint
 async function downloadPdf(item: any) {
-  const svg = getItemSvgContent(item);
-  if (!svg) {
-    console.error("No SVG content available for PDF download");
+  if (!item?.id) {
+    console.error("Item ID not available for PDF download");
     return;
   }
 
-  const year = getItemYear(item);
-  const orderNumber = order.value?.orderNumber || "order";
-  const customerName = getCustomerNameForFilename();
-  const filename = `calendar-${orderNumber}-${customerName}-${year}.pdf`;
+  const orderNumber = order.value?.orderNumber;
+  if (!orderNumber) {
+    console.error("Order number not available for PDF download");
+    return;
+  }
 
   try {
-    // Call backend to convert SVG to PDF
-    const response = await fetch("/api/calendar/svg-to-pdf", {
-      method: "POST",
+    // Use secure order-based PDF download endpoint
+    // This retrieves SVG content from the backend database, ensuring security and consistency
+    const response = await fetch(`/api/orders/${orderNumber}/items/${item.id}/pdf`, {
+      method: "GET",
       headers: {
-        "Content-Type": "application/json",
         Accept: "application/pdf",
       },
-      body: JSON.stringify({
-        svgContent: svg,
-        year: year,
-      }),
     });
 
     if (!response.ok) {
@@ -320,6 +316,16 @@ async function downloadPdf(item: any) {
     const contentType = response.headers.get("Content-Type");
     if (!contentType || !contentType.includes("application/pdf")) {
       throw new Error(`Expected PDF but got: ${contentType}`);
+    }
+
+    // Get filename from backend response headers (backend generates secure filename)
+    const contentDisposition = response.headers.get("Content-Disposition");
+    let filename = `calendar-${orderNumber}-item${item.id}.pdf`;
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
     }
 
     // Download the PDF blob
@@ -339,17 +345,8 @@ async function downloadPdf(item: any) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   } catch (error) {
-    console.error("Failed to generate PDF:", error);
-    // Fallback: download as SVG if PDF generation fails
-    const blob = new Blob([svg], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename.replace(".pdf", ".svg");
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    console.error("Failed to download PDF:", error);
+    alert("Failed to download PDF. Please try again or contact support.");
   }
 }
 </script>

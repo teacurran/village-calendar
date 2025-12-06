@@ -209,40 +209,55 @@ function getCustomerNameForFilename(order: CalendarOrder): string {
 }
 
 /**
- * Download PDF with order ID and customer name in filename via backend conversion
+ * Download PDF for specific order item using secure backend endpoint
  */
 async function downloadPdf(order: CalendarOrder) {
-  const svg = getCalendarSvg(order);
-  if (!svg) {
+  // Find the first calendar item in the order
+  const calendarItem = order.items?.find(item => item.configuration && 
+    (item.configuration.svgContent || item.configuration.generatedSvg || item.calendar));
+  
+  if (!calendarItem) {
     toast.add({
       severity: "error",
       summary: "Error",
-      detail: "No calendar content available for download",
+      detail: "No calendar item found in this order",
       life: 3000,
     });
     return;
   }
 
-  const orderNumber = order.orderNumber || order.id.substring(0, 8);
-  const customerName = getCustomerNameForFilename(order);
-  const year = order.calendar?.year || new Date().getFullYear();
-  const filename = `calendar-${orderNumber}-${customerName}-${year}.pdf`;
+  const orderNumber = order.orderNumber;
+  if (!orderNumber) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "Order number not available",
+      life: 3000,
+    });
+    return;
+  }
 
   try {
-    // Call backend to convert SVG to PDF
-    const response = await fetch("/api/calendar/svg-to-pdf", {
-      method: "POST",
+    // Use secure order-based PDF download endpoint
+    const response = await fetch(`/api/orders/${orderNumber}/items/${calendarItem.id}/pdf`, {
+      method: "GET",
       headers: {
-        "Content-Type": "application/json",
+        Accept: "application/pdf",
       },
-      body: JSON.stringify({
-        svgContent: svg,
-        year: year,
-      }),
     });
 
     if (!response.ok) {
       throw new Error(`Failed to generate PDF: ${response.status}`);
+    }
+
+    // Get filename from backend response headers
+    const contentDisposition = response.headers.get("Content-Disposition");
+    let filename = `calendar-${orderNumber}-item${calendarItem.id}.pdf`;
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
     }
 
     // Download the PDF blob

@@ -837,4 +837,24 @@ public class OrderService {
 
         return calendar;
     }
+
+    /**
+     * Find order by order number.
+     * Used for secure PDF downloads and order lookup.
+     * 
+     * @param orderNumber The order number to search for
+     * @return CalendarOrder if found, null otherwise
+     */
+    public CalendarOrder findByOrderNumber(String orderNumber) {
+        if (orderNumber == null || orderNumber.trim().isEmpty()) {
+            return null;
+        }
+        
+        try {
+            return CalendarOrder.find("orderNumber", orderNumber.trim()).firstResult();
+        } catch (Exception e) {
+            LOG.warnf("Error finding order by number %s: %s", orderNumber, e.getMessage());
+            return null;
+        }
+    }
 }

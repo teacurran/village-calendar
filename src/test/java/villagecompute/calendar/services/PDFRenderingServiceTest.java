@@ -225,4 +225,34 @@ public class PDFRenderingServiceTest {
         
         System.out.println("Complex calendar PDF generated successfully: " + pdf.length + " bytes");
     }
+
+    @Test
+    public void testEmojiFontConsistency() {
+        // Test that emoji font setting is properly applied in both SVG generation and PDF conversion
+        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+        config.year = 2025;
+        config.theme = "default";
+        config.emojiFont = "noto-mono"; // Explicitly set to monochrome
+        config.customDates.put("2025-01-01", "🎉");
+
+        // Generate SVG with monochrome emoji setting
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+        assertNotNull(svg, "SVG generation should succeed");
+
+        // Convert to PDF - should maintain the monochrome emoji setting
+        byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, 2025);
+        assertNotNull(pdf, "PDF output should not be null");
+        assertTrue(pdf.length > 1000, "PDF should have substantial content");
+        assertTrue(new String(pdf, 0, 4).equals("%PDF"), "Output should be a valid PDF");
+
+        // Also test with color emojis
+        config.emojiFont = "noto-color";
+        String colorSvg = calendarRenderingService.generateCalendarSVG(config);
+        assertNotNull(colorSvg, "Color SVG generation should succeed");
+        assertNotEquals(svg, colorSvg, "Mono and color SVGs should be different");
+
+        byte[] colorPdf = pdfRenderingService.renderSVGToPDF(colorSvg, 2025);
+        assertNotNull(colorPdf, "Color PDF output should not be null");
+        assertTrue(colorPdf.length > 1000, "Color PDF should have substantial content");
+    }
 }

@@ -101,6 +101,8 @@ public class CalendarResource {
   public static class SvgToPdfRequest {
     public String svgContent;
     public Integer year;
+    // Optional: If provided, will regenerate SVG with these settings instead of using svgContent
+    public CalendarRequest regenerateConfig;
   }
 
   @POST
@@ -209,18 +211,63 @@ public class CalendarResource {
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces("application/pdf")
   public Response svgToPdf(SvgToPdfRequest request) {
-    if (request == null || request.svgContent == null || request.svgContent.isEmpty()) {
+    if (request == null) {
       return Response.status(Response.Status.BAD_REQUEST)
         .type(MediaType.TEXT_PLAIN)
-        .entity("SVG content is required")
+        .entity("Request is required")
         .build();
     }
 
     int year = request.year != null ? request.year : java.time.LocalDate.now().getYear();
+    String svgContent;
 
     try {
+      // Check if we should regenerate SVG with new configuration (e.g., different emoji font)
+      if (request.regenerateConfig != null) {
+        // Regenerate SVG with updated configuration
+        CalendarRenderingService.CalendarConfig config = buildConfig(request.regenerateConfig);
+        
+        // Generate fresh SVG based on calendar type
+        if ("hebrew".equals(request.regenerateConfig.calendarType)) {
+          // Generate Hebrew calendar
+          HebrewCalendarService.HebrewCalendarConfig hebrewConfig = new HebrewCalendarService.HebrewCalendarConfig();
+          hebrewConfig.hebrewYear = config.year;
+          hebrewConfig.theme = config.theme;
+          hebrewConfig.showGrid = config.showGrid;
+          hebrewConfig.highlightWeekends = config.highlightWeekends;
+          hebrewConfig.showDayNumbers = config.showDayNumbers;
+          hebrewConfig.compactMode = config.compactMode;
+          hebrewConfig.rotateMonthNames = config.rotateMonthNames;
+          // Copy all moon-related settings
+          hebrewConfig.showMoonPhases = config.showMoonPhases;
+          hebrewConfig.showMoonIllumination = config.showMoonIllumination;
+          hebrewConfig.showFullMoonOnly = config.showFullMoonOnly;
+          hebrewConfig.moonSize = config.moonSize;
+          hebrewConfig.moonOffsetX = config.moonOffsetX;
+          hebrewConfig.moonOffsetY = config.moonOffsetY;
+          hebrewConfig.moonBorderColor = config.moonBorderColor;
+          hebrewConfig.moonBorderWidth = config.moonBorderWidth;
+          hebrewConfig.moonDarkColor = config.moonDarkColor;
+          hebrewConfig.moonLightColor = config.moonLightColor;
+          hebrewConfig.latitude = config.latitude;
+          hebrewConfig.longitude = config.longitude;
+          String holidaySet = request.regenerateConfig.holidaySet != null ? request.regenerateConfig.holidaySet : "HEBREW_RELIGIOUS";
+          svgContent = hebrewCalendarService.generateHebrewCalendarSVG(hebrewConfig, holidaySet);
+        } else {
+          svgContent = calendarRenderingService.generateCalendarSVG(config);
+        }
+      } else if (request.svgContent != null && !request.svgContent.isEmpty()) {
+        // Use provided SVG content
+        svgContent = request.svgContent;
+      } else {
+        return Response.status(Response.Status.BAD_REQUEST)
+          .type(MediaType.TEXT_PLAIN)
+          .entity("Either svgContent or regenerateConfig is required")
+          .build();
+      }
+
       // Convert SVG to PDF using PDFRenderingService
-      byte[] pdf = pdfRenderingService.renderSVGToPDF(request.svgContent, year);
+      byte[] pdf = pdfRenderingService.renderSVGToPDF(svgContent, year);
 
       if (pdf == null || pdf.length == 0) {
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
