@@ -34,6 +34,9 @@ public class CalendarRenderingService {
   @Inject
   HolidayService holidayService;
 
+  @Inject
+  EmojiSvgService emojiSvgService;
+
   // ===========================================
   // PRINT DIMENSIONS (in inches)
   // ===========================================
@@ -151,6 +154,42 @@ public class CalendarRenderingService {
       return emoji; // No substitution needed for color mode
     }
     return MONOCHROME_EMOJI_SUBSTITUTIONS.getOrDefault(emoji, emoji);
+  }
+
+  /**
+   * Render an emoji as either inline SVG (preferred for PDF) or text with font fallback.
+   * Uses EmojiSvgService for vector rendering when available.
+   *
+   * @param emoji The emoji character(s) to render
+   * @param x X position (center for centered, left for left-aligned)
+   * @param y Y position (center for centered, baseline for text)
+   * @param size Font size in pixels
+   * @param config Calendar configuration
+   * @param centered Whether the emoji should be centered at x,y
+   * @return SVG element string (either <svg> or <text>)
+   */
+  private String renderEmoji(String emoji, double x, double y, int size, CalendarConfig config, boolean centered) {
+    // Try to use SVG rendering for better PDF compatibility
+    if (emojiSvgService != null && emojiSvgService.hasEmojiSvg(emoji)) {
+      // For SVG, x/y is top-left corner, so adjust if centered
+      double svgX = centered ? x - size / 2.0 : x;
+      double svgY = centered ? y - size / 2.0 : y - size; // text y is baseline, svg y is top
+      return emojiSvgService.getEmojiAsSvg(emoji, svgX, svgY, size);
+    }
+
+    // Fall back to text rendering with emoji font
+    String processedEmoji = substituteEmojiForMonochrome(emoji, config);
+    if (centered) {
+      return String.format(
+        "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; text-anchor: middle; dominant-baseline: middle; font-family: %s;\">%s</text>",
+        x, y, size, getEmojiFontFamily(config), processedEmoji
+      );
+    } else {
+      return String.format(
+        "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; font-family: %s;\">%s</text>",
+        x, y, size, getEmojiFontFamily(config), processedEmoji
+      );
+    }
   }
 
   // Color themes
@@ -584,19 +623,15 @@ public class CalendarRenderingService {
             } else {
               emojiY = cellY + cellHeight / 2 + 5;
             }
-            svg.append(String.format(
-              "<text x=\"%d\" y=\"%d\" style=\"font-size: %dpx; text-anchor: middle; dominant-baseline: middle; font-family: %s;\">%s</text>%n",
-              emojiX, emojiY, fontSize, getEmojiFontFamily(config), holidayEmoji
-            ));
+            svg.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, true));
+            svg.append("\n");
           } else {
             // Small mode: bottom-left corner
             int emojiX = cellX + 5;
             int emojiY = cellY + cellHeight - 5;
             int fontSize = Math.max(10, cellHeight / 6);
-            svg.append(String.format(
-              "<text x=\"%d\" y=\"%d\" style=\"font-size: %dpx; font-family: %s;\">%s</text>%n",
-              emojiX, emojiY, fontSize, getEmojiFontFamily(config), holidayEmoji
-            ));
+            svg.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, false));
+            svg.append("\n");
           }
         }
 
@@ -619,10 +654,8 @@ public class CalendarRenderingService {
             int scaledSize = (int) (eventDisplay.getEmojiSize(12) * scaleFactor);
             int emojiSize = Math.max(8, Math.min(24, scaledSize)); // Clamp between 8-24px
 
-            svg.append(String.format(
-              "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; text-anchor: middle; dominant-baseline: middle; font-family: %s;\">%s</text>%n",
-              emojiX, emojiY, emojiSize, getEmojiFontFamily(config), customEmoji
-            ));
+            svg.append(renderEmoji(customEmoji, emojiX, emojiY, emojiSize, config, true));
+            svg.append("\n");
           } else {
             // Fall back to original positioning logic
             int emojiX = cellX;
@@ -669,10 +702,8 @@ public class CalendarRenderingService {
                 break;
             }
 
-            svg.append(String.format(
-              "<text x=\"%d\" y=\"%d\" style=\"font-size: 12px; font-family: %s;\">%s</text>%n",
-              emojiX, emojiY, getEmojiFontFamily(config), customEmoji
-            ));
+            svg.append(renderEmoji(customEmoji, emojiX, emojiY, 12, config, false));
+            svg.append("\n");
           }
         }
 
@@ -940,19 +971,15 @@ public class CalendarRenderingService {
             int emojiX = cellX + cellWidth / 2;
             int fontSize = Math.max(12, cellHeight / 3);
             int emojiY = cellY + cellHeight / 2 + 5;
-            svg.append(String.format(
-              "<text x=\"%d\" y=\"%d\" style=\"font-size: %dpx; text-anchor: middle; dominant-baseline: middle; font-family: %s;\">%s</text>%n",
-              emojiX, emojiY, fontSize, getEmojiFontFamily(config), holidayEmoji
-            ));
+            svg.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, true));
+            svg.append("\n");
           } else {
             // Small mode: bottom-left corner
             int emojiX = cellX + 5;
             int emojiY = cellY + cellHeight - 5;
             int fontSize = Math.max(8, cellHeight / 6);
-            svg.append(String.format(
-              "<text x=\"%d\" y=\"%d\" style=\"font-size: %dpx; font-family: %s;\">%s</text>%n",
-              emojiX, emojiY, fontSize, getEmojiFontFamily(config), holidayEmoji
-            ));
+            svg.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, false));
+            svg.append("\n");
           }
         }
 
@@ -973,10 +1000,8 @@ public class CalendarRenderingService {
           int emojiX = cellX + (position.contains("right") ? cellWidth - 10 : 5);
           int emojiY = cellY + (position.contains("top") ? 15 : cellHeight - 5);
 
-          svg.append(String.format(
-            "<text x=\"%d\" y=\"%d\" style=\"font-size: 12px; font-family: %s;\">%s</text>%n",
-            emojiX, emojiY, getEmojiFontFamily(config), emoji
-          ));
+          svg.append(renderEmoji(emoji, emojiX, emojiY, 12, config, false));
+          svg.append("\n");
         }
 
         // Moon display (illumination, phase symbols, or full moon only)
@@ -1207,10 +1232,8 @@ public class CalendarRenderingService {
           int scaledSize = (int) (eventDisplay.getEmojiSize(9) * scaleFactor);
           int emojiSize = Math.max(6, Math.min(16, scaledSize)); // Clamp between 6-16px for smaller cells
 
-          month.append(String.format(
-            "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; text-anchor: middle; dominant-baseline: middle; font-family: %s;\">%s</text>%n",
-            emojiX, emojiY, emojiSize, getEmojiFontFamily(config), customEmoji
-          ));
+          month.append(renderEmoji(customEmoji, emojiX, emojiY, emojiSize, config, true));
+          month.append("\n");
         } else {
           // Fall back to original positioning logic
           int emojiX = dayX;
@@ -1258,10 +1281,8 @@ public class CalendarRenderingService {
               break;
           }
 
-          month.append(String.format(
-            "<text x=\"%d\" y=\"%d\" style=\"font-size: 9px;\">%s</text>%n",
-            emojiX, emojiY, customEmoji
-          ));
+          month.append(renderEmoji(customEmoji, emojiX, emojiY, 9, config, false));
+          month.append("\n");
         }
       }
 
