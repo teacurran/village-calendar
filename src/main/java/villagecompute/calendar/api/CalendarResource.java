@@ -206,10 +206,12 @@ public class CalendarResource {
    */
   @POST
   @Path("/svg-to-pdf")
+  @Consumes(MediaType.APPLICATION_JSON)
   @Produces("application/pdf")
   public Response svgToPdf(SvgToPdfRequest request) {
-    if (request.svgContent == null || request.svgContent.isEmpty()) {
+    if (request == null || request.svgContent == null || request.svgContent.isEmpty()) {
       return Response.status(Response.Status.BAD_REQUEST)
+        .type(MediaType.TEXT_PLAIN)
         .entity("SVG content is required")
         .build();
     }
@@ -222,17 +224,20 @@ public class CalendarResource {
 
       if (pdf == null || pdf.length == 0) {
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-          .entity("Failed to generate PDF")
+          .type(MediaType.TEXT_PLAIN)
+          .entity("Failed to generate PDF - empty result")
           .build();
       }
 
       return Response.ok(pdf)
-        .header("Content-Type", "application/pdf")
+        .type("application/pdf")
         .header("Content-Disposition", "attachment; filename=\"calendar-" + year + ".pdf\"")
         .build();
 
     } catch (Exception e) {
+      e.printStackTrace();
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+        .type(MediaType.TEXT_PLAIN)
         .entity("PDF generation failed: " + e.getMessage())
         .build();
     }

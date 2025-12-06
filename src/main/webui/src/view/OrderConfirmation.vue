@@ -301,6 +301,7 @@ async function downloadPdf(item: any) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/pdf",
       },
       body: JSON.stringify({
         svgContent: svg,
@@ -309,11 +310,26 @@ async function downloadPdf(item: any) {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to generate PDF: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(
+        `Failed to generate PDF: ${response.status} - ${errorText}`,
+      );
+    }
+
+    // Verify we got a PDF response
+    const contentType = response.headers.get("Content-Type");
+    if (!contentType || !contentType.includes("application/pdf")) {
+      throw new Error(`Expected PDF but got: ${contentType}`);
     }
 
     // Download the PDF blob
     const blob = await response.blob();
+
+    // Verify blob is not empty and looks like a PDF (starts with %PDF)
+    if (blob.size < 100) {
+      throw new Error("PDF response is too small, likely an error");
+    }
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
