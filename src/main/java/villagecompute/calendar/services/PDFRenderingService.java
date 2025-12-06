@@ -60,9 +60,9 @@ public class PDFRenderingService {
             StringReader reader = new StringReader(svgContent);
             TranscoderInput input = new TranscoderInput(reader);
 
-            // Set a data URI as base to avoid file path resolution issues
-            // This prevents Batik from trying to resolve internal references as external files
-            input.setURI("data:image/svg+xml,calendar");
+            // Set a dummy URI to avoid null pointer exception with style elements
+            // This is CRITICAL when the SVG contains <style> tags
+            input.setURI("file:///calendar.svg");
 
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             TranscoderOutput output = new TranscoderOutput(outputStream);
@@ -93,13 +93,31 @@ public class PDFRenderingService {
      * @return Fixed SVG content
      */
     private String preprocessSVG(String svgContent) {
-        // Fix xlink namespace issues
-        svgContent = fixXlinkNamespace(svgContent);
-        
-        // Fix CSS URI references that cause invalid URI errors
-        svgContent = fixCSSUriReferences(svgContent);
-        
-        return svgContent;
+        try {
+            // Validate input
+            if (svgContent == null || svgContent.trim().isEmpty()) {
+                LOG.warn("SVG content is null or empty, skipping preprocessing");
+                return svgContent;
+            }
+            
+            // Ensure content starts with proper XML structure
+            String trimmedContent = svgContent.trim();
+            if (!trimmedContent.startsWith("<")) {
+                LOG.warn("SVG content doesn't start with XML tag, skipping preprocessing");
+                return svgContent;
+            }
+            
+            // Fix xlink namespace issues
+            svgContent = fixXlinkNamespace(svgContent);
+            
+            // Fix CSS URI references that cause invalid URI errors
+            svgContent = fixCSSUriReferences(svgContent);
+            
+            return svgContent;
+        } catch (Exception e) {
+            LOG.warnf(e, "Error during SVG preprocessing, returning original content");
+            return svgContent;
+        }
     }
 
     /**
@@ -114,20 +132,32 @@ public class PDFRenderingService {
         if (svgContent.contains("xlink:href") && !svgContent.contains("xmlns:xlink")) {
             LOG.debug("Fixing xlink namespace declaration in SVG");
             
-            // Find the opening <svg> tag and add the xlink namespace
+            // Find the opening <svg> tag more carefully to handle XML properly
             String xlinkNamespace = "xmlns:xlink=\"http://www.w3.org/1999/xlink\"";
             
-            // Look for the <svg> tag with its existing attributes
-            int svgStart = svgContent.indexOf("<svg");
-            if (svgStart != -1) {
-                // Find the end of the opening svg tag
-                int svgEnd = svgContent.indexOf(">", svgStart);
-                if (svgEnd != -1) {
-                    // Insert the xlink namespace before the closing >
-                    String beforeTag = svgContent.substring(0, svgEnd);
-                    String afterTag = svgContent.substring(svgEnd);
-                    svgContent = beforeTag + " " + xlinkNamespace + afterTag;
-                    LOG.debug("Added xlink namespace to SVG");
+            // Use regex to find the svg tag and handle various formats
+            java.util.regex.Pattern svgPattern = java.util.regex.Pattern.compile(
+                "(<svg[^>]*?)>", 
+                java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL
+            );
+            java.util.regex.Matcher matcher = svgPattern.matcher(svgContent);
+            
+            if (matcher.find()) {
+                String svgOpenTag = matcher.group(1);
+                String replacement = svgOpenTag + " " + xlinkNamespace + ">";
+                svgContent = svgContent.replace(matcher.group(0), replacement);
+                LOG.debug("Added xlink namespace to SVG using regex approach");
+            } else {
+                // Fallback to simple approach if regex fails
+                int svgStart = svgContent.indexOf("<svg");
+                if (svgStart != -1) {
+                    int svgEnd = svgContent.indexOf(">", svgStart);
+                    if (svgEnd != -1) {
+                        String beforeTag = svgContent.substring(0, svgEnd);
+                        String afterTag = svgContent.substring(svgEnd);
+                        svgContent = beforeTag + " " + xlinkNamespace + afterTag;
+                        LOG.debug("Added xlink namespace to SVG using fallback approach");
+                    }
                 }
             }
         }
