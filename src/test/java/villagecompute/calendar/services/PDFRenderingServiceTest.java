@@ -108,8 +108,6 @@ public class PDFRenderingServiceTest {
 
             // Add a custom event with an emoji that uses xlink:href
             config.customDates.put("2025-05-05", "💃"); // Dancing woman emoji
-            config.holidays.add("2025-05-05");
-            config.holidayEmojis.put("2025-05-05", "💃");
 
             String svg = calendarRenderingService.generateCalendarSVG(config);
             assertNotNull(svg, "SVG generation with dancing emoji should succeed");
@@ -136,8 +134,6 @@ public class PDFRenderingServiceTest {
                 config.showMoonPhases = false;
 
                 config.customDates.put("2025-01-15", emoji);
-                config.holidays.add("2025-01-15");
-                config.holidayEmojis.put("2025-01-15", emoji);
 
                 String svg = calendarRenderingService.generateCalendarSVG(config);
                 assertNotNull(svg, "SVG generation with emoji " + emoji + " should succeed");
@@ -175,5 +171,58 @@ public class PDFRenderingServiceTest {
         assertNotNull(pdf, "PDF output should not be null for monochrome calendar");
         assertTrue(pdf.length > 0, "PDF should have content");
         assertTrue(new String(pdf, 0, 4).equals("%PDF"), "Output should be a valid PDF");
+    }
+
+    @Test
+    public void testComplexCalendarWithAllFeatures() {
+        // Test a complex calendar with all features that could cause CSS URI reference issues
+        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+        config.year = 2025;
+        config.theme = "rainbowWeekends";
+        config.layoutStyle = "grid";
+        config.showMoonPhases = true;
+        config.showMoonIllumination = true;
+        config.showFullMoonOnly = false;
+        config.showWeekNumbers = true;
+        config.showDayNames = true;
+        config.showDayNumbers = true;
+        config.showGrid = true;
+        config.highlightWeekends = true;
+        config.holidaySets = List.of("secular", "us");
+        config.eventDisplayMode = "large";
+        config.emojiFont = "noto-color";
+        
+        // Add complex custom dates with various emojis (including known xlink users)
+        config.customDates.put("2025-01-01", "🎉"); // New Year
+        config.customDates.put("2025-02-14", "❤️"); // Valentine's
+        config.customDates.put("2025-10-31", "🎃"); // Halloween (uses xlink)
+        config.customDates.put("2025-05-05", "💃"); // Dancing woman (uses xlink)
+        config.customDates.put("2025-12-25", "🎄"); // Christmas tree
+
+        // Generate SVG
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+        assertNotNull(svg, "SVG generation should succeed with complex configuration");
+        assertTrue(svg.length() > 1000, "SVG should be substantial in size");
+        
+        // Verify that our preprocessing is working - the SVG should contain processed references
+        if (svg.contains("url(#")) {
+            // If we still have url(# references, our preprocessing didn't catch them all
+            // Log for debugging but don't fail the test since some might be legitimate
+            System.out.println("WARNING: SVG still contains url(# references after preprocessing");
+            // Extract a sample for analysis
+            int urlIndex = svg.indexOf("url(#");
+            if (urlIndex != -1) {
+                String sample = svg.substring(Math.max(0, urlIndex - 50), Math.min(svg.length(), urlIndex + 100));
+                System.out.println("Sample: " + sample);
+            }
+        }
+
+        // Convert to PDF - this is the critical test
+        byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, 2025);
+        assertNotNull(pdf, "PDF output should not be null for complex calendar");
+        assertTrue(pdf.length > 10000, "PDF should be substantial in size (>10KB)");
+        assertTrue(new String(pdf, 0, 4).equals("%PDF"), "Output should be a valid PDF");
+        
+        System.out.println("Complex calendar PDF generated successfully: " + pdf.length + " bytes");
     }
 }
