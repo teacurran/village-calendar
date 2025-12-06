@@ -1824,20 +1824,11 @@ onMounted(async () => {
   // Load holidays (but don't show them by default)
   await fetchHolidays();
 
-  // Check if URL has calendar ID or template ID
-  const hasUrlParams = route.query.id || route.query.templateId;
-
-  // Try to load from localStorage for anonymous users (only if no URL params)
-  let configLoaded = false;
-  if (!hasUrlParams && !userStore.isLoggedIn) {
-    configLoaded = loadFromLocalStorage();
-  }
-
-  // Load calendar or template from URL (takes precedence over localStorage)
+  // Load calendar or template from URL if specified
   const calendarLoaded = await loadCalendarFromUrl();
 
-  // If nothing was loaded, generate a default calendar (no template)
-  if (!calendarLoaded && !configLoaded) {
+  // If nothing was loaded from URL, generate a fresh default calendar
+  if (!calendarLoaded) {
     generateCalendar();
     await autoSaveCalendar();
   }
@@ -2669,11 +2660,6 @@ const addToCart = async (productType: "pdf" | "print" = "print") => {
       detail: product.successMessage,
       life: 3000,
     });
-
-    // Save to localStorage for anonymous users
-    if (!userStore.isLoggedIn) {
-      saveToLocalStorage();
-    }
   } catch (error) {
     console.error("Error adding to cart:", error);
     toast.add({
@@ -2991,10 +2977,6 @@ watch(
     if (currentCalendarId.value || isViewingSharedCalendar.value) {
       autoSaveCalendar();
     }
-    // Save to localStorage for anonymous users
-    if (!userStore.isLoggedIn) {
-      saveToLocalStorage();
-    }
   },
   { deep: true },
 );
@@ -3006,10 +2988,6 @@ watch(
     // Auto-save if we have a calendar ID OR if viewing a shared calendar (will trigger copy)
     if (currentCalendarId.value || isViewingSharedCalendar.value) {
       autoSaveCalendar();
-    }
-    // Save to localStorage for anonymous users
-    if (!userStore.isLoggedIn) {
-      saveToLocalStorage();
     }
   },
   { deep: true },
@@ -3038,62 +3016,6 @@ const buildFullConfiguration = () => {
   });
 
   return fullConfig;
-};
-
-// Save configuration to localStorage for anonymous users
-const saveToLocalStorage = () => {
-  if (typeof window !== "undefined" && window.localStorage) {
-    try {
-      const dataToSave = {
-        config: config.value,
-        customEvents: customEvents.value.map((event) => ({
-          ...event,
-          date: event.date ? event.date.toISOString() : null,
-        })),
-        lastModified: new Date().toISOString(),
-      };
-      localStorage.setItem(
-        "calendarGeneratorConfig",
-        JSON.stringify(dataToSave),
-      );
-    } catch (error) {
-      console.error("Failed to save to localStorage:", error);
-    }
-  }
-};
-
-// Load configuration from localStorage for anonymous users
-const loadFromLocalStorage = () => {
-  if (
-    !userStore.isLoggedIn &&
-    typeof window !== "undefined" &&
-    window.localStorage
-  ) {
-    try {
-      const saved = localStorage.getItem("calendarGeneratorConfig");
-      if (saved) {
-        const data = JSON.parse(saved);
-
-        // Restore config
-        if (data.config) {
-          Object.assign(config.value, data.config);
-        }
-
-        // Restore custom events
-        if (data.customEvents) {
-          customEvents.value = data.customEvents.map((event) => ({
-            ...event,
-            date: event.date ? new Date(event.date) : null,
-          }));
-        }
-
-        return true;
-      }
-    } catch (error) {
-      console.error("Failed to load from localStorage:", error);
-    }
-  }
-  return false;
 };
 
 // Load all templates for admin
