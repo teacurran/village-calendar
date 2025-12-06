@@ -43,6 +43,9 @@ public class PDFRenderingService {
         try {
             LOG.debugf("Rendering SVG to PDF (SVG length: %d bytes)", svgContent.length());
 
+            // Preprocess SVG to fix xlink namespace issues
+            svgContent = fixXlinkNamespace(svgContent);
+
             // Create transcoder for PDF
             PDFTranscoder transcoder = new PDFTranscoder();
 
@@ -81,6 +84,39 @@ public class PDFRenderingService {
             LOG.errorf(e, "Error rendering SVG to PDF");
             throw new RuntimeException("PDF rendering failed: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Fix SVG content that contains xlink:href attributes without proper namespace declaration.
+     * This is required for Batik to properly process SVG with xlink references.
+     *
+     * @param svgContent Original SVG content
+     * @return Fixed SVG content with proper xlink namespace declaration
+     */
+    private String fixXlinkNamespace(String svgContent) {
+        // Check if SVG contains xlink:href but doesn't declare xmlns:xlink
+        if (svgContent.contains("xlink:href") && !svgContent.contains("xmlns:xlink")) {
+            LOG.debug("Fixing xlink namespace declaration in SVG");
+            
+            // Find the opening <svg> tag and add the xlink namespace
+            String xlinkNamespace = "xmlns:xlink=\"http://www.w3.org/1999/xlink\"";
+            
+            // Look for the <svg> tag with its existing attributes
+            int svgStart = svgContent.indexOf("<svg");
+            if (svgStart != -1) {
+                // Find the end of the opening svg tag
+                int svgEnd = svgContent.indexOf(">", svgStart);
+                if (svgEnd != -1) {
+                    // Insert the xlink namespace before the closing >
+                    String beforeTag = svgContent.substring(0, svgEnd);
+                    String afterTag = svgContent.substring(svgEnd);
+                    svgContent = beforeTag + " " + xlinkNamespace + afterTag;
+                    LOG.debug("Added xlink namespace to SVG");
+                }
+            }
+        }
+        
+        return svgContent;
     }
 
     /**
