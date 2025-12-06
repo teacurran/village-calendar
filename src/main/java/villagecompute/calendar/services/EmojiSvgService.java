@@ -80,6 +80,13 @@ public class EmojiSvgService {
         EMOJI_TO_FILENAME.put("⚔️", "emoji_u2694");   // Crossed Swords
         EMOJI_TO_FILENAME.put("🎖️", "emoji_u1f396");  // Military Medal
         EMOJI_TO_FILENAME.put("🕯️", "emoji_u1f56f");  // Candle
+
+        // Pagan/Wiccan Holidays (Wheel of the Year)
+        EMOJI_TO_FILENAME.put("🐣", "emoji_u1f423");  // Hatching Chick (Ostara)
+        EMOJI_TO_FILENAME.put("🔥", "emoji_u1f525");  // Fire (Beltane)
+        EMOJI_TO_FILENAME.put("🌾", "emoji_u1f33e");  // Sheaf of Rice (Lughnasadh)
+        EMOJI_TO_FILENAME.put("🍂", "emoji_u1f342");  // Fallen Leaf (Mabon)
+        EMOJI_TO_FILENAME.put("🌲", "emoji_u1f332");  // Evergreen Tree (Yule)
     }
 
     @PostConstruct
