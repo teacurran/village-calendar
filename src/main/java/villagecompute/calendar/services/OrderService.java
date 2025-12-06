@@ -839,21 +839,45 @@ public class OrderService {
     }
 
     /**
-     * Find order by order number.
+     * Find order by order number with items loaded.
      * Used for secure PDF downloads and order lookup.
      * 
      * @param orderNumber The order number to search for
-     * @return CalendarOrder if found, null otherwise
+     * @return CalendarOrder if found with items loaded, null otherwise
      */
+    @Transactional
     public CalendarOrder findByOrderNumber(String orderNumber) {
         if (orderNumber == null || orderNumber.trim().isEmpty()) {
             return null;
         }
         
         try {
-            return CalendarOrder.find("orderNumber", orderNumber.trim()).firstResult();
+            LOG.infof("Looking for order with orderNumber: %s", orderNumber.trim());
+            
+            // Find order with items eagerly loaded
+            CalendarOrder order = CalendarOrder.find("orderNumber", orderNumber.trim()).firstResult();
+            
+            if (order != null) {
+                // Force load the items to avoid lazy loading issues
+                order.items.size(); // This triggers the lazy loading
+                LOG.infof("Found order %s with %d items", orderNumber, order.items.size());
+                
+                // Also load calendar relationships for items
+                for (CalendarOrderItem item : order.items) {
+                    if (item.calendar != null) {
+                        // Force load calendar.generatedSvg
+                        String svg = item.calendar.generatedSvg;
+                        LOG.debugf("Item %s has calendar with SVG: %s", item.id, 
+                                   svg != null ? "yes (" + svg.length() + " chars)" : "no");
+                    }
+                }
+            } else {
+                LOG.warnf("No order found with orderNumber: %s", orderNumber);
+            }
+            
+            return order;
         } catch (Exception e) {
-            LOG.warnf("Error finding order by number %s: %s", orderNumber, e.getMessage());
+            LOG.errorf(e, "Error finding order by number %s: %s", orderNumber, e.getMessage());
             return null;
         }
     }

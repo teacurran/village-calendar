@@ -65,20 +65,38 @@ public class OrderResource {
                     .build();
             }
 
-            // Find the specific order item
-            CalendarOrderItem orderItem = null;
+            // Log available items for debugging
+            LOG.infof("Order %s has %d items", orderNumber, order.items.size());
             for (CalendarOrderItem item : order.items) {
-                if (item.id.equals(itemId)) {
+                LOG.infof("  Item ID: %s, ProductType: %s", item.id, item.productType);
+            }
+
+            // Find the specific order item (handle both UUID and string formats)
+            CalendarOrderItem orderItem = null;
+            String itemIdStr = itemId.toString();
+            
+            for (CalendarOrderItem item : order.items) {
+                if (item.id.equals(itemId) || item.id.toString().equals(itemIdStr)) {
                     orderItem = item;
+                    LOG.infof("Found matching item: %s", item.id);
                     break;
                 }
             }
 
             if (orderItem == null) {
-                LOG.warnf("Order item not found: %d in order %s", itemId, orderNumber);
+                LOG.warnf("Order item not found: %s in order %s with %d items", 
+                          itemId, orderNumber, order.items.size());
+                
+                // List available item IDs for debugging
+                StringBuilder availableIds = new StringBuilder("Available item IDs: ");
+                for (CalendarOrderItem item : order.items) {
+                    availableIds.append(item.id).append(", ");
+                }
+                LOG.warnf(availableIds.toString());
+                
                 return Response.status(Response.Status.NOT_FOUND)
                     .type(MediaType.TEXT_PLAIN)
-                    .entity("Order item not found")
+                    .entity("Order item not found. Item ID: " + itemId)
                     .build();
             }
 
@@ -144,20 +162,35 @@ public class OrderResource {
      * Checks multiple possible locations for the SVG content.
      */
     private String extractSvgFromOrderItem(CalendarOrderItem orderItem) {
+        LOG.infof("Extracting SVG from order item %s", orderItem.id);
+        
         // First, try to get SVG from the linked UserCalendar
-        if (orderItem.calendar != null && orderItem.calendar.generatedSvg != null) {
-            LOG.debugf("Found SVG in UserCalendar.generatedSvg for item %d", orderItem.id);
-            return orderItem.calendar.generatedSvg;
+        if (orderItem.calendar != null) {
+            LOG.infof("Item has linked calendar: %s", orderItem.calendar.id);
+            if (orderItem.calendar.generatedSvg != null && !orderItem.calendar.generatedSvg.isEmpty()) {
+                LOG.infof("Found SVG in UserCalendar.generatedSvg for item %s (%d chars)", 
+                          orderItem.id, orderItem.calendar.generatedSvg.length());
+                return orderItem.calendar.generatedSvg;
+            } else {
+                LOG.warnf("Calendar %s exists but generatedSvg is null/empty", orderItem.calendar.id);
+            }
+        } else {
+            LOG.infof("Item %s has no linked calendar", orderItem.id);
         }
 
         // Fallback: try to extract from order item configuration JSON
         if (orderItem.configuration != null) {
+            LOG.infof("Checking configuration JSON for SVG content");
             try {
+                // Log configuration structure for debugging
+                LOG.infof("Configuration keys: %s", orderItem.configuration.fieldNames());
+                
                 // Check for svgContent field
                 if (orderItem.configuration.has("svgContent")) {
                     String svgContent = orderItem.configuration.get("svgContent").asText();
                     if (svgContent != null && !svgContent.isEmpty()) {
-                        LOG.debugf("Found SVG in configuration.svgContent for item %d", orderItem.id);
+                        LOG.infof("Found SVG in configuration.svgContent for item %s (%d chars)", 
+                                  orderItem.id, svgContent.length());
                         return svgContent;
                     }
                 }
@@ -166,17 +199,22 @@ public class OrderResource {
                 if (orderItem.configuration.has("generatedSvg")) {
                     String svgContent = orderItem.configuration.get("generatedSvg").asText();
                     if (svgContent != null && !svgContent.isEmpty()) {
-                        LOG.debugf("Found SVG in configuration.generatedSvg for item %d", orderItem.id);
+                        LOG.infof("Found SVG in configuration.generatedSvg for item %s (%d chars)", 
+                                  orderItem.id, svgContent.length());
                         return svgContent;
                     }
                 }
+                
+                LOG.warnf("Configuration exists but no SVG content found in svgContent or generatedSvg fields");
             } catch (Exception e) {
-                LOG.warnf("Error extracting SVG from configuration for item %d: %s", 
-                          orderItem.id, e.getMessage());
+                LOG.errorf(e, "Error extracting SVG from configuration for item %s: %s", 
+                           orderItem.id, e.getMessage());
             }
+        } else {
+            LOG.warnf("Item %s has no configuration", orderItem.id);
         }
 
-        LOG.warnf("No SVG content found for order item %d", orderItem.id);
+        LOG.errorf("No SVG content found for order item %s", orderItem.id);
         return null;
     }
 
