@@ -16,6 +16,7 @@ import villagecompute.calendar.services.OrderService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jboss.logging.Logger;
+import java.util.UUID;
 
 /**
  * REST endpoint for secure order-related operations
@@ -49,11 +50,11 @@ public class OrderResource {
     @Produces("application/pdf")
     public Response downloadOrderItemPDF(
             @PathParam("orderNumber") String orderNumber,
-            @PathParam("itemId") Long itemId,
+            @PathParam("itemId") UUID itemId,
             @Context SecurityContext securityContext) {
 
         try {
-            LOG.infof("PDF download request for order %s, item %d", orderNumber, itemId);
+            LOG.infof("PDF download request for order %s, item %s", orderNumber, itemId);
 
             // Find the order by order number
             CalendarOrder order = orderService.findByOrderNumber(orderNumber);
@@ -71,12 +72,10 @@ public class OrderResource {
                 LOG.infof("  Item ID: %s, ProductType: %s", item.id, item.productType);
             }
 
-            // Find the specific order item (handle both UUID and string formats)
+            // Find the specific order item
             CalendarOrderItem orderItem = null;
-            String itemIdStr = itemId.toString();
-            
             for (CalendarOrderItem item : order.items) {
-                if (item.id.equals(itemId) || item.id.toString().equals(itemIdStr)) {
+                if (item.id.equals(itemId)) {
                     orderItem = item;
                     LOG.infof("Found matching item: %s", item.id);
                     break;
@@ -110,7 +109,7 @@ public class OrderResource {
             // Extract SVG content from the order item configuration
             String svgContent = extractSvgFromOrderItem(orderItem);
             if (svgContent == null || svgContent.isEmpty()) {
-                LOG.warnf("No SVG content found for order item %d", itemId);
+                LOG.warnf("No SVG content found for order item %s", itemId);
                 return Response.status(Response.Status.BAD_REQUEST)
                     .type(MediaType.TEXT_PLAIN)
                     .entity("No calendar content found for this item")
@@ -125,14 +124,14 @@ public class OrderResource {
             byte[] pdf = pdfRenderingService.renderSVGToPDF(svgContent, year);
 
             if (pdf == null || pdf.length == 0) {
-                LOG.errorf("PDF generation failed for order item %d", itemId);
+                LOG.errorf("PDF generation failed for order item %s", itemId);
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .type(MediaType.TEXT_PLAIN)
                     .entity("Failed to generate PDF")
                     .build();
             }
 
-            LOG.infof("PDF generated successfully for order %s, item %d: %d bytes", 
+            LOG.infof("PDF generated successfully for order %s, item %s: %d bytes",
                       orderNumber, itemId, pdf.length);
 
             // Create filename: calendar-ORDER123-customer-2025.pdf
@@ -149,7 +148,7 @@ public class OrderResource {
                 .build();
 
         } catch (Exception e) {
-            LOG.errorf(e, "Error generating PDF for order %s, item %d", orderNumber, itemId);
+            LOG.errorf(e, "Error generating PDF for order %s, item %s", orderNumber, itemId);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .type(MediaType.TEXT_PLAIN)
                 .entity("PDF generation failed: " + e.getMessage())
