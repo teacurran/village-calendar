@@ -223,19 +223,20 @@ public class EmojiSvgService {
 
         // Noto Emoji SVGs are typically 128x128 viewBox
         // We embed as a nested <svg> element with proper positioning and scaling
+        // Include xlink namespace for SVGs that use xlink:href attributes
         if (monochrome) {
             // Apply grayscale filter for monochrome mode
             // Using a unique filter ID based on position to avoid conflicts
             String filterId = String.format("grayscale_%.0f_%.0f", x, y);
             return String.format(
-                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"0 0 128 128\" overflow=\"visible\">" +
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"0 0 128 128\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
                 "<defs><filter id=\"%s\"><feColorMatrix type=\"saturate\" values=\"0\"/></filter></defs>" +
                 "<g filter=\"url(#%s)\">%s</g></svg>",
                 x, y, size, size, filterId, filterId, innerContent
             );
         } else {
             return String.format(
-                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"0 0 128 128\" overflow=\"visible\">%s</svg>",
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"0 0 128 128\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">%s</svg>",
                 x, y, size, size, innerContent
             );
         }
