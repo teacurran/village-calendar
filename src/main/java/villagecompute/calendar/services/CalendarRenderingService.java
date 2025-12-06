@@ -169,12 +169,15 @@ public class CalendarRenderingService {
    * @return SVG element string (either <svg> or <text>)
    */
   private String renderEmoji(String emoji, double x, double y, int size, CalendarConfig config, boolean centered) {
+    // Check if monochrome mode is enabled
+    boolean isMonochrome = "noto-mono".equals(config.emojiFont);
+
     // Try to use SVG rendering for better PDF compatibility
     if (emojiSvgService != null && emojiSvgService.hasEmojiSvg(emoji)) {
       // For SVG, x/y is top-left corner, so adjust if centered
       double svgX = centered ? x - size / 2.0 : x;
       double svgY = centered ? y - size / 2.0 : y - size; // text y is baseline, svg y is top
-      return emojiSvgService.getEmojiAsSvg(emoji, svgX, svgY, size);
+      return emojiSvgService.getEmojiAsSvg(emoji, svgX, svgY, size, isMonochrome);
     }
 
     // Fall back to text rendering with emoji font

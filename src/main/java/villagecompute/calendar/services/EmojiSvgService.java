@@ -163,6 +163,20 @@ public class EmojiSvgService {
      * @return SVG element string, or null if emoji SVG not available
      */
     public String getEmojiAsSvg(String emoji, double x, double y, double size) {
+        return getEmojiAsSvg(emoji, x, y, size, false);
+    }
+
+    /**
+     * Get the SVG representation of an emoji as an embeddable SVG element.
+     *
+     * @param emoji      The emoji character(s)
+     * @param x          X position
+     * @param y          Y position
+     * @param size       Size (width and height) in pixels
+     * @param monochrome If true, apply grayscale filter for black & white rendering
+     * @return SVG element string, or null if emoji SVG not available
+     */
+    public String getEmojiAsSvg(String emoji, double x, double y, double size, boolean monochrome) {
         String normalized = normalizeEmoji(emoji);
         String innerContent = emojiSvgCache.get(normalized);
 
@@ -172,10 +186,22 @@ public class EmojiSvgService {
 
         // Noto Emoji SVGs are typically 128x128 viewBox
         // We embed as a nested <svg> element with proper positioning and scaling
-        return String.format(
-            "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"0 0 128 128\" overflow=\"visible\">%s</svg>",
-            x, y, size, size, innerContent
-        );
+        if (monochrome) {
+            // Apply grayscale filter for monochrome mode
+            // Using a unique filter ID based on position to avoid conflicts
+            String filterId = String.format("grayscale_%.0f_%.0f", x, y);
+            return String.format(
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"0 0 128 128\" overflow=\"visible\">" +
+                "<defs><filter id=\"%s\"><feColorMatrix type=\"saturate\" values=\"0\"/></filter></defs>" +
+                "<g filter=\"url(#%s)\">%s</g></svg>",
+                x, y, size, size, filterId, filterId, innerContent
+            );
+        } else {
+            return String.format(
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"0 0 128 128\" overflow=\"visible\">%s</svg>",
+                x, y, size, size, innerContent
+            );
+        }
     }
 
     /**
