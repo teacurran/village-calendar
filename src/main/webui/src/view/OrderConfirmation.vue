@@ -69,6 +69,7 @@ onMounted(async () => {
     // Try to get order data from session first (direct checkout flow)
     const orderData = sessionStorage.getItem("lastOrder");
     const pendingOrderInfo = sessionStorage.getItem("pendingOrderInfo");
+    const orderId = route.params.orderId as string;
 
     if (orderData) {
       // Direct flow - order info stored after payment in Checkout.vue
@@ -77,15 +78,13 @@ onMounted(async () => {
     } else if (pendingOrderInfo) {
       // Redirect flow - restore pending order info saved before Stripe redirect
       const pendingOrder = JSON.parse(pendingOrderInfo);
-      const orderId = route.params.orderId as string;
       order.value = {
         orderNumber: orderId,
         ...pendingOrder,
       };
       sessionStorage.removeItem("pendingOrderInfo");
-    } else if (route.params.orderId) {
+    } else if (orderId) {
       // Fetch from backend if no session data
-      const orderId = route.params.orderId as string;
       const fetchedOrder = await fetchOrderFromBackend(orderId);
       if (fetchedOrder) {
         order.value = fetchedOrder;
@@ -96,6 +95,15 @@ onMounted(async () => {
       // Redirect if no order data available
       router.push({ name: "templates" });
       return;
+    }
+
+    // Always fetch order items from backend to get correct database IDs for PDF downloads
+    // Session storage has frontend cart IDs which don't match database order item IDs
+    if (orderId) {
+      const backendOrder = await fetchOrderFromBackend(orderId);
+      if (backendOrder?.items) {
+        order.value.items = backendOrder.items;
+      }
     }
 
     // Calculate estimated delivery
