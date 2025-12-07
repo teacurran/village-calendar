@@ -127,7 +127,7 @@ public class CalendarRenderingService {
     // Jewish
     MONOCHROME_EMOJI_SUBSTITUTIONS.put("🕎", "✡️");      // Menorah -> Star of David
     // Mexican
-    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🎖️", "⚔️");     // Military Medal -> Crossed Swords
+    MONOCHROME_EMOJI_SUBSTITUTIONS.put("🎖️", "⭐");      // Military Medal -> Star
     // Hindu
     MONOCHROME_EMOJI_SUBSTITUTIONS.put("🪁", "☀️");      // Kite -> Sun (Makar Sankranti)
     MONOCHROME_EMOJI_SUBSTITUTIONS.put("🪈", "🎵");      // Flute -> Music Note (Janmashtami)
@@ -644,7 +644,8 @@ public class CalendarRenderingService {
         }
 
         // Custom emoji with enhanced positioning
-        if (!customEmoji.isEmpty()) {
+        // Skip if holiday emoji already rendered for this date to avoid duplicates
+        if (!customEmoji.isEmpty() && holidayEmoji.isEmpty()) {
           if (eventDisplay != null) {
             // Use custom display settings
             double emojiX = cellX + (cellWidth * eventDisplay.getEmojiX(50) / 100.0);
@@ -1009,8 +1010,8 @@ public class CalendarRenderingService {
           }
         }
 
-        // Custom emoji
-        if (isCustomDate && config.customDates.get(dateStr) != null) {
+        // Custom emoji - skip if holiday emoji already rendered to avoid duplicates
+        if (isCustomDate && config.customDates.get(dateStr) != null && holidayEmoji.isEmpty()) {
           Object customDataObj = config.customDates.get(dateStr);
           String emoji = "📅";
           if (customDataObj instanceof Map) {
