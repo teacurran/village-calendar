@@ -232,6 +232,38 @@ public class OrderGraphQL {
     }
 
     /**
+     * Get a single order by order number (e.g., "VC-MB2B-UN2Z").
+     * This is a public query for order confirmation pages - no auth required.
+     * Only returns order if found (does not expose order existence to unauthorized users).
+     *
+     * @param orderNumber Order number (e.g., "VC-MB2B-UN2Z")
+     * @return Order if found
+     */
+    @Query("orderByNumber")
+    @Description("Get a single order by order number. Used for order confirmation pages.")
+    public CalendarOrder orderByNumber(
+        @Name("orderNumber")
+        @Description("Order number (e.g., VC-MB2B-UN2Z)")
+        @NonNull
+        String orderNumber
+    ) {
+        LOG.infof("Query: orderByNumber(orderNumber=%s)", orderNumber);
+
+        // Find order by order number
+        CalendarOrder order = CalendarOrder.findByOrderNumber(orderNumber).firstResult();
+
+        if (order == null) {
+            LOG.warnf("Order not found by number: %s", orderNumber);
+            return null;
+        }
+
+        LOG.infof("Found order %s (id=%s) with %d items", orderNumber, order.id,
+            order.items != null ? order.items.size() : 0);
+
+        return order;
+    }
+
+    /**
      * Get all orders across all users (admin only).
      * Supports optional status filter and result limit.
      *
