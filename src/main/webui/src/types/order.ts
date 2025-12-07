@@ -22,12 +22,29 @@ export interface ShippingAddress {
   country: string;
 }
 
+export interface CalendarOrderItem {
+  id: string;
+  productType: string;
+  productName?: string;
+  calendarYear?: number;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  itemStatus?: string;
+  configuration?: any;
+}
+
 export interface CalendarOrder {
   id: string;
+  orderNumber?: string;
+  customerEmail?: string;
   status: OrderStatus;
   quantity: number;
   unitPrice: number; // BigDecimal
   totalPrice: number; // BigDecimal
+  subtotal?: number;
+  shippingCost?: number;
+  taxAmount?: number;
   shippingAddress: ShippingAddress;
   notes?: string;
   trackingNumber?: string;
@@ -38,12 +55,14 @@ export interface CalendarOrder {
   paidAt?: string; // DateTime
   shippedAt?: string; // DateTime
   deliveredAt?: string; // DateTime
-  calendar: {
+  items?: CalendarOrderItem[];
+  calendar?: {
     id: string;
     name: string;
     year: number;
+    generatedSvg?: string;
   };
-  user: {
+  user?: {
     id: string;
     email: string;
     displayName?: string;

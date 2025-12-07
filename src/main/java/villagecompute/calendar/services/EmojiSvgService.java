@@ -16,6 +16,8 @@ import java.util.stream.Collectors;
  * Service for converting emoji characters to inline SVG graphics.
  * Uses Noto Emoji SVG files (Apache 2.0 licensed) for vector rendering.
  * This ensures emojis render correctly in PDFs without font dependencies.
+ *
+ * Supports both color (Noto Color Emoji) and monochrome (Noto Emoji) variants.
  */
 @ApplicationScoped
 public class EmojiSvgService {
@@ -23,7 +25,16 @@ public class EmojiSvgService {
     private static final Logger LOG = Logger.getLogger(EmojiSvgService.class);
 
     // Map from emoji character to SVG content (inner content only, no outer <svg> wrapper)
-    private final Map<String, String> emojiSvgCache = new HashMap<>();
+    // Color SVGs from emoji-svg/ folder
+    private final Map<String, String> colorSvgCache = new HashMap<>();
+    private final Map<String, String> colorViewBoxCache = new HashMap<>();
+
+    // Monochrome SVGs from emoji-svg-mono/ folder
+    private final Map<String, String> monoSvgCache = new HashMap<>();
+    private final Map<String, String> monoViewBoxCache = new HashMap<>();
+
+    // Default viewBox for most emojis
+    private static final String DEFAULT_VIEWBOX = "0 0 128 128";
 
     // Map from emoji to Noto Emoji filename (without .svg extension)
     // Noto Emoji files are named: emoji_u{codepoint}.svg or emoji_u{cp1}_u{cp2}.svg for ZWJ sequences
@@ -36,6 +47,7 @@ public class EmojiSvgService {
         EMOJI_TO_FILENAME.put("☘️", "emoji_u2618");   // Shamrock (St. Patrick's)
         EMOJI_TO_FILENAME.put("🐰", "emoji_u1f430");  // Rabbit (Easter)
         EMOJI_TO_FILENAME.put("🇺🇸", "emoji_u1f1fa_1f1f8"); // US Flag (July 4th, Veterans Day)
+        EMOJI_TO_FILENAME.put("👷", "emoji_u1f477");  // Construction Worker (Labor Day)
         EMOJI_TO_FILENAME.put("🦃", "emoji_u1f983");  // Turkey (Thanksgiving)
         EMOJI_TO_FILENAME.put("🎃", "emoji_u1f383");  // Jack-o-lantern (Halloween)
         EMOJI_TO_FILENAME.put("💀", "emoji_u1f480");  // Skull (Halloween/Day of Dead)
@@ -121,32 +133,54 @@ public class EmojiSvgService {
     @PostConstruct
     void init() {
         LOG.info("Initializing EmojiSvgService - loading emoji SVGs from resources");
-        int loaded = 0;
-        int failed = 0;
+        int colorLoaded = 0;
+        int monoLoaded = 0;
+        int colorFailed = 0;
+        int monoFailed = 0;
 
         for (Map.Entry<String, String> entry : EMOJI_TO_FILENAME.entrySet()) {
             String emoji = entry.getKey();
-            String filename = entry.getValue();
-            String svgContent = loadSvgFromResources(filename);
-            if (svgContent != null) {
-                // Normalize the emoji key when storing in cache to match lookup behavior
-                emojiSvgCache.put(normalizeEmoji(emoji), svgContent);
-                loaded++;
+            String colorFilename = entry.getValue();
+            // Mono files use different naming: emoji_uXXXX.svg -> uXXXX.svg
+            String monoFilename = colorFilename.replace("emoji_", "");
+
+            // Load color SVG
+            String[] colorResult = loadSvgFromResources("emoji-svg/" + colorFilename + ".svg");
+            if (colorResult != null) {
+                String normalizedEmoji = normalizeEmoji(emoji);
+                colorSvgCache.put(normalizedEmoji, colorResult[0]);
+                colorViewBoxCache.put(normalizedEmoji, colorResult[1]);
+                colorLoaded++;
             } else {
-                failed++;
-                LOG.debugf("SVG not found for emoji %s (file: %s.svg)", emoji, filename);
+                colorFailed++;
+                LOG.debugf("Color SVG not found for emoji %s (file: %s.svg)", emoji, colorFilename);
+            }
+
+            // Load monochrome SVG
+            String[] monoResult = loadSvgFromResources("emoji-svg-mono/" + monoFilename + ".svg");
+            if (monoResult != null) {
+                String normalizedEmoji = normalizeEmoji(emoji);
+                monoSvgCache.put(normalizedEmoji, monoResult[0]);
+                monoViewBoxCache.put(normalizedEmoji, monoResult[1]);
+                monoLoaded++;
+            } else {
+                monoFailed++;
+                LOG.debugf("Mono SVG not found for emoji %s (file: %s.svg)", emoji, monoFilename);
             }
         }
 
-        LOG.infof("EmojiSvgService initialized: %d emojis loaded, %d not found", loaded, failed);
+        LOG.infof("EmojiSvgService initialized: color=%d/%d, mono=%d/%d",
+                  colorLoaded, colorLoaded + colorFailed, monoLoaded, monoLoaded + monoFailed);
     }
 
     /**
      * Load SVG content from resources folder.
-     * Returns the inner content of the SVG (everything inside the root <svg> element).
+     * Returns an array with [innerContent, viewBox] or null if not found.
+     *
+     * @param resourcePath Full resource path (e.g., "emoji-svg/emoji_u1f384.svg")
+     * @return String array with [innerContent, viewBox] or null
      */
-    private String loadSvgFromResources(String filename) {
-        String resourcePath = "emoji-svg/" + filename + ".svg";
+    private String[] loadSvgFromResources(String resourcePath) {
         try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
             if (is == null) {
                 return null;
@@ -155,12 +189,29 @@ public class EmojiSvgService {
                 .lines()
                 .collect(Collectors.joining("\n"));
 
+            // Extract viewBox from the SVG
+            String viewBox = extractViewBox(fullSvg);
+
             // Extract the inner content (we'll wrap it in our own <svg> or <g> when embedding)
-            return extractSvgInnerContent(fullSvg);
+            String innerContent = extractSvgInnerContent(fullSvg);
+
+            return new String[] { innerContent, viewBox };
         } catch (Exception e) {
-            LOG.warnf("Error loading emoji SVG %s: %s", filename, e.getMessage());
+            LOG.warnf("Error loading emoji SVG %s: %s", resourcePath, e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Extract viewBox attribute from SVG element.
+     */
+    private String extractViewBox(String fullSvg) {
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("viewBox=\"([^\"]+)\"");
+        java.util.regex.Matcher matcher = pattern.matcher(fullSvg);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return DEFAULT_VIEWBOX;
     }
 
     /**
@@ -185,9 +236,22 @@ public class EmojiSvgService {
 
     /**
      * Check if an emoji has an SVG representation available.
+     * Returns true if either color or mono SVG is available.
      */
     public boolean hasEmojiSvg(String emoji) {
-        return emojiSvgCache.containsKey(normalizeEmoji(emoji));
+        String normalized = normalizeEmoji(emoji);
+        return colorSvgCache.containsKey(normalized) || monoSvgCache.containsKey(normalized);
+    }
+
+    /**
+     * Check if an emoji has a specific variant (color or mono) available.
+     */
+    public boolean hasEmojiSvg(String emoji, boolean monochrome) {
+        String normalized = normalizeEmoji(emoji);
+        if (monochrome) {
+            return monoSvgCache.containsKey(normalized);
+        }
+        return colorSvgCache.containsKey(normalized);
     }
 
     /**
@@ -210,12 +274,33 @@ public class EmojiSvgService {
      * @param x          X position
      * @param y          Y position
      * @param size       Size (width and height) in pixels
-     * @param monochrome If true, apply grayscale filter for black & white rendering
+     * @param monochrome If true, use monochrome SVG variant (or fall back to grayscale filter)
      * @return SVG element string, or null if emoji SVG not available
      */
     public String getEmojiAsSvg(String emoji, double x, double y, double size, boolean monochrome) {
         String normalized = normalizeEmoji(emoji);
-        String innerContent = emojiSvgCache.get(normalized);
+
+        // Choose the appropriate cache
+        String innerContent = null;
+        String viewBox = DEFAULT_VIEWBOX;
+        boolean usingMonoSvg = false;
+
+        if (monochrome) {
+            // Try monochrome SVG first
+            innerContent = monoSvgCache.get(normalized);
+            if (innerContent != null) {
+                usingMonoSvg = true;
+                viewBox = monoViewBoxCache.getOrDefault(normalized, DEFAULT_VIEWBOX);
+            } else {
+                // Fall back to color SVG with grayscale filter
+                innerContent = colorSvgCache.get(normalized);
+                viewBox = colorViewBoxCache.getOrDefault(normalized, DEFAULT_VIEWBOX);
+            }
+        } else {
+            // Use color SVG
+            innerContent = colorSvgCache.get(normalized);
+            viewBox = colorViewBoxCache.getOrDefault(normalized, DEFAULT_VIEWBOX);
+        }
 
         if (innerContent == null) {
             return null;
@@ -225,23 +310,23 @@ public class EmojiSvgService {
         String uniquePrefix = String.format("e%.0f_%.0f_", x, y);
         innerContent = makeIdsUnique(innerContent, uniquePrefix);
 
-        // Noto Emoji SVGs are typically 128x128 viewBox
+        // Use the correct viewBox from the original SVG
         // We embed as a nested <svg> element with proper positioning and scaling
         // Include xlink namespace for SVGs that use xlink:href attributes
-        if (monochrome) {
-            // Apply grayscale filter for monochrome mode
-            // Using a unique filter ID based on position to avoid conflicts
+        if (monochrome && !usingMonoSvg) {
+            // Fall back to grayscale filter for color SVG (when mono SVG not available)
             String filterId = uniquePrefix + "grayscale";
             return String.format(
-                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"0 0 128 128\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
                 "<defs><filter id=\"%s\"><feColorMatrix type=\"saturate\" values=\"0\"/></filter></defs>" +
                 "<g filter=\"url(#%s)\">%s</g></svg>",
-                x, y, size, size, filterId, filterId, innerContent
+                x, y, size, size, viewBox, filterId, filterId, innerContent
             );
         } else {
+            // Use SVG directly (either color or true mono)
             return String.format(
-                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"0 0 128 128\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">%s</svg>",
-                x, y, size, size, innerContent
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">%s</svg>",
+                x, y, size, size, viewBox, innerContent
             );
         }
     }
@@ -290,8 +375,12 @@ public class EmojiSvgService {
 
     /**
      * Get all available emoji characters that have SVG representations.
+     * Returns emojis from both color and mono caches.
      */
     public java.util.Set<String> getAvailableEmojis() {
-        return emojiSvgCache.keySet();
+        java.util.Set<String> all = new java.util.HashSet<>();
+        all.addAll(colorSvgCache.keySet());
+        all.addAll(monoSvgCache.keySet());
+        return all;
     }
 }

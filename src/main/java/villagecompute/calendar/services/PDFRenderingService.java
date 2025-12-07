@@ -169,20 +169,22 @@ public class PDFRenderingService {
      * Fix CSS URI references that cause "invalid URI" errors in Batik.
      * The main issue is with the base URI resolution causing problems with internal ID references.
      *
+     * IMPORTANT: Only clip-path can use bare #id syntax. Other properties like filter, fill, stroke
+     * require the url(#id) syntax and should NOT be modified.
+     *
      * @param svgContent Original SVG content
      * @return Fixed SVG content
      */
     private String fixCSSUriReferences(String svgContent) {
         if (svgContent.contains("url(#")) {
-            LOG.debug("SVG contains CSS URI references - fixing paint and path properties");
-            
-            // The issue affects multiple CSS properties that use url(#id) syntax:
-            // clip-path, fill, stroke, filter, mask, marker-start, marker-mid, marker-end
-            // Batik tries to resolve these as external URIs which fails
-            
+            LOG.debug("SVG contains CSS URI references - fixing clip-path properties only");
+
+            // ONLY clip-path needs fixing - it can use bare #id syntax
+            // Other properties (filter, fill, stroke, mask, markers) MUST keep url(#id) syntax
+            // Modifying filter="url(#id)" to filter="#id" breaks the filter completely!
+
             String[] cssProperties = {
-                "clip-path", "fill", "stroke", "filter", "mask", 
-                "marker-start", "marker-mid", "marker-end"
+                "clip-path"
             };
             
             for (String property : cssProperties) {

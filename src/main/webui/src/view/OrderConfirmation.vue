@@ -99,8 +99,10 @@ onMounted(async () => {
 
     // Always fetch order items from backend to get correct database IDs for PDF downloads
     // Session storage has frontend cart IDs which don't match database order item IDs
-    if (orderId) {
-      const backendOrder = await fetchOrderFromBackend(orderId);
+    // Use order number from parsed order data OR route params
+    const orderNumberToFetch = order.value.orderNumber || orderId;
+    if (orderNumberToFetch) {
+      const backendOrder = await fetchOrderFromBackend(orderNumberToFetch);
       if (backendOrder?.items) {
         order.value.items = backendOrder.items;
       }

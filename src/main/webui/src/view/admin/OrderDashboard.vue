@@ -129,6 +129,14 @@ function openDetails(order: CalendarOrder) {
 }
 
 /**
+ * Get first PDF item from order for download
+ */
+function getFirstPdfItem(order: CalendarOrder | null): any | null {
+  if (!order?.items || order.items.length === 0) return null;
+  return order.items.find((item) => item.productType === "PDF") || order.items[0];
+}
+
+/**
  * Get calendar SVG content from order
  * Checks calendar.generatedSvg first, then item configurations
  */
@@ -211,22 +219,9 @@ function getCustomerNameForFilename(order: CalendarOrder): string {
 /**
  * Download PDF for specific order item using secure backend endpoint
  */
-async function downloadPdf(order: CalendarOrder) {
-  // Find the first calendar item in the order
-  const calendarItem = order.items?.find(item => item.configuration && 
-    (item.configuration.svgContent || item.configuration.generatedSvg || item.calendar));
-  
-  if (!calendarItem) {
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: "No calendar item found in this order",
-      life: 3000,
-    });
-    return;
-  }
-
+async function downloadPdf(order: CalendarOrder, item: any) {
   const orderNumber = order.orderNumber;
+  const itemId = item?.id;
   if (!orderNumber) {
     toast.add({
       severity: "error",
@@ -236,10 +231,19 @@ async function downloadPdf(order: CalendarOrder) {
     });
     return;
   }
+  if (!itemId) {
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "Item ID not available",
+      life: 3000,
+    });
+    return;
+  }
 
   try {
     // Use secure order-based PDF download endpoint
-    const response = await fetch(`/api/orders/${orderNumber}/items/${calendarItem.id}/pdf`, {
+    const response = await fetch(`/api/orders/${orderNumber}/items/${itemId}/pdf`, {
       method: "GET",
       headers: {
         Accept: "application/pdf",
@@ -252,7 +256,7 @@ async function downloadPdf(order: CalendarOrder) {
 
     // Get filename from backend response headers
     const contentDisposition = response.headers.get("Content-Disposition");
-    let filename = `calendar-${orderNumber}-item${calendarItem.id}.pdf`;
+    let filename = `calendar-${orderNumber}-item${itemId}.pdf`;
     if (contentDisposition) {
       const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
       if (filenameMatch) {
@@ -282,19 +286,9 @@ async function downloadPdf(order: CalendarOrder) {
     toast.add({
       severity: "error",
       summary: "Error",
-      detail: "Failed to generate PDF. Downloading as SVG instead.",
+      detail: "Failed to generate PDF. Please try again.",
       life: 3000,
     });
-    // Fallback: download as SVG
-    const blob = new Blob([svg], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename.replace(".pdf", ".svg");
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   }
 }
 
@@ -637,15 +631,6 @@ onMounted(async () => {
               severity="secondary"
               @click="openUpdateStatus(data)"
             />
-            <Button
-              v-if="getCalendarSvg(data)"
-              v-tooltip.top="'Download PDF'"
-              icon="pi pi-download"
-              size="small"
-              text
-              severity="success"
-              @click="downloadPdf(data)"
-            />
           </div>
         </template>
       </Column>
@@ -876,11 +861,11 @@ onMounted(async () => {
                   @click="showCalendarPreview(viewingOrder)"
                 />
                 <Button
-                  v-if="getCalendarSvg(viewingOrder)"
+                  v-if="getFirstPdfItem(viewingOrder)"
                   label="Download PDF"
                   icon="pi pi-download"
                   size="small"
-                  @click="downloadPdf(viewingOrder)"
+                  @click="downloadPdf(viewingOrder, getFirstPdfItem(viewingOrder))"
                 />
               </div>
             </div>
@@ -972,6 +957,14 @@ onMounted(async () => {
               <span class="font-semibold">{{
                 formatCurrency(item.lineTotal)
               }}</span>
+              <Button
+                v-tooltip.top="'Download PDF'"
+                icon="pi pi-download"
+                size="small"
+                text
+                severity="success"
+                @click="downloadPdf(viewingOrder, item)"
+              />
             </div>
           </div>
           <div
@@ -1039,12 +1032,6 @@ onMounted(async () => {
           icon="pi pi-times"
           class="p-button-text"
           @click="detailsDialog = false"
-        />
-        <Button
-          v-if="viewingOrder && getCalendarSvg(viewingOrder)"
-          label="Download PDF"
-          icon="pi pi-download"
-          @click="downloadPdf(viewingOrder)"
         />
       </template>
     </Dialog>
