@@ -42,7 +42,8 @@ public class EmojiSvgService {
 
     static {
         // US Holidays
-        EMOJI_TO_FILENAME.put("🎆", "emoji_u1f386");  // Fireworks (New Year, July 4th)
+        EMOJI_TO_FILENAME.put("🎆", "emoji_u1f386");  // Fireworks
+        EMOJI_TO_FILENAME.put("🏛️", "emoji_u1f3db");  // Classical Building (Presidents' Day)
         EMOJI_TO_FILENAME.put("❤️", "emoji_u2764");   // Red Heart (Valentine's)
         EMOJI_TO_FILENAME.put("☘️", "emoji_u2618");   // Shamrock (St. Patrick's)
         EMOJI_TO_FILENAME.put("🐰", "emoji_u1f430");  // Rabbit (Easter)
@@ -53,6 +54,12 @@ public class EmojiSvgService {
         EMOJI_TO_FILENAME.put("💀", "emoji_u1f480");  // Skull (Halloween/Day of Dead)
         EMOJI_TO_FILENAME.put("🎄", "emoji_u1f384");  // Christmas Tree
         EMOJI_TO_FILENAME.put("🎁", "emoji_u1f381");  // Gift (Christmas)
+
+        // Christian Holidays
+        EMOJI_TO_FILENAME.put("🐟", "emoji_u1f41f");  // Fish (Good Friday)
+        EMOJI_TO_FILENAME.put("✝️", "emoji_u271d");   // Latin Cross (Ash Wednesday)
+        EMOJI_TO_FILENAME.put("☁️", "emoji_u2601");   // Cloud (Ascension Day)
+        EMOJI_TO_FILENAME.put("👼", "emoji_u1f47c");  // Baby Angel (All Saints Day)
 
         // Jewish Holidays
         EMOJI_TO_FILENAME.put("✡️", "emoji_u2721");   // Star of David
@@ -114,6 +121,13 @@ public class EmojiSvgService {
         EMOJI_TO_FILENAME.put("🌮", "emoji_u1f32e");  // Taco (Cinco de Mayo alternate)
         EMOJI_TO_FILENAME.put("💃", "emoji_u1f483");  // Woman Dancing
 
+        // Canadian Holidays
+        EMOJI_TO_FILENAME.put("🍁", "emoji_u1f341");  // Maple Leaf (Canada Day)
+        EMOJI_TO_FILENAME.put("👨‍👩‍👧‍👦", "emoji_u1f468_200d_1f469_200d_1f467_200d_1f466"); // Family (Family Day)
+
+        // UK Holidays
+        EMOJI_TO_FILENAME.put("🌷", "emoji_u1f337");  // Tulip (Spring Bank Holiday)
+
         // Various Holidays
         EMOJI_TO_FILENAME.put("✨", "emoji_u2728");   // Sparkles
         EMOJI_TO_FILENAME.put("🌹", "emoji_u1f339");  // Rose (Valentine's alternate)
@@ -123,7 +137,7 @@ public class EmojiSvgService {
         EMOJI_TO_FILENAME.put("🎨", "emoji_u1f3a8");  // Artist Palette
         EMOJI_TO_FILENAME.put("🏹", "emoji_u1f3f9");  // Bow and Arrow
         EMOJI_TO_FILENAME.put("🐉", "emoji_u1f409");  // Dragon (Chinese New Year)
-        EMOJI_TO_FILENAME.put("🐑", "emoji_u1f411");  // Sheep/Ram (Eid)
+        EMOJI_TO_FILENAME.put("🐑", "emoji_u1f411");  // Sheep/Ram (Eid, Easter)
         EMOJI_TO_FILENAME.put("🐘", "emoji_u1f418");  // Elephant (Diwali/Hindu)
         EMOJI_TO_FILENAME.put("🦅", "emoji_u1f985");  // Eagle (July 4th alternate)
         EMOJI_TO_FILENAME.put("🛒", "emoji_u1f6d2");  // Shopping Cart (Black Friday)

@@ -1859,18 +1859,18 @@ public class CalendarRenderingService {
 
     if ("US".equals(country)) {
       // US Holidays with emojis
-      holidayEmojis.put(LocalDate.of(year, 1, 1).toString(), "🎆"); // New Year's Day
+      holidayEmojis.put(LocalDate.of(year, 1, 1).toString(), "🎉"); // New Year's Day
 
       LocalDate mlkDay = getNthWeekdayOfMonth(year, Month.JANUARY, DayOfWeek.MONDAY, 3);
       holidayEmojis.put(mlkDay.toString(), "🕊️"); // MLK Day
 
       LocalDate presidentsDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
-      holidayEmojis.put(presidentsDay.toString(), "🇺🇸"); // Presidents' Day
+      holidayEmojis.put(presidentsDay.toString(), "🏛️"); // Presidents' Day
 
       LocalDate memorialDay = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
       holidayEmojis.put(memorialDay.toString(), "🎖️"); // Memorial Day
 
-      holidayEmojis.put(LocalDate.of(year, 7, 4).toString(), "🎆"); // Independence Day
+      holidayEmojis.put(LocalDate.of(year, 7, 4).toString(), "🇺🇸"); // Independence Day
 
       LocalDate laborDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
       holidayEmojis.put(laborDay.toString(), "👷"); // Labor Day
@@ -1890,23 +1890,23 @@ public class CalendarRenderingService {
 
     } else if ("CHRISTIAN".equals(country)) {
       LocalDate easter = calculateEasterSunday(year);
-      holidayEmojis.put(easter.toString(), "✝️"); // Easter Sunday
-      holidayEmojis.put(easter.minusDays(2).toString(), "✝️"); // Good Friday
+      holidayEmojis.put(easter.toString(), "🐑"); // Easter Sunday (Lamb of God)
+      holidayEmojis.put(easter.minusDays(2).toString(), "🐟"); // Good Friday (Fish)
       holidayEmojis.put(easter.minusDays(7).toString(), "🌿"); // Palm Sunday
       holidayEmojis.put(easter.minusDays(46).toString(), "✝️"); // Ash Wednesday
       holidayEmojis.put(easter.plusDays(39).toString(), "☁️"); // Ascension Day
       holidayEmojis.put(easter.plusDays(49).toString(), "🕊️"); // Pentecost
       holidayEmojis.put(LocalDate.of(year, 12, 25).toString(), "🎄"); // Christmas
-      holidayEmojis.put(LocalDate.of(year, 12, 24).toString(), "🎄"); // Christmas Eve
+      holidayEmojis.put(LocalDate.of(year, 12, 24).toString(), "🕯️"); // Christmas Eve (Candle)
       holidayEmojis.put(LocalDate.of(year, 1, 6).toString(), "⭐"); // Epiphany
       holidayEmojis.put(LocalDate.of(year, 11, 1).toString(), "👼"); // All Saints Day
 
     } else if ("CANADIAN".equals(country)) {
-      holidayEmojis.put(LocalDate.of(year, 1, 1).toString(), "🎆"); // New Year's Day
+      holidayEmojis.put(LocalDate.of(year, 1, 1).toString(), "🎉"); // New Year's Day
       LocalDate familyDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
       holidayEmojis.put(familyDay.toString(), "👨‍👩‍👧‍👦"); // Family Day
       LocalDate easter = calculateEasterSunday(year);
-      holidayEmojis.put(easter.minusDays(2).toString(), "✝️"); // Good Friday
+      holidayEmojis.put(easter.minusDays(2).toString(), "🐟"); // Good Friday (Fish)
       LocalDate victoriaDay = LocalDate.of(year, 5, 25);
       while (victoriaDay.getDayOfWeek() != DayOfWeek.MONDAY) {
         victoriaDay = victoriaDay.minusDays(1);
@@ -1922,9 +1922,9 @@ public class CalendarRenderingService {
       holidayEmojis.put(LocalDate.of(year, 12, 26).toString(), "🎁"); // Boxing Day
 
     } else if ("UK".equals(country)) {
-      holidayEmojis.put(LocalDate.of(year, 1, 1).toString(), "🎆"); // New Year's Day
+      holidayEmojis.put(LocalDate.of(year, 1, 1).toString(), "🎉"); // New Year's Day
       LocalDate easter = calculateEasterSunday(year);
-      holidayEmojis.put(easter.minusDays(2).toString(), "✝️"); // Good Friday
+      holidayEmojis.put(easter.minusDays(2).toString(), "🐟"); // Good Friday (Fish)
       holidayEmojis.put(easter.plusDays(1).toString(), "🐰"); // Easter Monday
       LocalDate earlyMay = getNthWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY, 1);
       holidayEmojis.put(earlyMay.toString(), "🌸"); // Early May Bank Holiday
@@ -1936,7 +1936,7 @@ public class CalendarRenderingService {
       holidayEmojis.put(LocalDate.of(year, 12, 26).toString(), "🎁"); // Boxing Day
 
     } else if ("MAJOR_WORLD".equals(country)) {
-      holidayEmojis.put(LocalDate.of(year, 1, 1).toString(), "🎆"); // New Year's Day
+      holidayEmojis.put(LocalDate.of(year, 1, 1).toString(), "🎉"); // New Year's Day
       holidayEmojis.put(LocalDate.of(year, 2, 14).toString(), "❤️"); // Valentine's Day
       holidayEmojis.put(LocalDate.of(year, 3, 17).toString(), "☘️"); // St. Patrick's Day
       holidayEmojis.put(LocalDate.of(year, 4, 22).toString(), "🌍"); // Earth Day
