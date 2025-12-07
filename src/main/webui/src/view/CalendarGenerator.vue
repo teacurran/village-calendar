@@ -943,7 +943,7 @@ const config = ref({
   emojiPosition: "bottom-left", // Position of emojis in calendar cells
   // Holiday settings
   holidaySets: [] as string[], // List of selected holiday set IDs
-  eventDisplayMode: "small" as "small" | "large", // Display mode for events/holidays
+  eventDisplayMode: "large" as "large" | "large-text" | "small" | "text" | "none", // Display mode for events/holidays
   // Emoji font settings
   emojiFont: "noto-color" as "noto-color" | "noto-mono", // Emoji font style
 });

@@ -21,7 +21,7 @@ It serves as the master reference for emoji selection and SVG availability.
 | New Year's Day | Jan 1 | 🎉 | U+1F389 | ✅ | ✅ | OK |
 | MLK Day | 3rd Mon Jan | 🕊️ | U+1F54A | ✅ | ✅ | OK |
 | Presidents' Day | 3rd Mon Feb | 🏛️ | U+1F3DB | ✅ | ✅ | OK |
-| Memorial Day | Last Mon May | 🎖️ | U+1F396 | ✅ | ✅ | OK |
+| Memorial Day | Last Mon May | 🎖️ | U+1F396 | ✅ | ✅ | OK |it lholid
 | Independence Day | Jul 4 | 🇺🇸 | U+1F1FA_1F1F8 | ✅ | ✅ | OK |
 | Labor Day | 1st Mon Sep | 👷 | U+1F477 | ✅ | ✅ | OK |
 | Halloween | Oct 31 | 🎃 | U+1F383 | ✅ | ✅ | OK |

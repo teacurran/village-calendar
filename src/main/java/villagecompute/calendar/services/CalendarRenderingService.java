@@ -94,8 +94,9 @@ public class CalendarRenderingService {
     public Map<String, String> eventTitles = new HashMap<>(); // date -> title mapping
     public Set<String> holidays = new HashSet<>();
     public Map<String, String> holidayEmojis = new HashMap<>(); // date -> emoji for holidays
+    public Map<String, String> holidayNames = new HashMap<>(); // date -> holiday name for text display
     public List<String> holidaySets = new ArrayList<>(); // List of holiday set IDs to include
-    public String eventDisplayMode = "small"; // "small" or "large" for event/holiday display
+    public String eventDisplayMode = "large"; // "large", "large-text", "small", "text", or "none"
     public String emojiFont = "noto-color"; // "noto-color" (default) or "noto-mono" for monochrome
     public String locale = "en-US";
     public DayOfWeek firstDayOfWeek = DayOfWeek.SUNDAY;
@@ -405,6 +406,9 @@ public class CalendarRenderingService {
         Map<String, String> setHolidayEmojis = getHolidaysWithEmoji(config.year, backendSetName);
         config.holidays.addAll(setHolidayEmojis.keySet());
         config.holidayEmojis.putAll(setHolidayEmojis);
+        // Also get holiday names for text display modes
+        Map<String, String> setHolidayNames = getHolidayNames(config.year, backendSetName);
+        config.holidayNames.putAll(setHolidayNames);
       }
     }
 
@@ -566,6 +570,11 @@ public class CalendarRenderingService {
           // Use X/Y offset settings for precise positioning
           int moonX = cellX + config.moonOffsetX;
           int moonY = cellY + config.moonOffsetY;
+          // Move moon up by 3px when text will be displayed below
+          boolean hasTextBelow = "large-text".equals(config.eventDisplayMode) || "text".equals(config.eventDisplayMode);
+          if (hasTextBelow) {
+            moonY -= 3;
+          }
 
           // For moon phases, only show on phase days
           if (config.showMoonPhases && !isMoonPhaseDay(date)) {
@@ -610,16 +619,18 @@ public class CalendarRenderingService {
           }
         }
 
-        // Holiday emoji (if applicable) - render based on eventDisplayMode
-        // Skip emoji rendering when mode is "none" (color only)
-        if (!holidayEmoji.isEmpty() && !"none".equals(config.eventDisplayMode)) {
-          if ("large".equals(config.eventDisplayMode)) {
-            // Large mode: centered emoji (or lower if moon is displayed)
+        // Holiday emoji/text (if applicable) - render based on eventDisplayMode
+        // Skip rendering when mode is "none" (color only)
+        String holidayName = config.holidayNames.getOrDefault(dateStr, "");
+        boolean isLargeMode = "large".equals(config.eventDisplayMode) || "large-text".equals(config.eventDisplayMode);
+
+        if (!"none".equals(config.eventDisplayMode)) {
+          if (isLargeMode && !holidayEmoji.isEmpty()) {
+            // Large/large-text mode: centered emoji
             int emojiX = cellX + cellWidth / 2;
             int fontSize = Math.max(16, cellHeight / 3);
             int emojiY;
             if (shouldShowMoon) {
-              // When moon is displayed, position emoji halfway between center and bottom
               int centerY = cellY + cellHeight / 2 + 5;
               int bottomY = cellY + cellHeight - fontSize / 2 - 5;
               emojiY = (centerY + bottomY) / 2;
@@ -628,13 +639,26 @@ public class CalendarRenderingService {
             }
             svg.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, true));
             svg.append("\n");
-          } else {
+          } else if ("small".equals(config.eventDisplayMode) && !holidayEmoji.isEmpty()) {
             // Small mode: bottom-left corner
             int emojiX = cellX + 5;
             int emojiY = cellY + cellHeight - 5;
             int fontSize = Math.max(10, cellHeight / 6);
             svg.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, false));
             svg.append("\n");
+          }
+
+          // Holiday name text for large-text and text modes
+          boolean showHolidayText = ("large-text".equals(config.eventDisplayMode) || "text".equals(config.eventDisplayMode))
+              && !holidayName.isEmpty();
+          if (showHolidayText) {
+            int textX = cellX + cellWidth / 2;
+            int textY = cellY + cellHeight - 3;
+            int textSize = Math.max(5, cellWidth / 10);
+            svg.append(String.format(
+              "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\" fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\">%s</text>%n",
+              textX, textY, textSize, config.holidayColor, escapeXml(holidayName)
+            ));
           }
         }
 
@@ -1975,6 +1999,111 @@ public class CalendarRenderingService {
     return holidayEmojis;
   }
 
+  // Get holiday names for text display modes
+  public Map<String, String> getHolidayNames(int year, String country) {
+    Map<String, String> holidayNames = new HashMap<>();
+
+    if ("US".equals(country)) {
+      holidayNames.put(LocalDate.of(year, 1, 1).toString(), "New Year's Day");
+      LocalDate mlkDay = getNthWeekdayOfMonth(year, Month.JANUARY, DayOfWeek.MONDAY, 3);
+      holidayNames.put(mlkDay.toString(), "MLK Day");
+      LocalDate presidentsDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
+      holidayNames.put(presidentsDay.toString(), "Presidents' Day");
+      LocalDate memorialDay = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
+      holidayNames.put(memorialDay.toString(), "Memorial Day");
+      holidayNames.put(LocalDate.of(year, 7, 4).toString(), "Independence Day");
+      LocalDate laborDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
+      holidayNames.put(laborDay.toString(), "Labor Day");
+      holidayNames.put(LocalDate.of(year, 10, 31).toString(), "Halloween");
+      holidayNames.put(LocalDate.of(year, 11, 11).toString(), "Veterans Day");
+      LocalDate thanksgiving = getNthWeekdayOfMonth(year, Month.NOVEMBER, DayOfWeek.THURSDAY, 4);
+      holidayNames.put(thanksgiving.toString(), "Thanksgiving");
+      holidayNames.put(LocalDate.of(year, 12, 25).toString(), "Christmas");
+
+    } else if ("JEWISH".equals(country) || "HEBREW".equals(country)) {
+      holidayNames.putAll(holidayService.getJewishHolidays(year));
+
+    } else if ("CHRISTIAN".equals(country)) {
+      LocalDate easter = calculateEasterSunday(year);
+      holidayNames.put(easter.toString(), "Easter");
+      holidayNames.put(easter.minusDays(2).toString(), "Good Friday");
+      holidayNames.put(easter.minusDays(7).toString(), "Palm Sunday");
+      holidayNames.put(easter.minusDays(46).toString(), "Ash Wednesday");
+      holidayNames.put(easter.plusDays(39).toString(), "Ascension");
+      holidayNames.put(easter.plusDays(49).toString(), "Pentecost");
+      holidayNames.put(LocalDate.of(year, 12, 25).toString(), "Christmas");
+      holidayNames.put(LocalDate.of(year, 12, 24).toString(), "Christmas Eve");
+      holidayNames.put(LocalDate.of(year, 1, 6).toString(), "Epiphany");
+      holidayNames.put(LocalDate.of(year, 11, 1).toString(), "All Saints");
+
+    } else if ("CANADIAN".equals(country)) {
+      holidayNames.put(LocalDate.of(year, 1, 1).toString(), "New Year's Day");
+      LocalDate familyDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
+      holidayNames.put(familyDay.toString(), "Family Day");
+      LocalDate easter = calculateEasterSunday(year);
+      holidayNames.put(easter.minusDays(2).toString(), "Good Friday");
+      LocalDate victoriaDay = LocalDate.of(year, 5, 25);
+      while (victoriaDay.getDayOfWeek() != DayOfWeek.MONDAY) {
+        victoriaDay = victoriaDay.minusDays(1);
+      }
+      holidayNames.put(victoriaDay.toString(), "Victoria Day");
+      holidayNames.put(LocalDate.of(year, 7, 1).toString(), "Canada Day");
+      LocalDate labourDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
+      holidayNames.put(labourDay.toString(), "Labour Day");
+      LocalDate thanksgiving = getNthWeekdayOfMonth(year, Month.OCTOBER, DayOfWeek.MONDAY, 2);
+      holidayNames.put(thanksgiving.toString(), "Thanksgiving");
+      holidayNames.put(LocalDate.of(year, 11, 11).toString(), "Remembrance Day");
+      holidayNames.put(LocalDate.of(year, 12, 25).toString(), "Christmas");
+      holidayNames.put(LocalDate.of(year, 12, 26).toString(), "Boxing Day");
+
+    } else if ("UK".equals(country)) {
+      holidayNames.put(LocalDate.of(year, 1, 1).toString(), "New Year's Day");
+      LocalDate easter = calculateEasterSunday(year);
+      holidayNames.put(easter.minusDays(2).toString(), "Good Friday");
+      holidayNames.put(easter.plusDays(1).toString(), "Easter Monday");
+      LocalDate earlyMay = getNthWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY, 1);
+      holidayNames.put(earlyMay.toString(), "Early May");
+      LocalDate springBank = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
+      holidayNames.put(springBank.toString(), "Spring Bank");
+      LocalDate summerBank = getLastWeekdayOfMonth(year, Month.AUGUST, DayOfWeek.MONDAY);
+      holidayNames.put(summerBank.toString(), "Summer Bank");
+      holidayNames.put(LocalDate.of(year, 12, 25).toString(), "Christmas");
+      holidayNames.put(LocalDate.of(year, 12, 26).toString(), "Boxing Day");
+
+    } else if ("MAJOR_WORLD".equals(country)) {
+      holidayNames.put(LocalDate.of(year, 1, 1).toString(), "New Year's Day");
+      holidayNames.put(LocalDate.of(year, 2, 14).toString(), "Valentine's Day");
+      holidayNames.put(LocalDate.of(year, 3, 17).toString(), "St. Patrick's");
+      holidayNames.put(LocalDate.of(year, 4, 22).toString(), "Earth Day");
+      holidayNames.put(LocalDate.of(year, 5, 1).toString(), "Workers' Day");
+      holidayNames.put(LocalDate.of(year, 10, 31).toString(), "Halloween");
+      holidayNames.put(LocalDate.of(year, 12, 25).toString(), "Christmas");
+      holidayNames.put(LocalDate.of(year, 12, 31).toString(), "New Year's Eve");
+      LocalDate easter = calculateEasterSunday(year);
+      holidayNames.put(easter.toString(), "Easter");
+
+    } else if ("MEXICAN".equals(country)) {
+      holidayNames.putAll(holidayService.getMexicanHolidays(year));
+
+    } else if ("PAGAN".equals(country) || "WICCAN".equals(country)) {
+      holidayNames.putAll(holidayService.getPaganHolidays(year));
+
+    } else if ("HINDU".equals(country)) {
+      holidayNames.putAll(holidayService.getHinduHolidays(year));
+
+    } else if ("ISLAMIC".equals(country) || "MUSLIM".equals(country)) {
+      holidayNames.putAll(holidayService.getIslamicHolidays(year));
+
+    } else if ("CHINESE".equals(country) || "LUNAR".equals(country)) {
+      holidayNames.putAll(holidayService.getChineseHolidays(year));
+
+    } else if ("SECULAR".equals(country) || "FUN".equals(country)) {
+      holidayNames.putAll(holidayService.getSecularHolidays(year));
+    }
+
+    return holidayNames;
+  }
+
   // Calculate Easter Sunday using the Anonymous Gregorian algorithm
   private LocalDate calculateEasterSunday(int year) {
     int a = year % 19;
@@ -2367,5 +2496,18 @@ public class CalendarRenderingService {
     }
 
     return "rgba(255, 255, 255, 0)"; // Transparent
+  }
+
+  /**
+   * Escapes special XML characters in a string.
+   */
+  private String escapeXml(String text) {
+    if (text == null) return "";
+    return text
+      .replace("&", "&amp;")
+      .replace("<", "&lt;")
+      .replace(">", "&gt;")
+      .replace("\"", "&quot;")
+      .replace("'", "&apos;");
   }
 }
