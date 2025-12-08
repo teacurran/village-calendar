@@ -42,14 +42,14 @@ public class CalendarRenderingService {
   // ===========================================
   // Page size for printing
   public static final float PAGE_WIDTH_INCHES = 35f;
-  public static final float PAGE_HEIGHT_INCHES = 22.5f;
+  public static final float PAGE_HEIGHT_INCHES = 23f;
 
   // Margin on all sides - change this value to adjust margins (e.g., 1.0f for 1 inch)
   public static final float MARGIN_INCHES = 0.5f;
 
   // Printable area (calculated from page size minus margins)
   public static final float PRINTABLE_WIDTH_INCHES = PAGE_WIDTH_INCHES - (2 * MARGIN_INCHES);   // 34"
-  public static final float PRINTABLE_HEIGHT_INCHES = PAGE_HEIGHT_INCHES - (2 * MARGIN_INCHES); // 21.5"
+  public static final float PRINTABLE_HEIGHT_INCHES = PAGE_HEIGHT_INCHES - (2 * MARGIN_INCHES); // 22"
 
   // Points per inch (PDF standard)
   private static final float POINTS_PER_INCH = 72f;

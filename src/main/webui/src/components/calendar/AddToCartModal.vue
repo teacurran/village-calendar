@@ -19,7 +19,7 @@ const emit = defineEmits<{
 }>();
 
 // State
-const selectedOption = ref<"pdf" | "print">("pdf");
+const selectedOption = ref<"pdf" | "print">("print");
 
 // Computed
 const isOpen = computed({
@@ -30,21 +30,8 @@ const isOpen = computed({
 // Product options
 const productOptions = [
   {
-    id: "pdf" as const,
-    name: "Digital PDF Download",
-    price: 5.0,
-    description:
-      "High-resolution PDF file ready for printing at home or any print shop.",
-    features: [
-      "Instant download after purchase",
-      "Print-ready 11×17 inch format",
-      "Unlimited personal prints",
-    ],
-    icon: "pi-file-pdf",
-  },
-  {
     id: "print" as const,
-    name: 'Printed 35" x 22.5" Poster',
+    name: 'Printed 35" x 23" Poster',
     price: 25.0,
     description: "Beautiful printed calendar shipped directly to your door.",
     features: [
@@ -55,6 +42,18 @@ const productOptions = [
     ],
     icon: "pi-print",
     badge: "Most Popular",
+  },
+  {
+    id: "pdf" as const,
+    name: "Digital PDF Download",
+    price: 5.0,
+    description:
+      "High-resolution PDF file ready for printing at home or any print shop.",
+    features: [
+      "Instant download after purchase",
+      "Unlimited personal prints",
+    ],
+    icon: "pi-file-pdf",
   },
 ];
 

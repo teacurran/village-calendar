@@ -1741,10 +1741,10 @@ const holidays = ref(new Set());
 // PRINT DIMENSIONS (must match backend CalendarRenderingService)
 // ===========================================
 const PAGE_WIDTH_INCHES = 35;
-const PAGE_HEIGHT_INCHES = 22.5;
+const PAGE_HEIGHT_INCHES = 23;
 const MARGIN_INCHES = 0.5; // Change this to adjust margins (e.g., 1.0 for 1 inch)
 const PRINTABLE_WIDTH_INCHES = PAGE_WIDTH_INCHES - 2 * MARGIN_INCHES; // 34"
-const PRINTABLE_HEIGHT_INCHES = PAGE_HEIGHT_INCHES - 2 * MARGIN_INCHES; // 21.5"
+const PRINTABLE_HEIGHT_INCHES = PAGE_HEIGHT_INCHES - 2 * MARGIN_INCHES; // 22"
 
 /**
  * Wraps the SVG with margins so content fits within the printable area.
