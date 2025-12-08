@@ -2643,12 +2643,12 @@ const addToCart = async (productCode: string = "print") => {
     // Add to cart using GraphQL (works for both logged-in and anonymous users)
     // Price is determined by backend based on productCode
     await cartStore.addToCart(
-      calendarData.calendarId || `temp-${Date.now()}`, // templateId
+      productCode, // templateId - use productCode directly (print or pdf)
       calendarData.name,
       calendarData.year,
       1, // quantity
       productCode, // Backend looks up price from product catalog
-      calendarData, // Full configuration including svgContent and productCode
+      { ...calendarData, calendarId: calendarData.calendarId }, // Full configuration including svgContent and calendarId
     );
 
     toast.add({

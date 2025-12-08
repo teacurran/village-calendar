@@ -15,30 +15,38 @@ const cartStore = useCartStore();
 const toast = useToast();
 const router = useRouter();
 
-// Calendar product IDs
-const CALENDAR_PRINT_PRODUCT_ID = "ca1e0da2-0000-0000-0000-000000000001";
-const CALENDAR_PDF_PRODUCT_ID = "ca1e0da2-0000-0000-0000-000000000002";
-
 // Store for calendar SVGs
 const calendarSvgs = ref<Record<string, string>>({});
 const showPreviewModal = ref(false);
 const previewCalendarSvg = ref("");
 const previewCalendarName = ref("");
 
-// Check if item is a calendar (print or PDF)
+// Check if item is a calendar (has productCode 'print' or 'pdf', or has calendar config)
 const isCalendarItem = (item: any) => {
-  return (
-    item.templateId === CALENDAR_PRINT_PRODUCT_ID ||
-    item.templateId === CALENDAR_PDF_PRODUCT_ID
-  );
+  // Check productCode
+  if (item.productCode === "print" || item.productCode === "pdf") {
+    return true;
+  }
+  // Check configuration for calendar data
+  if (item.configuration) {
+    try {
+      const config = typeof item.configuration === "string"
+        ? JSON.parse(item.configuration)
+        : item.configuration;
+      return config.svgContent || config.year || config.productCode;
+    } catch (e) {}
+  }
+  return false;
 };
 
 // Parse configuration and get calendar details
 const getCalendarConfig = (item: any) => {
-  // templateId is used to store the product ID
-  if (isCalendarItem(item) && item.configuration) {
+  if (item.configuration) {
     try {
-      return JSON.parse(item.configuration);
+      const config = typeof item.configuration === "string"
+        ? JSON.parse(item.configuration)
+        : item.configuration;
+      return config;
     } catch (e) {
       console.error(
         "Failed to parse calendar configuration for item:",

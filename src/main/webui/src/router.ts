@@ -44,6 +44,12 @@ const router = createRouter({
     {
       path: "/checkout",
       name: "checkout",
+      component: () => import("./view/CheckoutEmbedded.vue"),
+      meta: { requiresAuth: false },
+    },
+    {
+      path: "/checkout/legacy",
+      name: "checkout-legacy",
       component: () => import("./view/Checkout.vue"),
       meta: { requiresAuth: false },
     },

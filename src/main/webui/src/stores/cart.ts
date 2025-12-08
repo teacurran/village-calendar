@@ -70,6 +70,7 @@ export const useCartStore = defineStore("cart", {
                     quantity
                     unitPrice
                     lineTotal
+                    productCode
                     configuration
                   }
                 }
@@ -224,6 +225,7 @@ export const useCartStore = defineStore("cart", {
                     quantity
                     unitPrice
                     lineTotal
+                    productCode
                     configuration
                   }
                 }
@@ -285,6 +287,7 @@ export const useCartStore = defineStore("cart", {
                     quantity
                     unitPrice
                     lineTotal
+                    productCode
                     configuration
                   }
                 }

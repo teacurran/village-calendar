@@ -27,43 +27,47 @@ const cartStore = useCartStore();
 const userStore = useUserStore();
 const toast = useToast();
 
-// Calendar product IDs
-const CALENDAR_PRINT_PRODUCT_ID = "ca1e0da2-0000-0000-0000-000000000001";
-const CALENDAR_PDF_PRODUCT_ID = "ca1e0da2-0000-0000-0000-000000000002";
-
 // Store for calendar SVGs
 const calendarSvgs = ref<Record<string, string>>({});
 const showPreviewModal = ref(false);
 const previewCalendarSvg = ref("");
 const previewCalendarName = ref("");
 
-// Check if item is a calendar (print or PDF)
+// Check if item is a calendar (has productCode 'print' or 'pdf', or has calendar config)
 const isCalendarItem = (item: any) => {
-  return (
-    item.templateId === CALENDAR_PRINT_PRODUCT_ID ||
-    item.templateId === CALENDAR_PDF_PRODUCT_ID
-  );
+  // Check productCode
+  if (item.productCode === "print" || item.productCode === "pdf") {
+    return true;
+  }
+  // Check configuration for calendar data
+  if (item.configuration) {
+    try {
+      const config = typeof item.configuration === "string"
+        ? JSON.parse(item.configuration)
+        : item.configuration;
+      return config.svgContent || config.year || config.productCode;
+    } catch (e) {}
+  }
+  return false;
 };
 
 // Check if item is a digital product (PDF)
 const isDigitalItem = (item: any) => {
-  // Check by product ID
-  if (item.templateId === CALENDAR_PDF_PRODUCT_ID) {
+  // Check productCode
+  if (item.productCode === "pdf") {
     return true;
   }
-  // Also check configuration for productType
+  // Also check configuration for productCode/productType
   if (item.configuration) {
     try {
       const config =
         typeof item.configuration === "string"
           ? JSON.parse(item.configuration)
           : item.configuration;
-      if (config.productType === "pdf" || config.productType === "PDF") {
+      if (config.productCode === "pdf" || config.productType === "pdf") {
         return true;
       }
-    } catch (e) {
-      // Ignore parse errors
-    }
+    } catch (e) {}
   }
   return false;
 };

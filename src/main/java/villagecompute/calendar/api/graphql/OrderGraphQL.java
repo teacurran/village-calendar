@@ -21,6 +21,7 @@ import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PaymentService;
+import villagecompute.calendar.services.ProductService;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -55,6 +56,9 @@ public class OrderGraphQL {
 
     @Inject
     ObjectMapper objectMapper;
+
+    @Inject
+    ProductService productService;
 
     // ============================================================================
     // QUERIES
@@ -578,6 +582,123 @@ public class OrderGraphQL {
         );
     }
 
+    /**
+     * Create a Stripe Checkout Session for embedded checkout.
+     * This creates an order and returns a client secret for the embedded checkout component.
+     * The checkout session handles payment, shipping address collection, and tax calculation.
+     *
+     * @param input Checkout session input
+     * @return Checkout session response with clientSecret
+     */
+    @Mutation("createCheckoutSession")
+    @Description("Create a Stripe Checkout Session for embedded checkout. Returns clientSecret for Stripe embedded checkout component.")
+    @Transactional
+    public CheckoutSessionResponse createCheckoutSession(
+        @Name("input")
+        @Description("Checkout session input")
+        @NotNull
+        @Valid
+        CheckoutSessionInput input
+    ) {
+        LOG.infof("Mutation: createCheckoutSession(cartId=%s, email=%s)", input.cartId, input.customerEmail);
+
+        try {
+            // Get cart items and create line items
+            List<PaymentService.CheckoutLineItem> lineItems = new java.util.ArrayList<>();
+
+            // Parse cart items from input
+            if (input.items != null) {
+                for (CheckoutItemInput item : input.items) {
+                    // Get price from ProductService if unitPrice is not provided
+                    long unitAmountCents;
+                    if (item.unitPrice != null && item.unitPrice > 0) {
+                        unitAmountCents = Math.round(item.unitPrice * 100);
+                    } else {
+                        // Look up price from product catalog
+                        String productCode = item.productCode != null ? item.productCode : "print";
+                        BigDecimal price = productService.getPrice(productCode);
+                        unitAmountCents = price.multiply(BigDecimal.valueOf(100)).longValue();
+                        LOG.infof("Using product catalog price for '%s': $%.2f", productCode, price);
+                    }
+                    lineItems.add(new PaymentService.CheckoutLineItem(
+                        item.name,
+                        item.description != null ? item.description : "Calendar " + item.year,
+                        unitAmountCents,
+                        item.quantity
+                    ));
+                }
+            }
+
+            if (lineItems.isEmpty()) {
+                throw new IllegalArgumentException("No items in cart");
+            }
+
+            // Create a pending order
+            // For now, we'll create a minimal order that will be updated when the session completes
+            CalendarOrder order = new CalendarOrder();
+
+            // Get current user if authenticated
+            Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
+            if (currentUser.isPresent()) {
+                order.user = currentUser.get();
+            }
+
+            // Set order details
+            order.status = CalendarOrder.STATUS_PENDING;
+            order.quantity = lineItems.stream().mapToInt(i -> (int) i.quantity).sum();
+
+            // Calculate totals from line items
+            BigDecimal subtotal = lineItems.stream()
+                .map(i -> BigDecimal.valueOf(i.unitAmountCents * i.quantity).divide(BigDecimal.valueOf(100)))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            order.unitPrice = subtotal.divide(BigDecimal.valueOf(order.quantity), 2, java.math.RoundingMode.HALF_UP);
+            order.subtotal = subtotal;
+            order.totalPrice = subtotal; // Will be updated with tax/shipping from Stripe
+
+            order.persist();
+            LOG.infof("Created pending order %s for checkout session", order.id);
+
+            // Determine if shipping is required (any print products)
+            boolean shippingRequired = input.items != null && input.items.stream()
+                .anyMatch(item -> "print".equals(item.productCode));
+
+            // Build success/cancel URLs
+            String baseUrl = input.returnUrl != null ? input.returnUrl : "https://villagecompute.com";
+            String successUrl = baseUrl + "/order-confirmation";
+
+            // Create checkout session
+            Map<String, String> sessionDetails = paymentService.createCheckoutSession(
+                order.id.toString(),
+                order.orderNumber,
+                lineItems,
+                input.customerEmail,
+                successUrl,
+                baseUrl,
+                shippingRequired
+            );
+
+            // Update order with session ID
+            order.notes = String.format("[%s] Checkout session created: %s\n",
+                java.time.Instant.now(), sessionDetails.get("sessionId"));
+            order.persist();
+
+            // Return response
+            CheckoutSessionResponse response = new CheckoutSessionResponse();
+            response.clientSecret = sessionDetails.get("clientSecret");
+            response.sessionId = sessionDetails.get("sessionId");
+            response.orderId = order.id.toString();
+            response.orderNumber = order.orderNumber;
+
+            LOG.infof("Created checkout session %s for order %s", response.sessionId, order.id);
+
+            return response;
+
+        } catch (StripeException e) {
+            LOG.errorf(e, "Failed to create checkout session");
+            throw new RuntimeException("Failed to create checkout session: " + e.getMessage());
+        }
+    }
+
     // ============================================================================
     // RESPONSE TYPES
     // ============================================================================
@@ -594,5 +715,81 @@ public class OrderGraphQL {
         @NonNull
         @Description("Stripe client secret for payment processing")
         public String clientSecret;
+    }
+
+    /**
+     * Response type for createCheckoutSession mutation.
+     */
+    @Type("CheckoutSessionResponse")
+    public static class CheckoutSessionResponse {
+        @NonNull
+        @Description("Stripe client secret for embedded checkout")
+        public String clientSecret;
+
+        @NonNull
+        @Description("Stripe checkout session ID")
+        public String sessionId;
+
+        @NonNull
+        @Description("Order ID")
+        public String orderId;
+
+        @Description("Order number for display")
+        public String orderNumber;
+    }
+
+    // ============================================================================
+    // INPUT TYPES
+    // ============================================================================
+
+    /**
+     * Input for createCheckoutSession mutation.
+     */
+    @Input("CheckoutSessionInput")
+    public static class CheckoutSessionInput {
+        @Description("Cart ID (optional)")
+        public String cartId;
+
+        @Description("Customer email for receipts")
+        public String customerEmail;
+
+        @Description("Items to checkout")
+        public List<CheckoutItemInput> items;
+
+        @Description("Return URL after checkout completes")
+        public String returnUrl;
+    }
+
+    /**
+     * Item input for checkout session.
+     */
+    @Input("CheckoutItemInput")
+    public static class CheckoutItemInput {
+        @NonNull
+        @Description("Item name")
+        public String name;
+
+        @Description("Item description")
+        public String description;
+
+        @NonNull
+        @Description("Quantity")
+        public Integer quantity;
+
+        @NonNull
+        @Description("Unit price in dollars")
+        public Double unitPrice;
+
+        @Description("Year for calendar items")
+        public Integer year;
+
+        @Description("Product code (e.g., 'print', 'pdf')")
+        public String productCode;
+
+        @Description("Template/calendar ID")
+        public String templateId;
+
+        @Description("Configuration JSON")
+        public String configuration;
     }
 }

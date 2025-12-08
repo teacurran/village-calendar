@@ -189,8 +189,8 @@ public class WebhookResource {
 
     /**
      * Handle Stripe Checkout Session completed event.
-     * This is the primary payment success event for hosted checkout flow.
-     * Extracts payment intent from session and delegates to PaymentService.
+     * This is the primary payment success event for embedded checkout flow.
+     * Delegates to PaymentService which handles order updates and shipping info extraction.
      *
      * @param event Stripe event
      */
@@ -210,13 +210,18 @@ public class WebhookResource {
 
         LOG.infof("Checkout session completed: %s (PaymentIntent: %s)", sessionId, paymentIntentId);
 
-        if (paymentIntentId == null || paymentIntentId.equals("null") || paymentIntentId.isEmpty()) {
-            LOG.errorf("Checkout session %s has no PaymentIntent", sessionId);
+        if (sessionId == null || sessionId.isEmpty()) {
+            LOG.errorf("Checkout session has no ID");
             return;
         }
 
-        // Delegate to PaymentService for idempotent processing
-        paymentService.processPaymentSuccess(paymentIntentId, null);
+        // Use the new checkout session processing which handles shipping info
+        try {
+            paymentService.processCheckoutSessionCompleted(sessionId);
+        } catch (com.stripe.exception.StripeException e) {
+            LOG.errorf(e, "Failed to process checkout session %s", sessionId);
+            throw new RuntimeException("Failed to process checkout session", e);
+        }
     }
 
     /**

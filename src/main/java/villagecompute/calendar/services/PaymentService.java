@@ -4,8 +4,13 @@ import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.Refund;
+import com.stripe.model.checkout.Session;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.RefundCreateParams;
+import com.stripe.param.checkout.SessionCreateParams;
+
+import java.util.ArrayList;
+import java.util.List;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -396,5 +401,215 @@ public class PaymentService {
         order.persist();
 
         LOG.infof("Recorded refund %s for order %s, amount: $%.2f", refundId, order.id, refundAmount);
+    }
+
+    // ========================================
+    // STRIPE CHECKOUT SESSION (Embedded)
+    // ========================================
+
+    /**
+     * Create a Stripe Checkout Session for embedded checkout.
+     * Returns the client secret for the embedded checkout component.
+     *
+     * @param orderId Order ID for metadata
+     * @param orderNumber Human-readable order number
+     * @param lineItems List of line items with name, quantity, and unit amount in cents
+     * @param customerEmail Customer email for receipts
+     * @param successUrl URL to redirect after successful payment
+     * @param cancelUrl URL to redirect if customer cancels
+     * @param shippingRequired Whether to collect shipping address
+     * @return Map with clientSecret for embedded checkout
+     * @throws StripeException if Stripe API call fails
+     */
+    public Map<String, String> createCheckoutSession(
+        String orderId,
+        String orderNumber,
+        List<CheckoutLineItem> lineItems,
+        String customerEmail,
+        String successUrl,
+        String cancelUrl,
+        boolean shippingRequired
+    ) throws StripeException {
+        LOG.infof("Creating Checkout Session for order %s", orderId);
+
+        SessionCreateParams.Builder paramsBuilder = SessionCreateParams.builder()
+            .setMode(SessionCreateParams.Mode.PAYMENT)
+            .setUiMode(SessionCreateParams.UiMode.EMBEDDED)
+            .setReturnUrl(successUrl + "?session_id={CHECKOUT_SESSION_ID}")
+            .putMetadata("orderId", orderId);
+
+        if (orderNumber != null) {
+            paramsBuilder.putMetadata("orderNumber", orderNumber);
+        }
+
+        // Add line items
+        for (CheckoutLineItem item : lineItems) {
+            paramsBuilder.addLineItem(
+                SessionCreateParams.LineItem.builder()
+                    .setPriceData(
+                        SessionCreateParams.LineItem.PriceData.builder()
+                            .setCurrency("usd")
+                            .setUnitAmount(item.unitAmountCents)
+                            .setProductData(
+                                SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                                    .setName(item.name)
+                                    .setDescription(item.description)
+                                    .build()
+                            )
+                            .build()
+                    )
+                    .setQuantity(item.quantity)
+                    .build()
+            );
+        }
+
+        // Customer email for receipts
+        if (customerEmail != null && !customerEmail.isEmpty()) {
+            paramsBuilder.setCustomerEmail(customerEmail);
+        }
+
+        // Shipping address collection
+        if (shippingRequired) {
+            paramsBuilder.setShippingAddressCollection(
+                SessionCreateParams.ShippingAddressCollection.builder()
+                    .addAllowedCountry(SessionCreateParams.ShippingAddressCollection.AllowedCountry.US)
+                    .addAllowedCountry(SessionCreateParams.ShippingAddressCollection.AllowedCountry.CA)
+                    .build()
+            );
+        }
+
+        // Enable automatic tax calculation if configured
+        // paramsBuilder.setAutomaticTax(
+        //     SessionCreateParams.AutomaticTax.builder()
+        //         .setEnabled(true)
+        //         .build()
+        // );
+
+        Session session = Session.create(paramsBuilder.build());
+
+        Map<String, String> response = new HashMap<>();
+        response.put("clientSecret", session.getClientSecret());
+        response.put("sessionId", session.getId());
+
+        LOG.infof("Created Checkout Session %s for order %s", session.getId(), orderId);
+
+        return response;
+    }
+
+    /**
+     * Retrieve a Checkout Session by ID.
+     *
+     * @param sessionId Checkout Session ID
+     * @return Session object
+     * @throws StripeException if Stripe API call fails
+     */
+    public Session getCheckoutSession(String sessionId) throws StripeException {
+        return Session.retrieve(sessionId);
+    }
+
+    /**
+     * Process successful checkout from webhook.
+     * Called when checkout.session.completed event is received.
+     *
+     * @param sessionId Stripe Checkout Session ID
+     * @return true if processed, false if already processed (idempotent)
+     */
+    @Transactional
+    public boolean processCheckoutSessionCompleted(String sessionId) throws StripeException {
+        LOG.infof("Processing checkout.session.completed for session: %s", sessionId);
+
+        Session session = Session.retrieve(sessionId);
+        String orderId = session.getMetadata().get("orderId");
+
+        if (orderId == null) {
+            LOG.warnf("No orderId in session metadata for session: %s", sessionId);
+            return false;
+        }
+
+        // Find the order
+        java.util.UUID orderUuid;
+        try {
+            orderUuid = java.util.UUID.fromString(orderId);
+        } catch (IllegalArgumentException e) {
+            LOG.errorf("Invalid orderId format in session %s: %s", sessionId, orderId);
+            return false;
+        }
+        Optional<CalendarOrder> orderOpt = orderService.getOrderById(orderUuid);
+        if (orderOpt.isEmpty()) {
+            LOG.warnf("Order not found for session %s, orderId: %s", sessionId, orderId);
+            throw new IllegalStateException("Order not found for session: " + sessionId);
+        }
+
+        CalendarOrder order = orderOpt.get();
+
+        // Idempotent check
+        if (CalendarOrder.STATUS_PAID.equals(order.status)) {
+            LOG.infof("Order %s already marked as PAID, skipping (idempotent)", order.id);
+            return false;
+        }
+
+        // Update order with session details
+        order.status = CalendarOrder.STATUS_PAID;
+        order.paidAt = Instant.now();
+        order.stripePaymentIntentId = session.getPaymentIntent();
+
+        // Store shipping address if collected (as JSON)
+        if (session.getCollectedInformation() != null
+            && session.getCollectedInformation().getShippingDetails() != null) {
+            var shipping = session.getCollectedInformation().getShippingDetails();
+            var address = shipping.getAddress();
+            if (address != null) {
+                // Store as JSON in the shippingAddress field
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                try {
+                    Map<String, Object> addressMap = new HashMap<>();
+                    addressMap.put("name", shipping.getName());
+                    addressMap.put("line1", address.getLine1());
+                    addressMap.put("line2", address.getLine2());
+                    addressMap.put("city", address.getCity());
+                    addressMap.put("state", address.getState());
+                    addressMap.put("postalCode", address.getPostalCode());
+                    addressMap.put("country", address.getCountry());
+                    order.shippingAddress = mapper.valueToTree(addressMap);
+                } catch (Exception e) {
+                    LOG.warnf("Failed to store shipping address for order %s: %s", order.id, e.getMessage());
+                }
+            }
+        }
+
+        // Add note
+        String timestamp = Instant.now().toString();
+        String noteEntry = String.format("[%s] Payment completed via Checkout Session %s\n", timestamp, sessionId);
+        order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
+
+        order.persist();
+        LOG.infof("Order %s marked as PAID via Checkout Session", order.id);
+
+        // Enqueue confirmation email
+        DelayedJob emailJob = DelayedJob.createDelayedJob(
+            order.id.toString(),
+            DelayedJobQueue.EMAIL_ORDER_CONFIRMATION,
+            Instant.now()
+        );
+        LOG.infof("Enqueued order confirmation email job %s for order %s", emailJob.id, order.id);
+
+        return true;
+    }
+
+    /**
+     * Line item for checkout session
+     */
+    public static class CheckoutLineItem {
+        public String name;
+        public String description;
+        public long unitAmountCents;
+        public long quantity;
+
+        public CheckoutLineItem(String name, String description, long unitAmountCents, long quantity) {
+            this.name = name;
+            this.description = description;
+            this.unitAmountCents = unitAmountCents;
+            this.quantity = quantity;
+        }
     }
 }
