@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import RadioButton from "primevue/radiobutton";
+import { GET_PRODUCTS_QUERY } from "@/graphql/product-queries";
 
 // Props
 interface Props {
@@ -12,14 +13,29 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Emits
+// Product type from backend
+interface Product {
+  code: string;
+  name: string;
+  description: string;
+  price: number;
+  features: string[];
+  icon: string;
+  badge: string | null;
+  displayOrder: number;
+}
+
+// Emits - now includes product info
 const emit = defineEmits<{
   (e: "update:visible", value: boolean): void;
-  (e: "select", productType: "pdf" | "print"): void;
+  (e: "select", productCode: string, price: number): void;
 }>();
 
 // State
-const selectedOption = ref<"pdf" | "print">("print");
+const selectedOption = ref<string>("print");
+const productOptions = ref<Product[]>([]);
+const loading = ref(false);
+const error = ref<string | null>(null);
 
 // Computed
 const isOpen = computed({
@@ -27,39 +43,52 @@ const isOpen = computed({
   set: (value) => emit("update:visible", value),
 });
 
-// Product options
-const productOptions = [
-  {
-    id: "print" as const,
-    name: 'Printed 35" x 23" Poster',
-    price: 25.0,
-    description: "Beautiful printed calendar shipped directly to your door.",
-    features: [
-      "Premium quality paper stock",
-      "Vibrant, long-lasting colors",
-      "PDF download included free",
-      "Ships within 3-5 business days",
-    ],
-    icon: "pi-print",
-    badge: "Most Popular",
+// Fetch products from backend
+const fetchProducts = async () => {
+  loading.value = true;
+  error.value = null;
+  try {
+    const response = await fetch("/graphql", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: GET_PRODUCTS_QUERY }),
+    });
+    const result = await response.json();
+    if (result.errors) {
+      throw new Error(result.errors[0].message);
+    }
+    productOptions.value = result.data.products;
+    // Set default to first product (should be "print" based on displayOrder)
+    if (productOptions.value.length > 0) {
+      selectedOption.value = productOptions.value[0].code;
+    }
+  } catch (e) {
+    console.error("Failed to fetch products:", e);
+    error.value = "Failed to load products";
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Fetch products when modal opens
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible && productOptions.value.length === 0) {
+      fetchProducts();
+    }
   },
-  {
-    id: "pdf" as const,
-    name: "Digital PDF Download",
-    price: 5.0,
-    description:
-      "High-resolution PDF file ready for printing at home or any print shop.",
-    features: [
-      "Instant download after purchase",
-      "Unlimited personal prints",
-    ],
-    icon: "pi-file-pdf",
-  },
-];
+  { immediate: true }
+);
 
 // Methods
 const handleSelect = () => {
-  emit("select", selectedOption.value);
+  const selectedProduct = productOptions.value.find(
+    (p) => p.code === selectedOption.value
+  );
+  if (selectedProduct) {
+    emit("select", selectedProduct.code, selectedProduct.price);
+  }
   isOpen.value = false;
 };
 
@@ -97,19 +126,29 @@ const formatPrice = (price: number) => {
         Choose how you'd like to receive your {{ calendarYear }} calendar:
       </p>
 
-      <div class="product-options">
+      <div v-if="loading" class="loading-state">
+        <i class="pi pi-spin pi-spinner"></i>
+        Loading products...
+      </div>
+
+      <div v-else-if="error" class="error-state">
+        <i class="pi pi-exclamation-triangle"></i>
+        {{ error }}
+      </div>
+
+      <div v-else class="product-options">
         <div
           v-for="option in productOptions"
-          :key="option.id"
+          :key="option.code"
           class="product-option"
-          :class="{ selected: selectedOption === option.id }"
-          @click="selectedOption = option.id"
+          :class="{ selected: selectedOption === option.code }"
+          @click="selectedOption = option.code"
         >
           <div class="option-header">
             <RadioButton
               v-model="selectedOption"
-              :input-id="option.id"
-              :value="option.id"
+              :input-id="option.code"
+              :value="option.code"
               name="productType"
             />
             <div class="option-icon">
@@ -137,7 +176,7 @@ const formatPrice = (price: number) => {
             </ul>
           </div>
 
-          <div v-if="option.id === 'print'" class="shipping-note">
+          <div v-if="option.code === 'print'" class="shipping-note">
             <i class="pi pi-info-circle"></i>
             Shipping calculated at checkout
           </div>
@@ -183,6 +222,20 @@ const formatPrice = (price: number) => {
   color: var(--text-color-secondary);
   margin-bottom: 1.25rem;
   font-size: 0.9375rem;
+}
+
+.loading-state,
+.error-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: var(--text-color-secondary);
+}
+
+.error-state {
+  color: var(--red-500);
 }
 
 .product-options {

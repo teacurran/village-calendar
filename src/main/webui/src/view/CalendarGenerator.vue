@@ -2573,11 +2573,11 @@ const openAddToCartModal = () => {
 };
 
 // Handle product selection from modal
-const handleAddToCartSelect = async (productType: "pdf" | "print") => {
-  await addToCart(productType);
+const handleAddToCartSelect = async (productCode: string, price: number) => {
+  await addToCart(productCode);
 };
 
-const addToCart = async (productType: "pdf" | "print" = "print") => {
+const addToCart = async (productCode: string = "print") => {
   if (!generatedSVG.value) {
     toast.add({
       severity: "warn",
@@ -2588,30 +2588,26 @@ const addToCart = async (productType: "pdf" | "print" = "print") => {
     return;
   }
 
-  // Product configuration based on type
-  const productConfig = {
+  // Product display names and success messages
+  const productMessages: Record<string, { name: string; successMessage: string }> = {
     pdf: {
-      productId: "ca1e0da2-0000-0000-0000-000000000002", // Digital PDF product ID
       name: `Calendar ${config.value.year} (PDF)`,
-      price: 5.0,
       successMessage: "Your PDF calendar has been added to the cart.",
     },
     print: {
-      productId: "ca1e0da2-0000-0000-0000-000000000001", // Printed Calendar product ID
       name: `Calendar ${config.value.year} (Printed)`,
-      price: 25.0,
       successMessage:
         "Your printed calendar has been added to the cart. PDF download included!",
     },
   };
 
-  const product = productConfig[productType];
+  const productInfo = productMessages[productCode] || productMessages.print;
 
   try {
     const calendarData = {
       year: config.value.year,
-      name: product.name,
-      productType: productType,
+      name: productInfo.name,
+      productCode: productCode,
       configuration: buildFullConfiguration(),
       svgContent: generatedSVG.value,
     };
@@ -2645,19 +2641,20 @@ const addToCart = async (productType: "pdf" | "print" = "print") => {
     }
 
     // Add to cart using GraphQL (works for both logged-in and anonymous users)
+    // Price is determined by backend based on productCode
     await cartStore.addToCart(
-      product.productId,
+      calendarData.calendarId || `temp-${Date.now()}`, // templateId
       calendarData.name,
       calendarData.year,
       1, // quantity
-      product.price,
-      calendarData, // Full configuration including svgContent and productType
+      productCode, // Backend looks up price from product catalog
+      calendarData, // Full configuration including svgContent and productCode
     );
 
     toast.add({
       severity: "success",
       summary: "Added to Cart",
-      detail: product.successMessage,
+      detail: productInfo.successMessage,
       life: 3000,
     });
   } catch (error) {

@@ -94,6 +94,17 @@ public class Cart extends DefaultPanacheEntityWithTimestamps {
      */
     public CartItem addOrUpdateItem(String templateId, String templateName, int year,
                                     int quantity, BigDecimal unitPrice, String configuration) {
+        return addOrUpdateItem(templateId, templateName, year, quantity, unitPrice, configuration, null);
+    }
+
+    /**
+     * Add item to cart or update quantity if already exists.
+     * Items are considered the same if they have the same templateId, year, AND configuration.
+     * Different calendar designs (different configurations) are separate line items.
+     */
+    public CartItem addOrUpdateItem(String templateId, String templateName, int year,
+                                    int quantity, BigDecimal unitPrice, String configuration,
+                                    String productCode) {
         // Check if item already exists with same template, year, AND configuration
         CartItem existing = items.stream()
             .filter(item -> item.templateId.equals(templateId)
@@ -104,6 +115,7 @@ public class Cart extends DefaultPanacheEntityWithTimestamps {
 
         if (existing != null) {
             existing.quantity += quantity;
+            existing.productCode = productCode;
             existing.persist();
             return existing;
         } else {
@@ -115,6 +127,7 @@ public class Cart extends DefaultPanacheEntityWithTimestamps {
             newItem.quantity = quantity;
             newItem.unitPrice = unitPrice;
             newItem.configuration = configuration;
+            newItem.productCode = productCode;
             newItem.persist();
             items.add(newItem);
             return newItem;

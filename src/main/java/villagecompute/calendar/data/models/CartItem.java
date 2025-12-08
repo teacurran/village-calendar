@@ -53,6 +53,13 @@ public class CartItem extends DefaultPanacheEntityWithTimestamps {
     public BigDecimal unitPrice;
 
     /**
+     * Product code (e.g., "print", "pdf")
+     */
+    @Size(max = 50)
+    @Column(name = "product_code", length = 50)
+    public String productCode;
+
+    /**
      * JSON configuration for the calendar
      */
     @Column(name = "configuration", columnDefinition = "TEXT")

@@ -1,6 +1,7 @@
 package villagecompute.calendar.services;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 import villagecompute.calendar.api.graphql.inputs.AddToCartInput;
@@ -22,6 +23,9 @@ public class CartService {
 
     private static final Logger LOG = Logger.getLogger(CartService.class);
 
+    @Inject
+    ProductService productService;
+
     /**
      * Get or create cart for session
      */
@@ -41,9 +45,22 @@ public class CartService {
         villagecompute.calendar.data.models.Cart cartEntity =
             villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
 
-        // Default unit price if not provided
-        BigDecimal unitPrice = input.unitPrice != null ?
-            BigDecimal.valueOf(input.unitPrice) : BigDecimal.valueOf(29.99);
+        // Get price from product catalog (preferred) or fall back to provided price
+        BigDecimal unitPrice;
+        String productCode = input.productCode;
+        if (productCode != null && productService.isValidProductCode(productCode)) {
+            unitPrice = productService.getPrice(productCode);
+            LOG.infof("Using price from product catalog for '%s': $%.2f", productCode, unitPrice);
+        } else if (input.unitPrice != null) {
+            // Fallback for backwards compatibility - log warning
+            unitPrice = BigDecimal.valueOf(input.unitPrice);
+            LOG.warnf("Using client-provided price $%.2f - productCode not provided or invalid", unitPrice);
+        } else {
+            // Use default product price
+            productCode = productService.getDefaultProductCode();
+            unitPrice = productService.getPrice(productCode);
+            LOG.infof("Using default product '%s' price: $%.2f", productCode, unitPrice);
+        }
 
         cartEntity.addOrUpdateItem(
             input.templateId,
@@ -51,7 +68,8 @@ public class CartService {
             input.year,
             input.quantity != null ? input.quantity : 1,
             unitPrice,
-            input.configuration
+            input.configuration,
+            productCode
         );
 
         return toGraphQLCart(cartEntity);
@@ -140,6 +158,7 @@ public class CartService {
         item.quantity = itemEntity.quantity;
         item.unitPrice = itemEntity.unitPrice.doubleValue();
         item.lineTotal = itemEntity.getLineTotal().doubleValue();
+        item.productCode = itemEntity.productCode;
         item.configuration = itemEntity.configuration; // Already a String in the database
         return item;
     }

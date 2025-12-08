@@ -11,6 +11,7 @@ export interface CartItem {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  productCode?: string;
   configuration?: {
     coverImage?: string;
     customization?: Record<string, any>;
@@ -122,7 +123,7 @@ export const useCartStore = defineStore("cart", {
       templateName: string,
       year: number,
       quantity: number,
-      unitPrice: number,
+      productCode: string,
       configuration?: any,
     ) {
       this.loading = true;
@@ -151,6 +152,7 @@ export const useCartStore = defineStore("cart", {
                     quantity
                     unitPrice
                     lineTotal
+                    productCode
                     configuration
                   }
                 }
@@ -162,7 +164,7 @@ export const useCartStore = defineStore("cart", {
                 templateName,
                 year,
                 quantity,
-                unitPrice,
+                productCode,
                 configuration: configuration
                   ? JSON.stringify(configuration)
                   : null,
