@@ -34,11 +34,10 @@ import java.util.UUID;
 )
 public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
 
-    @NotNull
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_calendar_orders_user"))
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "user_id", nullable = true, foreignKey = @ForeignKey(name = "fk_calendar_orders_user"))
     @Ignore  // GraphQL field resolver provided by OrderResolver.batchLoadUsers()
-    public CalendarUser user;
+    public CalendarUser user;  // Nullable for guest checkout
 
     /**
      * Customer email (especially important for guest orders)
