@@ -22,6 +22,7 @@ import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PaymentService;
 import villagecompute.calendar.services.ProductService;
+import villagecompute.calendar.util.OrderNumberGenerator;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -654,6 +655,9 @@ public class OrderGraphQL {
             order.unitPrice = subtotal.divide(BigDecimal.valueOf(order.quantity), 2, java.math.RoundingMode.HALF_UP);
             order.subtotal = subtotal;
             order.totalPrice = subtotal; // Will be updated with tax/shipping from Stripe
+
+            // Generate order number
+            order.orderNumber = OrderNumberGenerator.generateSecureOrderNumber();
 
             order.persist();
             LOG.infof("Created pending order %s for checkout session", order.id);

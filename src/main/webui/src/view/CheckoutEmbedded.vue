@@ -183,6 +183,7 @@ async function initializeEmbeddedCheckout() {
 
     const result = await response.json();
     if (result.errors) {
+      console.error("GraphQL errors:", JSON.stringify(result.errors, null, 2));
       throw new Error(result.errors[0].message);
     }
 
