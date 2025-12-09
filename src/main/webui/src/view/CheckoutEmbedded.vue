@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from "vue";
 import { useRouter } from "vue-router";
-import { useCartStore } from "../stores/cart";
+import {
+  useCartStore,
+  type CartItem,
+  type CalendarConfiguration,
+} from "../stores/cart";
 import { useToast } from "primevue/usetoast";
 import { ROUTE_NAMES } from "../navigation/routes";
 import { homeBreadcrumb } from "../navigation/breadcrumbs";
@@ -44,17 +48,17 @@ const cartItems = computed(() => cartStore.items);
 
 // Check if any items are calendars
 const hasCalendarItems = computed(() => {
-  return cartItems.value.some((item: any) => {
+  return cartItems.value.some((item: CartItem) => {
     if (item.productCode === "print" || item.productCode === "pdf") return true;
     if (item.configuration) {
       try {
-        const config =
+        const config: CalendarConfiguration =
           typeof item.configuration === "string"
             ? JSON.parse(item.configuration)
             : item.configuration;
-        return config.svgContent || config.year;
+        return !!(config.svgContent || config.year);
       } catch {
-        // Ignore JSON parse errors
+        return false;
       }
     }
     return false;
@@ -62,12 +66,14 @@ const hasCalendarItems = computed(() => {
 });
 
 // Get calendar config from item
-const getCalendarConfig = (item: any) => {
+const getCalendarConfig = (item: CartItem): CalendarConfiguration | null => {
   if (item.configuration) {
     try {
-      return typeof item.configuration === "string"
-        ? JSON.parse(item.configuration)
-        : item.configuration;
+      const config: CalendarConfiguration =
+        typeof item.configuration === "string"
+          ? JSON.parse(item.configuration)
+          : item.configuration;
+      return config;
     } catch {
       return null;
     }
@@ -93,7 +99,7 @@ const loadCalendarSvgs = async () => {
 };
 
 // Show calendar preview modal
-const showCalendarPreview = (item: any) => {
+const showCalendarPreview = (item: CartItem) => {
   const config = getCalendarConfig(item);
   if (config && calendarSvgs.value[item.id]) {
     previewCalendarSvg.value = calendarSvgs.value[item.id];
@@ -122,7 +128,7 @@ async function initializeEmbeddedCheckout() {
     }
 
     // Prepare items for checkout session
-    const items = cartStore.items.map((item: any) => ({
+    const items = cartStore.items.map((item: CartItem) => ({
       name: item.templateName || `Calendar ${item.year}`,
       description: `${item.year} Calendar`,
       quantity: item.quantity,
@@ -187,13 +193,15 @@ async function initializeEmbeddedCheckout() {
     } else {
       console.error("Missing required elements for checkout mount");
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error initializing embedded checkout:", error);
-    checkoutError.value = error.message || "Failed to initialize checkout";
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to initialize checkout";
+    checkoutError.value = errorMessage;
     toast.add({
       severity: "error",
       summary: "Checkout Error",
-      detail: error.message || "Failed to initialize checkout",
+      detail: errorMessage,
       life: 5000,
     });
     creatingSession.value = false;

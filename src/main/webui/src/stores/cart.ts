@@ -1,7 +1,17 @@
 // ./stores/cart.ts
 import { defineStore } from "pinia";
-import { useUserStore } from "./user";
 import { getSessionId } from "@/services/sessionService";
+
+export interface CalendarConfiguration {
+  coverImage?: string;
+  customization?: Record<string, unknown>;
+  svgContent?: string;
+  generatedSvg?: string;
+  calendarId?: string;
+  year?: number;
+  name?: string;
+  productCode?: string;
+}
 
 export interface CartItem {
   id: string;
@@ -12,10 +22,12 @@ export interface CartItem {
   unitPrice: number;
   lineTotal: number;
   productCode?: string;
-  configuration?: {
-    coverImage?: string;
-    customization?: Record<string, any>;
-  };
+  productName?: string;
+  description?: string;
+  imageUrl?: string;
+  notes?: string;
+  options?: Record<string, string>;
+  configuration?: CalendarConfiguration | string;
 }
 
 export interface Cart {
@@ -103,8 +115,9 @@ export const useCartStore = defineStore("cart", {
             items: [],
           };
         }
-      } catch (err: any) {
-        this.error = err.message || "Failed to fetch cart";
+      } catch (err: unknown) {
+        this.error =
+          err instanceof Error ? err.message : "Failed to fetch cart";
         // Initialize empty cart on error
         this.cart = {
           id: "",
@@ -125,7 +138,7 @@ export const useCartStore = defineStore("cart", {
       year: number,
       quantity: number,
       productCode: string,
-      configuration?: any,
+      configuration?: CalendarConfiguration,
     ) {
       this.loading = true;
       this.error = null;
@@ -190,8 +203,9 @@ export const useCartStore = defineStore("cart", {
           this.cart = result.data.addToCart;
           this.lastFetchTime = Date.now();
         }
-      } catch (err: any) {
-        this.error = err.message || "Failed to add item to cart";
+      } catch (err: unknown) {
+        this.error =
+          err instanceof Error ? err.message : "Failed to add item to cart";
         throw err;
       } finally {
         this.loading = false;
@@ -252,8 +266,9 @@ export const useCartStore = defineStore("cart", {
           this.cart = result.data.updateCartItemQuantity;
           this.lastFetchTime = Date.now();
         }
-      } catch (err: any) {
-        this.error = err.message || "Failed to update item quantity";
+      } catch (err: unknown) {
+        this.error =
+          err instanceof Error ? err.message : "Failed to update item quantity";
         throw err;
       } finally {
         this.loading = false;
@@ -313,8 +328,11 @@ export const useCartStore = defineStore("cart", {
           this.cart = result.data.removeFromCart;
           this.lastFetchTime = Date.now();
         }
-      } catch (err: any) {
-        this.error = err.message || "Failed to remove item from cart";
+      } catch (err: unknown) {
+        this.error =
+          err instanceof Error
+            ? err.message
+            : "Failed to remove item from cart";
         throw err;
       } finally {
         this.loading = false;
@@ -355,8 +373,9 @@ export const useCartStore = defineStore("cart", {
 
         // Fetch the updated cart state
         await this.fetchCart(true);
-      } catch (err: any) {
-        this.error = err.message || "Failed to clear cart";
+      } catch (err: unknown) {
+        this.error =
+          err instanceof Error ? err.message : "Failed to clear cart";
         throw err;
       } finally {
         this.loading = false;

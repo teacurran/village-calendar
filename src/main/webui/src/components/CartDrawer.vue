@@ -5,7 +5,11 @@ import Drawer from "primevue/drawer";
 import Button from "primevue/button";
 import Divider from "primevue/divider";
 import Dialog from "primevue/dialog";
-import { useCartStore } from "../stores/cart";
+import {
+  useCartStore,
+  type CartItem,
+  type CalendarConfiguration,
+} from "../stores/cart";
 import { useToast } from "primevue/usetoast";
 import { useRouter } from "vue-router";
 import { ROUTE_NAMES } from "../navigation/routes";
@@ -22,7 +26,7 @@ const previewCalendarSvg = ref("");
 const previewCalendarName = ref("");
 
 // Check if item is a calendar (has productCode 'print' or 'pdf', or has calendar config)
-const isCalendarItem = (item: any) => {
+const isCalendarItem = (item: CartItem): boolean => {
   // Check productCode
   if (item.productCode === "print" || item.productCode === "pdf") {
     return true;
@@ -30,11 +34,11 @@ const isCalendarItem = (item: any) => {
   // Check configuration for calendar data
   if (item.configuration) {
     try {
-      const config =
+      const config: CalendarConfiguration =
         typeof item.configuration === "string"
           ? JSON.parse(item.configuration)
           : item.configuration;
-      return config.svgContent || config.year || config.productCode;
+      return !!(config.svgContent || config.year || config.productCode);
     } catch {
       return false;
     }
@@ -43,10 +47,10 @@ const isCalendarItem = (item: any) => {
 };
 
 // Parse configuration and get calendar details
-const getCalendarConfig = (item: any) => {
+const getCalendarConfig = (item: CartItem): CalendarConfiguration | null => {
   if (item.configuration) {
     try {
-      const config =
+      const config: CalendarConfiguration =
         typeof item.configuration === "string"
           ? JSON.parse(item.configuration)
           : item.configuration;
@@ -57,28 +61,10 @@ const getCalendarConfig = (item: any) => {
         item.id,
         e,
       );
+      return null;
     }
   }
   return null;
-};
-
-// Get month name from number
-const getMonthName = (month: number) => {
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  return months[month - 1] || "Jan";
 };
 
 // Get calendar SVG for a specific calendar ID
@@ -127,7 +113,7 @@ const loadCalendarSvgs = async () => {
 };
 
 // Show calendar preview
-const showCalendarPreview = (item: any) => {
+const showCalendarPreview = (item: CartItem) => {
   const config = getCalendarConfig(item);
   if (config) {
     // Use item.id as the key, same as in loadCalendarSvgs
@@ -169,7 +155,7 @@ const isOpen = computed({
 const updateQuantity = async (itemId: string, quantity: number) => {
   try {
     await cartStore.updateQuantity(itemId, quantity);
-  } catch (error) {
+  } catch {
     toast.add({
       severity: "error",
       summary: t("cart.error.title"),
@@ -182,7 +168,7 @@ const updateQuantity = async (itemId: string, quantity: number) => {
 const removeItem = async (itemId: string) => {
   try {
     await cartStore.removeFromCart(itemId);
-  } catch (error) {
+  } catch {
     toast.add({
       severity: "error",
       summary: t("cart.error.title"),
@@ -196,7 +182,7 @@ const clearCart = async () => {
   if (confirm(t("cart.clearCartConfirm"))) {
     try {
       await cartStore.clearCart();
-    } catch (error) {
+    } catch {
       toast.add({
         severity: "error",
         summary: t("cart.error.title"),
