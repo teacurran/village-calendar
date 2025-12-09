@@ -25,18 +25,8 @@
             />
           </div>
 
-          <!-- Auth buttons for non-authenticated users -->
-          <div v-if="!authStore.isAuthenticated" class="auth-buttons">
-            <Button
-              label="Sign In"
-              icon="pi pi-sign-in"
-              text
-              @click="showLoginDialog = true"
-            />
-          </div>
-
           <!-- User menu for authenticated users -->
-          <div v-else class="user-section">
+          <div v-if="authStore.isAuthenticated" class="user-section">
             <!-- Admin button for admin users -->
             <Button
               v-if="authStore.isAdmin"
@@ -68,35 +58,6 @@
       </template>
     </Menubar>
 
-    <!-- Login Dialog -->
-    <Dialog
-      v-model:visible="showLoginDialog"
-      header="Sign In"
-      :modal="true"
-      :closable="true"
-      :style="{ width: '400px' }"
-    >
-      <div class="login-dialog-content">
-        <p class="mb-4 text-gray-600">
-          Choose a provider to sign in to your account
-        </p>
-        <div class="login-buttons">
-          <Button
-            label="Sign in with Google"
-            icon="pi pi-google"
-            class="w-full mb-3"
-            @click="loginWithProvider('google')"
-          />
-          <Button
-            label="Sign in with Facebook"
-            icon="pi pi-facebook"
-            severity="info"
-            class="w-full"
-            @click="loginWithProvider('facebook')"
-          />
-        </div>
-      </div>
-    </Dialog>
   </header>
 </template>
 
@@ -109,7 +70,6 @@ import Menubar from "primevue/menubar";
 import Button from "primevue/button";
 import Badge from "primevue/badge";
 import Menu from "primevue/menu";
-import Dialog from "primevue/dialog";
 import type { MenuItem } from "primevue/menuitem";
 
 const router = useRouter();
@@ -117,7 +77,6 @@ const authStore = useAuthStore();
 const cartStore = useCartStore();
 
 // State
-const showLoginDialog = ref(false);
 const userMenuRef = ref();
 
 // Navigation menu items
@@ -177,12 +136,6 @@ const navigateToAdmin = () => {
   router.push("/admin");
 };
 
-// Login with OAuth provider
-const loginWithProvider = (provider: "google" | "facebook") => {
-  showLoginDialog.value = false;
-  authStore.initiateLogin(provider);
-};
-
 // Handle logout
 const handleLogout = () => {
   authStore.logout();
@@ -234,12 +187,6 @@ onMounted(() => {
   gap: 0.5rem;
 }
 
-.auth-buttons {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
 .cart-icon-wrapper {
   position: relative;
   display: flex;
@@ -259,15 +206,6 @@ onMounted(() => {
 .user-section {
   display: flex;
   align-items: center;
-}
-
-.login-dialog-content {
-  padding: 1rem 0;
-}
-
-.login-buttons {
-  display: flex;
-  flex-direction: column;
 }
 
 /* Responsive styles */

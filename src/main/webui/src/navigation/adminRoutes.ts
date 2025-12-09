@@ -41,7 +41,9 @@ export async function adminGuard(to: any, from: any, next: any) {
   const token = localStorage.getItem("auth_token");
 
   if (!token) {
-    next({ name: "home", query: { error: "auth_required" } });
+    // Save intended destination and redirect to login
+    sessionStorage.setItem("auth_return_to", to.fullPath);
+    next({ name: "login" });
     return;
   }
 
