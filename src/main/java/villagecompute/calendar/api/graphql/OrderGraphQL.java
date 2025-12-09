@@ -16,6 +16,7 @@ import villagecompute.calendar.api.graphql.inputs.OrderInput;
 import villagecompute.calendar.api.graphql.inputs.OrderStatusUpdateInput;
 import villagecompute.calendar.api.graphql.inputs.PlaceOrderInput;
 import villagecompute.calendar.data.models.CalendarOrder;
+import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.AuthenticationService;
@@ -266,6 +267,64 @@ public class OrderGraphQL {
             order.items != null ? order.items.size() : 0);
 
         return order;
+    }
+
+    /**
+     * Get a single order by Stripe checkout session ID.
+     * This is used when returning from Stripe embedded checkout.
+     * Retrieves the session from Stripe to get the orderId from metadata.
+     *
+     * @param sessionId Stripe checkout session ID
+     * @return Order if found
+     */
+    @Query("orderByStripeSessionId")
+    @Description("Get a single order by Stripe checkout session ID. Used for order confirmation after Stripe redirect.")
+    public CalendarOrder orderByStripeSessionId(
+        @Name("sessionId")
+        @Description("Stripe checkout session ID")
+        @NonNull
+        String sessionId
+    ) {
+        LOG.infof("Query: orderByStripeSessionId(sessionId=%s)", sessionId);
+
+        try {
+            // Retrieve the session from Stripe
+            com.stripe.model.checkout.Session session = paymentService.getCheckoutSession(sessionId);
+
+            if (session == null) {
+                LOG.warnf("Stripe session not found: %s", sessionId);
+                return null;
+            }
+
+            // Extract orderId from session metadata
+            String orderId = session.getMetadata().get("orderId");
+            if (orderId == null || orderId.isEmpty()) {
+                LOG.warnf("No orderId in session metadata for session: %s", sessionId);
+                return null;
+            }
+
+            // Parse and look up the order
+            UUID orderUuid;
+            try {
+                orderUuid = UUID.fromString(orderId);
+            } catch (IllegalArgumentException e) {
+                LOG.errorf("Invalid orderId format in session %s: %s", sessionId, orderId);
+                return null;
+            }
+
+            Optional<CalendarOrder> orderOpt = orderService.getOrderById(orderUuid);
+            if (orderOpt.isEmpty()) {
+                LOG.warnf("Order not found for session %s, orderId: %s", sessionId, orderId);
+                return null;
+            }
+
+            LOG.infof("Found order %s for session %s", orderId, sessionId);
+            return orderOpt.get();
+
+        } catch (com.stripe.exception.StripeException e) {
+            LOG.errorf(e, "Failed to retrieve Stripe session: %s", sessionId);
+            return null;
+        }
     }
 
     /**
@@ -661,6 +720,50 @@ public class OrderGraphQL {
 
             order.persist();
             LOG.infof("Created pending order %s for checkout session", order.id);
+
+            // Create order items from input
+            if (input.items != null) {
+                for (CheckoutItemInput itemInput : input.items) {
+                    CalendarOrderItem orderItem = new CalendarOrderItem();
+                    orderItem.order = order;
+
+                    // Determine product type from productCode
+                    String productCode = itemInput.productCode != null ? itemInput.productCode : "print";
+                    orderItem.productType = "pdf".equalsIgnoreCase(productCode)
+                        ? CalendarOrderItem.TYPE_PDF
+                        : CalendarOrderItem.TYPE_PRINT;
+
+                    orderItem.productName = itemInput.name;
+                    orderItem.calendarYear = itemInput.year != null ? itemInput.year : java.time.Year.now().getValue();
+                    orderItem.quantity = itemInput.quantity != null ? itemInput.quantity : 1;
+
+                    // Get unit price
+                    if (itemInput.unitPrice != null && itemInput.unitPrice > 0) {
+                        orderItem.unitPrice = BigDecimal.valueOf(itemInput.unitPrice);
+                    } else {
+                        orderItem.unitPrice = productService.getPrice(productCode);
+                    }
+
+                    // Calculate line total
+                    orderItem.calculateLineTotal();
+
+                    // Parse and store configuration
+                    if (itemInput.configuration != null && !itemInput.configuration.isEmpty()) {
+                        try {
+                            orderItem.configuration = objectMapper.readTree(itemInput.configuration);
+                        } catch (Exception e) {
+                            LOG.warnf("Failed to parse item configuration: %s", e.getMessage());
+                        }
+                    }
+
+                    orderItem.itemStatus = CalendarOrderItem.STATUS_PENDING;
+                    orderItem.persist();
+                    order.items.add(orderItem);
+
+                    LOG.infof("Created order item: %s (%s) x%d @ $%.2f",
+                        orderItem.productName, orderItem.productType, orderItem.quantity, orderItem.unitPrice);
+                }
+            }
 
             // Determine if shipping is required (any print products)
             boolean shippingRequired = input.items != null && input.items.stream()

@@ -45,6 +45,20 @@ public class PaymentService {
     @ConfigProperty(name = "stripe.webhook.secret", defaultValue = "")
     String webhookSecret;
 
+    // Shipping rates (in cents) - matches ShippingService defaults
+    @ConfigProperty(name = "calendar.shipping.domestic.standard", defaultValue = "5.99")
+    String domesticStandardRate;
+
+    @ConfigProperty(name = "calendar.shipping.domestic.priority", defaultValue = "9.99")
+    String domesticPriorityRate;
+
+    @ConfigProperty(name = "calendar.shipping.domestic.express", defaultValue = "14.99")
+    String domesticExpressRate;
+
+    // Tax configuration
+    @ConfigProperty(name = "stripe.automatic.tax.enabled", defaultValue = "true")
+    boolean automaticTaxEnabled;
+
     @Inject
     OrderService orderService;
 
@@ -468,7 +482,7 @@ public class PaymentService {
             paramsBuilder.setCustomerEmail(customerEmail);
         }
 
-        // Shipping address collection
+        // Shipping address collection and shipping options
         if (shippingRequired) {
             paramsBuilder.setShippingAddressCollection(
                 SessionCreateParams.ShippingAddressCollection.builder()
@@ -476,14 +490,124 @@ public class PaymentService {
                     .addAllowedCountry(SessionCreateParams.ShippingAddressCollection.AllowedCountry.CA)
                     .build()
             );
+
+            // Add shipping rate options
+            long standardRateCents = Math.round(Double.parseDouble(domesticStandardRate) * 100);
+            long priorityRateCents = Math.round(Double.parseDouble(domesticPriorityRate) * 100);
+            long expressRateCents = Math.round(Double.parseDouble(domesticExpressRate) * 100);
+
+            paramsBuilder.addShippingOption(
+                SessionCreateParams.ShippingOption.builder()
+                    .setShippingRateData(
+                        SessionCreateParams.ShippingOption.ShippingRateData.builder()
+                            .setType(SessionCreateParams.ShippingOption.ShippingRateData.Type.FIXED_AMOUNT)
+                            .setFixedAmount(
+                                SessionCreateParams.ShippingOption.ShippingRateData.FixedAmount.builder()
+                                    .setAmount(standardRateCents)
+                                    .setCurrency("usd")
+                                    .build()
+                            )
+                            .setDisplayName("Standard Shipping")
+                            .setDeliveryEstimate(
+                                SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.builder()
+                                    .setMinimum(
+                                        SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Minimum.builder()
+                                            .setUnit(SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Minimum.Unit.BUSINESS_DAY)
+                                            .setValue(5L)
+                                            .build()
+                                    )
+                                    .setMaximum(
+                                        SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Maximum.builder()
+                                            .setUnit(SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Maximum.Unit.BUSINESS_DAY)
+                                            .setValue(7L)
+                                            .build()
+                                    )
+                                    .build()
+                            )
+                            .build()
+                    )
+                    .build()
+            );
+
+            paramsBuilder.addShippingOption(
+                SessionCreateParams.ShippingOption.builder()
+                    .setShippingRateData(
+                        SessionCreateParams.ShippingOption.ShippingRateData.builder()
+                            .setType(SessionCreateParams.ShippingOption.ShippingRateData.Type.FIXED_AMOUNT)
+                            .setFixedAmount(
+                                SessionCreateParams.ShippingOption.ShippingRateData.FixedAmount.builder()
+                                    .setAmount(priorityRateCents)
+                                    .setCurrency("usd")
+                                    .build()
+                            )
+                            .setDisplayName("Priority Shipping")
+                            .setDeliveryEstimate(
+                                SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.builder()
+                                    .setMinimum(
+                                        SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Minimum.builder()
+                                            .setUnit(SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Minimum.Unit.BUSINESS_DAY)
+                                            .setValue(2L)
+                                            .build()
+                                    )
+                                    .setMaximum(
+                                        SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Maximum.builder()
+                                            .setUnit(SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Maximum.Unit.BUSINESS_DAY)
+                                            .setValue(3L)
+                                            .build()
+                                    )
+                                    .build()
+                            )
+                            .build()
+                    )
+                    .build()
+            );
+
+            paramsBuilder.addShippingOption(
+                SessionCreateParams.ShippingOption.builder()
+                    .setShippingRateData(
+                        SessionCreateParams.ShippingOption.ShippingRateData.builder()
+                            .setType(SessionCreateParams.ShippingOption.ShippingRateData.Type.FIXED_AMOUNT)
+                            .setFixedAmount(
+                                SessionCreateParams.ShippingOption.ShippingRateData.FixedAmount.builder()
+                                    .setAmount(expressRateCents)
+                                    .setCurrency("usd")
+                                    .build()
+                            )
+                            .setDisplayName("Express Shipping")
+                            .setDeliveryEstimate(
+                                SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.builder()
+                                    .setMinimum(
+                                        SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Minimum.builder()
+                                            .setUnit(SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Minimum.Unit.BUSINESS_DAY)
+                                            .setValue(1L)
+                                            .build()
+                                    )
+                                    .setMaximum(
+                                        SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Maximum.builder()
+                                            .setUnit(SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Maximum.Unit.BUSINESS_DAY)
+                                            .setValue(2L)
+                                            .build()
+                                    )
+                                    .build()
+                            )
+                            .build()
+                    )
+                    .build()
+            );
+
+            LOG.infof("Added shipping options: Standard $%.2f, Priority $%.2f, Express $%.2f",
+                standardRateCents / 100.0, priorityRateCents / 100.0, expressRateCents / 100.0);
         }
 
         // Enable automatic tax calculation if configured
-        // paramsBuilder.setAutomaticTax(
-        //     SessionCreateParams.AutomaticTax.builder()
-        //         .setEnabled(true)
-        //         .build()
-        // );
+        if (automaticTaxEnabled) {
+            paramsBuilder.setAutomaticTax(
+                SessionCreateParams.AutomaticTax.builder()
+                    .setEnabled(true)
+                    .build()
+            );
+            LOG.info("Automatic tax calculation enabled for checkout session");
+        }
 
         Session session = Session.create(paramsBuilder.build());
 
@@ -553,6 +677,25 @@ public class PaymentService {
         order.paidAt = Instant.now();
         order.stripePaymentIntentId = session.getPaymentIntent();
 
+        // Update totals from Stripe session (which includes shipping and tax)
+        if (session.getAmountTotal() != null) {
+            order.totalPrice = BigDecimal.valueOf(session.getAmountTotal()).divide(BigDecimal.valueOf(100));
+        }
+        if (session.getAmountSubtotal() != null) {
+            order.subtotal = BigDecimal.valueOf(session.getAmountSubtotal()).divide(BigDecimal.valueOf(100));
+        }
+        if (session.getTotalDetails() != null) {
+            if (session.getTotalDetails().getAmountShipping() != null) {
+                order.shippingCost = BigDecimal.valueOf(session.getTotalDetails().getAmountShipping()).divide(BigDecimal.valueOf(100));
+            }
+            if (session.getTotalDetails().getAmountTax() != null) {
+                order.taxAmount = BigDecimal.valueOf(session.getTotalDetails().getAmountTax()).divide(BigDecimal.valueOf(100));
+            }
+        }
+
+        LOG.infof("Updated order totals from Stripe: subtotal=$%.2f, shipping=$%.2f, tax=$%.2f, total=$%.2f",
+            order.subtotal, order.shippingCost, order.taxAmount, order.totalPrice);
+
         // Store shipping address if collected (as JSON)
         if (session.getCollectedInformation() != null
             && session.getCollectedInformation().getShippingDetails() != null) {
@@ -560,17 +703,35 @@ public class PaymentService {
             var address = shipping.getAddress();
             if (address != null) {
                 // Store as JSON in the shippingAddress field
+                // Format to match frontend expectations (firstName/lastName, address1, etc.)
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 try {
                     Map<String, Object> addressMap = new HashMap<>();
-                    addressMap.put("name", shipping.getName());
-                    addressMap.put("line1", address.getLine1());
+
+                    // Parse name into firstName/lastName (Stripe only gives full name)
+                    String fullName = shipping.getName();
+                    if (fullName != null && !fullName.isEmpty()) {
+                        String[] nameParts = fullName.trim().split("\\s+", 2);
+                        addressMap.put("firstName", nameParts[0]);
+                        addressMap.put("lastName", nameParts.length > 1 ? nameParts[1] : "");
+                        addressMap.put("name", fullName); // Keep original for reference
+                    }
+
+                    // Map Stripe field names to frontend expected names
+                    addressMap.put("address1", address.getLine1());
+                    addressMap.put("line1", address.getLine1()); // Keep both formats
+                    addressMap.put("address2", address.getLine2());
                     addressMap.put("line2", address.getLine2());
                     addressMap.put("city", address.getCity());
                     addressMap.put("state", address.getState());
                     addressMap.put("postalCode", address.getPostalCode());
                     addressMap.put("country", address.getCountry());
+
                     order.shippingAddress = mapper.valueToTree(addressMap);
+                    order.customerEmail = session.getCustomerEmail();
+
+                    LOG.infof("Stored shipping address for order %s: %s, %s %s",
+                        order.id, address.getLine1(), address.getCity(), address.getState());
                 } catch (Exception e) {
                     LOG.warnf("Failed to store shipping address for order %s: %s", order.id, e.getMessage());
                 }

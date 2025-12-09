@@ -1,24 +1,17 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, nextTick, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useCartStore } from "../stores/cart";
 import { useToast } from "primevue/usetoast";
 import { ROUTE_NAMES } from "../navigation/routes";
 import { homeBreadcrumb } from "../navigation/breadcrumbs";
 import { Breadcrumb, Button, Card } from "primevue";
-import Divider from "primevue/divider";
 import Dialog from "primevue/dialog";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 
 const router = useRouter();
 const cartStore = useCartStore();
 const toast = useToast();
-
-// Store for calendar SVGs
-const calendarSvgs = ref<Record<string, string>>({});
-const showPreviewModal = ref(false);
-const previewCalendarSvg = ref("");
-const previewCalendarName = ref("");
 
 // Stripe state
 const stripe = ref<Stripe | null>(null);
@@ -34,61 +27,11 @@ const pageLoading = ref(true);
 const creatingSession = ref(false);
 const checkoutError = ref<string | null>(null);
 
-// Check if item is a calendar (by productCode or configuration)
-const isCalendarItem = (item: any) => {
-  // Check productCode
-  if (item.productCode === "print" || item.productCode === "pdf") {
-    return true;
-  }
-  // Check configuration for calendar data
-  if (item.configuration) {
-    try {
-      const config =
-        typeof item.configuration === "string"
-          ? JSON.parse(item.configuration)
-          : item.configuration;
-      return config.svgContent || config.year || config.productCode;
-    } catch (e) {}
-  }
-  return false;
-};
-
-// Check if item is digital (PDF)
-const isDigitalItem = (item: any) => {
-  if (item.productCode === "pdf") return true;
-  if (item.configuration) {
-    try {
-      const config =
-        typeof item.configuration === "string"
-          ? JSON.parse(item.configuration)
-          : item.configuration;
-      if (config.productType === "pdf" || config.productCode === "pdf") {
-        return true;
-      }
-    } catch (e) {}
-  }
-  return false;
-};
-
-// Get calendar config from item
-const getCalendarConfig = (item: any) => {
-  if (item.configuration) {
-    try {
-      const config =
-        typeof item.configuration === "string"
-          ? JSON.parse(item.configuration)
-          : item.configuration;
-      return config;
-    } catch (e) {
-      console.error("Failed to parse calendar configuration:", e);
-    }
-  }
-  return null;
-};
-
-// Computed
-const cartItems = computed(() => cartStore.items);
-const cartSubtotal = computed(() => cartStore.subtotal || 0);
+// Calendar preview state
+const calendarSvgs = ref<Record<string, string>>({});
+const showPreviewModal = ref(false);
+const previewCalendarSvg = ref("");
+const previewCalendarName = ref("");
 
 // Breadcrumbs
 const breadcrumbItems = computed(() => [
@@ -96,7 +39,38 @@ const breadcrumbItems = computed(() => [
   { label: "Checkout" },
 ]);
 
-// Load calendar SVGs
+// Cart items
+const cartItems = computed(() => cartStore.items);
+
+// Check if any items are calendars
+const hasCalendarItems = computed(() => {
+  return cartItems.value.some((item: any) => {
+    if (item.productCode === "print" || item.productCode === "pdf") return true;
+    if (item.configuration) {
+      try {
+        const config = typeof item.configuration === "string"
+          ? JSON.parse(item.configuration)
+          : item.configuration;
+        return config.svgContent || config.year;
+      } catch (e) {}
+    }
+    return false;
+  });
+});
+
+// Get calendar config from item
+const getCalendarConfig = (item: any) => {
+  if (item.configuration) {
+    try {
+      return typeof item.configuration === "string"
+        ? JSON.parse(item.configuration)
+        : item.configuration;
+    } catch (e) {}
+  }
+  return null;
+};
+
+// Load calendar SVGs from cart items
 const loadCalendarSvgs = async () => {
   if (!cartStore.items || cartStore.items.length === 0) return;
 
@@ -113,16 +87,13 @@ const loadCalendarSvgs = async () => {
   }
 };
 
-// Show calendar preview
+// Show calendar preview modal
 const showCalendarPreview = (item: any) => {
   const config = getCalendarConfig(item);
-  if (config) {
-    const calendarKey = item.id;
-    if (calendarSvgs.value[calendarKey]) {
-      previewCalendarSvg.value = calendarSvgs.value[calendarKey];
-      previewCalendarName.value = config.name || `${config.year} Calendar`;
-      showPreviewModal.value = true;
-    }
+  if (config && calendarSvgs.value[item.id]) {
+    previewCalendarSvg.value = calendarSvgs.value[item.id];
+    previewCalendarName.value = config.name || `${config.year} Calendar`;
+    showPreviewModal.value = true;
   }
 };
 
@@ -188,10 +159,17 @@ async function initializeEmbeddedCheckout() {
     }
 
     const sessionData = result.data.createCheckoutSession;
+    console.log("Checkout session created:", sessionData);
     checkoutClientSecret.value = sessionData.clientSecret;
     checkoutSessionId.value = sessionData.sessionId;
     orderId.value = sessionData.orderId;
     orderNumber.value = sessionData.orderNumber;
+
+    // Session created, stop showing spinner so container becomes visible
+    creatingSession.value = false;
+
+    // Wait for DOM to be ready before mounting
+    await nextTick();
 
     // Mount embedded checkout
     if (checkoutContainer.value && stripe.value && checkoutClientSecret.value) {
@@ -201,6 +179,8 @@ async function initializeEmbeddedCheckout() {
 
       checkout.mount(checkoutContainer.value);
       checkoutMounted.value = true;
+    } else {
+      console.error("Missing required elements for checkout mount");
     }
   } catch (error: any) {
     console.error("Error initializing embedded checkout:", error);
@@ -211,7 +191,6 @@ async function initializeEmbeddedCheckout() {
       detail: error.message || "Failed to initialize checkout",
       life: 5000,
     });
-  } finally {
     creatingSession.value = false;
   }
 }
@@ -222,13 +201,8 @@ async function handleCheckoutCompletion() {
   const sessionId = urlParams.get("session_id");
 
   if (sessionId) {
-    // Payment completed, redirect to confirmation
-    // Clear cart
     await cartStore.clearCart();
-
-    // Get order number from session storage or URL
     const storedOrderNumber = sessionStorage.getItem("pendingOrderNumber");
-
     router.push({
       name: ROUTE_NAMES.ORDER_CONFIRMATION,
       params: { orderId: storedOrderNumber || sessionId },
@@ -236,21 +210,10 @@ async function handleCheckoutCompletion() {
   }
 }
 
-// Format currency
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
-}
-
 // Initialize
 onMounted(async () => {
   try {
-    // Check for return from Stripe
     await handleCheckoutCompletion();
-
-    // Fetch cart
     await cartStore.fetchCart();
     await loadCalendarSvgs();
 
@@ -259,21 +222,18 @@ onMounted(async () => {
       return;
     }
 
-    // Initialize embedded checkout
+    pageLoading.value = false;
     await initializeEmbeddedCheckout();
-  } finally {
+  } catch (error) {
+    console.error("Error during checkout initialization:", error);
     pageLoading.value = false;
   }
 });
 
-// Watch cart changes
-watch(
-  cartItems,
-  async () => {
-    await loadCalendarSvgs();
-  },
-  { immediate: false }
-);
+// Watch for cart changes to reload SVGs
+watch(cartItems, async () => {
+  await loadCalendarSvgs();
+}, { immediate: false });
 </script>
 
 <template>
@@ -285,10 +245,10 @@ watch(
     <p class="mt-3">Loading checkout...</p>
   </div>
 
-  <!-- Main checkout grid -->
-  <div v-else class="checkout-grid">
-    <!-- Left: Stripe Embedded Checkout -->
-    <Card class="checkout-form">
+  <!-- Main checkout layout -->
+  <div v-else :class="['checkout-layout', { 'with-sidebar': hasCalendarItems }]">
+    <!-- Stripe Checkout (main area) -->
+    <Card class="checkout-card">
       <template #content>
         <!-- Creating session spinner -->
         <div v-if="creatingSession" class="checkout-loading">
@@ -317,84 +277,34 @@ watch(
       </template>
     </Card>
 
-    <!-- Right: Order summary -->
-    <Card class="checkout-sidebar">
-      <template #title>Order summary</template>
-
-      <template #content>
-        <!-- Cart items -->
-        <div class="cart-items">
-          <div v-for="item in cartItems" :key="item.id" class="cart-item">
-            <div class="item-image">
-              <div
-                v-if="isCalendarItem(item) && getCalendarConfig(item)"
-                class="image-placeholder calendar-preview"
-                @click="showCalendarPreview(item)"
-              >
-                <div class="preview-container">
-                  <div
-                    v-if="calendarSvgs[item.id]"
-                    class="svg-preview"
-                    v-html="calendarSvgs[item.id]"
-                  ></div>
-                  <div v-else class="calendar-icon">
-                    <div class="calendar-year">
-                      {{ getCalendarConfig(item)?.year }}
-                    </div>
-                    <i class="pi pi-calendar"></i>
-                  </div>
-                </div>
-                <span class="item-quantity">{{ item.quantity }}</span>
-              </div>
-              <div v-else class="image-placeholder">
-                <span class="item-quantity">{{ item.quantity }}</span>
-              </div>
-            </div>
-            <div class="item-details">
-              <div class="item-name">
-                {{ item.templateName }}
-                <span
-                  v-if="isDigitalItem(item)"
-                  class="product-badge pdf-badge"
-                >
-                  PDF
-                </span>
-                <span v-else class="product-badge print-badge">Print</span>
-              </div>
-              <div
-                v-if="isCalendarItem(item) && getCalendarConfig(item)"
-                class="item-variant"
-              >
-                <i class="pi pi-calendar mr-1"></i>
-                {{ getCalendarConfig(item).year }} Calendar
-              </div>
-            </div>
-            <div class="item-price">{{ formatCurrency(item.lineTotal) }}</div>
+    <!-- Calendar Thumbnails Sidebar (only if there are calendars) -->
+    <div v-if="hasCalendarItems" class="preview-sidebar">
+      <h3 class="sidebar-title">Your Calendars</h3>
+      <div class="thumbnail-list">
+        <div
+          v-for="item in cartItems"
+          :key="item.id"
+          class="thumbnail-item"
+          @click="showCalendarPreview(item)"
+        >
+          <div v-if="calendarSvgs[item.id]" class="thumbnail-container">
+            <div class="thumbnail-svg" v-html="calendarSvgs[item.id]"></div>
           </div>
+          <div v-else class="thumbnail-placeholder">
+            <i class="pi pi-calendar"></i>
+          </div>
+          <span class="thumbnail-label">{{ getCalendarConfig(item)?.year || item.year }}</span>
         </div>
-
-        <Divider />
-
-        <!-- Subtotal -->
-        <div class="summary-totals">
-          <div class="total-row">
-            <span>Subtotal</span>
-            <span>{{ formatCurrency(cartSubtotal) }}</span>
-          </div>
-          <div class="total-row hint">
-            <span>Shipping & taxes</span>
-            <span>Calculated at checkout</span>
-          </div>
-        </div>
-      </template>
-    </Card>
+      </div>
+      <p class="sidebar-hint">Click to preview</p>
+    </div>
   </div>
 
   <!-- Calendar Preview Modal -->
   <Dialog
     v-model:visible="showPreviewModal"
     :header="previewCalendarName"
-    :style="{ width: '90vw', maxWidth: '900px' }"
+    :style="{ width: '90vw', maxWidth: '1000px' }"
     :modal="true"
     :dismissable-mask="true"
   >
@@ -416,24 +326,33 @@ watch(
   color: var(--text-color-secondary);
 }
 
-.checkout-grid {
+.checkout-layout {
+  display: block;
+  width: fit-content;
+  margin: 0 0 3rem 2rem;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.checkout-layout.with-sidebar {
   display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 1.5rem;
-  margin: 0 auto 3rem;
-  padding: 0 1rem;
+  grid-template-columns: auto 1fr;
+  gap: 2rem;
+  width: 100%;
   max-width: 1200px;
   align-items: start;
 }
 
-.checkout-form {
-  min-width: 0;
+.checkout-card {
+  width: fit-content;
 }
 
-.checkout-sidebar {
-  position: sticky;
-  top: 2rem;
-  height: fit-content;
+.checkout-card :deep(.p-card-body) {
+  padding: 0.75rem;
+}
+
+.checkout-card :deep(.p-card-content) {
+  padding: 0;
 }
 
 .checkout-loading,
@@ -448,154 +367,96 @@ watch(
 }
 
 .stripe-embedded-checkout {
-  min-height: 400px;
+  min-height: 500px;
 }
 
-/* Cart items */
-.cart-items {
-  margin-bottom: 1rem;
+/* Preview Sidebar - Large calendar preview */
+.preview-sidebar {
+  position: sticky;
+  top: 1rem;
+  text-align: center;
 }
 
-.cart-item {
+.sidebar-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  margin: 0 0 1rem 0;
+  text-align: left;
+}
+
+.thumbnail-list {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.item-image {
-  position: relative;
-  padding: 8px 8px 0 0;
-}
-
-.image-placeholder {
-  width: 64px;
-  height: 64px;
-  background: #f5f5f5;
-  border: 1px solid #e1e1e1;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
+.thumbnail-item {
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.image-placeholder.calendar-preview {
-  background: var(--p-surface-0);
-  border-color: #90caf9;
+.thumbnail-item:hover {
+  transform: scale(1.01);
 }
 
-.image-placeholder.calendar-preview:hover {
+.thumbnail-container {
+  width: 100%;
+  aspect-ratio: 35 / 23;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.thumbnail-container:hover {
   border-color: #1976d2;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
-.preview-container {
+.thumbnail-svg {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
-  border-radius: 4px;
-}
-
-.svg-preview {
-  width: 800px;
-  height: 800px;
-  transform: scale(0.08);
-  transform-origin: top left;
   pointer-events: none;
 }
 
-.calendar-icon {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #1565c0;
+.thumbnail-svg :deep(svg) {
   width: 100%;
   height: 100%;
 }
 
-.calendar-year {
-  font-size: 1.2rem;
-  font-weight: bold;
-  line-height: 1;
-  margin-bottom: 2px;
-}
-
-.item-quantity {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background: #737373;
-  color: white;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
+.thumbnail-placeholder {
+  width: 100%;
+  aspect-ratio: 35 / 23;
+  background: #f5f5f5;
+  border: 2px solid #e1e1e1;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #999;
+  font-size: 3rem;
+}
+
+.thumbnail-label {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  margin-top: 0.5rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+.sidebar-hint {
   font-size: 0.75rem;
-}
-
-.item-details {
-  flex: 1;
-}
-
-.item-name {
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 0.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.product-badge {
-  font-size: 0.7rem;
-  padding: 0.15rem 0.4rem;
-  border-radius: 3px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.print-badge {
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-.pdf-badge {
-  background: #fce4ec;
-  color: #c62828;
-}
-
-.item-variant {
-  font-size: 0.875rem;
-  color: #737373;
-}
-
-.item-price {
-  font-weight: 500;
-  color: #333;
-}
-
-/* Totals */
-.summary-totals {
-  margin-top: 1rem;
-}
-
-.total-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.5rem 0;
-  font-size: 0.875rem;
-}
-
-.total-row.hint {
   color: var(--text-color-secondary);
-  font-size: 0.8rem;
+  margin: 1rem 0 0 0;
+  text-align: left;
 }
 
 /* Calendar preview modal */
@@ -608,18 +469,17 @@ watch(
 .calendar-preview-content :deep(svg) {
   width: 100%;
   height: auto;
-  max-height: 70vh;
+  max-height: 75vh;
 }
 
-/* Responsive */
-@media (max-width: 968px) {
-  .checkout-grid {
-    grid-template-columns: 1fr;
+/* Responsive - hide sidebar on small screens */
+@media (max-width: 600px) {
+  .checkout-layout.with-sidebar {
+    display: block;
   }
 
-  .checkout-sidebar {
-    position: static;
-    order: -1;
+  .preview-sidebar {
+    display: none;
   }
 }
 </style>

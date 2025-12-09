@@ -225,8 +225,8 @@ function parseItemConfig(item: any) {
 
 // Get product type display info
 function getProductTypeInfo(item: any) {
-  const config = parseItemConfig(item);
-  const productType = config?.productType || "print";
+  // Check item.productType directly (from database), or fall back to config
+  const productType = item.productType?.toLowerCase() || parseItemConfig(item)?.productType || "print";
 
   if (productType === "pdf") {
     return {
@@ -244,9 +244,10 @@ function getProductTypeInfo(item: any) {
 
 // Check if item includes PDF access (PDF product or print includes free PDF)
 function hasPdfAccess(item: any) {
-  const config = parseItemConfig(item);
+  // Check item.productType directly (from database), or fall back to config
+  const productType = item.productType?.toLowerCase() || parseItemConfig(item)?.productType || "print";
   // Both PDF products and printed calendars include PDF access
-  return config?.productType === "pdf" || config?.productType === "print";
+  return productType === "pdf" || productType === "print";
 }
 
 // Get the calendar year from item

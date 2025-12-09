@@ -60,6 +60,12 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
+      path: "/order-confirmation",
+      name: "order-confirmation-stripe",
+      component: () => import("./view/OrderConfirmationStripe.vue"),
+      meta: { requiresAuth: false },
+    },
+    {
       path: "/auth/callback",
       name: "oauth-callback",
       component: () => import("./view/public/OAuthCallback.vue"),
