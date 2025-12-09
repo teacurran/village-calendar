@@ -206,10 +206,6 @@ function printOrder() {
   window.print();
 }
 
-function continueShopping() {
-  router.push({ name: "templates" });
-}
-
 // Parse item configuration - it may be a string or object
 function parseItemConfig(item: any) {
   if (!item.configuration) return null;
@@ -660,12 +656,6 @@ async function downloadPdf(item: any) {
             </div>
 
             <div class="action-buttons mt-4">
-              <Button
-                label="Continue Shopping"
-                icon="pi pi-shopping-bag"
-                class="w-full mb-2"
-                @click="continueShopping"
-              />
               <Button
                 label="Print Order"
                 icon="pi pi-print"
