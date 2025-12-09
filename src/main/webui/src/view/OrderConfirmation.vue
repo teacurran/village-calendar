@@ -666,24 +666,6 @@ async function downloadPdf(item: any) {
           </template>
         </Card>
 
-        <!-- Create account prompt -->
-        <Card v-if="!order?.userId">
-          <template #title>
-            <h3>Save Time Next Time!</h3>
-          </template>
-          <template #content>
-            <p class="text-gray-600 mb-3">
-              Create an account to track orders, save addresses, and checkout
-              faster next time.
-            </p>
-            <Button
-              label="Create Account"
-              icon="pi pi-user-plus"
-              class="w-full"
-              @click="() => router.push('/register')"
-            />
-          </template>
-        </Card>
       </div>
     </div>
 
