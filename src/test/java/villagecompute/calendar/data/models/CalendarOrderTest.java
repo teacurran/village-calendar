@@ -104,18 +104,16 @@ class CalendarOrderTest {
     }
 
     @Test
-    void testInvalidEntity_NullUser() {
-        // Given
+    void testValidEntity_NullUser_GuestCheckout() {
+        // Given - user is now nullable to support guest checkout
         CalendarOrder order = createValidOrder();
         order.user = null;
 
         // When
         Set<ConstraintViolation<CalendarOrder>> violations = validator.validate(order);
 
-        // Then
-        assertEquals(1, violations.size());
-        ConstraintViolation<CalendarOrder> violation = violations.iterator().next();
-        assertEquals("user", violation.getPropertyPath().toString());
+        // Then - no violations, null user is allowed for guest checkout
+        assertEquals(0, violations.size());
     }
 
     @Test

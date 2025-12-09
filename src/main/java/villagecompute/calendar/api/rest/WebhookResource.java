@@ -195,33 +195,53 @@ public class WebhookResource {
      * @param event Stripe event
      */
     private void handleCheckoutSessionCompleted(Event event) {
-        // Parse session data from JSON - works in both test and production
-        JsonNode sessionData;
+        // Deserialize the Session object from the event data
+        com.stripe.model.checkout.Session session;
         try {
-            String dataJson = event.getData().toJson();
-            sessionData = MAPPER.readTree(dataJson).get("object");
+            // Try to deserialize directly from the event
+            var deserializer = event.getDataObjectDeserializer();
+            if (deserializer.getObject().isPresent()) {
+                session = (com.stripe.model.checkout.Session) deserializer.getObject().get();
+            } else {
+                // Fallback: parse from JSON manually for test compatibility
+                String dataJson = event.getData().toJson();
+                JsonNode sessionData = MAPPER.readTree(dataJson).get("object");
+                String sessionId = sessionData.get("id").asText();
+
+                LOG.infof("Deserializing session from JSON, ID: %s", sessionId);
+
+                // Create a minimal session object from JSON
+                session = new com.stripe.model.checkout.Session();
+                session.setId(sessionId);
+
+                // Set payment intent if present
+                if (sessionData.has("payment_intent") && !sessionData.get("payment_intent").isNull()) {
+                    session.setPaymentIntent(sessionData.get("payment_intent").asText());
+                }
+
+                // Set metadata if present
+                if (sessionData.has("metadata") && !sessionData.get("metadata").isNull()) {
+                    java.util.Map<String, String> metadata = new java.util.HashMap<>();
+                    sessionData.get("metadata").fields().forEachRemaining(field ->
+                        metadata.put(field.getKey(), field.getValue().asText()));
+                    session.setMetadata(metadata);
+                }
+            }
         } catch (Exception e) {
+            LOG.errorf(e, "Failed to parse checkout session from event");
             throw new IllegalStateException("Failed to parse checkout session data", e);
         }
 
-        String sessionId = sessionData.get("id").asText();
-        JsonNode paymentIntentNode = sessionData.get("payment_intent");
-        String paymentIntentId = paymentIntentNode != null ? paymentIntentNode.asText() : null;
+        LOG.infof("Checkout session completed: %s (PaymentIntent: %s)",
+            session.getId(), session.getPaymentIntent());
 
-        LOG.infof("Checkout session completed: %s (PaymentIntent: %s)", sessionId, paymentIntentId);
-
-        if (sessionId == null || sessionId.isEmpty()) {
+        if (session.getId() == null || session.getId().isEmpty()) {
             LOG.errorf("Checkout session has no ID");
             return;
         }
 
-        // Use the new checkout session processing which handles shipping info
-        try {
-            paymentService.processCheckoutSessionCompleted(sessionId);
-        } catch (com.stripe.exception.StripeException e) {
-            LOG.errorf(e, "Failed to process checkout session %s", sessionId);
-            throw new RuntimeException("Failed to process checkout session", e);
-        }
+        // Use the Session object directly (no Stripe API call needed)
+        paymentService.processCheckoutSessionCompleted(session);
     }
 
     /**

@@ -235,7 +235,7 @@ public class StripeWebhookControllerTest {
         CalendarOrder order = CalendarOrder.findById(testOrder.id);
         assertEquals(CalendarOrder.STATUS_PENDING, order.status);
 
-        // Create webhook payload with proper Stripe event structure
+        // Create webhook payload with proper Stripe event structure including metadata
         String payload = String.format("""
             {
                 "id": "evt_test_checkout_success",
@@ -249,11 +249,14 @@ public class StripeWebhookControllerTest {
                         "object": "checkout.session",
                         "payment_intent": "%s",
                         "payment_status": "paid",
-                        "status": "complete"
+                        "status": "complete",
+                        "metadata": {
+                            "orderId": "%s"
+                        }
                     }
                 }
             }
-            """, System.currentTimeMillis() / 1000, TEST_SESSION_ID, TEST_PAYMENT_INTENT_ID);
+            """, System.currentTimeMillis() / 1000, TEST_SESSION_ID, TEST_PAYMENT_INTENT_ID, testOrder.id.toString());
 
         String signature = generateStripeSignature(payload);
 
@@ -298,11 +301,14 @@ public class StripeWebhookControllerTest {
                         "object": "checkout.session",
                         "payment_intent": "%s",
                         "payment_status": "paid",
-                        "status": "complete"
+                        "status": "complete",
+                        "metadata": {
+                            "orderId": "%s"
+                        }
                     }
                 }
             }
-            """, System.currentTimeMillis() / 1000, TEST_SESSION_ID, TEST_PAYMENT_INTENT_ID);
+            """, System.currentTimeMillis() / 1000, TEST_SESSION_ID, TEST_PAYMENT_INTENT_ID, testOrder.id.toString());
 
         String signature = generateStripeSignature(payload);
 
@@ -354,11 +360,14 @@ public class StripeWebhookControllerTest {
                         "object": "checkout.session",
                         "payment_intent": "%s",
                         "payment_status": "paid",
-                        "status": "complete"
+                        "status": "complete",
+                        "metadata": {
+                            "orderId": "%s"
+                        }
                     }
                 }
             }
-            """, System.currentTimeMillis() / 1000, TEST_SESSION_ID, TEST_PAYMENT_INTENT_ID);
+            """, System.currentTimeMillis() / 1000, TEST_SESSION_ID, TEST_PAYMENT_INTENT_ID, testOrder.id.toString());
 
         String signature = generateStripeSignature(payload);
 

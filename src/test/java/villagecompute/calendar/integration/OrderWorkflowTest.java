@@ -227,11 +227,14 @@ class OrderWorkflowTest {
                         "object": "checkout.session",
                         "payment_intent": "%s",
                         "payment_status": "paid",
-                        "status": "complete"
+                        "status": "complete",
+                        "metadata": {
+                            "orderId": "%s"
+                        }
                     }
                 }
             }
-            """, System.currentTimeMillis() / 1000, testPaymentIntentId);
+            """, System.currentTimeMillis() / 1000, testPaymentIntentId, order.id.toString());
 
         String signature = generateStripeSignature(webhookPayload);
 
@@ -288,11 +291,14 @@ class OrderWorkflowTest {
                         "object": "checkout.session",
                         "payment_intent": "%s",
                         "payment_status": "paid",
-                        "status": "complete"
+                        "status": "complete",
+                        "metadata": {
+                            "orderId": "%s"
+                        }
                     }
                 }
             }
-            """, System.currentTimeMillis() / 1000, testPaymentIntentId);
+            """, System.currentTimeMillis() / 1000, testPaymentIntentId, order.id.toString());
 
         String signature = generateStripeSignature(webhookPayload);
 
@@ -350,11 +356,14 @@ class OrderWorkflowTest {
                         "object": "checkout.session",
                         "payment_intent": "%s",
                         "payment_status": "paid",
-                        "status": "complete"
+                        "status": "complete",
+                        "metadata": {
+                            "orderId": "%s"
+                        }
                     }
                 }
             }
-            """, System.currentTimeMillis() / 1000, testPaymentIntentId);
+            """, System.currentTimeMillis() / 1000, testPaymentIntentId, order.id.toString());
 
         String signature = generateStripeSignature(webhookPayload);
 

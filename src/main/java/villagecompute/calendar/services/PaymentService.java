@@ -632,7 +632,8 @@ public class PaymentService {
     }
 
     /**
-     * Process successful checkout from webhook.
+     * Process successful checkout from webhook using session ID.
+     * Retrieves the session from Stripe API.
      * Called when checkout.session.completed event is received.
      *
      * @param sessionId Stripe Checkout Session ID
@@ -641,9 +642,24 @@ public class PaymentService {
     @Transactional
     public boolean processCheckoutSessionCompleted(String sessionId) throws StripeException {
         LOG.infof("Processing checkout.session.completed for session: %s", sessionId);
-
         Session session = Session.retrieve(sessionId);
-        String orderId = session.getMetadata().get("orderId");
+        return processCheckoutSessionCompleted(session);
+    }
+
+    /**
+     * Process successful checkout from webhook using Session object.
+     * Called with the session data deserialized from the webhook event.
+     *
+     * @param session Stripe Checkout Session object
+     * @return true if processed, false if already processed (idempotent)
+     */
+    @Transactional
+    public boolean processCheckoutSessionCompleted(Session session) {
+        String sessionId = session.getId();
+        LOG.infof("Processing checkout.session.completed for session: %s", sessionId);
+
+        Map<String, String> metadata = session.getMetadata();
+        String orderId = metadata != null ? metadata.get("orderId") : null;
 
         if (orderId == null) {
             LOG.warnf("No orderId in session metadata for session: %s", sessionId);
@@ -740,7 +756,7 @@ public class PaymentService {
 
         // Add note
         String timestamp = Instant.now().toString();
-        String noteEntry = String.format("[%s] Payment completed via Checkout Session %s\n", timestamp, sessionId);
+        String noteEntry = String.format("[%s] Payment succeeded via Checkout Session %s\n", timestamp, sessionId);
         order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
 
         order.persist();
