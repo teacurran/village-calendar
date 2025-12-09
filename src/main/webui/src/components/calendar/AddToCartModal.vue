@@ -78,13 +78,13 @@ watch(
       fetchProducts();
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // Methods
 const handleSelect = () => {
   const selectedProduct = productOptions.value.find(
-    (p) => p.code === selectedOption.value
+    (p) => p.code === selectedOption.value,
   );
   if (selectedProduct) {
     emit("select", selectedProduct.code, selectedProduct.price);

@@ -133,7 +133,9 @@ function openDetails(order: CalendarOrder) {
  */
 function getFirstPdfItem(order: CalendarOrder | null): any | null {
   if (!order?.items || order.items.length === 0) return null;
-  return order.items.find((item) => item.productType === "PDF") || order.items[0];
+  return (
+    order.items.find((item) => item.productType === "PDF") || order.items[0]
+  );
 }
 
 /**
@@ -243,12 +245,15 @@ async function downloadPdf(order: CalendarOrder, item: any) {
 
   try {
     // Use secure order-based PDF download endpoint
-    const response = await fetch(`/api/orders/${orderNumber}/items/${itemId}/pdf`, {
-      method: "GET",
-      headers: {
-        Accept: "application/pdf",
+    const response = await fetch(
+      `/api/orders/${orderNumber}/items/${itemId}/pdf`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/pdf",
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to generate PDF: ${response.status}`);
@@ -865,7 +870,9 @@ onMounted(async () => {
                   label="Download PDF"
                   icon="pi pi-download"
                   size="small"
-                  @click="downloadPdf(viewingOrder, getFirstPdfItem(viewingOrder))"
+                  @click="
+                    downloadPdf(viewingOrder, getFirstPdfItem(viewingOrder))
+                  "
                 />
               </div>
             </div>

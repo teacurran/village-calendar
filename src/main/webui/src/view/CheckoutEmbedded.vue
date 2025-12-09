@@ -48,11 +48,14 @@ const hasCalendarItems = computed(() => {
     if (item.productCode === "print" || item.productCode === "pdf") return true;
     if (item.configuration) {
       try {
-        const config = typeof item.configuration === "string"
-          ? JSON.parse(item.configuration)
-          : item.configuration;
+        const config =
+          typeof item.configuration === "string"
+            ? JSON.parse(item.configuration)
+            : item.configuration;
         return config.svgContent || config.year;
-      } catch (e) {}
+      } catch {
+        // Ignore JSON parse errors
+      }
     }
     return false;
   });
@@ -65,7 +68,9 @@ const getCalendarConfig = (item: any) => {
       return typeof item.configuration === "string"
         ? JSON.parse(item.configuration)
         : item.configuration;
-    } catch (e) {}
+    } catch {
+      return null;
+    }
   }
   return null;
 };
@@ -231,9 +236,13 @@ onMounted(async () => {
 });
 
 // Watch for cart changes to reload SVGs
-watch(cartItems, async () => {
-  await loadCalendarSvgs();
-}, { immediate: false });
+watch(
+  cartItems,
+  async () => {
+    await loadCalendarSvgs();
+  },
+  { immediate: false },
+);
 </script>
 
 <template>
@@ -246,7 +255,10 @@ watch(cartItems, async () => {
   </div>
 
   <!-- Main checkout layout -->
-  <div v-else :class="['checkout-layout', { 'with-sidebar': hasCalendarItems }]">
+  <div
+    v-else
+    :class="['checkout-layout', { 'with-sidebar': hasCalendarItems }]"
+  >
     <!-- Stripe Checkout (main area) -->
     <Card class="checkout-card">
       <template #content>
@@ -293,7 +305,9 @@ watch(cartItems, async () => {
           <div v-else class="thumbnail-placeholder">
             <i class="pi pi-calendar"></i>
           </div>
-          <span class="thumbnail-label">{{ getCalendarConfig(item)?.year || item.year }}</span>
+          <span class="thumbnail-label">{{
+            getCalendarConfig(item)?.year || item.year
+          }}</span>
         </div>
       </div>
       <p class="sidebar-hint">Click to preview</p>
@@ -393,7 +407,9 @@ watch(cartItems, async () => {
 
 .thumbnail-item {
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .thumbnail-item:hover {

@@ -42,11 +42,14 @@ const isCalendarItem = (item: any) => {
   // Check configuration for calendar data
   if (item.configuration) {
     try {
-      const config = typeof item.configuration === "string"
-        ? JSON.parse(item.configuration)
-        : item.configuration;
+      const config =
+        typeof item.configuration === "string"
+          ? JSON.parse(item.configuration)
+          : item.configuration;
       return config.svgContent || config.year || config.productCode;
-    } catch (e) {}
+    } catch {
+      // Ignore JSON parse errors
+    }
   }
   return false;
 };
@@ -67,7 +70,9 @@ const isDigitalItem = (item: any) => {
       if (config.productCode === "pdf" || config.productType === "pdf") {
         return true;
       }
-    } catch (e) {}
+    } catch {
+      // Ignore JSON parse errors
+    }
   }
   return false;
 };

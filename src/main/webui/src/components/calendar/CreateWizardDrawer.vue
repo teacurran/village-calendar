@@ -107,7 +107,12 @@ export interface ColorSettings {
   emojiFont: EmojiFontType;
 }
 
-export type EventDisplayMode = "large" | "large-text" | "small" | "text" | "none";
+export type EventDisplayMode =
+  | "large"
+  | "large-text"
+  | "small"
+  | "text"
+  | "none";
 
 export interface HolidaySettings {
   selectedSets: string[];
@@ -1146,7 +1151,9 @@ onMounted(() => {
                     </div>
                     <div class="event-info">
                       <div class="event-name">Emoji + Text</div>
-                      <div class="event-description">Emoji with holiday name below</div>
+                      <div class="event-description">
+                        Emoji with holiday name below
+                      </div>
                     </div>
                   </div>
 
@@ -1200,7 +1207,9 @@ onMounted(() => {
                     </div>
                     <div class="event-info">
                       <div class="event-name">Text Only</div>
-                      <div class="event-description">Holiday name, no emoji</div>
+                      <div class="event-description">
+                        Holiday name, no emoji
+                      </div>
                     </div>
                   </div>
 
@@ -1226,7 +1235,9 @@ onMounted(() => {
                     </div>
                     <div class="event-info">
                       <div class="event-name">Color Only</div>
-                      <div class="event-description">Date color changes, no emoji or text</div>
+                      <div class="event-description">
+                        Date color changes, no emoji or text
+                      </div>
                     </div>
                   </div>
                 </div>

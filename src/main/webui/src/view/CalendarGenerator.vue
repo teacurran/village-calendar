@@ -943,7 +943,12 @@ const config = ref({
   emojiPosition: "bottom-left", // Position of emojis in calendar cells
   // Holiday settings
   holidaySets: [] as string[], // List of selected holiday set IDs
-  eventDisplayMode: "large" as "large" | "large-text" | "small" | "text" | "none", // Display mode for events/holidays
+  eventDisplayMode: "large" as
+    | "large"
+    | "large-text"
+    | "small"
+    | "text"
+    | "none", // Display mode for events/holidays
   // Emoji font settings
   emojiFont: "noto-color" as "noto-color" | "noto-mono", // Emoji font style
 });
@@ -2589,7 +2594,10 @@ const addToCart = async (productCode: string = "print") => {
   }
 
   // Product display names and success messages
-  const productMessages: Record<string, { name: string; successMessage: string }> = {
+  const productMessages: Record<
+    string,
+    { name: string; successMessage: string }
+  > = {
     pdf: {
       name: `Calendar ${config.value.year} (PDF)`,
       successMessage: "Your PDF calendar has been added to the cart.",

@@ -222,7 +222,10 @@ function parseItemConfig(item: any) {
 // Get product type display info
 function getProductTypeInfo(item: any) {
   // Check item.productType directly (from database), or fall back to config
-  const productType = item.productType?.toLowerCase() || parseItemConfig(item)?.productType || "print";
+  const productType =
+    item.productType?.toLowerCase() ||
+    parseItemConfig(item)?.productType ||
+    "print";
 
   if (productType === "pdf") {
     return {
@@ -241,7 +244,10 @@ function getProductTypeInfo(item: any) {
 // Check if item includes PDF access (PDF product or print includes free PDF)
 function hasPdfAccess(item: any) {
   // Check item.productType directly (from database), or fall back to config
-  const productType = item.productType?.toLowerCase() || parseItemConfig(item)?.productType || "print";
+  const productType =
+    item.productType?.toLowerCase() ||
+    parseItemConfig(item)?.productType ||
+    "print";
   // Both PDF products and printed calendars include PDF access
   return productType === "pdf" || productType === "print";
 }
@@ -305,12 +311,15 @@ async function downloadPdf(item: any) {
   try {
     // Use secure order-based PDF download endpoint
     // This retrieves SVG content from the backend database, ensuring security and consistency
-    const response = await fetch(`/api/orders/${orderNumber}/items/${item.id}/pdf`, {
-      method: "GET",
-      headers: {
-        Accept: "application/pdf",
+    const response = await fetch(
+      `/api/orders/${orderNumber}/items/${item.id}/pdf`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/pdf",
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -665,7 +674,6 @@ async function downloadPdf(item: any) {
             </div>
           </template>
         </Card>
-
       </div>
     </div>
 

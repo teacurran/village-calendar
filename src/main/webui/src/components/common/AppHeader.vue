@@ -57,7 +57,6 @@
         </div>
       </template>
     </Menubar>
-
   </header>
 </template>
 

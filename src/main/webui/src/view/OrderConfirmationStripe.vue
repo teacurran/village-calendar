@@ -44,7 +44,7 @@ onMounted(async () => {
     if (result.errors || !result.data?.orderByStripeSessionId) {
       // Order not found by session - might not be processed yet
       // Wait a moment and try again
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const retryResponse = await fetch("/graphql", {
         method: "POST",
@@ -66,7 +66,8 @@ onMounted(async () => {
       const retryResult = await retryResponse.json();
 
       if (retryResult.errors || !retryResult.data?.orderByStripeSessionId) {
-        error.value = "Order not found. Please check your email for confirmation.";
+        error.value =
+          "Order not found. Please check your email for confirmation.";
         loading.value = false;
         return;
       }
@@ -92,7 +93,8 @@ onMounted(async () => {
     });
   } catch (err) {
     console.error("Error fetching order:", err);
-    error.value = "Failed to load order. Please check your email for confirmation.";
+    error.value =
+      "Failed to load order. Please check your email for confirmation.";
     loading.value = false;
   }
 });
@@ -109,12 +111,10 @@ onMounted(async () => {
       <i class="pi pi-exclamation-triangle text-5xl text-orange-500 mb-4"></i>
       <h2>{{ error }}</h2>
       <p class="mt-2 text-gray-600">
-        If you completed payment, you should receive a confirmation email shortly.
+        If you completed payment, you should receive a confirmation email
+        shortly.
       </p>
-      <button
-        class="mt-4 p-button"
-        @click="router.push({ name: 'templates' })"
-      >
+      <button class="mt-4 p-button" @click="router.push({ name: 'templates' })">
         Continue Shopping
       </button>
     </div>

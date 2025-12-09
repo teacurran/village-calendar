@@ -41,11 +41,14 @@ const isCalendarItem = (item: any) => {
   // Check configuration for calendar data
   if (item.configuration) {
     try {
-      const config = typeof item.configuration === "string"
-        ? JSON.parse(item.configuration)
-        : item.configuration;
+      const config =
+        typeof item.configuration === "string"
+          ? JSON.parse(item.configuration)
+          : item.configuration;
       return config.svgContent || config.year || config.productCode;
-    } catch (e) {}
+    } catch {
+      // Ignore JSON parse errors
+    }
   }
   return false;
 };
@@ -54,9 +57,10 @@ const isCalendarItem = (item: any) => {
 const getCalendarConfig = (item: any) => {
   if (item.configuration) {
     try {
-      const config = typeof item.configuration === "string"
-        ? JSON.parse(item.configuration)
-        : item.configuration;
+      const config =
+        typeof item.configuration === "string"
+          ? JSON.parse(item.configuration)
+          : item.configuration;
       return config;
     } catch (e) {
       console.error(
