@@ -101,29 +101,8 @@ spec:
                   name: calendar-secrets
                   key: JWT_PRIVATE_KEY
 
-            # Mailer Configuration - Google Workspace SMTP
-            - name: QUARKUS_MAILER_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: calendar-secrets
-                  key: MAIL_HOST
-            - name: QUARKUS_MAILER_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: calendar-secrets
-                  key: MAIL_PORT
-            - name: QUARKUS_MAILER_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: calendar-secrets
-                  key: MAIL_USERNAME
-            - name: QUARKUS_MAILER_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: calendar-secrets
-                  key: MAIL_PASSWORD
-            - name: QUARKUS_MAILER_START_TLS
-              value: "REQUIRED"
+            # Mailer Configuration - set in application-beta.properties
+            # Uses smtp-relay.gmail.com (Google Workspace SMTP Relay, no auth required)
 
             # Cloudflare R2 / S3 Configuration
             - name: R2_ENDPOINT
