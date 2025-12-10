@@ -9,11 +9,15 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarOrder;
+import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.services.EmailService;
+import villagecompute.calendar.services.PDFRenderingService;
 import villagecompute.calendar.services.exceptions.DelayedJobException;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -28,6 +32,12 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
 
     @Inject
     EmailService emailService;
+
+    @Inject
+    PDFRenderingService pdfRenderingService;
+
+    // Preview image width in pixels (height calculated automatically from aspect ratio)
+    private static final int PREVIEW_IMAGE_WIDTH = 600;
 
     @ConfigProperty(name = "email.order.from", defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
     String orderFromEmail;
@@ -48,11 +58,13 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
          *
          * @param order Calendar order
          * @param stylesheet CSS stylesheet
+         * @param previewImages List of base64 PNG data URIs for calendar previews (parallel to order.items)
          * @return Template instance
          */
         public static native TemplateInstance orderConfirmation(
             CalendarOrder order,
-            String stylesheet
+            String stylesheet,
+            List<String> previewImages
         );
 
         /**
@@ -61,12 +73,14 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
          * @param order Calendar order
          * @param stylesheet CSS stylesheet
          * @param baseUrl Base URL for admin links
+         * @param previewImages List of base64 PNG data URIs for calendar previews (parallel to order.items)
          * @return Template instance
          */
         public static native TemplateInstance adminOrderNotification(
             CalendarOrder order,
             String stylesheet,
-            String baseUrl
+            String baseUrl,
+            List<String> previewImages
         );
     }
 
@@ -75,11 +89,12 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
     public void run(String actorId) throws Exception {
         LOG.infof("Processing order confirmation email for order: %s", actorId);
 
-        // Find the order with eagerly fetched relationships
+        // Find the order with eagerly fetched relationships including item calendars
         CalendarOrder order = CalendarOrder.find(
-            "SELECT o FROM CalendarOrder o " +
+            "SELECT DISTINCT o FROM CalendarOrder o " +
             "LEFT JOIN FETCH o.user " +
-            "LEFT JOIN FETCH o.items " +
+            "LEFT JOIN FETCH o.items i " +
+            "LEFT JOIN FETCH i.calendar " +
             "LEFT JOIN FETCH o.calendar " +
             "WHERE o.id = ?1", UUID.fromString(actorId))
             .firstResult();
@@ -108,9 +123,13 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
             // Load CSS from resources
             String css = loadResourceAsString("css/email.css");
 
+            // Generate preview images for each order item's calendar
+            List<String> previewImages = generatePreviewImages(order);
+            LOG.infof("Generated %d preview images for order %s", previewImages.size(), order.orderNumber);
+
             // Send customer confirmation email
             String customerSubject = "Order Confirmation - Village Compute Calendar #" + order.orderNumber;
-            String customerHtmlContent = Templates.orderConfirmation(order, css).render();
+            String customerHtmlContent = Templates.orderConfirmation(order, css, previewImages).render();
 
             emailService.sendHtmlEmail(orderFromEmail, customerEmail, customerSubject, customerHtmlContent);
             LOG.infof("Order confirmation email sent successfully to customer: %s", customerEmail);
@@ -118,7 +137,7 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
 
             // Send admin notification email
             String adminSubject = "New Order Received - #" + order.orderNumber;
-            String adminHtmlContent = Templates.adminOrderNotification(order, css, baseUrl).render();
+            String adminHtmlContent = Templates.adminOrderNotification(order, css, baseUrl, previewImages).render();
 
             emailService.sendHtmlEmail(orderFromEmail, adminEmail, adminSubject, adminHtmlContent);
             LOG.infof("Order notification email sent to admin: %s", adminEmail);
@@ -131,6 +150,47 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
             LOG.error("Failed to send order confirmation email", e);
             throw new DelayedJobException(true, "Failed to send order confirmation email", e);
         }
+    }
+
+    /**
+     * Generate preview images for each order item's calendar.
+     * Returns a list of base64 PNG data URIs, parallel to order.items.
+     * Items without a calendar or SVG will have null in the corresponding position.
+     *
+     * @param order The order containing items
+     * @return List of base64 PNG data URIs (or null for items without calendars)
+     */
+    private List<String> generatePreviewImages(CalendarOrder order) {
+        List<String> previews = new ArrayList<>();
+
+        if (order.items == null || order.items.isEmpty()) {
+            return previews;
+        }
+
+        for (CalendarOrderItem item : order.items) {
+            String previewDataUri = null;
+
+            if (item.calendar != null && item.calendar.generatedSvg != null
+                    && !item.calendar.generatedSvg.isEmpty()) {
+                try {
+                    previewDataUri = pdfRenderingService.renderSVGToPNGDataUri(
+                        item.calendar.generatedSvg,
+                        PREVIEW_IMAGE_WIDTH
+                    );
+                    LOG.debugf("Generated preview image for item %s (calendar %s)",
+                        item.id, item.calendar.id);
+                } catch (Exception e) {
+                    LOG.warnf(e, "Failed to generate preview image for item %s, skipping", item.id);
+                    // Continue without preview for this item
+                }
+            } else {
+                LOG.debugf("No calendar SVG available for item %s", item.id);
+            }
+
+            previews.add(previewDataUri);
+        }
+
+        return previews;
     }
 
     /**

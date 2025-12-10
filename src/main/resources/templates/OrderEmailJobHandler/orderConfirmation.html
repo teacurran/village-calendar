@@ -25,6 +25,11 @@
 
         {#for item in order.items}
         <div class="detail-box">
+            {#if previewImages.size > item_index && previewImages.get(item_index)}
+            <div style="text-align: center; margin-bottom: 15px;">
+                <img src="{previewImages.get(item_index)}" alt="Calendar Preview" style="max-width: 100%; height: auto; border: 1px solid #e5e7eb; border-radius: 4px;" />
+            </div>
+            {/if}
             <strong>{item.productName ?: 'Calendar'}</strong>
             {#if item.calendarYear} ({item.calendarYear}){/if}
             <div style="margin-top: 5px;">

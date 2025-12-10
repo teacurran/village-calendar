@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -61,7 +63,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -84,7 +86,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -110,7 +112,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -137,7 +139,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -156,7 +158,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -177,7 +179,7 @@ class OrderEmailJobHandlerTemplateTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When
-        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl).render();
+        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -201,7 +203,7 @@ class OrderEmailJobHandlerTemplateTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When
-        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl).render();
+        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -225,7 +227,7 @@ class OrderEmailJobHandlerTemplateTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When
-        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl).render();
+        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -246,7 +248,7 @@ class OrderEmailJobHandlerTemplateTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When
-        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl).render();
+        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -272,7 +274,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -299,7 +301,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -321,7 +323,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -344,7 +346,7 @@ class OrderEmailJobHandlerTemplateTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When
-        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl).render();
+        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -365,7 +367,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -387,7 +389,7 @@ class OrderEmailJobHandlerTemplateTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When
-        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl).render();
+        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);

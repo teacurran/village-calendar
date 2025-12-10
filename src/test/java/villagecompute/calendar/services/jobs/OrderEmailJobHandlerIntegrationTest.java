@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -112,7 +113,7 @@ class OrderEmailJobHandlerIntegrationTest {
             .firstResult();
 
         // When - Render the order confirmation template
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
 
         // Then - Verify template renders without errors
         assertNotNull(html, "Template should render");
@@ -173,7 +174,7 @@ class OrderEmailJobHandlerIntegrationTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When - Render the admin notification template
-        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl).render();
+        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then - Verify template renders without errors
         assertNotNull(html, "Template should render");
@@ -227,7 +228,7 @@ class OrderEmailJobHandlerIntegrationTest {
             .firstResult();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html, "Template should render");
@@ -268,7 +269,7 @@ class OrderEmailJobHandlerIntegrationTest {
             .firstResult();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
 
         // Then - Should render without exceptions
         assertNotNull(html, "Template should render even with empty items");
@@ -307,7 +308,7 @@ class OrderEmailJobHandlerIntegrationTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When
-        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl).render();
+        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html, "Template should render");
@@ -344,7 +345,7 @@ class OrderEmailJobHandlerIntegrationTest {
             .firstResult();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html, "Template should render");
@@ -381,8 +382,8 @@ class OrderEmailJobHandlerIntegrationTest {
             .firstResult();
 
         // When - Both templates should handle extreme null cases
-        String customerHtml = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
-        String adminHtml = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, "https://example.com").render();
+        String customerHtml = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String adminHtml = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, "https://example.com", Collections.emptyList()).render();
 
         // Then
         assertNotNull(customerHtml, "Customer template should render");

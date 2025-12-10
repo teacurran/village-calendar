@@ -1,9 +1,9 @@
 package villagecompute.calendar.services;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import org.apache.batik.transcoder.Transcoder;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
+import org.apache.batik.transcoder.image.PNGTranscoder;
 import org.apache.fop.svg.PDFTranscoder;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
@@ -84,6 +84,73 @@ public class PDFRenderingService {
             LOG.errorf(e, "Error rendering SVG to PDF");
             throw new RuntimeException("PDF rendering failed: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Render SVG content to PNG format for email preview.
+     * Uses Apache Batik's PNGTranscoder for SVG to PNG conversion.
+     *
+     * @param svgContent The SVG content as a string
+     * @param width      Target width in pixels (height calculated to maintain aspect ratio)
+     * @return PNG bytes
+     * @throws RuntimeException if rendering fails
+     */
+    public byte[] renderSVGToPNG(String svgContent, int width) {
+        if (svgContent == null || svgContent.isEmpty()) {
+            throw new IllegalArgumentException("SVG content cannot be null or empty");
+        }
+
+        try {
+            LOG.debugf("Rendering SVG to PNG (SVG length: %d bytes, target width: %d)", svgContent.length(), width);
+
+            // Preprocess SVG to fix various issues
+            svgContent = preprocessSVG(svgContent);
+
+            // Create transcoder for PNG
+            PNGTranscoder transcoder = new PNGTranscoder();
+
+            // Set width - height will be calculated automatically to maintain aspect ratio
+            transcoder.addTranscodingHint(PNGTranscoder.KEY_WIDTH, (float) width);
+
+            // Create input and output
+            StringReader reader = new StringReader(svgContent);
+            TranscoderInput input = new TranscoderInput(reader);
+
+            // Set a dummy URI to avoid null pointer exception with style elements
+            input.setURI("file:///calendar.svg");
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            TranscoderOutput output = new TranscoderOutput(outputStream);
+
+            // Perform the transcoding
+            LOG.debug("Transcoding SVG to PNG...");
+            transcoder.transcode(input, output);
+
+            byte[] pngBytes = outputStream.toByteArray();
+
+            LOG.infof("PNG generated successfully, size: %d bytes", pngBytes.length);
+
+            return pngBytes;
+
+        } catch (Exception e) {
+            LOG.errorf(e, "Error rendering SVG to PNG");
+            throw new RuntimeException("PNG rendering failed: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Render SVG content to PNG and return as base64-encoded data URI.
+     * Suitable for embedding directly in HTML emails.
+     *
+     * @param svgContent The SVG content as a string
+     * @param width      Target width in pixels
+     * @return Base64 data URI string (e.g., "data:image/png;base64,...")
+     * @throws RuntimeException if rendering fails
+     */
+    public String renderSVGToPNGDataUri(String svgContent, int width) {
+        byte[] pngBytes = renderSVGToPNG(svgContent, width);
+        String base64 = java.util.Base64.getEncoder().encodeToString(pngBytes);
+        return "data:image/png;base64," + base64;
     }
 
     /**
