@@ -18,6 +18,7 @@ import java.util.UUID;
 
 /**
  * DelayedJob handler for sending order confirmation emails.
+ * Sends confirmation to both the customer and the admin.
  * Renders HTML email templates using Qute and sends via EmailService.
  */
 @ApplicationScoped
@@ -31,6 +32,9 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
     @ConfigProperty(name = "email.order.from", defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
     String orderFromEmail;
 
+    @ConfigProperty(name = "email.admin.to", defaultValue = "terrence.curran@villagecompute.com")
+    String adminEmail;
+
     @ConfigProperty(name = "app.base-url", defaultValue = "https://calendar.villagecompute.com")
     String baseUrl;
 
@@ -40,7 +44,7 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
     @CheckedTemplate
     public static class Templates {
         /**
-         * Order confirmation email template.
+         * Order confirmation email template for customers.
          *
          * @param order Calendar order
          * @param stylesheet CSS stylesheet
@@ -49,6 +53,20 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
         public static native TemplateInstance orderConfirmation(
             CalendarOrder order,
             String stylesheet
+        );
+
+        /**
+         * Admin notification email template for new orders.
+         *
+         * @param order Calendar order
+         * @param stylesheet CSS stylesheet
+         * @param baseUrl Base URL for admin links
+         * @return Template instance
+         */
+        public static native TemplateInstance adminOrderNotification(
+            CalendarOrder order,
+            String stylesheet,
+            String baseUrl
         );
     }
 
@@ -62,34 +80,50 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
 
         if (order == null) {
             LOG.errorf("Order not found: %s", actorId);
-            throw new DelayedJobException(true, "Order not found: " + actorId);
+            throw new DelayedJobException(false, "Order not found: " + actorId);
+        }
+
+        // Get customer email (prefer customerEmail field, fall back to user.email)
+        String customerEmail = order.customerEmail != null ? order.customerEmail :
+            (order.user != null ? order.user.email : null);
+
+        if (customerEmail == null) {
+            LOG.errorf("No customer email found for order: %s", actorId);
+            throw new DelayedJobException(false, "No customer email found for order: " + actorId);
         }
 
         // Add tracing attributes
         Span.current().setAttribute("order.id", order.id.toString());
-        Span.current().setAttribute("order.user.email", order.user.email);
+        Span.current().setAttribute("order.number", order.orderNumber);
+        Span.current().setAttribute("order.customer.email", customerEmail);
         Span.current().setAttribute("order.status", order.status);
 
         try {
             // Load CSS from resources
             String css = loadResourceAsString("css/email.css");
 
-            // Render the confirmation email template
-            String subject = "Order Confirmation - Village Compute Calendar";
-            String htmlContent = Templates.orderConfirmation(order, css).render();
+            // Send customer confirmation email
+            String customerSubject = "Order Confirmation - Village Compute Calendar #" + order.orderNumber;
+            String customerHtmlContent = Templates.orderConfirmation(order, css).render();
 
-            // Send the email
-            emailService.sendHtmlEmail(orderFromEmail, order.user.email, subject, htmlContent);
+            emailService.sendHtmlEmail(orderFromEmail, customerEmail, customerSubject, customerHtmlContent);
+            LOG.infof("Order confirmation email sent successfully to customer: %s", customerEmail);
+            Span.current().addEvent("Customer order confirmation email sent");
 
-            LOG.infof("Order confirmation email sent successfully to: %s", order.user.email);
-            Span.current().addEvent("Order confirmation email sent");
+            // Send admin notification email
+            String adminSubject = "New Order Received - #" + order.orderNumber;
+            String adminHtmlContent = Templates.adminOrderNotification(order, css, baseUrl).render();
+
+            emailService.sendHtmlEmail(orderFromEmail, adminEmail, adminSubject, adminHtmlContent);
+            LOG.infof("Order notification email sent to admin: %s", adminEmail);
+            Span.current().addEvent("Admin order notification email sent");
 
         } catch (IOException e) {
             LOG.error("Failed to load email resources", e);
-            throw new DelayedJobException(true, "Failed to load email resources", e);
+            throw new DelayedJobException(false, "Failed to load email resources", e);
         } catch (Exception e) {
             LOG.error("Failed to send order confirmation email", e);
-            throw new DelayedJobException(false, "Failed to send order confirmation email", e);
+            throw new DelayedJobException(true, "Failed to send order confirmation email", e);
         }
     }
 

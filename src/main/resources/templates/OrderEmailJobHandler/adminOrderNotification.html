@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Order Received</title>
+    <style>
+        {stylesheet}
+    </style>
+</head>
+<body>
+    <div class="outer-wrapper">
+        <h1>📦 New Order Received!</h1>
+
+        <div class="highlight-box">
+            <strong>Order #{order.orderNumber}</strong>
+            <p style="margin: 5px 0 0 0; color: white;">Total: ${order.totalPrice}</p>
+        </div>
+
+        <h2>👤 Customer Information</h2>
+
+        <div class="detail-box">
+            <strong>Email:</strong>
+            {order.customerEmail ?: order.user.email}
+        </div>
+
+        {#if order.user}
+        <div class="detail-box">
+            <strong>Customer Name:</strong>
+            {order.user.displayName ?: 'Guest'}
+        </div>
+        {/if}
+
+        <h2>📋 Order Details</h2>
+
+        <div class="detail-box">
+            <strong>Status:</strong>
+            {order.status}
+        </div>
+
+        <div class="detail-box">
+            <strong>Order Date:</strong>
+            {order.paidAt ?: order.createdAt}
+        </div>
+
+        <div class="detail-box">
+            <strong>Subtotal:</strong>
+            ${order.subtotal}
+        </div>
+
+        {#if order.shippingCost}
+        <div class="detail-box">
+            <strong>Shipping:</strong>
+            ${order.shippingCost}
+        </div>
+        {/if}
+
+        {#if order.taxAmount}
+        <div class="detail-box">
+            <strong>Tax:</strong>
+            ${order.taxAmount}
+        </div>
+        {/if}
+
+        <div class="highlight-box">
+            <strong>Total: ${order.totalPrice}</strong>
+        </div>
+
+        {#if order.items && order.items.size > 0}
+        <h2>🛒 Order Items</h2>
+
+        {#for item in order.items}
+        <div class="detail-box">
+            <strong>{item.productName ?: 'Calendar'}</strong>
+            <div style="margin-top: 5px;">
+                Type: {item.productType} | Quantity: {item.quantity} | Unit Price: ${item.unitPrice}
+            </div>
+            {#if item.calendarYear}
+            <div>Year: {item.calendarYear}</div>
+            {/if}
+        </div>
+        {/for}
+        {#else}
+        {#if order.calendar}
+        <div class="detail-box">
+            <strong>Calendar:</strong>
+            {order.calendar.name} ({order.calendar.year})
+        </div>
+
+        <div class="detail-box">
+            <strong>Quantity:</strong>
+            {order.quantity} {#if order.quantity > 1}calendars{#else}calendar{/if}
+        </div>
+
+        <div class="detail-box">
+            <strong>Unit Price:</strong>
+            ${order.unitPrice}
+        </div>
+        {/if}
+        {/if}
+
+        <h2>📦 Shipping Address</h2>
+
+        {#if order.shippingAddress}
+        <div class="shipping-box">
+            {#if order.shippingAddress.has('name') && !order.shippingAddress.get('name').isNull()}
+            <strong>{order.shippingAddress.get('name').asText()}</strong><br>
+            {/if}
+            {#if order.shippingAddress.has('line1')}
+            {order.shippingAddress.get('line1').asText()}<br>
+            {/if}
+            {#if order.shippingAddress.has('line2') && !order.shippingAddress.get('line2').isNull()}
+            {order.shippingAddress.get('line2').asText()}<br>
+            {/if}
+            {#if order.shippingAddress.has('city')}
+            {order.shippingAddress.get('city').asText()},
+            {/if}
+            {#if order.shippingAddress.has('state')}
+            {order.shippingAddress.get('state').asText()}
+            {/if}
+            {#if order.shippingAddress.has('postalCode')}
+            {order.shippingAddress.get('postalCode').asText()}<br>
+            {/if}
+            {#if order.shippingAddress.has('country')}
+            {order.shippingAddress.get('country').asText()}
+            {/if}
+        </div>
+        {#else}
+        <div class="detail-box">
+            <em>No shipping address provided</em>
+        </div>
+        {/if}
+
+        {#if order.stripePaymentIntentId}
+        <h2>💳 Payment Information</h2>
+
+        <div class="detail-box">
+            <strong>Stripe Payment Intent:</strong>
+            {order.stripePaymentIntentId}
+        </div>
+        {/if}
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{baseUrl}/admin/orders" class="button">View in Admin</a>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated notification from Village Compute Calendar.</p>
+            <p style="margin-top: 10px;">
+                <a href="{baseUrl}">calendar.villagecompute.com</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
