@@ -42,6 +42,9 @@ public class EmailService {
     @ConfigProperty(name = "email.safe-test-domains", defaultValue = "villagecompute.com,grilledcheese.com,approachingpi.com")
     String safeTestDomains;
 
+    @ConfigProperty(name = "quarkus.mailer.mock", defaultValue = "false")
+    boolean mailerMock;
+
     /**
      * Get list of safe test domains.
      */
@@ -56,6 +59,15 @@ public class EmailService {
      */
     private boolean isProduction() {
         return "prod".equalsIgnoreCase(profile) || "production".equalsIgnoreCase(profile);
+    }
+
+    /**
+     * Check if mailer is in mock mode (emails logged but not sent).
+     *
+     * @return true if mock mode
+     */
+    private boolean isMockMode() {
+        return mailerMock;
     }
 
     /**
@@ -144,7 +156,7 @@ public class EmailService {
      */
     public void sendEmail(String from, String to, String subject, String body) {
         if (!emailEnabled) {
-            LOG.info("Email disabled - would have sent: " + subject + " to " + to);
+            LOG.warnf("[EMAIL DISABLED] Would have sent '%s' to %s", subject, to);
             return;
         }
 
@@ -154,15 +166,23 @@ public class EmailService {
             return;
         }
 
+        // Log mock mode clearly
+        if (isMockMode()) {
+            LOG.warnf("[EMAIL MOCK MODE] Email not actually sent - '%s' to %s (set MAIL_MOCK=false to send real emails)", subject, to);
+        }
+
         try {
             String prefixedSubject = addEnvironmentPrefix(subject);
             Mail mail = Mail.withText(to, prefixedSubject, body)
                 .setFrom(from);
 
             mailer.send(mail);
-            LOG.infof("Email sent successfully from %s to: %s", from, to);
+
+            if (!isMockMode()) {
+                LOG.infof("[EMAIL SENT] '%s' from %s to %s", prefixedSubject, from, to);
+            }
         } catch (Exception e) {
-            LOG.error("Failed to send email to: " + to, e);
+            LOG.errorf(e, "[EMAIL FAILED] Failed to send '%s' to %s", subject, to);
             throw new RuntimeException("Failed to send email", e);
         }
     }
@@ -188,7 +208,7 @@ public class EmailService {
      */
     public void sendHtmlEmail(String from, String to, String subject, String htmlBody) {
         if (!emailEnabled) {
-            LOG.info("Email disabled - would have sent: " + subject + " to " + to);
+            LOG.warnf("[EMAIL DISABLED] Would have sent '%s' to %s", subject, to);
             return;
         }
 
@@ -198,15 +218,23 @@ public class EmailService {
             return;
         }
 
+        // Log mock mode clearly
+        if (isMockMode()) {
+            LOG.warnf("[EMAIL MOCK MODE] Email not actually sent - '%s' to %s (set MAIL_MOCK=false to send real emails)", subject, to);
+        }
+
         try {
             String prefixedSubject = addEnvironmentPrefix(subject);
             Mail mail = Mail.withHtml(to, prefixedSubject, htmlBody)
                 .setFrom(from);
 
             mailer.send(mail);
-            LOG.infof("HTML email sent successfully from %s to: %s", from, to);
+
+            if (!isMockMode()) {
+                LOG.infof("[EMAIL SENT] '%s' from %s to %s", prefixedSubject, from, to);
+            }
         } catch (Exception e) {
-            LOG.error("Failed to send HTML email to: " + to, e);
+            LOG.errorf(e, "[EMAIL FAILED] Failed to send '%s' to %s", subject, to);
             throw new RuntimeException("Failed to send email", e);
         }
     }
