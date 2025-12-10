@@ -18,7 +18,6 @@ import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarOrder;
-import villagecompute.calendar.data.models.DelayedJob;
 import villagecompute.calendar.data.models.DelayedJobQueue;
 
 import java.math.BigDecimal;
@@ -61,6 +60,9 @@ public class PaymentService {
 
     @Inject
     OrderService orderService;
+
+    @Inject
+    DelayedJobService delayedJobService;
 
     @PostConstruct
     void init() {
@@ -312,12 +314,13 @@ public class PaymentService {
         LOG.infof("Order %s marked as PAID", order.id);
 
         // Enqueue confirmation email (within same transaction for consistency)
-        DelayedJob emailJob = DelayedJob.createDelayedJob(
-            order.id.toString(),
-            DelayedJobQueue.EMAIL_ORDER_CONFIRMATION,
-            Instant.now() // Send immediately
-        );
-        LOG.infof("Enqueued order confirmation email job %s for order %s", emailJob.id, order.id);
+        try {
+            delayedJobService.createDelayedJob(order.id.toString(), DelayedJobQueue.EMAIL_ORDER_CONFIRMATION);
+            LOG.infof("Enqueued order confirmation email job for order %s", order.id);
+        } catch (Exception e) {
+            // Log but don't fail - scheduled processor will pick it up
+            LOG.error("Failed to enqueue email job for order " + order.id, e);
+        }
 
         return true;
     }
@@ -763,12 +766,13 @@ public class PaymentService {
         LOG.infof("Order %s marked as PAID via Checkout Session", order.id);
 
         // Enqueue confirmation email
-        DelayedJob emailJob = DelayedJob.createDelayedJob(
-            order.id.toString(),
-            DelayedJobQueue.EMAIL_ORDER_CONFIRMATION,
-            Instant.now()
-        );
-        LOG.infof("Enqueued order confirmation email job %s for order %s", emailJob.id, order.id);
+        try {
+            delayedJobService.createDelayedJob(order.id.toString(), DelayedJobQueue.EMAIL_ORDER_CONFIRMATION);
+            LOG.infof("Enqueued order confirmation email job for order %s", order.id);
+        } catch (Exception e) {
+            // Log but don't fail - scheduled processor will pick it up
+            LOG.error("Failed to enqueue email job for order " + order.id, e);
+        }
 
         return true;
     }

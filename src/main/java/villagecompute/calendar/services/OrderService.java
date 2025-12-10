@@ -1,5 +1,6 @@
 package villagecompute.calendar.services;
 
+import io.opentelemetry.api.trace.Span;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -7,7 +8,6 @@ import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarUser;
-import villagecompute.calendar.data.models.DelayedJob;
 import villagecompute.calendar.data.models.DelayedJobQueue;
 import villagecompute.calendar.data.models.Shipment;
 import villagecompute.calendar.data.models.UserCalendar;
@@ -37,6 +37,9 @@ public class OrderService {
 
     @Inject
     ShippingService shippingService;
+
+    @Inject
+    DelayedJobService delayedJobService;
 
     /**
      * Create a new order for a calendar.
@@ -552,12 +555,14 @@ public class OrderService {
      * @param queue Email job queue type
      */
     private void enqueueEmailJob(CalendarOrder order, DelayedJobQueue queue) {
-        DelayedJob emailJob = DelayedJob.createDelayedJob(
-            order.id.toString(),
-            queue,
-            Instant.now()  // Run immediately
-        );
-        LOG.infof("Enqueued %s email job (ID: %s) for order %s", queue, emailJob.id, order.id);
+        try {
+            delayedJobService.createDelayedJob(order.id.toString(), queue);
+            LOG.infof("Enqueued %s email job for order %s", queue, order.id);
+        } catch (Exception e) {
+            // Log but don't fail the operation - the scheduled processor will pick it up
+            LOG.error("Failed to enqueue email job for order " + order.id, e);
+            Span.current().recordException(e);
+        }
     }
 
     /**
