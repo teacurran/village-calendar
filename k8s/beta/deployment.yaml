@@ -106,22 +106,22 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: calendar-secrets
-                  key: QUARKUS_MAILER_HOST
+                  key: MAIL_HOST
             - name: QUARKUS_MAILER_PORT
               valueFrom:
                 secretKeyRef:
                   name: calendar-secrets
-                  key: QUARKUS_MAILER_PORT
+                  key: MAIL_PORT
             - name: QUARKUS_MAILER_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: calendar-secrets
-                  key: QUARKUS_MAILER_USERNAME
+                  key: MAIL_USERNAME
             - name: QUARKUS_MAILER_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: calendar-secrets
-                  key: QUARKUS_MAILER_PASSWORD
+                  key: MAIL_PASSWORD
             - name: QUARKUS_MAILER_START_TLS
               value: "REQUIRED"
 
