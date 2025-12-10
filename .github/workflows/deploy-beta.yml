@@ -1,13 +1,12 @@
 name: Deploy to Beta Environment
 
 on:
-  # Only deploy after CI workflow completes successfully
+  # Only deploy after CI workflow completes successfully on beta branch
   workflow_run:
     workflows: ["Continuous Integration"]
     types: [completed]
     branches:
       - beta
-      - main
   # Allow manual deploys
   workflow_dispatch:
 

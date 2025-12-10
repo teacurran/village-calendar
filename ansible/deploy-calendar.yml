@@ -44,11 +44,16 @@
     quarkus_profile: "beta"
 
     # Ingress hostname (overridden by -e ingress_host=...)
+    # For production, pass comma-separated hosts: "calendar.villagecompute.com,calendars.villagecompute.com"
     ingress_host: "{{ lookup('env', 'INGRESS_HOST') | default('calendar-beta.villagecompute.com', true) }}"
+
+    # Additional ingress hosts (optional, comma-separated)
+    ingress_hosts_extra: "{{ lookup('env', 'INGRESS_HOSTS_EXTRA') | default('', true) }}"
 
     # Application configuration
     app_name: "calendar"
-    replicas: 2
+    # Replicas - override with -e replicas=3 for production
+    replicas: "{{ lookup('env', 'REPLICAS') | default('2', true) }}"
 
   tasks:
     - name: Check which kubectl command is available
@@ -349,6 +354,20 @@
                           name: calendar-service
                           port:
                             number: 80
+          {% if ingress_hosts_extra %}
+          {% for extra_host in ingress_hosts_extra.split(',') %}
+              - host: {{ extra_host | trim }}
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: calendar-service
+                          port:
+                            number: 80
+          {% endfor %}
+          {% endif %}
 
     - name: Apply Kubernetes manifest
       shell: "{{ kubectl }} apply -f /tmp/calendar-k8s.yaml"

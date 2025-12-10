@@ -3,10 +3,12 @@ name: Continuous Integration
 on:
   push:
     branches:
-      - '**'
+      - main
+      - beta
   pull_request:
     branches:
-      - '**'
+      - main
+      - beta
 
 env:
   REGISTRY: docker.io

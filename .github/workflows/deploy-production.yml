@@ -1,18 +1,27 @@
 name: Deploy to Production Environment
 
 on:
+  # Only deploy after CI workflow completes successfully on main branch
+  workflow_run:
+    workflows: ["Continuous Integration"]
+    types: [completed]
+    branches:
+      - main
+  # Allow manual deploys
   workflow_dispatch:
 
 env:
   REGISTRY: docker.io
   IMAGE_NAME: village-calendar
   USE_WIREGUARD: ${{ secrets.USE_WIREGUARD || 'false' }}
-  DEPLOYMENT_NAMESPACE: calendar-prod
+  DEPLOYMENT_NAMESPACE: calendar-production
 
 jobs:
+  # Only build if manually triggered (CI already built the image for workflow_run)
   build:
-    name: Build Docker Image
+    name: Build Docker Image (manual only)
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' }}
 
     steps:
       - name: Checkout code
@@ -71,7 +80,14 @@ jobs:
   deploy:
     name: Deploy to Production (k3s)
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build]
+    # Run if: (workflow_run AND CI passed AND build skipped) OR (workflow_dispatch AND build succeeded)
+    if: |
+      always() &&
+      (
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && needs.build.result == 'skipped') ||
+        (github.event_name == 'workflow_dispatch' && needs.build.result == 'success')
+      )
     # IMPORTANT: This 'environment' setting creates a manual approval gate
     # Configure this in GitHub: Settings > Environments > production > Required reviewers
     environment: production
@@ -79,6 +95,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # For workflow_run, checkout the commit that triggered CI; for workflow_dispatch, use default
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup WireGuard
         if: env.USE_WIREGUARD == 'true'
@@ -205,24 +224,38 @@ jobs:
         env:
           REGISTRY_USER: ${{ secrets.DOCKER_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+          # Use the image built by CI workflow (sha-<full_sha> format)
+          IMAGE_TAG: sha-${{ github.event.workflow_run.head_sha || github.sha }}
           K3S_HOST: ${{ env.USE_WIREGUARD == 'true' && '10.50.0.20' || secrets.K3S_HOST }}
           K3S_USER: ${{ secrets.K3S_USER }}
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: ${{ secrets.DB_PORT }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          # Production database credentials
+          DB_HOST: ${{ secrets.DB_HOST_PROD || secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT_PROD || secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME_PROD || 'village_calendar_prod' }}
+          DB_USER: ${{ secrets.DB_USER_PROD || secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD_PROD }}
+          # Object storage (can be overridden with _PROD suffix)
           OBJECT_STORAGE_REGION: ${{ secrets.OBJECT_STORAGE_REGION }}
-          OBJECT_STORAGE_BUCKET_NAME: ${{ secrets.OBJECT_STORAGE_BUCKET_NAME }}
+          OBJECT_STORAGE_BUCKET_NAME: ${{ secrets.OBJECT_STORAGE_BUCKET_NAME_PROD || secrets.OBJECT_STORAGE_BUCKET_NAME }}
           OBJECT_STORAGE_ENDPOINT_URL: ${{ secrets.OBJECT_STORAGE_ENDPOINT_URL }}
           OBJECT_STORAGE_CDN_URL: ${{ secrets.OBJECT_STORAGE_CDN_URL }}
           OBJECT_STORAGE_ACCESS_KEY: ${{ secrets.OBJECT_STORAGE_ACCESS_KEY }}
           OBJECT_STORAGE_SECRET_KEY: ${{ secrets.OBJECT_STORAGE_SECRET_KEY }}
-          SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY }}
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID_PROD }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET_PROD }}
+          # Production session key
+          SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY_PROD || secrets.SESSION_ENCRYPTION_KEY }}
+          # OAuth
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID_PROD || secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET_PROD || secrets.GOOGLE_CLIENT_SECRET }}
+          # Stripe production keys
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY_PROD || secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY_PROD || secrets.STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET_PROD || secrets.STRIPE_WEBHOOK_SECRET }}
+          # Primary ingress host
           INGRESS_HOST: calendar.villagecompute.com
+          # Additional hosts (comma-separated) - can add calendars.villagecompute.com later
+          INGRESS_HOSTS_EXTRA: ""
+          # Number of replicas for production
+          REPLICAS: "3"
           DEPLOYMENT_NAMESPACE: ${{ env.DEPLOYMENT_NAMESPACE }}
         run: |
           # Install Ansible
