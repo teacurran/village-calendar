@@ -40,20 +40,40 @@
 
         <div class="detail-box">
             <strong>Order Date:</strong>
-            {order.paidAt.toString()}
+            {order.paidAt ?: order.created}
         </div>
 
         <h2>📦 Shipping Address</h2>
 
+        {#if order.shippingAddress}
         <div class="shipping-box">
+            {#if order.shippingAddress.has('name') && !order.shippingAddress.get('name').isNull()}
             <strong>{order.shippingAddress.get('name').asText()}</strong><br>
-            {order.shippingAddress.get('line1').asText()}<br>
-            {#if order.shippingAddress.has('line2') && !order.shippingAddress.get('line2').isNull()}
-                {order.shippingAddress.get('line2').asText()}<br>
             {/if}
-            {order.shippingAddress.get('city').asText()}, {order.shippingAddress.get('state').asText()} {order.shippingAddress.get('postalCode').asText()}<br>
+            {#if order.shippingAddress.has('line1') && !order.shippingAddress.get('line1').isNull()}
+            {order.shippingAddress.get('line1').asText()}<br>
+            {/if}
+            {#if order.shippingAddress.has('line2') && !order.shippingAddress.get('line2').isNull()}
+            {order.shippingAddress.get('line2').asText()}<br>
+            {/if}
+            {#if order.shippingAddress.has('city') && !order.shippingAddress.get('city').isNull()}
+            {order.shippingAddress.get('city').asText()},
+            {/if}
+            {#if order.shippingAddress.has('state') && !order.shippingAddress.get('state').isNull()}
+            {order.shippingAddress.get('state').asText()}
+            {/if}
+            {#if order.shippingAddress.has('postalCode') && !order.shippingAddress.get('postalCode').isNull()}
+            {order.shippingAddress.get('postalCode').asText()}<br>
+            {/if}
+            {#if order.shippingAddress.has('country') && !order.shippingAddress.get('country').isNull()}
             {order.shippingAddress.get('country').asText()}
+            {/if}
         </div>
+        {#else}
+        <div class="detail-box">
+            <em>Shipping address will be confirmed separately.</em>
+        </div>
+        {/if}
 
         <h2>📅 What's Next?</h2>
 
