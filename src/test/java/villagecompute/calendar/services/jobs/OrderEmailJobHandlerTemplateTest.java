@@ -8,9 +8,8 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.calendar.data.models.CalendarOrder;
-import villagecompute.calendar.data.models.CalendarTemplate;
+import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarUser;
-import villagecompute.calendar.data.models.UserCalendar;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -30,17 +29,15 @@ class OrderEmailJobHandlerTemplateTest {
     ObjectMapper objectMapper;
 
     private CalendarUser testUser;
-    private UserCalendar testCalendar;
     private String testCss;
 
     @BeforeEach
     @Transactional
     void setUp() throws IOException {
         // Clean up test data
+        CalendarOrderItem.deleteAll();
         CalendarOrder.deleteAll();
-        UserCalendar.deleteAll();
         CalendarUser.deleteAll();
-        CalendarTemplate.deleteAll();
 
         // Create test user
         testUser = new CalendarUser();
@@ -49,23 +46,6 @@ class OrderEmailJobHandlerTemplateTest {
         testUser.email = "test@example.com";
         testUser.displayName = "Test User";
         testUser.persist();
-
-        // Create test template
-        CalendarTemplate template = new CalendarTemplate();
-        template.name = "Test Template";
-        template.description = "Test template for unit tests";
-        template.isActive = true;
-        template.configuration = objectMapper.createObjectNode();
-        template.persist();
-
-        // Create test calendar
-        testCalendar = new UserCalendar();
-        testCalendar.user = testUser;
-        testCalendar.name = "Test Calendar 2025";
-        testCalendar.year = 2025;
-        testCalendar.template = template;
-        testCalendar.isPublic = false;
-        testCalendar.persist();
 
         // Load CSS
         testCss = loadResourceAsString("css/email.css");
@@ -420,16 +400,27 @@ class OrderEmailJobHandlerTemplateTest {
     private CalendarOrder createTestOrder() {
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
         order.customerEmail = "customer@test.com";
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("29.99");
         order.subtotal = new BigDecimal("29.99");
         order.shippingCost = new BigDecimal("5.99");
         order.taxAmount = BigDecimal.ZERO;
         order.totalPrice = new BigDecimal("35.98");
         order.status = CalendarOrder.STATUS_PAID;
         order.orderNumber = "VC-TEST-" + System.currentTimeMillis();
+        order.persist();
+
+        // Add a test item
+        CalendarOrderItem item = new CalendarOrderItem();
+        item.order = order;
+        item.productName = "Test Calendar 2025";
+        item.productType = CalendarOrderItem.TYPE_PRINT;
+        item.calendarYear = 2025;
+        item.quantity = 1;
+        item.unitPrice = new BigDecimal("29.99");
+        item.lineTotal = new BigDecimal("29.99");
+        item.persist();
+        order.items.add(item);
+
         return order;
     }
 

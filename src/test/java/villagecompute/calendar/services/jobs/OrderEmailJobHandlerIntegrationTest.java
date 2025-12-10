@@ -237,74 +237,24 @@ class OrderEmailJobHandlerIntegrationTest {
             "Should not contain template errors");
     }
 
-    // ==================== Legacy Order Tests ====================
+    // ==================== Empty Items Edge Cases ====================
 
     @Test
     @Transactional
-    void testOrderConfirmationTemplate_LegacyOrder_WithCalendar() {
-        // Given - Legacy order with single calendar (old order model)
-        CalendarUser user = createTestUser("legacy-test");
-        CalendarTemplate template = createTestTemplate("Legacy Test Template");
-        UserCalendar calendar = createTestCalendar(user, template, "Legacy Calendar", 2025);
+    void testOrderConfirmationTemplate_EmptyItems() {
+        // Given - Order with empty items list
+        CalendarUser user = createTestUser("empty-items-test");
 
         CalendarOrder order = new CalendarOrder();
         order.user = user;
         order.customerEmail = user.email;
-        order.calendar = calendar;  // Legacy field
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("29.99");
-        order.subtotal = new BigDecimal("29.99");
-        order.shippingCost = new BigDecimal("5.99");
-        order.taxAmount = BigDecimal.ZERO;
-        order.totalPrice = new BigDecimal("35.98");
-        order.status = CalendarOrder.STATUS_PAID;
-        order.orderNumber = "VC-LEGACY-" + System.currentTimeMillis();
-        order.shippingAddress = createShippingAddressJson();
-        order.paidAt = Instant.now();
-        order.persist();
-
-        // Reload with eager fetching
-        order = CalendarOrder.find(
-            "SELECT o FROM CalendarOrder o " +
-            "LEFT JOIN FETCH o.user " +
-            "LEFT JOIN FETCH o.items " +
-            "LEFT JOIN FETCH o.calendar " +
-            "WHERE o.id = ?1", order.id)
-            .firstResult();
-
-        // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
-
-        // Then
-        assertNotNull(html, "Template should render");
-        assertTrue(html.contains("Thank You for Your Order"), "Should contain thank you message");
-        assertTrue(html.contains("Legacy Calendar"), "Should contain calendar name");
-        assertTrue(html.contains("2025"), "Should contain calendar year");
-        assertFalse(html.contains("Property") && html.contains("not found"),
-            "Should not contain template errors");
-    }
-
-    // ==================== Null Field Edge Cases ====================
-
-    @Test
-    @Transactional
-    void testOrderConfirmationTemplate_NullCalendarAndEmptyItems() {
-        // Given - Order with null calendar AND empty items list (worst case)
-        CalendarUser user = createTestUser("null-test");
-
-        CalendarOrder order = new CalendarOrder();
-        order.user = user;
-        order.customerEmail = user.email;
-        order.calendar = null;  // No legacy calendar
         // items list is empty by default
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("29.99");
         order.subtotal = new BigDecimal("29.99");
         order.shippingCost = new BigDecimal("5.99");
         order.taxAmount = BigDecimal.ZERO;
         order.totalPrice = new BigDecimal("35.98");
         order.status = CalendarOrder.STATUS_PAID;
-        order.orderNumber = "VC-NULL-" + System.currentTimeMillis();
+        order.orderNumber = "VC-EMPTY-" + System.currentTimeMillis();
         order.shippingAddress = createShippingAddressJson();
         order.paidAt = Instant.now();
         order.persist();
@@ -314,7 +264,6 @@ class OrderEmailJobHandlerIntegrationTest {
             "SELECT o FROM CalendarOrder o " +
             "LEFT JOIN FETCH o.user " +
             "LEFT JOIN FETCH o.items " +
-            "LEFT JOIN FETCH o.calendar " +
             "WHERE o.id = ?1", order.id)
             .firstResult();
 
@@ -322,7 +271,7 @@ class OrderEmailJobHandlerIntegrationTest {
         String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
 
         // Then - Should render without exceptions
-        assertNotNull(html, "Template should render even with null calendar");
+        assertNotNull(html, "Template should render even with empty items");
         assertTrue(html.contains("Thank You for Your Order"), "Should contain thank you message");
         assertFalse(html.contains("Property") && html.contains("not found"),
             "Should not contain template errors");
@@ -330,22 +279,19 @@ class OrderEmailJobHandlerIntegrationTest {
 
     @Test
     @Transactional
-    void testAdminNotificationTemplate_NullCalendarAndEmptyItems() {
-        // Given - Order with null calendar AND empty items list
-        CalendarUser user = createTestUser("admin-null-test");
+    void testAdminNotificationTemplate_EmptyItems() {
+        // Given - Order with empty items list
+        CalendarUser user = createTestUser("admin-empty-test");
 
         CalendarOrder order = new CalendarOrder();
         order.user = user;
         order.customerEmail = user.email;
-        order.calendar = null;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("29.99");
         order.subtotal = new BigDecimal("29.99");
         order.shippingCost = new BigDecimal("5.99");
         order.taxAmount = BigDecimal.ZERO;
         order.totalPrice = new BigDecimal("35.98");
         order.status = CalendarOrder.STATUS_PAID;
-        order.orderNumber = "VC-ADMIN-NULL-" + System.currentTimeMillis();
+        order.orderNumber = "VC-ADMIN-EMPTY-" + System.currentTimeMillis();
         order.shippingAddress = createShippingAddressJson();
         order.paidAt = Instant.now();
         order.persist();
@@ -355,7 +301,6 @@ class OrderEmailJobHandlerIntegrationTest {
             "SELECT o FROM CalendarOrder o " +
             "LEFT JOIN FETCH o.user " +
             "LEFT JOIN FETCH o.items " +
-            "LEFT JOIN FETCH o.calendar " +
             "WHERE o.id = ?1", order.id)
             .firstResult();
 
@@ -380,9 +325,6 @@ class OrderEmailJobHandlerIntegrationTest {
         CalendarOrder order = new CalendarOrder();
         order.user = user;
         order.customerEmail = user.email;
-        order.calendar = null;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("29.99");
         order.subtotal = new BigDecimal("29.99");
         order.shippingCost = BigDecimal.ZERO;
         order.taxAmount = BigDecimal.ZERO;
@@ -398,7 +340,6 @@ class OrderEmailJobHandlerIntegrationTest {
             "SELECT o FROM CalendarOrder o " +
             "LEFT JOIN FETCH o.user " +
             "LEFT JOIN FETCH o.items " +
-            "LEFT JOIN FETCH o.calendar " +
             "WHERE o.id = ?1", order.id)
             .firstResult();
 
@@ -421,9 +362,6 @@ class OrderEmailJobHandlerIntegrationTest {
         CalendarOrder order = new CalendarOrder();
         order.user = null;
         order.customerEmail = null;
-        order.calendar = null;
-        order.quantity = null;
-        order.unitPrice = null;
         order.subtotal = null;
         order.shippingCost = null;
         order.taxAmount = null;
@@ -439,7 +377,6 @@ class OrderEmailJobHandlerIntegrationTest {
             "SELECT o FROM CalendarOrder o " +
             "LEFT JOIN FETCH o.user " +
             "LEFT JOIN FETCH o.items " +
-            "LEFT JOIN FETCH o.calendar " +
             "WHERE o.id = ?1", order.id)
             .firstResult();
 
@@ -501,27 +438,6 @@ class OrderEmailJobHandlerIntegrationTest {
         user.displayName = "Test User " + suffix;
         user.persist();
         return user;
-    }
-
-    private CalendarTemplate createTestTemplate(String name) {
-        CalendarTemplate template = new CalendarTemplate();
-        template.name = name;
-        template.description = "Test template for email tests";
-        template.isActive = true;
-        template.configuration = objectMapper.createObjectNode();
-        template.persist();
-        return template;
-    }
-
-    private UserCalendar createTestCalendar(CalendarUser user, CalendarTemplate template, String name, int year) {
-        UserCalendar calendar = new UserCalendar();
-        calendar.user = user;
-        calendar.name = name;
-        calendar.year = year;
-        calendar.template = template;
-        calendar.isPublic = false;
-        calendar.persist();
-        return calendar;
     }
 
     private String loadResourceAsString(String resourcePath) throws IOException {

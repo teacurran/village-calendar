@@ -23,8 +23,6 @@
 
         <h2>📋 Order Details</h2>
 
-        {#if order.items && order.items.size > 0}
-        {! Modern item-based order !}
         {#for item in order.items}
         <div class="detail-box">
             <strong>{item.productName ?: 'Calendar'}</strong>
@@ -34,28 +32,6 @@
             </div>
         </div>
         {/for}
-        {#else if order.calendar}
-        {! Legacy single-calendar order !}
-        <div class="detail-box">
-            <strong>Calendar:</strong>
-            {order.calendar.name} ({order.calendar.year})
-        </div>
-
-        <div class="detail-box">
-            <strong>Quantity:</strong>
-            {order.quantity ?: 1} {#if order.quantity > 1}calendars{#else}calendar{/if}
-        </div>
-
-        <div class="detail-box">
-            <strong>Unit Price:</strong>
-            ${order.unitPrice}
-        </div>
-        {#else}
-        {! Fallback for orders with no items or calendar !}
-        <div class="detail-box">
-            <em>Order details will be confirmed separately.</em>
-        </div>
-        {/if}
 
         <div class="detail-box">
             <strong>Order Date:</strong>
