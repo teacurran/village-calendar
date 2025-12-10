@@ -21,6 +21,7 @@ export const useCalendarEditorStore = defineStore("calendarEditor", {
     zoomInCallback: null as (() => void) | null,
     zoomOutCallback: null as (() => void) | null,
     resetZoomCallback: null as (() => void) | null,
+    saveAsTemplateCallback: null as (() => void) | null,
   }),
 
   actions: {
@@ -36,6 +37,7 @@ export const useCalendarEditorStore = defineStore("calendarEditor", {
       this.zoomInCallback = null;
       this.zoomOutCallback = null;
       this.resetZoomCallback = null;
+      this.saveAsTemplateCallback = null;
     },
 
     setHasGeneratedSVG(value: boolean) {
@@ -59,6 +61,18 @@ export const useCalendarEditorStore = defineStore("calendarEditor", {
       this.zoomInCallback = zoomIn;
       this.zoomOutCallback = zoomOut;
       this.resetZoomCallback = resetZoom;
+    },
+
+    // Register save as template callback from CalendarGenerator
+    registerSaveAsTemplateCallback(callback: () => void) {
+      this.saveAsTemplateCallback = callback;
+    },
+
+    // Save as template action (admin only)
+    saveAsTemplate() {
+      if (this.saveAsTemplateCallback) {
+        this.saveAsTemplateCallback();
+      }
     },
 
     // Zoom actions that delegate to callbacks

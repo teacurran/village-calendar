@@ -115,20 +115,6 @@
 
     <!-- Main Content Area -->
     <div class="p-4">
-      <!-- Admin-only toolbar (Save as Template) -->
-      <div v-if="isAdmin" class="flex justify-end items-center mb-2">
-        <div class="flex gap-2">
-          <Button
-            v-tooltip="'Save as Template'"
-            icon="pi pi-bookmark"
-            text
-            rounded
-            :disabled="!generatedSVG"
-            @click="saveAsTemplate"
-          />
-        </div>
-      </div>
-
       <!-- Preview Panel -->
       <div ref="previewContainer" class="calendar-preview">
         <div v-if="!generatedSVG" class="text-center py-12 text-gray-500">
@@ -1775,6 +1761,7 @@ onMounted(async () => {
   calendarEditorStore.activate();
   calendarEditorStore.setCalendarYear(config.value.year);
   calendarEditorStore.registerZoomCallbacks(zoomIn, zoomOut, resetZoom);
+  calendarEditorStore.registerSaveAsTemplateCallback(saveAsTemplate);
 
   // Fetch user data to ensure store is populated
   await userStore.fetchCurrentUser();

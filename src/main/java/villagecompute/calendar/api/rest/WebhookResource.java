@@ -134,10 +134,30 @@ public class WebhookResource {
         Event event;
         try {
             String webhookSecret = paymentService.getWebhookSecret();
+
+            // Debug logging for webhook secret configuration
+            if (webhookSecret == null || webhookSecret.isEmpty()) {
+                LOG.error("WEBHOOK SECRET IS NOT CONFIGURED - webhook secret is null or empty");
+            } else if (webhookSecret.equals("whsec_placeholder")) {
+                LOG.error("WEBHOOK SECRET IS PLACEHOLDER - environment variable STRIPE_WEBHOOK_SECRET not set");
+            } else {
+                LOG.infof("Webhook secret configured (length: %d, prefix: %s...)",
+                    webhookSecret.length(),
+                    webhookSecret.substring(0, Math.min(10, webhookSecret.length())));
+            }
+
+            // Log signature header info
+            LOG.infof("Stripe-Signature header length: %d, prefix: %s...",
+                signatureHeader.length(),
+                signatureHeader.substring(0, Math.min(30, signatureHeader.length())));
+
             event = Webhook.constructEvent(payload, signatureHeader, webhookSecret);
             LOG.infof("Webhook signature validated successfully. Event type: %s", event.getType());
         } catch (SignatureVerificationException e) {
             LOG.errorf("Invalid webhook signature: %s", e.getMessage());
+            LOG.errorf("SignatureVerificationException details - sigHeader length: %d, payload length: %d",
+                signatureHeader != null ? signatureHeader.length() : 0,
+                payload != null ? payload.length() : 0);
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(Map.of("error", "Invalid signature"))
                 .build();

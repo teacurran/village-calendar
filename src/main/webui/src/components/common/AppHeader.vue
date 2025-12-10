@@ -54,6 +54,15 @@
               @click="calendarEditorStore.openAddToCartModal('pdf')"
             />
             <Button
+              v-if="authStore.isAdmin"
+              v-tooltip.bottom="'Save as Template'"
+              icon="pi pi-bookmark"
+              text
+              rounded
+              :disabled="!calendarEditorStore.hasGeneratedSVG"
+              @click="calendarEditorStore.saveAsTemplate()"
+            />
+            <Button
               label="Order a Print"
               icon="pi pi-print"
               text
