@@ -101,22 +101,29 @@ spec:
                   name: calendar-secrets
                   key: JWT_PRIVATE_KEY
 
-            # Mailer Configuration - using mailpit in beta
+            # Mailer Configuration - Google Workspace SMTP
             - name: QUARKUS_MAILER_HOST
               valueFrom:
-                configMapKeyRef:
-                  name: calendar-config
+                secretKeyRef:
+                  name: calendar-secrets
                   key: QUARKUS_MAILER_HOST
             - name: QUARKUS_MAILER_PORT
               valueFrom:
-                configMapKeyRef:
-                  name: calendar-config
+                secretKeyRef:
+                  name: calendar-secrets
                   key: QUARKUS_MAILER_PORT
-            - name: QUARKUS_MAILER_START_TLS
+            - name: QUARKUS_MAILER_USERNAME
               valueFrom:
-                configMapKeyRef:
-                  name: calendar-config
-                  key: QUARKUS_MAILER_START_TLS
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: QUARKUS_MAILER_USERNAME
+            - name: QUARKUS_MAILER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: calendar-secrets
+                  key: QUARKUS_MAILER_PASSWORD
+            - name: QUARKUS_MAILER_START_TLS
+              value: "REQUIRED"
 
             # Cloudflare R2 / S3 Configuration
             - name: R2_ENDPOINT
