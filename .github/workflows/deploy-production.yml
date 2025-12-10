@@ -244,6 +244,7 @@ jobs:
           ansible-playbook \
             -i inventory.yml \
             -e "k8s_namespace=${DEPLOYMENT_NAMESPACE}" \
+            -e "quarkus_profile=production" \
             ansible/deploy-calendar.yml
 
       - name: Wait for rollout completion

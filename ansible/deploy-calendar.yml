@@ -40,6 +40,9 @@
     # Kubernetes namespace (overridden by -e k8s_namespace=calendar-beta)
     k8s_namespace: "calendar-beta"
 
+    # Quarkus profile - defaults to 'beta', override with -e quarkus_profile=production
+    quarkus_profile: "beta"
+
     # Ingress hostname (overridden by -e ingress_host=...)
     ingress_host: "{{ lookup('env', 'INGRESS_HOST') | default('calendar-beta.villagecompute.com', true) }}"
 
@@ -266,7 +269,7 @@
 
                       # Application settings
                       - name: QUARKUS_PROFILE
-                        value: "production"
+                        value: "{{ quarkus_profile }}"
                       # Port 8030 is configured in application.properties, no override needed
 
                     resources:
