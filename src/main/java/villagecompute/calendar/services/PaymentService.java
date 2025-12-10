@@ -715,6 +715,16 @@ public class PaymentService {
         LOG.infof("Updated order totals from Stripe: subtotal=$%.2f, shipping=$%.2f, tax=$%.2f, total=$%.2f",
             order.subtotal, order.shippingCost, order.taxAmount, order.totalPrice);
 
+        // Always capture customer email from session (required for confirmation emails)
+        if (session.getCustomerEmail() != null && !session.getCustomerEmail().isEmpty()) {
+            order.customerEmail = session.getCustomerEmail();
+            LOG.infof("Set customer email for order %s: %s", order.id, order.customerEmail);
+        } else if (session.getCustomerDetails() != null && session.getCustomerDetails().getEmail() != null) {
+            // Fallback to customer details email
+            order.customerEmail = session.getCustomerDetails().getEmail();
+            LOG.infof("Set customer email from customer details for order %s: %s", order.id, order.customerEmail);
+        }
+
         // Store shipping address if collected (as JSON)
         if (session.getCollectedInformation() != null
             && session.getCollectedInformation().getShippingDetails() != null) {
@@ -747,7 +757,6 @@ public class PaymentService {
                     addressMap.put("country", address.getCountry());
 
                     order.shippingAddress = mapper.valueToTree(addressMap);
-                    order.customerEmail = session.getCustomerEmail();
 
                     LOG.infof("Stored shipping address for order %s: %s, %s %s",
                         order.id, address.getLine1(), address.getCity(), address.getState());
