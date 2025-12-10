@@ -109,80 +109,22 @@
     <AddToCartModal
       v-model:visible="showAddToCartModal"
       :calendar-year="config.year"
+      :default-product-code="calendarEditorStore.defaultProductCode"
       @select="handleAddToCartSelect"
     />
 
     <!-- Main Content Area -->
     <div class="p-4">
-      <!-- Toolbar -->
-      <div class="flex justify-end items-center mb-2">
+      <!-- Admin-only toolbar (Save as Template) -->
+      <div v-if="isAdmin" class="flex justify-end items-center mb-2">
         <div class="flex gap-2">
           <Button
-            v-tooltip="'Zoom In'"
-            icon="pi pi-search-plus"
-            text
-            rounded
-            :disabled="!generatedSVG"
-            @click="zoomIn"
-          />
-          <Button
-            v-tooltip="'Zoom Out'"
-            icon="pi pi-search-minus"
-            text
-            rounded
-            :disabled="!generatedSVG"
-            @click="zoomOut"
-          />
-          <Button
-            v-tooltip="'Reset Zoom'"
-            icon="pi pi-refresh"
-            text
-            rounded
-            :disabled="!generatedSVG"
-            @click="resetZoom"
-          />
-          <Button
-            v-if="FEATURE_FLAGS.enableRulers"
-            v-tooltip="'Toggle Rulers'"
-            icon="pi pi-chart-bar"
-            text
-            rounded
-            :disabled="!generatedSVG"
-            :class="{ 'bg-primary-100': showRulers }"
-            @click="showRulers = !showRulers"
-          />
-          <Button
-            v-tooltip="'Download PDF'"
-            icon="pi pi-download"
-            text
-            rounded
-            :disabled="!generatedSVG"
-            @click="openAddToCartModal"
-          />
-          <Button
-            v-tooltip="'Save Calendar'"
-            icon="pi pi-save"
-            text
-            rounded
-            :disabled="!generatedSVG"
-            @click="saveCalendar"
-          />
-          <Button
-            v-if="isAdmin"
             v-tooltip="'Save as Template'"
             icon="pi pi-bookmark"
             text
             rounded
             :disabled="!generatedSVG"
             @click="saveAsTemplate"
-          />
-          <Button
-            v-tooltip="'Add to Cart'"
-            icon="pi pi-shopping-cart"
-            text
-            rounded
-            :disabled="!generatedSVG"
-            @click="openAddToCartModal"
           />
         </div>
       </div>
@@ -203,7 +145,7 @@
             class="scaled-wrapper"
             :style="{
               width: `${3500 * zoomLevel}px`,
-              height: `${2250 * zoomLevel}px`,
+              height: `${2300 * zoomLevel}px`,
             }"
           >
             <div
@@ -229,21 +171,15 @@
               <span class="ruler-label">{{ inch }}"</span>
             </div>
           </div>
-          <!-- Right ruler (22.5 inches total) -->
+          <!-- Right ruler (23 inches total) -->
           <div v-if="showRulers" class="ruler ruler-right">
             <div
-              v-for="inch in 22"
+              v-for="inch in 23"
               :key="'r' + inch"
               class="ruler-mark"
               :style="{ height: `${100 * zoomLevel}px` }"
             >
               <span class="ruler-label">{{ inch }}"</span>
-            </div>
-            <div
-              class="ruler-mark ruler-mark-half"
-              :style="{ height: `${50 * zoomLevel}px` }"
-            >
-              <span class="ruler-label">22½"</span>
             </div>
           </div>
         </div>
@@ -834,12 +770,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick, computed } from "vue";
+import { ref, onMounted, onUnmounted, watch, nextTick, computed } from "vue";
 import { useToast } from "primevue/usetoast";
 import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "../stores/user";
 import { useCartStore } from "../stores/cart";
 import { useAuthStore } from "../stores/authStore";
+import { useCalendarEditorStore } from "../stores/calendarEditor";
 import Button from "primevue/button";
 import InputNumber from "primevue/inputnumber";
 import Dropdown from "primevue/dropdown";
@@ -883,11 +820,22 @@ const router = useRouter();
 const userStore = useUserStore();
 const cartStore = useCartStore();
 const authStore = useAuthStore();
+const calendarEditorStore = useCalendarEditorStore();
 
 // Drawer visibility
 const showTemplateDrawer = ref(false);
 const showCreateWizard = ref(false);
-const showAddToCartModal = ref(false);
+// Add to cart modal visibility - synced with store for header access
+const showAddToCartModal = computed({
+  get: () => calendarEditorStore.showAddToCartModal,
+  set: (value) => {
+    if (value) {
+      calendarEditorStore.openAddToCartModal();
+    } else {
+      calendarEditorStore.closeAddToCartModal();
+    }
+  },
+});
 
 // All templates (for all users)
 const allTemplates = ref([]);
@@ -1804,9 +1752,17 @@ const wrapSvgWithMargins = (innerSvg: string): string => {
 </svg>`;
 };
 
-// Zoom state (calculated to fit window width)
-const zoomLevel = ref(0.3);
-const showRulers = ref(false);
+// Zoom state (calculated to fit window width on initial load)
+const zoomLevel = ref(0.5);
+// Rulers visibility - synced with store for header access
+const showRulers = computed({
+  get: () => calendarEditorStore.showRulers,
+  set: (value) => {
+    if (value !== calendarEditorStore.showRulers) {
+      calendarEditorStore.toggleRulers();
+    }
+  },
+});
 const previewContainer = ref(null);
 const isInitialGeneration = ref(true);
 
@@ -1815,6 +1771,11 @@ let emojiPicker = null;
 
 // Auto-generate on mount
 onMounted(async () => {
+  // Activate the calendar editor store and register callbacks
+  calendarEditorStore.activate();
+  calendarEditorStore.setCalendarYear(config.value.year);
+  calendarEditorStore.registerZoomCallbacks(zoomIn, zoomOut, resetZoom);
+
   // Fetch user data to ensure store is populated
   await userStore.fetchCurrentUser();
 
@@ -1854,6 +1815,11 @@ onMounted(async () => {
   }
 });
 
+// Clean up store when component unmounts
+onUnmounted(() => {
+  calendarEditorStore.deactivate();
+});
+
 // Watch for wizard query param changes (for when already on page)
 watch(
   () => route.query.wizard,
@@ -1889,6 +1855,24 @@ watch(
     ) {
       newEvent.value.date = new Date(newYear, 0, 1);
     }
+    // Sync with calendar editor store
+    calendarEditorStore.setCalendarYear(newYear);
+  },
+);
+
+// Sync generatedSVG state with store for header button visibility
+watch(
+  () => generatedSVG.value,
+  (svg) => {
+    calendarEditorStore.setHasGeneratedSVG(!!svg);
+  },
+);
+
+// Sync zoom level with store
+watch(
+  () => zoomLevel.value,
+  (level) => {
+    calendarEditorStore.setZoomLevel(level);
   },
 );
 
@@ -2384,18 +2368,12 @@ const zoomOut = () => {
 };
 
 const resetZoom = () => {
-  // SVG is 3500x2250 units (100 units per inch for 35"x22.5" page)
+  // SVG is 3500x2300 units (100 units per inch for 35"x23" page)
   const calendarWidth = 3500;
 
-  // Use the actual preview container width if available, otherwise estimate
-  let availableWidth: number;
-  if (previewContainer.value) {
-    // Get the actual container width with a small padding
-    availableWidth = (previewContainer.value as HTMLElement).clientWidth - 32;
-  } else {
-    // Fallback: estimate based on window width minus typical sidebar
-    availableWidth = window.innerWidth - 510;
-  }
+  // Calculate zoom to fill the browser window width, accounting for page padding
+  // Subtract padding: 16px left page padding + 16px right + 16px calendar-preview padding
+  const availableWidth = window.innerWidth - 48;
 
   // Calculate zoom to fill the available width
   // Min 0.15 to prevent too small, max 1.0 to prevent over-zoom
@@ -3600,17 +3578,16 @@ const confirmDuplicateTemplate = async () => {
 
 <style scoped>
 .calendar-generator {
-  min-height: calc(100vh - 100px);
+  /* Let content determine height naturally */
 }
 
 .calendar-preview {
   position: relative;
-  overflow: auto;
-  max-height: calc(100vh - 250px);
-  min-height: 500px;
+  overflow: visible;
   border: 1px solid #f8f9fa;
   border-radius: 8px;
   padding: 1rem;
+  display: inline-block;
 }
 
 .svg-container {
@@ -3636,6 +3613,7 @@ const confirmDuplicateTemplate = async () => {
 
 .scaled-wrapper {
   position: relative;
+  overflow: hidden;
 }
 
 .page-border {

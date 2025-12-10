@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import RadioButton from "primevue/radiobutton";
@@ -9,9 +9,12 @@ import { GET_PRODUCTS_QUERY } from "@/graphql/product-queries";
 interface Props {
   visible: boolean;
   calendarYear: number;
+  defaultProductCode?: string | null;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  defaultProductCode: null,
+});
 
 // Product type from backend
 interface Product {
@@ -70,12 +73,23 @@ const fetchProducts = async () => {
   }
 };
 
-// Fetch products when modal opens
+// Fetch products when modal opens and set default selection
 watch(
   () => props.visible,
-  (visible) => {
-    if (visible && productOptions.value.length === 0) {
-      fetchProducts();
+  async (visible) => {
+    if (visible) {
+      if (productOptions.value.length === 0) {
+        await fetchProducts();
+      }
+      // Set default selection based on prop or first product
+      if (props.defaultProductCode) {
+        const hasProduct = productOptions.value.some(
+          (p) => p.code === props.defaultProductCode,
+        );
+        if (hasProduct) {
+          selectedOption.value = props.defaultProductCode;
+        }
+      }
     }
   },
   { immediate: true },

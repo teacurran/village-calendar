@@ -9,6 +9,60 @@
       </template>
       <template #end>
         <div class="header-end-section">
+          <!-- Calendar Editor Toolbar (only visible when editing a calendar) -->
+          <div v-if="calendarEditorStore.isActive" class="editor-toolbar">
+            <Button
+              v-tooltip.bottom="'Zoom In'"
+              icon="pi pi-search-plus"
+              text
+              rounded
+              :disabled="!calendarEditorStore.hasGeneratedSVG"
+              @click="calendarEditorStore.zoomIn()"
+            />
+            <Button
+              v-tooltip.bottom="'Zoom Out'"
+              icon="pi pi-search-minus"
+              text
+              rounded
+              :disabled="!calendarEditorStore.hasGeneratedSVG"
+              @click="calendarEditorStore.zoomOut()"
+            />
+            <Button
+              v-tooltip.bottom="'Reset Zoom'"
+              icon="pi pi-refresh"
+              text
+              rounded
+              :disabled="!calendarEditorStore.hasGeneratedSVG"
+              @click="calendarEditorStore.resetZoom()"
+            />
+            <Button
+              v-tooltip.bottom="'Toggle Rulers'"
+              icon="pi pi-arrows-h"
+              text
+              rounded
+              :disabled="!calendarEditorStore.hasGeneratedSVG"
+              :class="{ 'ruler-active': calendarEditorStore.showRulers }"
+              @click="calendarEditorStore.toggleRulers()"
+            />
+            <div class="toolbar-divider"></div>
+            <Button
+              v-tooltip.bottom="'Download PDF'"
+              icon="pi pi-download"
+              text
+              rounded
+              :disabled="!calendarEditorStore.hasGeneratedSVG"
+              @click="calendarEditorStore.openAddToCartModal('pdf')"
+            />
+            <Button
+              label="Order a Print"
+              icon="pi pi-print"
+              text
+              :disabled="!calendarEditorStore.hasGeneratedSVG"
+              class="order-print-btn"
+              @click="calendarEditorStore.openAddToCartModal('print')"
+            />
+          </div>
+
           <!-- Cart Icon (always visible) -->
           <div class="cart-icon-wrapper">
             <Button
@@ -65,6 +119,7 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/authStore";
 import { useCartStore } from "@/stores/cart";
+import { useCalendarEditorStore } from "@/stores/calendarEditor";
 import Menubar from "primevue/menubar";
 import Button from "primevue/button";
 import Badge from "primevue/badge";
@@ -74,6 +129,7 @@ import type { MenuItem } from "primevue/menuitem";
 const router = useRouter();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
+const calendarEditorStore = useCalendarEditorStore();
 
 // State
 const userMenuRef = ref();
@@ -186,6 +242,34 @@ onMounted(() => {
   gap: 0.5rem;
 }
 
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding-right: 0.5rem;
+  margin-right: 0.5rem;
+  border-right: 1px solid var(--surface-200);
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--surface-200);
+  margin: 0 0.25rem;
+}
+
+/* Style Order a Print button to match menu items */
+.order-print-btn {
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+}
+
+/* Active state for ruler toggle button */
+.ruler-active {
+  background-color: var(--primary-100) !important;
+  color: var(--primary-700) !important;
+}
+
 .cart-icon-wrapper {
   position: relative;
   display: flex;
@@ -210,6 +294,22 @@ onMounted(() => {
 /* Responsive styles */
 @media (max-width: 768px) {
   .logo-text {
+    display: none;
+  }
+
+  .editor-toolbar {
+    gap: 0;
+  }
+
+  /* Hide "Order a Print" label on mobile, show only icon */
+  .editor-toolbar :deep(.p-button-label) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Hide zoom controls on very small screens */
+  .editor-toolbar {
     display: none;
   }
 }
