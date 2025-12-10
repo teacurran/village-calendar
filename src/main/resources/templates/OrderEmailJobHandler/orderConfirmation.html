@@ -12,7 +12,7 @@
     <div class="outer-wrapper">
         <h1>🎉 Thank You for Your Order!</h1>
 
-        <p>Hi {order.user.displayName ?: order.user.email},</p>
+        <p>Hi {#if order.user}{order.user.displayName ?: order.user.email}{#else}{order.customerEmail ?: 'Valued Customer'}{/if},</p>
 
         <p>We're excited to confirm that we've received your order for your custom calendar!</p>
 

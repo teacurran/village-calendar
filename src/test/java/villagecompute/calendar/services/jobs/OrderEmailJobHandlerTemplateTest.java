@@ -329,6 +329,92 @@ class OrderEmailJobHandlerTemplateTest {
         assertFalse(html.contains("\"null\""), "Should not contain literal 'null' text");
     }
 
+    @Test
+    @Transactional
+    void testOrderConfirmationTemplateWithNullUser() {
+        // Given - Guest checkout order with null user
+        CalendarOrder order = createTestOrder();
+        order.user = null;  // Guest checkout - no user
+        order.customerEmail = "guest@example.com";
+        order.shippingAddress = createFullShippingAddress();
+        order.paidAt = Instant.now();
+        order.persist();
+
+        // When
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+
+        // Then
+        assertNotNull(html);
+        assertTrue(html.contains("Thank You for Your Order"), "Should contain order thank you message");
+        assertTrue(html.contains("guest@example.com"), "Should show customer email for guest");
+        assertFalse(html.contains("Property") && html.contains("not found"), "Should not contain template error");
+    }
+
+    @Test
+    @Transactional
+    void testAdminOrderNotificationTemplateWithNullUser() {
+        // Given - Guest checkout order with null user
+        CalendarOrder order = createTestOrder();
+        order.user = null;  // Guest checkout - no user
+        order.customerEmail = "guest@example.com";
+        order.shippingAddress = createFullShippingAddress();
+        order.paidAt = Instant.now();
+        order.persist();
+
+        String baseUrl = "https://calendar.villagecompute.com";
+
+        // When
+        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl).render();
+
+        // Then
+        assertNotNull(html);
+        assertTrue(html.contains("New Order Received"), "Should contain admin notification message");
+        assertTrue(html.contains("guest@example.com"), "Should show customer email");
+        assertFalse(html.contains("Property") && html.contains("not found"), "Should not contain template error");
+    }
+
+    @Test
+    @Transactional
+    void testOrderConfirmationTemplateWithNullUserAndNullCustomerEmail() {
+        // Given - Edge case: both user and customerEmail are null
+        CalendarOrder order = createTestOrder();
+        order.user = null;
+        order.customerEmail = null;  // Both are null
+        order.shippingAddress = createFullShippingAddress();
+        order.paidAt = Instant.now();
+        order.persist();
+
+        // When
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss).render();
+
+        // Then
+        assertNotNull(html);
+        assertTrue(html.contains("Thank You for Your Order"), "Should contain order thank you message");
+        assertTrue(html.contains("Valued Customer"), "Should show fallback greeting for missing email");
+    }
+
+    @Test
+    @Transactional
+    void testAdminOrderNotificationTemplateWithNullUserAndNullCustomerEmail() {
+        // Given - Edge case: both user and customerEmail are null
+        CalendarOrder order = createTestOrder();
+        order.user = null;
+        order.customerEmail = null;  // Both are null
+        order.shippingAddress = createFullShippingAddress();
+        order.paidAt = Instant.now();
+        order.persist();
+
+        String baseUrl = "https://calendar.villagecompute.com";
+
+        // When
+        String html = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, baseUrl).render();
+
+        // Then
+        assertNotNull(html);
+        assertTrue(html.contains("New Order Received"), "Should contain admin notification message");
+        assertTrue(html.contains("N/A"), "Should show N/A when no email available");
+    }
+
     // ==================== Helper Methods ====================
 
     private CalendarOrder createTestOrder() {

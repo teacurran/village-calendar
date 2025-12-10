@@ -75,8 +75,14 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
     public void run(String actorId) throws Exception {
         LOG.infof("Processing order confirmation email for order: %s", actorId);
 
-        // Find the order
-        CalendarOrder order = CalendarOrder.findById(UUID.fromString(actorId));
+        // Find the order with eagerly fetched relationships
+        CalendarOrder order = CalendarOrder.find(
+            "SELECT o FROM CalendarOrder o " +
+            "LEFT JOIN FETCH o.user " +
+            "LEFT JOIN FETCH o.items " +
+            "LEFT JOIN FETCH o.calendar " +
+            "WHERE o.id = ?1", UUID.fromString(actorId))
+            .firstResult();
 
         if (order == null) {
             LOG.errorf("Order not found: %s", actorId);

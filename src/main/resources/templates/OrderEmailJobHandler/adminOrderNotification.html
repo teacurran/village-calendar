@@ -21,7 +21,7 @@
 
         <div class="detail-box">
             <strong>Email:</strong>
-            {order.customerEmail ?: order.user.email}
+            {#if order.customerEmail}{order.customerEmail}{#else if order.user}{order.user.email}{#else}N/A{/if}
         </div>
 
         {#if order.user}
