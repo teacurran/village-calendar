@@ -101,37 +101,22 @@ spec:
                   name: calendar-secrets
                   key: JWT_PRIVATE_KEY
 
-            # Mailer Configuration
-            - name: MAIL_FROM
-              valueFrom:
-                secretKeyRef:
-                  name: calendar-secrets
-                  key: MAIL_FROM
-            - name: MAIL_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: calendar-secrets
-                  key: MAIL_HOST
-            - name: MAIL_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: calendar-secrets
-                  key: MAIL_PORT
-            - name: MAIL_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: calendar-secrets
-                  key: MAIL_USERNAME
-            - name: MAIL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: calendar-secrets
-                  key: MAIL_PASSWORD
-            - name: MAIL_MOCK
+            # Mailer Configuration - using mailpit in beta
+            - name: QUARKUS_MAILER_HOST
               valueFrom:
                 configMapKeyRef:
                   name: calendar-config
-                  key: MAIL_MOCK
+                  key: QUARKUS_MAILER_HOST
+            - name: QUARKUS_MAILER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: calendar-config
+                  key: QUARKUS_MAILER_PORT
+            - name: QUARKUS_MAILER_START_TLS
+              valueFrom:
+                configMapKeyRef:
+                  name: calendar-config
+                  key: QUARKUS_MAILER_START_TLS
 
             # Cloudflare R2 / S3 Configuration
             - name: R2_ENDPOINT

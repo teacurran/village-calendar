@@ -21,8 +21,10 @@ data:
   # Telemetry settings
   QUARKUS_OTEL_SDK_DISABLED: "false"
 
-  # Mailer settings
-  MAIL_MOCK: "false"
+  # Mailer settings - use mailpit in beta namespace
+  QUARKUS_MAILER_HOST: "mailpit.calendar-beta.svc.cluster.local"
+  QUARKUS_MAILER_PORT: "1025"
+  QUARKUS_MAILER_START_TLS: "DISABLED"
 
   # Feature flags (add as needed)
   # FEATURE_CALENDAR_TEMPLATES_ENABLED: "true"
