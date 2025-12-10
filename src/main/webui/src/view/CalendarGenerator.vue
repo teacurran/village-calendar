@@ -2542,9 +2542,10 @@ const openAddToCartModal = () => {
   showAddToCartModal.value = true;
 };
 
-// Handle product selection from modal
+// Handle product selection from modal - add to cart and go to checkout
 const handleAddToCartSelect = async (productCode: string, price: number) => {
   await addToCart(productCode);
+  router.push("/checkout");
 };
 
 const addToCart = async (productCode: string = "print") => {
