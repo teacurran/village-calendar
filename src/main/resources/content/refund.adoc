@@ -1,7 +1,7 @@
 ---
 title: Refund Policy
 layout: page
-date: 2024-12-11
+date: 2025-12-11
 description: Refund Policy for Village Compute Calendar - Learn about our return, refund, and exchange policies.
 ---
 

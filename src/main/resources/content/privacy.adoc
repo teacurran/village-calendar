@@ -1,7 +1,7 @@
 ---
 title: Privacy Policy
 layout: page
-date: 2024-12-11
+date: 2025-12-11
 description: Privacy Policy for Village Compute Calendar - Learn how we collect, use, and protect your personal information.
 ---
 
@@ -80,4 +80,4 @@ We may update this Privacy Policy from time to time. We will notify you of any c
 If you have questions about this Privacy Policy, please contact us at:
 
 * Email: privacy@villagecompute.com
-* Address: 1222 Scott Hwy, Village, State 12345
+* Address: 1222 Scott Hwy, Groton Vermont 05046

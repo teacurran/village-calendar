@@ -1,7 +1,7 @@
 ---
 title: Shipping Information
 layout: page
-date: 2024-12-11
+date: 2025-12-11
 description: Shipping information for Village Compute Calendar - Learn about our shipping options, delivery times, and policies.
 ---
 

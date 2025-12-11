@@ -1,7 +1,7 @@
 ---
 title: Terms of Service
 layout: page
-date: 2024-12-11
+date: 2025-12-11
 description: Terms of Service for Village Compute Calendar - Please read these terms carefully before using our service.
 ---
 
@@ -85,4 +85,4 @@ We may modify these Terms at any time. Continued use of the Service after change
 For questions about these Terms, contact us at:
 
 * Email: legal@villagecompute.com
-* Address: 1222 Scott Hwy, Village, State 12345
+* Address: 1222 Scott Hwy, Groton Vermont 05046
