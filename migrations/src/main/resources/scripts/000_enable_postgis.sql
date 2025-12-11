@@ -1,28 +1,25 @@
--- //
--- Enable PostgreSQL extensions required for Village Calendar application
--- This migration must run before any schema migrations
 --
--- Extensions enabled:
--- 1. uuid-ossp: Provides UUID generation functions (uuid_generate_v4())
--- 2. postgis: Provides geospatial data types and functions for location-based features
--- 3. postgis_topology: Provides topology data types and functions (advanced spatial operations)
+-- Create changelog table and enable PostgreSQL extensions
 --
--- NOTE: Extensions must be created by a superuser BEFORE running migrations.
--- This script only verifies they exist and will fail if they don't.
--- Run as superuser first:
---   CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
---   CREATE EXTENSION IF NOT EXISTS postgis;
---   CREATE EXTENSION IF NOT EXISTS postgis_topology;
--- //
+-- // create changelog table
+
+-- Create the schema_version (changelog) table for tracking migrations
+CREATE TABLE ${changelog} (
+  ID NUMERIC(20,0) NOT NULL,
+  APPLIED_AT VARCHAR(25) NOT NULL,
+  DESCRIPTION VARCHAR(255) NOT NULL
+);
+
+ALTER TABLE ${changelog}
+  ADD CONSTRAINT PK_${changelog}
+  PRIMARY KEY (ID);
 
 -- Verify extensions exist (will succeed if already created by superuser)
--- These use IF NOT EXISTS so they're idempotent
+-- NOTE: Extensions must be created by a superuser BEFORE running migrations.
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS postgis_topology;
 
 -- //@UNDO
 
--- Note: Extensions should not be dropped as they may be shared
--- and require superuser to drop
-SELECT 1;
+DROP TABLE ${changelog};

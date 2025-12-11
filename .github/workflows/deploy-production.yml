@@ -223,10 +223,6 @@ jobs:
           send_full_script=true
           EOF
 
-          # Bootstrap creates the schema_version table if it doesn't exist
-          echo "Bootstrapping migrations (creates schema_version table if needed)..."
-          mvn -Dmigration.env=production org.mybatis.maven:migrations-maven-plugin:bootstrap || true
-
           # Check migration status
           echo "Checking migration status..."
           mvn -Dmigration.env=production org.mybatis.maven:migrations-maven-plugin:status || true
