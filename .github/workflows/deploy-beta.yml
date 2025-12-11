@@ -288,13 +288,16 @@ jobs:
           K3S_HOST: ${{ env.USE_WIREGUARD == 'true' && '10.50.0.20' || secrets.K3S_HOST }}
           K3S_USER: ${{ secrets.K3S_USER }}
         run: |
+          # Wait a few seconds for pods to be fully ready after rollout
+          sleep 5
+
           echo "Running health check..."
           HEALTH_OUTPUT=$(ssh -o StrictHostKeyChecking=no ${K3S_USER}@${K3S_HOST} \
             "kubectl run smoke-test-health --rm -i --restart=Never --image=curlimages/curl:latest -n ${DEPLOYMENT_NAMESPACE} -- \
             curl -s -o /dev/null -w '%{http_code}' http://calendar-service.${DEPLOYMENT_NAMESPACE}.svc.cluster.local/q/health/live" 2>&1)
 
-          # Extract just the HTTP status code (first 3 digits)
-          HEALTH_STATUS=$(echo "${HEALTH_OUTPUT}" | grep -oE '^[0-9]{3}' | head -1)
+          # Extract HTTP status code (3 consecutive digits anywhere in output)
+          HEALTH_STATUS=$(echo "${HEALTH_OUTPUT}" | grep -oE '[0-9]{3}' | head -1)
 
           echo "Health check output: ${HEALTH_OUTPUT}"
           echo "Health check status: ${HEALTH_STATUS}"
