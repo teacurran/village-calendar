@@ -109,9 +109,7 @@ export type EmojiFontType =
   | "mono-navy"
   | "mono-maroon"
   | "mono-olive"
-  | "mono-coral"
-  | "mono-indigo"
-  | "mono-crimson";
+  | "mono-coral";
 
 export interface ColorSettings {
   yearColor: string;
@@ -521,19 +519,6 @@ const emojiStyleOptions: {
     label: "Coral",
     filter: "grayscale(100%) sepia(100%) saturate(8) hue-rotate(5deg)",
     color: "#F97316",
-  },
-  {
-    id: "mono-indigo",
-    label: "Indigo",
-    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(220deg)",
-    color: "#4F46E5",
-  },
-  {
-    id: "mono-crimson",
-    label: "Crimson",
-    filter:
-      "grayscale(100%) sepia(100%) saturate(10) hue-rotate(-5deg) brightness(0.8)",
-    color: "#BE123C",
   },
 ];
 
