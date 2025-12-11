@@ -63,7 +63,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
 
         // Then
         assertNotNull(html);
@@ -86,7 +86,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
 
         // Then
         assertNotNull(html);
@@ -112,7 +112,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
 
         // Then
         assertNotNull(html);
@@ -139,7 +139,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
 
         // Then
         assertNotNull(html);
@@ -158,7 +158,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
 
         // Then
         assertNotNull(html);
@@ -274,7 +274,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
 
         // Then
         assertNotNull(html);
@@ -301,7 +301,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
 
         // Then
         assertNotNull(html);
@@ -323,7 +323,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
 
         // Then
         assertNotNull(html);
@@ -367,7 +367,7 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
 
         // Then
         assertNotNull(html);
