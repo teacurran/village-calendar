@@ -228,28 +228,28 @@ jobs:
           IMAGE_TAG: sha-${{ github.event.workflow_run.head_sha || github.sha }}
           K3S_HOST: ${{ env.USE_WIREGUARD == 'true' && '10.50.0.20' || secrets.K3S_HOST }}
           K3S_USER: ${{ secrets.K3S_USER }}
-          # Production database credentials
-          DB_HOST: ${{ secrets.DB_HOST_PROD || secrets.DB_HOST }}
-          DB_PORT: ${{ secrets.DB_PORT_PROD || secrets.DB_PORT }}
-          DB_NAME: ${{ secrets.DB_NAME_PROD || 'village_calendar_prod' }}
-          DB_USER: ${{ secrets.DB_USER_PROD || secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD_PROD }}
-          # Object storage (can be overridden with _PROD suffix)
+          # Database credentials - uses environment-specific secrets from 'production' environment
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          # Object storage
           OBJECT_STORAGE_REGION: ${{ secrets.OBJECT_STORAGE_REGION }}
-          OBJECT_STORAGE_BUCKET_NAME: ${{ secrets.OBJECT_STORAGE_BUCKET_NAME_PROD || secrets.OBJECT_STORAGE_BUCKET_NAME }}
+          OBJECT_STORAGE_BUCKET_NAME: ${{ secrets.OBJECT_STORAGE_BUCKET_NAME }}
           OBJECT_STORAGE_ENDPOINT_URL: ${{ secrets.OBJECT_STORAGE_ENDPOINT_URL }}
           OBJECT_STORAGE_CDN_URL: ${{ secrets.OBJECT_STORAGE_CDN_URL }}
           OBJECT_STORAGE_ACCESS_KEY: ${{ secrets.OBJECT_STORAGE_ACCESS_KEY }}
           OBJECT_STORAGE_SECRET_KEY: ${{ secrets.OBJECT_STORAGE_SECRET_KEY }}
-          # Production session key
-          SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY_PROD || secrets.SESSION_ENCRYPTION_KEY }}
+          # Session encryption
+          SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY }}
           # OAuth
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID_PROD || secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET_PROD || secrets.GOOGLE_CLIENT_SECRET }}
-          # Stripe production keys
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY_PROD || secrets.STRIPE_SECRET_KEY }}
-          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY_PROD || secrets.STRIPE_PUBLISHABLE_KEY }}
-          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET_PROD || secrets.STRIPE_WEBHOOK_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          # Stripe keys
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           # Primary ingress host
           INGRESS_HOST: calendar.villagecompute.com
           # Additional hosts (comma-separated) - can add calendars.villagecompute.com later
