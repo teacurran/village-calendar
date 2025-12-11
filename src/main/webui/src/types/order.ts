@@ -54,7 +54,6 @@ export interface CalendarOrder {
   updated: string; // DateTime
   paidAt?: string; // DateTime
   shippedAt?: string; // DateTime
-  deliveredAt?: string; // DateTime
   items?: CalendarOrderItem[];
   calendar?: {
     id: string;

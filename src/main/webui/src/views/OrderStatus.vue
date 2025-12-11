@@ -77,11 +77,11 @@ const statusEvents = computed(() => {
     });
   }
 
-  // Delivered
-  if (order.value.deliveredAt) {
+  // Delivered (based on status since we don't have deliveredAt)
+  if (order.value.status === "DELIVERED") {
     events.push({
       status: "Delivered",
-      date: order.value.deliveredAt,
+      date: "Complete",
       icon: "pi pi-check-circle",
       color: "#10b981",
       completed: true,
@@ -183,7 +183,6 @@ onMounted(async () => {
           updated
           paidAt
           shippedAt
-          deliveredAt
           shippingAddress
           items {
             id
