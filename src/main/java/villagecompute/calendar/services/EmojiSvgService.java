@@ -343,23 +343,11 @@ public class EmojiSvgService {
         // We embed as a nested <svg> element with proper positioning and scaling
         // Include xlink namespace for SVGs that use xlink:href attributes
         if (colorHex != null && !colorHex.isEmpty() && monochrome) {
-            // Colorized monochrome: convert to grayscale then apply color tint
-            String filterId = uniquePrefix + "colorize";
-            // Parse hex color to RGB values (0-1 range)
-            String hex = colorHex.startsWith("#") ? colorHex.substring(1) : colorHex;
-            double r = Integer.parseInt(hex.substring(0, 2), 16) / 255.0;
-            double g = Integer.parseInt(hex.substring(2, 4), 16) / 255.0;
-            double b = Integer.parseInt(hex.substring(4, 6), 16) / 255.0;
-            // Use feColorMatrix to convert to luminance then multiply by target color
-            // This preserves the shading/depth of the original while applying the color
-            return String.format(java.util.Locale.US,
-                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
-                "<defs><filter id=\"%s\" color-interpolation-filters=\"sRGB\">" +
-                "<feColorMatrix type=\"matrix\" values=\"0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0 0 0 1 0\"/>" +
-                "<feColorMatrix type=\"matrix\" values=\"%.3f 0 0 0 0  0 %.3f 0 0 0  0 0 %.3f 0 0  0 0 0 1 0\"/>" +
-                "</filter></defs>" +
-                "<g filter=\"url(#%s)\">%s</g></svg>",
-                x, y, size, size, viewBox, filterId, r, g, b, filterId, innerContent
+            // Colorized monochrome: replace black fill colors with the target color
+            String colorizedContent = replaceBlackFills(innerContent, colorHex);
+            return String.format(
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">%s</svg>",
+                x, y, size, size, viewBox, colorizedContent
             );
         } else if (monochrome && !usingMonoSvg) {
             // Fall back to grayscale filter for color SVG (when mono SVG not available)
@@ -408,6 +396,38 @@ public class EmojiSvgService {
             // Replace href="#id" references (SVG2 style)
             result = result.replace("href=\"#" + id + "\"", "href=\"#" + newId + "\"");
         }
+
+        return result;
+    }
+
+    /**
+     * Replace black fill colors in SVG content with the target color.
+     * Handles various black color representations: #000, #000000, black, rgb(0,0,0)
+     * Also handles fill in style attributes.
+     */
+    private String replaceBlackFills(String svgContent, String targetColor) {
+        String result = svgContent;
+
+        // Ensure target color has # prefix
+        String color = targetColor.startsWith("#") ? targetColor : "#" + targetColor;
+
+        // Replace fill attribute variations of black
+        result = result.replaceAll("fill=\"#000000\"", "fill=\"" + color + "\"");
+        result = result.replaceAll("fill=\"#000\"", "fill=\"" + color + "\"");
+        result = result.replaceAll("fill=\"black\"", "fill=\"" + color + "\"");
+        result = result.replaceAll("fill='#000000'", "fill='" + color + "'");
+        result = result.replaceAll("fill='#000'", "fill='" + color + "'");
+        result = result.replaceAll("fill='black'", "fill='" + color + "'");
+
+        // Replace fill in style attributes
+        result = result.replaceAll("fill:\\s*#000000", "fill:" + color);
+        result = result.replaceAll("fill:\\s*#000(?![0-9a-fA-F])", "fill:" + color);
+        result = result.replaceAll("fill:\\s*black", "fill:" + color);
+
+        // Replace stroke attribute variations of black (for outlined emojis)
+        result = result.replaceAll("stroke=\"#000000\"", "stroke=\"" + color + "\"");
+        result = result.replaceAll("stroke=\"#000\"", "stroke=\"" + color + "\"");
+        result = result.replaceAll("stroke=\"black\"", "stroke=\"" + color + "\"");
 
         return result;
     }
