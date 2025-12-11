@@ -74,7 +74,7 @@
 
     <div class="footer-bottom">
       <p class="copyright">
-        &copy; {{ currentYear }} Village Calendar. All rights reserved.
+        &copy; {{ currentYear }} Village Compute. All rights reserved.
       </p>
       <div class="social-links">
         <a
