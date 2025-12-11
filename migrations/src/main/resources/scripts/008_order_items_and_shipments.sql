@@ -1,5 +1,7 @@
--- V2: Add order items and shipments support
+-- //
+-- Add order items and shipments support
 -- This migration enables orders with multiple line items and shipment tracking
+-- //
 
 -- 1. Make calendar_id nullable in calendar_orders (new orders use items, not single calendar)
 ALTER TABLE calendar_orders ALTER COLUMN calendar_id DROP NOT NULL;
@@ -60,7 +62,6 @@ CREATE INDEX IF NOT EXISTS idx_order_items_calendar ON calendar_order_items(cale
 CREATE INDEX IF NOT EXISTS idx_order_items_shipment ON calendar_order_items(shipment_id);
 
 -- 5. Migrate existing orders to have items (for any orders that have calendar_id set)
--- This creates an order item for each existing order that has a calendar
 INSERT INTO calendar_order_items (id, order_id, calendar_id, product_type, product_name, calendar_year, quantity, unit_price, line_total, item_status, created, updated, version)
 SELECT
     gen_random_uuid(),
@@ -99,3 +100,19 @@ AND co.customer_email IS NULL;
 UPDATE calendar_orders
 SET subtotal = total_price
 WHERE subtotal IS NULL AND total_price IS NOT NULL;
+
+-- //@UNDO
+
+DROP INDEX IF EXISTS idx_order_items_shipment;
+DROP INDEX IF EXISTS idx_order_items_calendar;
+DROP INDEX IF EXISTS idx_order_items_order;
+DROP TABLE IF EXISTS calendar_order_items;
+DROP INDEX IF EXISTS idx_shipments_status;
+DROP INDEX IF EXISTS idx_shipments_tracking;
+DROP INDEX IF EXISTS idx_shipments_order;
+DROP TABLE IF EXISTS shipments;
+ALTER TABLE calendar_orders DROP COLUMN IF EXISTS tax_amount;
+ALTER TABLE calendar_orders DROP COLUMN IF EXISTS shipping_cost;
+ALTER TABLE calendar_orders DROP COLUMN IF EXISTS subtotal;
+ALTER TABLE calendar_orders DROP COLUMN IF EXISTS billing_address;
+ALTER TABLE calendar_orders DROP COLUMN IF EXISTS customer_email;

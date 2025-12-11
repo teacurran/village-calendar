@@ -1,11 +1,6 @@
--- V1: Create cart tables for calendar shopping cart functionality
--- This migration creates the carts and cart_items tables with the correct schema
-
--- Drop old tables if they exist (handles schema mismatch from Hibernate auto-update)
-DROP TABLE IF EXISTS cart_items_aud CASCADE;
-DROP TABLE IF EXISTS carts_aud CASCADE;
-DROP TABLE IF EXISTS cart_items CASCADE;
-DROP TABLE IF EXISTS carts CASCADE;
+-- //
+-- Create cart tables for calendar shopping cart functionality
+-- //
 
 -- Create carts table
 CREATE TABLE carts (
@@ -36,3 +31,11 @@ CREATE TABLE cart_items (
 );
 
 CREATE INDEX idx_cart_items_cart ON cart_items(cart_id);
+
+-- //@UNDO
+
+DROP INDEX IF EXISTS idx_cart_items_cart;
+DROP TABLE IF EXISTS cart_items;
+DROP INDEX IF EXISTS idx_carts_session;
+DROP INDEX IF EXISTS idx_carts_user;
+DROP TABLE IF EXISTS carts;
