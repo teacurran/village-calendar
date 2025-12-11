@@ -7,7 +7,8 @@
           <span class="brand-name">Village Calendar</span>
         </div>
         <p class="footer-tagline">
-          Create beautiful, personalized calendars for any occasion
+          Custom yearly wall calendars with holidays, moon phases, and lunar
+          illumination
         </p>
       </div>
 

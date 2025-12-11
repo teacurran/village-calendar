@@ -961,8 +961,75 @@ onMounted(() => {
           </StepPanel>
         </StepItem>
 
-        <!-- Step 2: Moon Display -->
+        <!-- Step 2: Additional Options -->
         <StepItem value="2">
+          <Step>Additional Options</Step>
+          <StepPanel v-slot="{ activateCallback }">
+            <div class="step-content">
+              <div class="checkbox-options">
+                <div class="checkbox-option">
+                  <Checkbox
+                    v-model="showGrid"
+                    input-id="showGrid"
+                    :binary="true"
+                  />
+                  <label for="showGrid" class="checkbox-label">
+                    <span class="checkbox-title">Show Grid Lines</span>
+                    <span class="checkbox-description"
+                      >Display lines between calendar cells</span
+                    >
+                  </label>
+                </div>
+
+                <div class="checkbox-option">
+                  <Checkbox
+                    v-model="showDayNames"
+                    input-id="showDayNames"
+                    :binary="true"
+                  />
+                  <label for="showDayNames" class="checkbox-label">
+                    <span class="checkbox-title">Show Day Names</span>
+                    <span class="checkbox-description"
+                      >Display abbreviated day names (Mon, Tue, etc.)</span
+                    >
+                  </label>
+                </div>
+
+                <div class="checkbox-option">
+                  <Checkbox
+                    v-model="rotateMonthNames"
+                    input-id="rotateMonthNames"
+                    :binary="true"
+                  />
+                  <label for="rotateMonthNames" class="checkbox-label">
+                    <span class="checkbox-title">Rotate Month Names</span>
+                    <span class="checkbox-description"
+                      >Display month names vertically</span
+                    >
+                  </label>
+                </div>
+              </div>
+
+              <div class="step-navigation">
+                <Button
+                  label="Previous"
+                  icon="pi pi-arrow-left"
+                  outlined
+                  @click="activateCallback('1')"
+                />
+                <Button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  icon-pos="right"
+                  @click="activateCallback('3')"
+                />
+              </div>
+            </div>
+          </StepPanel>
+        </StepItem>
+
+        <!-- Step 3: Moon Display -->
+        <StepItem value="3">
           <Step>Moon Display</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
@@ -1026,21 +1093,21 @@ onMounted(() => {
                   label="Previous"
                   icon="pi pi-arrow-left"
                   outlined
-                  @click="activateCallback('1')"
+                  @click="activateCallback('2')"
                 />
                 <Button
                   label="Next"
                   icon="pi pi-arrow-right"
                   icon-pos="right"
-                  @click="activateCallback('3')"
+                  @click="activateCallback('4')"
                 />
               </div>
             </div>
           </StepPanel>
         </StepItem>
 
-        <!-- Step 3: Holidays -->
-        <StepItem value="3">
+        <!-- Step 4: Holidays -->
+        <StepItem value="4">
           <Step>Holidays</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
@@ -1240,73 +1307,6 @@ onMounted(() => {
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              <div class="step-navigation">
-                <Button
-                  label="Previous"
-                  icon="pi pi-arrow-left"
-                  outlined
-                  @click="activateCallback('2')"
-                />
-                <Button
-                  label="Next"
-                  icon="pi pi-arrow-right"
-                  icon-pos="right"
-                  @click="activateCallback('4')"
-                />
-              </div>
-            </div>
-          </StepPanel>
-        </StepItem>
-
-        <!-- Step 4: Additional Options -->
-        <StepItem value="4">
-          <Step>Additional Options</Step>
-          <StepPanel v-slot="{ activateCallback }">
-            <div class="step-content">
-              <div class="checkbox-options">
-                <div class="checkbox-option">
-                  <Checkbox
-                    v-model="showGrid"
-                    input-id="showGrid"
-                    :binary="true"
-                  />
-                  <label for="showGrid" class="checkbox-label">
-                    <span class="checkbox-title">Show Grid Lines</span>
-                    <span class="checkbox-description"
-                      >Display lines between calendar cells</span
-                    >
-                  </label>
-                </div>
-
-                <div class="checkbox-option">
-                  <Checkbox
-                    v-model="showDayNames"
-                    input-id="showDayNames"
-                    :binary="true"
-                  />
-                  <label for="showDayNames" class="checkbox-label">
-                    <span class="checkbox-title">Show Day Names</span>
-                    <span class="checkbox-description"
-                      >Display abbreviated day names (Mon, Tue, etc.)</span
-                    >
-                  </label>
-                </div>
-
-                <div class="checkbox-option">
-                  <Checkbox
-                    v-model="rotateMonthNames"
-                    input-id="rotateMonthNames"
-                    :binary="true"
-                  />
-                  <label for="rotateMonthNames" class="checkbox-label">
-                    <span class="checkbox-title">Rotate Month Names</span>
-                    <span class="checkbox-description"
-                      >Display month names vertically</span
-                    >
-                  </label>
                 </div>
               </div>
 
