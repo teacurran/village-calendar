@@ -76,32 +76,6 @@
       <p class="copyright">
         &copy; {{ currentYear }} Village Compute. All rights reserved.
       </p>
-      <div class="social-links">
-        <a
-          href="#"
-          class="social-link"
-          aria-label="Facebook"
-          @click.prevent="handleSocialClick('facebook')"
-        >
-          <i class="pi pi-facebook"></i>
-        </a>
-        <a
-          href="#"
-          class="social-link"
-          aria-label="Twitter"
-          @click.prevent="handleSocialClick('twitter')"
-        >
-          <i class="pi pi-twitter"></i>
-        </a>
-        <a
-          href="#"
-          class="social-link"
-          aria-label="Instagram"
-          @click.prevent="handleSocialClick('instagram')"
-        >
-          <i class="pi pi-instagram"></i>
-        </a>
-      </div>
     </div>
   </footer>
 </template>
@@ -122,7 +96,6 @@ const handleShippingClick = () => {};
 const handlePrivacyClick = () => {};
 const handleTermsClick = () => {};
 const handleRefundClick = () => {};
-const handleSocialClick = (_platform: string) => {};
 </script>
 
 <style scoped>
@@ -210,22 +183,6 @@ const handleSocialClick = (_platform: string) => {};
   color: #9ca3af;
   font-size: 0.875rem;
   margin: 0;
-}
-
-.social-links {
-  display: flex;
-  gap: 1rem;
-}
-
-.social-link {
-  color: #9ca3af;
-  font-size: 1.25rem;
-  transition: color 0.2s;
-  text-decoration: none;
-}
-
-.social-link:hover {
-  color: white;
 }
 
 /* Responsive styles */
