@@ -3068,6 +3068,7 @@ const handleWizardDisplayOptionsChange = (options: DisplayOptions) => {
   config.value.showGrid = options.showGrid;
   config.value.showDayNames = options.showDayNames;
   config.value.rotateMonthNames = options.rotateMonthNames;
+  generateCalendar();
 };
 
 // Handle color settings change from wizard
@@ -3079,12 +3080,14 @@ const handleWizardColorsChange = (colors: ColorSettings) => {
   config.value.gridLineColor = colors.gridLineColor;
   config.value.holidayColor = colors.holidayColor;
   config.value.emojiFont = colors.emojiFont;
+  generateCalendar();
 };
 
 // Handle holiday settings change from wizard
 const handleWizardHolidaysChange = (holidays: HolidaySettings) => {
   config.value.holidaySets = holidays.selectedSets;
   config.value.eventDisplayMode = holidays.displayMode;
+  generateCalendar();
 };
 
 // Load saved calendars for the current user
