@@ -292,6 +292,21 @@ public class EmojiSvgService {
      * @return SVG element string, or null if emoji SVG not available
      */
     public String getEmojiAsSvg(String emoji, double x, double y, double size, boolean monochrome) {
+        return getEmojiAsSvg(emoji, x, y, size, monochrome, null);
+    }
+
+    /**
+     * Get the SVG representation of an emoji as an embeddable SVG element with optional colorization.
+     *
+     * @param emoji      The emoji character(s)
+     * @param x          X position
+     * @param y          Y position
+     * @param size       Size (width and height) in pixels
+     * @param monochrome If true, use monochrome SVG variant (or fall back to grayscale filter)
+     * @param colorHex   Optional hex color (e.g., "#DC2626") to colorize the emoji (requires monochrome=true)
+     * @return SVG element string, or null if emoji SVG not available
+     */
+    public String getEmojiAsSvg(String emoji, double x, double y, double size, boolean monochrome, String colorHex) {
         String normalized = normalizeEmoji(emoji);
 
         // Choose the appropriate cache
@@ -327,7 +342,26 @@ public class EmojiSvgService {
         // Use the correct viewBox from the original SVG
         // We embed as a nested <svg> element with proper positioning and scaling
         // Include xlink namespace for SVGs that use xlink:href attributes
-        if (monochrome && !usingMonoSvg) {
+        if (colorHex != null && !colorHex.isEmpty() && monochrome) {
+            // Colorized monochrome: convert to grayscale then apply color tint
+            String filterId = uniquePrefix + "colorize";
+            // Parse hex color to RGB values (0-1 range)
+            String hex = colorHex.startsWith("#") ? colorHex.substring(1) : colorHex;
+            double r = Integer.parseInt(hex.substring(0, 2), 16) / 255.0;
+            double g = Integer.parseInt(hex.substring(2, 4), 16) / 255.0;
+            double b = Integer.parseInt(hex.substring(4, 6), 16) / 255.0;
+            // Use feColorMatrix to convert to luminance then multiply by target color
+            // This preserves the shading/depth of the original while applying the color
+            return String.format(java.util.Locale.US,
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
+                "<defs><filter id=\"%s\" color-interpolation-filters=\"sRGB\">" +
+                "<feColorMatrix type=\"matrix\" values=\"0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0 0 0 1 0\"/>" +
+                "<feColorMatrix type=\"matrix\" values=\"%.3f 0 0 0 0  0 %.3f 0 0 0  0 0 %.3f 0 0  0 0 0 1 0\"/>" +
+                "</filter></defs>" +
+                "<g filter=\"url(#%s)\">%s</g></svg>",
+                x, y, size, size, viewBox, filterId, r, g, b, filterId, innerContent
+            );
+        } else if (monochrome && !usingMonoSvg) {
             // Fall back to grayscale filter for color SVG (when mono SVG not available)
             String filterId = uniquePrefix + "grayscale";
             return String.format(

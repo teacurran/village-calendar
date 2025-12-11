@@ -97,7 +97,7 @@ public class CalendarRenderingService {
     public Map<String, String> holidayNames = new HashMap<>(); // date -> holiday name for text display
     public List<String> holidaySets = new ArrayList<>(); // List of holiday set IDs to include
     public String eventDisplayMode = "large"; // "large", "large-text", "small", "text", or "none"
-    public String emojiFont = "noto-color"; // "noto-color" (default) or "noto-mono" for monochrome
+    public String emojiFont = "noto-color"; // "noto-color", "noto-mono", or "mono-{color}" for colored monochrome
     public String locale = "en-US";
     public DayOfWeek firstDayOfWeek = DayOfWeek.SUNDAY;
     public String layoutStyle = "grid"; // "grid" for 12x31 layout, "traditional" for 4x3 month grid
@@ -146,12 +146,34 @@ public class CalendarRenderingService {
     MONOCHROME_EMOJI_SUBSTITUTIONS.put("🏳️‍🌈", "🌈");    // Pride Flag -> Rainbow
   }
 
+  // Emoji color variants mapping (emojiFont value -> hex color)
+  private static final Map<String, String> EMOJI_COLOR_MAP = new HashMap<>();
+  static {
+    EMOJI_COLOR_MAP.put("mono-red", "#DC2626");
+    EMOJI_COLOR_MAP.put("mono-blue", "#2563EB");
+    EMOJI_COLOR_MAP.put("mono-green", "#16A34A");
+    EMOJI_COLOR_MAP.put("mono-orange", "#EA580C");
+    EMOJI_COLOR_MAP.put("mono-purple", "#9333EA");
+    EMOJI_COLOR_MAP.put("mono-pink", "#EC4899");
+    EMOJI_COLOR_MAP.put("mono-teal", "#0D9488");
+    EMOJI_COLOR_MAP.put("mono-brown", "#92400E");
+    EMOJI_COLOR_MAP.put("mono-navy", "#1E3A5F");
+    EMOJI_COLOR_MAP.put("mono-maroon", "#7F1D1D");
+    EMOJI_COLOR_MAP.put("mono-olive", "#4D7C0F");
+    EMOJI_COLOR_MAP.put("mono-coral", "#F97316");
+    EMOJI_COLOR_MAP.put("mono-indigo", "#4F46E5");
+    EMOJI_COLOR_MAP.put("mono-crimson", "#BE123C");
+  }
+
   /**
    * Substitutes emojis that aren't available in Noto Emoji monochrome font
-   * with compatible alternatives.
+   * with compatible alternatives. Also applies to colored monochrome variants.
    */
   private static String substituteEmojiForMonochrome(String emoji, CalendarConfig config) {
-    if (!"noto-mono".equals(config.emojiFont)) {
+    // Apply substitutions for noto-mono and all mono-* color variants
+    boolean needsSubstitution = "noto-mono".equals(config.emojiFont) ||
+        (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
+    if (!needsSubstitution) {
       return emoji; // No substitution needed for color mode
     }
     return MONOCHROME_EMOJI_SUBSTITUTIONS.getOrDefault(emoji, emoji);
@@ -170,15 +192,18 @@ public class CalendarRenderingService {
    * @return SVG element string (either <svg> or <text>)
    */
   private String renderEmoji(String emoji, double x, double y, int size, CalendarConfig config, boolean centered) {
-    // Check if monochrome mode is enabled
-    boolean isMonochrome = "noto-mono".equals(config.emojiFont);
+    // Check if monochrome mode is enabled (noto-mono or any mono-* color variant)
+    boolean isMonochrome = "noto-mono".equals(config.emojiFont) ||
+        (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
+    // Get color for colored monochrome variants
+    String colorHex = EMOJI_COLOR_MAP.get(config.emojiFont);
 
     // Try to use SVG rendering for better PDF compatibility
     if (emojiSvgService != null && emojiSvgService.hasEmojiSvg(emoji)) {
       // For SVG, x/y is top-left corner, so adjust if centered
       double svgX = centered ? x - size / 2.0 : x;
       double svgY = centered ? y - size / 2.0 : y - size; // text y is baseline, svg y is top
-      return emojiSvgService.getEmojiAsSvg(emoji, svgX, svgY, size, isMonochrome);
+      return emojiSvgService.getEmojiAsSvg(emoji, svgX, svgY, size, isMonochrome, colorHex);
     }
 
     // Fall back to text rendering with emoji font

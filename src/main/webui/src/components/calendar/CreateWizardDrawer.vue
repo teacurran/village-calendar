@@ -95,7 +95,23 @@ export interface DisplayOptions {
   rotateMonthNames: boolean;
 }
 
-export type EmojiFontType = "noto-color" | "noto-mono";
+export type EmojiFontType =
+  | "noto-color"
+  | "noto-mono"
+  | "mono-red"
+  | "mono-blue"
+  | "mono-green"
+  | "mono-orange"
+  | "mono-purple"
+  | "mono-pink"
+  | "mono-teal"
+  | "mono-brown"
+  | "mono-navy"
+  | "mono-maroon"
+  | "mono-olive"
+  | "mono-coral"
+  | "mono-indigo"
+  | "mono-crimson";
 
 export interface ColorSettings {
   yearColor: string;
@@ -417,19 +433,107 @@ const colorSwatches = [
   "#ffc0cb",
 ];
 
-// Emoji font options
-const emojiFontOptions = [
+// Emoji style options with CSS filter for preview
+const emojiStyleOptions: {
+  id: EmojiFontType;
+  label: string;
+  filter: string;
+  color?: string;
+}[] = [
+  { id: "noto-color", label: "Full Color", filter: "none" },
   {
-    id: "noto-color" as const,
-    name: "Color Emoji",
-    description: "Full-color emoji (Noto Color Emoji)",
-    preview: "🎄",
+    id: "noto-mono",
+    label: "Black & White",
+    filter: "grayscale(100%) contrast(1.2)",
   },
   {
-    id: "noto-mono" as const,
-    name: "Monochrome",
-    description: "Black and white line art style",
-    preview: "🎄",
+    id: "mono-red",
+    label: "Red",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(-10deg)",
+    color: "#DC2626",
+  },
+  {
+    id: "mono-blue",
+    label: "Blue",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(180deg)",
+    color: "#2563EB",
+  },
+  {
+    id: "mono-green",
+    label: "Green",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(80deg)",
+    color: "#16A34A",
+  },
+  {
+    id: "mono-orange",
+    label: "Orange",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(20deg)",
+    color: "#EA580C",
+  },
+  {
+    id: "mono-purple",
+    label: "Purple",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(240deg)",
+    color: "#9333EA",
+  },
+  {
+    id: "mono-pink",
+    label: "Pink",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(300deg)",
+    color: "#EC4899",
+  },
+  {
+    id: "mono-teal",
+    label: "Teal",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(140deg)",
+    color: "#0D9488",
+  },
+  {
+    id: "mono-brown",
+    label: "Brown",
+    filter:
+      "grayscale(100%) sepia(100%) saturate(5) hue-rotate(350deg) brightness(0.7)",
+    color: "#92400E",
+  },
+  {
+    id: "mono-navy",
+    label: "Navy",
+    filter:
+      "grayscale(100%) sepia(100%) saturate(10) hue-rotate(200deg) brightness(0.6)",
+    color: "#1E3A5F",
+  },
+  {
+    id: "mono-maroon",
+    label: "Maroon",
+    filter:
+      "grayscale(100%) sepia(100%) saturate(10) hue-rotate(-20deg) brightness(0.6)",
+    color: "#7F1D1D",
+  },
+  {
+    id: "mono-olive",
+    label: "Olive",
+    filter:
+      "grayscale(100%) sepia(100%) saturate(5) hue-rotate(50deg) brightness(0.7)",
+    color: "#4D7C0F",
+  },
+  {
+    id: "mono-coral",
+    label: "Coral",
+    filter: "grayscale(100%) sepia(100%) saturate(8) hue-rotate(5deg)",
+    color: "#F97316",
+  },
+  {
+    id: "mono-indigo",
+    label: "Indigo",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(220deg)",
+    color: "#4F46E5",
+  },
+  {
+    id: "mono-crimson",
+    label: "Crimson",
+    filter:
+      "grayscale(100%) sepia(100%) saturate(10) hue-rotate(-5deg) brightness(0.8)",
+    color: "#BE123C",
   },
 ];
 
@@ -1437,33 +1541,28 @@ onMounted(() => {
               <p class="step-description">
                 Choose how emojis appear in your calendar
               </p>
-              <div class="emoji-font-options">
-                <div
-                  v-for="option in emojiFontOptions"
-                  :key="option.id"
-                  class="emoji-font-option"
-                  :class="{ selected: emojiFont === option.id }"
-                  @click="emojiFont = option.id"
-                >
+              <div class="emoji-style-picker">
+                <div class="emoji-style-swatches">
                   <div
-                    class="emoji-preview"
-                    :class="{ monochrome: option.id === 'noto-mono' }"
+                    v-for="option in emojiStyleOptions"
+                    :key="option.id"
+                    class="emoji-swatch"
+                    :class="{ selected: emojiFont === option.id }"
+                    :title="option.label"
+                    @click="emojiFont = option.id"
                   >
-                    {{ option.preview }}
+                    <span
+                      class="emoji-swatch-icon"
+                      :style="{ filter: option.filter }"
+                      >🎄</span
+                    >
                   </div>
-                  <div class="emoji-font-info">
-                    <div class="emoji-font-name">{{ option.name }}</div>
-                    <div class="emoji-font-description">
-                      {{ option.description }}
-                    </div>
-                  </div>
-                  <div class="selection-indicator">
-                    <i
-                      v-if="emojiFont === option.id"
-                      class="pi pi-check-circle"
-                    ></i>
-                    <i v-else class="pi pi-circle"></i>
-                  </div>
+                </div>
+                <div class="emoji-style-label">
+                  {{
+                    emojiStyleOptions.find((o) => o.id === emojiFont)?.label ||
+                    "Full Color"
+                  }}
                 </div>
               </div>
 
@@ -2248,70 +2347,58 @@ onMounted(() => {
   color: var(--text-color-secondary);
 }
 
-/* Emoji font options */
-.emoji-font-options {
+/* Emoji style swatch picker */
+.emoji-style-picker {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
-.emoji-font-option {
+.emoji-style-swatches {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border: 2px solid var(--surface-200);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px;
   background: var(--surface-0);
+  border: 1px solid var(--surface-200);
+  border-radius: 8px;
+  max-width: 280px;
 }
 
-.emoji-font-option:hover {
-  border-color: var(--primary-300);
-  background: var(--surface-50);
-}
-
-.emoji-font-option.selected {
-  border-color: var(--primary-color);
-  background: var(--primary-50);
-}
-
-.emoji-preview {
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+.emoji-swatch {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--surface-50);
+  border: 2px solid transparent;
+}
+
+.emoji-swatch:hover {
   background: var(--surface-100);
-  border-radius: 6px;
+  transform: scale(1.1);
+}
+
+.emoji-swatch.selected {
+  border-color: var(--primary-color);
+  background: var(--primary-50);
+  box-shadow: 0 0 0 2px var(--primary-200);
+}
+
+.emoji-swatch-icon {
+  font-size: 20px;
   font-family:
     "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  line-height: 1;
 }
 
-.emoji-preview.monochrome {
-  /* Use color emoji font but apply grayscale filter for monochrome preview */
-  font-family:
-    "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-  filter: grayscale(100%) contrast(1.2);
-}
-
-.emoji-font-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.emoji-font-name {
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: var(--text-color);
-  margin-bottom: 0.125rem;
-}
-
-.emoji-font-description {
+.emoji-style-label {
   font-size: 0.8125rem;
   color: var(--text-color-secondary);
+  font-weight: 500;
 }
 </style>

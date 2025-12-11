@@ -101,7 +101,12 @@ const statusEvents = computed(() => {
 
 // Format date for display
 function formatDate(dateString: string | undefined): string {
-  if (!dateString || dateString === "Pending" || dateString === "In progress" || dateString === "In transit") {
+  if (
+    !dateString ||
+    dateString === "Pending" ||
+    dateString === "In progress" ||
+    dateString === "In transit"
+  ) {
     return dateString || "";
   }
   try {
@@ -261,7 +266,9 @@ onMounted(async () => {
                   {{ order.status }}
                 </span>
               </div>
-              <p class="order-date">Placed on {{ formatDate(order.created) }}</p>
+              <p class="order-date">
+                Placed on {{ formatDate(order.created) }}
+              </p>
             </div>
           </template>
 
@@ -303,7 +310,9 @@ onMounted(async () => {
               >
                 <div class="item-info">
                   <strong>{{ item.productName || "Calendar" }}</strong>
-                  <span v-if="item.calendarYear"> ({{ item.calendarYear }})</span>
+                  <span v-if="item.calendarYear">
+                    ({{ item.calendarYear }})</span
+                  >
                   <p>Quantity: {{ item.quantity }}</p>
                 </div>
                 <div class="item-price">
@@ -326,7 +335,9 @@ onMounted(async () => {
               <h2>Order Summary</h2>
               <div class="summary-row">
                 <span>Subtotal</span>
-                <span>{{ formatCurrency(order.subtotal || order.totalPrice) }}</span>
+                <span>{{
+                  formatCurrency(order.subtotal || order.totalPrice)
+                }}</span>
               </div>
               <div v-if="order.shippingCost" class="summary-row">
                 <span>Shipping</span>
