@@ -96,6 +96,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: "/order/:orderNumber/:orderId",
+      name: "order-status",
+      component: () => import("./views/OrderStatus.vue"),
+      meta: { requiresAuth: false },
+    },
+    {
       path: "/bootstrap",
       name: "bootstrap",
       component: () => import("./view/public/Bootstrap.vue"),

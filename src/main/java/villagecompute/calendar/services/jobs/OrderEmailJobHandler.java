@@ -59,12 +59,14 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
          * @param order Calendar order
          * @param stylesheet CSS stylesheet
          * @param previewImages List of base64 PNG data URIs for calendar previews (parallel to order.items)
+         * @param baseUrl Base URL for order status links
          * @return Template instance
          */
         public static native TemplateInstance orderConfirmation(
             CalendarOrder order,
             String stylesheet,
-            List<String> previewImages
+            List<String> previewImages,
+            String baseUrl
         );
 
         /**
@@ -129,7 +131,7 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
 
             // Send customer confirmation email
             String customerSubject = "Order Confirmation - Village Compute Calendar #" + order.orderNumber;
-            String customerHtmlContent = Templates.orderConfirmation(order, css, previewImages).render();
+            String customerHtmlContent = Templates.orderConfirmation(order, css, previewImages, baseUrl).render();
 
             emailService.sendHtmlEmail(orderFromEmail, customerEmail, customerSubject, customerHtmlContent);
             LOG.infof("Order confirmation email sent successfully to customer: %s", customerEmail);
