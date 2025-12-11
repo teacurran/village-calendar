@@ -343,11 +343,13 @@ public class EmojiSvgService {
         // We embed as a nested <svg> element with proper positioning and scaling
         // Include xlink namespace for SVGs that use xlink:href attributes
         if (colorHex != null && !colorHex.isEmpty() && monochrome) {
-            // Colorized monochrome: replace black fill colors with the target color
-            String colorizedContent = replaceBlackFills(innerContent, colorHex);
+            // Colorized monochrome: wrap content in a group with fill color set
+            // This handles SVGs that have no explicit fill (default black) as well as explicit fills
+            String color = colorHex.startsWith("#") ? colorHex : "#" + colorHex;
             return String.format(
-                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">%s</svg>",
-                x, y, size, size, viewBox, colorizedContent
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
+                "<g fill=\"%s\">%s</g></svg>",
+                x, y, size, size, viewBox, color, innerContent
             );
         } else if (monochrome && !usingMonoSvg) {
             // Fall back to grayscale filter for color SVG (when mono SVG not available)
