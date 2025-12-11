@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{page.title} - Village Calendar</title>
+    <meta name="description" content="{page.data.description ?: 'Village Calendar - Custom calendars with moon phases'}">
+
+    <!-- PrimeIcons -->
+    <link rel="stylesheet" href="https://unpkg.com/primeicons/primeicons.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --p-surface-0: #ffffff;
+            --p-surface-50: #f5faff;
+            --p-surface-100: #e3f0fb;
+            --p-surface-200: #c7e0f7;
+            --p-surface-300: #a3c9e9;
+            --p-surface-400: #7bb3dd;
+            --p-surface-500: #3997d3;
+            --p-surface-600: #2176b6;
+            --p-surface-700: #175d96;
+            --p-surface-800: #14476c;
+            --p-surface-900: #12344a;
+            --p-surface-950: #0d2230;
+            --p-primary-color: #3997d3;
+            --p-text-color: #175d96;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .app-header {
+            background: var(--p-surface-0);
+            border-bottom: 1px solid var(--p-surface-200);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-link {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: var(--p-surface-800);
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+
+        .logo-link i {
+            margin-right: 0.5rem;
+            color: var(--p-primary-color);
+            font-size: 1.5rem;
+        }
+
+        .header-nav a {
+            color: var(--p-surface-700);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .header-nav a:hover {
+            color: var(--p-primary-color);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            width: 100%;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--p-surface-900);
+            margin-bottom: 0.5rem;
+        }
+
+        .page-meta {
+            color: var(--p-surface-500);
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--p-surface-200);
+        }
+
+        .page-content {
+            background: var(--p-surface-0);
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* Typography for AsciiDoc content */
+        .page-content h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--p-surface-900);
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .page-content h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--p-surface-800);
+            margin-top: 2rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--p-surface-200);
+        }
+
+        .page-content h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--p-surface-700);
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-content h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--p-surface-700);
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-content p {
+            margin-bottom: 1rem;
+            color: var(--p-surface-700);
+        }
+
+        .page-content ul, .page-content ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+
+        .page-content li {
+            margin-bottom: 0.5rem;
+            color: var(--p-surface-700);
+        }
+
+        .page-content a {
+            color: var(--p-primary-color);
+            text-decoration: none;
+        }
+
+        .page-content a:hover {
+            text-decoration: underline;
+        }
+
+        .page-content strong {
+            font-weight: 600;
+            color: var(--p-surface-800);
+        }
+
+        .page-content em {
+            font-style: italic;
+        }
+
+        .page-content blockquote {
+            border-left: 4px solid var(--p-primary-color);
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--p-surface-600);
+            font-style: italic;
+        }
+
+        .page-content code {
+            background: var(--p-surface-100);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9em;
+        }
+
+        .page-content pre {
+            background: var(--p-surface-100);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        .page-content pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .page-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        .page-content th, .page-content td {
+            border: 1px solid var(--p-surface-200);
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        .page-content th {
+            background: var(--p-surface-50);
+            font-weight: 600;
+            color: var(--p-surface-800);
+        }
+
+        /* AsciiDoc-specific styling */
+        .page-content .admonitionblock {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            border-radius: 8px;
+            background: var(--p-surface-50);
+            border-left: 4px solid var(--p-primary-color);
+        }
+
+        .page-content .admonitionblock.note {
+            border-left-color: #3b82f6;
+        }
+
+        .page-content .admonitionblock.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .page-content .admonitionblock.important {
+            border-left-color: #ef4444;
+        }
+
+        .page-content .sect1, .page-content .sect2, .page-content .sect3 {
+            margin-top: 1.5rem;
+        }
+
+        /* Footer */
+        .app-footer {
+            background: #1f2937;
+            color: #9ca3af;
+            padding: 3rem 2rem 1.5rem;
+            margin-top: auto;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+        }
+
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-brand i {
+            margin-right: 0.5rem;
+        }
+
+        .footer-tagline {
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+
+        .footer-heading {
+            color: white;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-links a {
+            color: #9ca3af;
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 2rem auto 0;
+            padding-top: 1.5rem;
+            border-top: 1px solid #374151;
+            text-align: center;
+        }
+
+        .copyright {
+            font-size: 0.875rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 2rem 1rem;
+            }
+
+            .page-content {
+                padding: 1.5rem;
+            }
+
+            .page-title {
+                font-size: 2rem;
+            }
+
+            .header-nav {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-content">
+            <a href="/" class="logo-link">
+                <i class="pi pi-calendar"></i>
+                <span>Village Calendar</span>
+            </a>
+            <nav class="header-nav">
+                <a href="/">Home</a>
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
+                <a href="/shipping">Shipping</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <h1 class="page-title">{page.title}</h1>
+        {#if page.date}
+        <div class="page-meta">Last updated: {page.date}</div>
+        {/if}
+        <div class="page-content">
+            {page.content.raw}
+        </div>
+    </main>
+
+    <footer class="app-footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <div class="footer-brand">
+                    <i class="pi pi-calendar"></i>
+                    <span>Village Calendar</span>
+                </div>
+                <p class="footer-tagline">Custom yearly wall calendars with holidays, moon phases, and lunar illumination</p>
+            </div>
+
+            <div class="footer-section">
+                <h3 class="footer-heading">Quick Links</h3>
+                <ul class="footer-links">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/">Create Calendar</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h3 class="footer-heading">Support</h3>
+                <ul class="footer-links">
+                    <li><a href="/shipping">Shipping Info</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h3 class="footer-heading">Legal</h3>
+                <ul class="footer-links">
+                    <li><a href="/privacy">Privacy Policy</a></li>
+                    <li><a href="/terms">Terms of Service</a></li>
+                    <li><a href="/refund">Refund Policy</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p class="copyright">&copy; 2024 Village Compute. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

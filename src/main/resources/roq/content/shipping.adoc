@@ -1,0 +1,147 @@
+---
+title: Shipping Information
+layout: page
+date: 2024-12-11
+description: Shipping information for Village Calendar - delivery times, shipping methods, and tracking your order.
+---
+
+== Shipping Overview
+
+Village Calendar ships custom-printed wall calendars throughout the United States. Each calendar is printed to order to ensure the highest quality and freshness.
+
+== Processing Time
+
+=== Standard Orders
+
+* **Processing**: 5-7 business days
+* Orders are printed and prepared for shipment within this timeframe
+* You will receive an email notification when your order ships
+
+=== Rush Orders
+
+* **Rush Processing**: 2-3 business days (when available)
+* Rush processing may be available for an additional fee
+* Select rush processing at checkout if available
+
+NOTE: Processing times do not include shipping transit time.
+
+== Shipping Methods
+
+We offer the following shipping options for US destinations:
+
+[cols="1,1,1"]
+|===
+|Method |Estimated Transit |Cost
+
+|Standard Shipping
+|5-7 business days
+|$7.99
+
+|Expedited Shipping
+|3-5 business days
+|$14.99
+
+|Priority Shipping
+|1-3 business days
+|$24.99
+|===
+
+NOTE: Transit times are estimates and may vary based on location and carrier conditions.
+
+== Shipping Carriers
+
+We ship via:
+
+* **USPS** (United States Postal Service)
+* **UPS** (United Parcel Service)
+* **FedEx**
+
+The carrier is selected based on package size, destination, and shipping speed selected.
+
+== Order Tracking
+
+=== Tracking Information
+
+* Tracking numbers are emailed when your order ships
+* Track your order through our website or directly with the carrier
+* Allow 24-48 hours for tracking information to update after shipment
+
+=== Check Order Status
+
+To check your order status:
+
+1. Log in to your Village Calendar account
+2. Navigate to "My Orders"
+3. Click on your order to view status and tracking
+
+Or use the order status link in your confirmation email.
+
+== Packaging
+
+Your calendar is carefully packaged to ensure safe delivery:
+
+* Calendars are rolled and placed in sturdy mailing tubes
+* Protective end caps prevent damage during transit
+* "Handle With Care" labels are applied to packaging
+
+== Delivery Details
+
+=== Delivery Address
+
+* Please ensure your shipping address is complete and accurate
+* We ship to residential and business addresses
+* PO Boxes may have limited shipping options
+
+=== Signature Requirements
+
+* Standard orders do not require signature
+* High-value orders may require signature confirmation
+* You may request signature confirmation at checkout
+
+=== Delivery Issues
+
+If you experience delivery issues:
+
+* Contact the carrier with your tracking number
+* Contact us at shipping@villagecompute.com
+* We will work with you to resolve any delivery problems
+
+== International Shipping
+
+We currently ship only within the United States.
+
+International shipping may be available in the future. Sign up for our newsletter to be notified when international shipping becomes available.
+
+== Shipping Restrictions
+
+We cannot ship to:
+
+* APO/FPO addresses (limited carrier support)
+* US Territories may have extended delivery times
+
+== Holiday Shipping
+
+=== Peak Season Notice
+
+During peak holiday seasons (November-December):
+
+* Processing times may be extended by 2-3 additional days
+* We recommend ordering early to ensure delivery before holidays
+* Expedited shipping is recommended for time-sensitive orders
+
+=== Holiday Deadlines
+
+Check our website for specific holiday ordering deadlines to ensure delivery before major holidays.
+
+== Contact Us
+
+For shipping questions or concerns:
+
+* **Email**: shipping@villagecompute.com
+* **Order Issues**: Include your order number in all correspondence
+
+We typically respond within 1-2 business days.
+
+---
+
+_Shipping policy last updated December 11, 2024._

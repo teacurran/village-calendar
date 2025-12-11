@@ -33,19 +33,7 @@
         <h3 class="footer-heading">Support</h3>
         <ul class="footer-links">
           <li>
-            <a href="#" class="footer-link" @click.prevent="handleContactClick"
-              >Contact Us</a
-            >
-          </li>
-          <li>
-            <a href="#" class="footer-link" @click.prevent="handleFaqClick"
-              >FAQ</a
-            >
-          </li>
-          <li>
-            <a href="#" class="footer-link" @click.prevent="handleShippingClick"
-              >Shipping Info</a
-            >
+            <a href="/shipping" class="footer-link">Shipping Info</a>
           </li>
         </ul>
       </div>
@@ -54,19 +42,13 @@
         <h3 class="footer-heading">Legal</h3>
         <ul class="footer-links">
           <li>
-            <a href="#" class="footer-link" @click.prevent="handlePrivacyClick"
-              >Privacy Policy</a
-            >
+            <a href="/privacy" class="footer-link">Privacy Policy</a>
           </li>
           <li>
-            <a href="#" class="footer-link" @click.prevent="handleTermsClick"
-              >Terms of Service</a
-            >
+            <a href="/terms" class="footer-link">Terms of Service</a>
           </li>
           <li>
-            <a href="#" class="footer-link" @click.prevent="handleRefundClick"
-              >Refund Policy</a
-            >
+            <a href="/refund" class="footer-link">Refund Policy</a>
           </li>
         </ul>
       </div>
@@ -88,14 +70,6 @@ const authStore = useAuthStore();
 
 // Current year for copyright
 const currentYear = computed(() => new Date().getFullYear());
-
-// Placeholder click handlers (can be implemented later)
-const handleContactClick = () => {};
-const handleFaqClick = () => {};
-const handleShippingClick = () => {};
-const handlePrivacyClick = () => {};
-const handleTermsClick = () => {};
-const handleRefundClick = () => {};
 </script>
 
 <style scoped>
