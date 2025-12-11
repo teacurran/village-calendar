@@ -223,7 +223,11 @@ jobs:
           send_full_script=true
           EOF
 
-          # Check migration status first
+          # Initialize schema_version table if it doesn't exist
+          echo "Initializing migrations (creates schema_version table if needed)..."
+          mvn -Dmigration.env=production org.mybatis.maven:migrations-maven-plugin:init || true
+
+          # Check migration status
           echo "Checking migration status..."
           mvn -Dmigration.env=production org.mybatis.maven:migrations-maven-plugin:status || true
 
