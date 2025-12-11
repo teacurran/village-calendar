@@ -196,6 +196,34 @@ public class CalendarRenderingService {
     }
   }
 
+  /**
+   * Renders a month name label with optional rotation.
+   * When rotated, text is centered in cellWidth and rotated -90 degrees.
+   * When not rotated, text is positioned at (x, y) with the specified anchor.
+   *
+   * @param monthName The month name to display
+   * @param x X position for non-rotated text
+   * @param y Y position (vertical center of the row)
+   * @param cellWidth Width of the month label cell (used for centering when rotated)
+   * @param rotated Whether to rotate the text -90 degrees
+   * @param textAnchor Text anchor for non-rotated text ("start", "middle", or "end")
+   * @return SVG text element string
+   */
+  private String renderMonthName(String monthName, int x, int y, int cellWidth, boolean rotated, String textAnchor) {
+    if (rotated) {
+      int centerX = cellWidth / 2;
+      return String.format(
+        "<text x=\"%d\" y=\"%d\" class=\"month-name\" text-anchor=\"middle\" transform=\"rotate(-90 %d %d)\">%s</text>%n",
+        centerX, y, centerX, y, monthName
+      );
+    } else {
+      return String.format(
+        "<text x=\"%d\" y=\"%d\" class=\"month-name\" text-anchor=\"%s\">%s</text>%n",
+        x, y, textAnchor, monthName
+      );
+    }
+  }
+
   // Color themes
   private static final Map<String, ThemeColors> THEMES = new HashMap<>();
 
@@ -508,20 +536,9 @@ public class CalendarRenderingService {
       int rowY = (monthNum - 1) * cellHeight + headerHeight;
 
       // Month name in first column
-      int monthX = config.rotateMonthNames ? cellWidth / 2 : 5;
+      int monthX = 5;
       int monthY = rowY + cellHeight / 2 + 5;
-
-      if (config.rotateMonthNames) {
-        svg.append(String.format(
-          "<text x=\"%d\" y=\"%d\" class=\"month-name\" text-anchor=\"middle\" transform=\"rotate(-90 %d %d)\">%s</text>%n",
-          monthX, monthY, monthX, monthY, monthName
-        ));
-      } else {
-        svg.append(String.format(
-          "<text x=\"%d\" y=\"%d\" class=\"month-name\">%s</text>%n",
-          monthX, monthY, monthName
-        ));
-      }
+      svg.append(renderMonthName(monthName, monthX, monthY, cellWidth, config.rotateMonthNames, "start"));
 
       // Generate cells for each day
       int weekendIndex = 0; // Track weekend index for Vermont colors
@@ -929,10 +946,9 @@ public class CalendarRenderingService {
 
       // Month label
       String monthName = Month.of(monthNum).getDisplayName(TextStyle.SHORT, locale);
-      svg.append(String.format(
-        "<text x=\"%d\" y=\"%d\" class=\"month-label\" text-anchor=\"end\">%s</text>%n",
-        cellWidth - 5, cellY + cellHeight / 2 + 4, monthName
-      ));
+      int monthX = cellWidth - 5;
+      int monthY = cellY + cellHeight / 2 + 4;
+      svg.append(renderMonthName(monthName, monthX, monthY, cellWidth, config.rotateMonthNames, "end"));
 
       // Generate day cells
       int weekendIndex = 0; // Track weekend index for Vermont colors
