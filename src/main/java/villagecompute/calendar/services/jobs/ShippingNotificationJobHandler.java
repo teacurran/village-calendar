@@ -37,7 +37,7 @@ public class ShippingNotificationJobHandler implements DelayedJobHandler {
     /**
      * Type-safe Qute templates for shipping emails.
      */
-    @CheckedTemplate
+    @CheckedTemplate(basePath = "email-templates/ShippingNotificationJobHandler")
     public static class Templates {
         /**
          * Shipping notification email template.

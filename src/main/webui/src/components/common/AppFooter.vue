@@ -33,7 +33,7 @@
         <h3 class="footer-heading">Support</h3>
         <ul class="footer-links">
           <li>
-            <a href="/shipping" class="footer-link">Shipping Info</a>
+            <a href="/pages/shipping" class="footer-link">Shipping Info</a>
           </li>
         </ul>
       </div>
@@ -42,13 +42,13 @@
         <h3 class="footer-heading">Legal</h3>
         <ul class="footer-links">
           <li>
-            <a href="/privacy" class="footer-link">Privacy Policy</a>
+            <a href="/pages/privacy" class="footer-link">Privacy Policy</a>
           </li>
           <li>
-            <a href="/terms" class="footer-link">Terms of Service</a>
+            <a href="/pages/terms" class="footer-link">Terms of Service</a>
           </li>
           <li>
-            <a href="/refund" class="footer-link">Refund Policy</a>
+            <a href="/pages/refund" class="footer-link">Refund Policy</a>
           </li>
         </ul>
       </div>

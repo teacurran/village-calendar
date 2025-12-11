@@ -1,0 +1,88 @@
+---
+title: Terms of Service
+layout: page
+date: 2024-12-11
+description: Terms of Service for Village Compute Calendar - Please read these terms carefully before using our service.
+---
+
+== Agreement to Terms
+
+By accessing or using Village Compute Calendar ("Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our Service.
+
+== Description of Service
+
+Village Compute Calendar provides customizable calendar creation and printing services. Users can design, customize, and order printed calendars featuring their own photos and content.
+
+== User Accounts
+
+=== Account Creation
+
+To use certain features of our Service, you must create an account. You agree to:
+
+* Provide accurate and complete information
+* Maintain the security of your account credentials
+* Promptly update your information if it changes
+* Accept responsibility for all activities under your account
+
+=== Account Termination
+
+We reserve the right to suspend or terminate accounts that violate these terms or for any other reason at our discretion.
+
+== Orders and Payments
+
+=== Pricing
+
+All prices are displayed in US dollars and are subject to change without notice. Applicable taxes and shipping costs will be calculated at checkout.
+
+=== Payment
+
+We accept major credit cards and other payment methods as displayed during checkout. By submitting an order, you authorize us to charge your selected payment method.
+
+=== Order Acceptance
+
+All orders are subject to acceptance. We reserve the right to refuse or cancel any order for any reason, including but not limited to product availability, errors in pricing or product information, or suspected fraud.
+
+== Intellectual Property
+
+=== Your Content
+
+You retain ownership of any photos, images, or other content you upload to create your calendars. By uploading content, you grant us a limited license to use it solely for fulfilling your order.
+
+=== Our Content
+
+All other content, including but not limited to software, design elements, logos, and text, is owned by Village Compute and protected by intellectual property laws.
+
+=== Content Restrictions
+
+You may not upload content that:
+
+* Infringes on others' intellectual property rights
+* Contains illegal, harmful, or offensive material
+* Violates any person's privacy or publicity rights
+
+== Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, VILLAGE COMPUTE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF THE SERVICE.
+
+== Disclaimer of Warranties
+
+THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+== Indemnification
+
+You agree to indemnify and hold harmless Village Compute and its affiliates from any claims, damages, or expenses arising from your use of the Service or violation of these terms.
+
+== Governing Law
+
+These Terms shall be governed by the laws of the State of Delaware, without regard to its conflict of law provisions.
+
+== Changes to Terms
+
+We may modify these Terms at any time. Continued use of the Service after changes constitutes acceptance of the modified terms.
+
+== Contact Information
+
+For questions about these Terms, contact us at:
+
+* Email: legal@villagecompute.com
+* Address: 1222 Scott Hwy, Village, State 12345

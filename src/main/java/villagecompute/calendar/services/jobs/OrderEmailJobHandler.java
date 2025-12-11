@@ -51,7 +51,7 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
     /**
      * Type-safe Qute templates for order emails.
      */
-    @CheckedTemplate
+    @CheckedTemplate(basePath = "email-templates/OrderEmailJobHandler")
     public static class Templates {
         /**
          * Order confirmation email template for customers.
