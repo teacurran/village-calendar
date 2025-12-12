@@ -530,18 +530,8 @@ const emojiStyleOptions: {
 // Random day for preview (1-28 to be safe)
 const previewDay = Math.floor(Math.random() * 28) + 1;
 
-// Random colorful emoji for style picker preview
-const colorfulEmojis = [
-  "%F0%9F%8E%84", // 🎄 Christmas Tree
-  "%F0%9F%8E%A8", // 🎨 Artist Palette
-  "%F0%9F%A6%9C", // 🦜 Parrot
-  "%F0%9F%A6%8B", // 🦋 Butterfly
-  "%F0%9F%8E%89", // 🎉 Party Popper
-  "%F0%9F%A6%9A", // 🦚 Peacock
-  "%F0%9F%8E%82", // 🎂 Birthday Cake
-  "%F0%9F%8D%AD", // 🍭 Lollipop
-];
-const previewEmoji = colorfulEmojis[Math.floor(Math.random() * colorfulEmojis.length)];
+// Emoji for style picker preview (URL-encoded 🎉 Party Popper)
+const previewEmoji = "%F0%9F%8E%89";
 
 // Generate moon preview cell SVG for size options (no day name)
 const generateMoonPreviewSVG = (moonOption: (typeof moonSizeOptions)[0]) => {
