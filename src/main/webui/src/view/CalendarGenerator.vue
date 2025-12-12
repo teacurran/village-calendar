@@ -1676,6 +1676,7 @@ const generatedSVG = ref("");
 const svgKey = ref(0); // Key to force re-render of SVG
 const generating = ref(false);
 const holidays = ref(new Set());
+const lastFetchedHolidayYear = ref(null); // Track which year's holidays we have cached
 
 // ===========================================
 // PRINT DIMENSIONS (must match backend CalendarRenderingService)
@@ -1937,15 +1938,21 @@ watch(
   { deep: true },
 );
 
-// Fetch holidays for the selected year
+// Fetch holidays for the selected year (only if year changed)
 const fetchHolidays = async () => {
+  const currentYear = config.value.year;
+  // Skip fetch if we already have this year's holidays
+  if (lastFetchedHolidayYear.value === currentYear) {
+    return;
+  }
   try {
     const response = await fetch(
-      `/api/calendar/holidays?year=${config.value.year}&country=US`,
+      `/api/calendar/holidays?year=${currentYear}&country=US`,
     );
     if (response.ok) {
       const data = await response.json();
       holidays.value = new Set(data.holidays);
+      lastFetchedHolidayYear.value = currentYear;
     }
   } catch (error) {
     console.error("Error fetching holidays:", error);
@@ -3071,7 +3078,7 @@ const handleWizardDisplayOptionsChange = (options: DisplayOptions) => {
   config.value.showGrid = options.showGrid;
   config.value.showDayNames = options.showDayNames;
   config.value.rotateMonthNames = options.rotateMonthNames;
-  generateCalendar();
+  // Config watcher handles generateCalendar() with debounce
 };
 
 // Handle color settings change from wizard
@@ -3083,14 +3090,14 @@ const handleWizardColorsChange = (colors: ColorSettings) => {
   config.value.gridLineColor = colors.gridLineColor;
   config.value.holidayColor = colors.holidayColor;
   config.value.emojiFont = colors.emojiFont;
-  generateCalendar();
+  // Config watcher handles generateCalendar() with debounce
 };
 
 // Handle holiday settings change from wizard
 const handleWizardHolidaysChange = (holidays: HolidaySettings) => {
   config.value.holidaySets = holidays.selectedSets;
   config.value.eventDisplayMode = holidays.displayMode;
-  generateCalendar();
+  // Config watcher handles generateCalendar() with debounce
 };
 
 // Load saved calendars for the current user
