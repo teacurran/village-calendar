@@ -221,6 +221,7 @@ public class CalendarRenderingService {
    * Renders a month name label with optional rotation.
    * When rotated, text is centered in cellWidth and rotated -90 degrees.
    * When not rotated, text is positioned at (x, y) with the specified anchor.
+   * Uses inline styles for immediate visual update (no CSS class dependency).
    *
    * @param monthName The month name to display
    * @param x X position for non-rotated text
@@ -228,19 +229,20 @@ public class CalendarRenderingService {
    * @param cellWidth Width of the month label cell (used for centering when rotated)
    * @param rotated Whether to rotate the text -90 degrees
    * @param textAnchor Text anchor for non-rotated text ("start", "middle", or "end")
+   * @param fillColor The fill color for the text
    * @return SVG text element string
    */
-  private String renderMonthName(String monthName, int x, int y, int cellWidth, boolean rotated, String textAnchor) {
+  private String renderMonthName(String monthName, int x, int y, int cellWidth, boolean rotated, String textAnchor, String fillColor) {
     if (rotated) {
       int centerX = cellWidth / 2;
       return String.format(
-        "<text x=\"%d\" y=\"%d\" class=\"month-name\" text-anchor=\"middle\" transform=\"rotate(-90 %d %d)\">%s</text>%n",
-        centerX, y, centerX, y, monthName
+        "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"20px\" font-weight=\"bold\" text-anchor=\"middle\" transform=\"rotate(-90 %d %d)\">%s</text>%n",
+        centerX, y, fillColor, centerX, y, monthName
       );
     } else {
       return String.format(
-        "<text x=\"%d\" y=\"%d\" class=\"month-name\" text-anchor=\"%s\">%s</text>%n",
-        x, y, textAnchor, monthName
+        "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"20px\" font-weight=\"bold\" text-anchor=\"%s\">%s</text>%n",
+        x, y, fillColor, textAnchor, monthName
       );
     }
   }
@@ -606,10 +608,11 @@ public class CalendarRenderingService {
 //        svg.append(".today { stroke: #2196f3; stroke-width: 2; fill: none; }%n");
     svg.append("</style>\n");
 
-    // Add year header
+    // Add year header - use inline styles for immediate visual update
+    String yearFill = config.yearColor != null ? config.yearColor : theme.monthHeader;
     svg.append(String.format(
-      "<text x=\"50\" y=\"80\" class=\"year-text\">%d</text>%n",
-      year
+      "<text x=\"50\" y=\"80\" fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n",
+      yearFill, year
     ));
 
     // Generate grid for each month (row)
@@ -625,7 +628,8 @@ public class CalendarRenderingService {
       // Month name in first column
       int monthX = 5;
       int monthY = rowY + cellHeight / 2 + 5;
-      svg.append(renderMonthName(monthName, monthX, monthY, cellWidth, config.rotateMonthNames, "start"));
+      String monthFill = config.monthColor != null ? config.monthColor : theme.monthHeader;
+      svg.append(renderMonthName(monthName, monthX, monthY, cellWidth, config.rotateMonthNames, "start", monthFill));
 
       // Generate cells for each day
       int weekendIndex = 0; // Track weekend index for Vermont colors
@@ -635,12 +639,12 @@ public class CalendarRenderingService {
 
         // Skip if day doesn't exist in this month
         if (day > daysInMonth) {
-          // Draw empty cell with grid
+          // Draw empty cell with grid - use inline styles for immediate visual update
           if (config.showGrid) {
             String pdfSafeColor = convertColorForPDF("rgba(255, 255, 255, 0)");
             svg.append(String.format(
-              "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" class=\"grid-line\" fill=\"%s\"/>%n",
-              cellX, cellY, cellWidth, cellHeight, pdfSafeColor
+              "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\" stroke=\"%s\" stroke-width=\"1\"/>%n",
+              cellX, cellY, cellWidth, cellHeight, pdfSafeColor, config.gridLineColor
             ));
           }
           continue;
@@ -905,29 +909,30 @@ public class CalendarRenderingService {
           ));
         }
 
-        // Day name (if enabled)
+        // Day name (if enabled) - use inline styles for immediate visual update
         if (config.showDayNames) {
           String dayName = dayOfWeek.getDisplayName(TextStyle.SHORT, locale).substring(0, 2);
+          String dayNameFill = config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader;
           svg.append(String.format(
-            "<text x=\"%d\" y=\"%d\" class=\"day-name\">%s</text>%n",
-            cellX + 5, cellY + 26, dayName
+            "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-family=\"Arial, sans-serif\" font-size=\"8px\">%s</text>%n",
+            cellX + 5, cellY + 26, dayNameFill, dayName
           ));
         }
 
-        // Grid lines
+        // Grid lines - use inline styles only (no CSS class) for immediate visual update
         if (config.showGrid) {
           svg.append(String.format(
-            "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" class=\"grid-line\" fill=\"none\" stroke=\"%s\" stroke-width=\"1\"/>%n",
+            "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"1\"/>%n",
             cellX, cellY, cellWidth, cellHeight, config.gridLineColor
           ));
         }
       }
     }
 
-    // Outer border for the entire grid
+    // Outer border for the entire grid - use inline styles for immediate visual update
     if (config.showGrid) {
       svg.append(String.format(
-        "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" class=\"grid-line\" fill=\"none\" stroke=\"%s\" stroke-width=\"2\"/>%n",
+        "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"2\"/>%n",
         cellWidth, headerHeight - 1, cellWidth * 31, cellHeight * 12 + 2, config.gridLineColor
       ));
     }
@@ -974,10 +979,11 @@ public class CalendarRenderingService {
     // Background
     // svg.append(String.format("<rect width=\"%d\" height=\"%d\" class=\"grid-bg\"/>%n", svgWidth, svgHeight));
 
-    // Year title
+    // Year title - use inline styles for immediate visual update
+    String yearFill = config.yearColor != null ? config.yearColor : theme.monthHeader;
     svg.append(String.format(
-      "<text x=\"50\" y=\"80\" class=\"year-text\">%d</text>%n",
-      year
+      "<text x=\"50\" y=\"80\" fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n",
+      yearFill, year
     ));
 
     // Generate each month row
@@ -997,7 +1003,8 @@ public class CalendarRenderingService {
       String monthName = Month.of(monthNum).getDisplayName(TextStyle.SHORT, locale);
       int monthX = cellWidth - 5;
       int monthY = cellY + cellHeight / 2 + 4;
-      svg.append(renderMonthName(monthName, monthX, monthY, cellWidth, config.rotateMonthNames, "end"));
+      String monthFill = config.monthColor != null ? config.monthColor : theme.monthHeader;
+      svg.append(renderMonthName(monthName, monthX, monthY, cellWidth, config.rotateMonthNames, "end", monthFill));
 
       // Generate day cells
       int weekendIndex = 0; // Track weekend index for Vermont colors
@@ -1048,11 +1055,13 @@ public class CalendarRenderingService {
         }
 
         // Day name (if enabled) - positioned below day number like grid layout
+        // Use inline styles for immediate visual update
         if (config.showDayNames) {
           String dayName = dayOfWeek.getDisplayName(TextStyle.SHORT, locale).substring(0, 2);
+          String dayNameFill = config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader;
           svg.append(String.format(
-            "<text x=\"%d\" y=\"%d\" class=\"day-name\">%s</text>%n",
-            cellX + 5, cellY + 26, dayName
+            "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-family=\"Arial, sans-serif\" font-size=\"8px\">%s</text>%n",
+            cellX + 5, cellY + 26, dayNameFill, dayName
           ));
         }
 
@@ -1105,10 +1114,10 @@ public class CalendarRenderingService {
           svg.append("\n");
         }
 
-        // Grid lines
+        // Grid lines - use inline styles only (no CSS class) for immediate visual update
         if (config.showGrid) {
           svg.append(String.format(
-            "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" class=\"grid-line\" fill=\"none\" stroke=\"%s\" stroke-width=\"1\"/>%n",
+            "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"1\"/>%n",
             cellX, cellY, cellWidth, cellHeight, config.gridLineColor
           ));
         }
