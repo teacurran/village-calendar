@@ -347,7 +347,7 @@ public class EmojiSvgService {
             // This handles SVGs that have no explicit fill (default black) as well as explicit fills
             String color = colorHex.startsWith("#") ? colorHex : "#" + colorHex;
             return String.format(
-                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
                 "<g fill=\"%s\">%s</g></svg>",
                 x, y, size, size, viewBox, color, innerContent
             );
@@ -355,7 +355,7 @@ public class EmojiSvgService {
             // Fall back to grayscale filter for color SVG (when mono SVG not available)
             String filterId = uniquePrefix + "grayscale";
             return String.format(
-                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
                 "<defs><filter id=\"%s\"><feColorMatrix type=\"saturate\" values=\"0\"/></filter></defs>" +
                 "<g filter=\"url(#%s)\">%s</g></svg>",
                 x, y, size, size, viewBox, filterId, filterId, innerContent
@@ -363,7 +363,7 @@ public class EmojiSvgService {
         } else {
             // Use SVG directly (either color or true mono)
             return String.format(
-                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">%s</svg>",
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">%s</svg>",
                 x, y, size, size, viewBox, innerContent
             );
         }
