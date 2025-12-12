@@ -1554,7 +1554,7 @@ onMounted(() => {
                       >🎄</span
                     >
                   </div>
-                  <Popover ref="emojiPopover">
+                  <Popover ref="emojiPopover" position="left">
                     <div class="emoji-popover-content">
                       <div class="emoji-popover-swatches">
                         <div
