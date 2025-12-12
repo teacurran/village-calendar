@@ -142,7 +142,7 @@
               }"
             >
               <div class="page-border">
-                <div v-html="generatedSVG"></div>
+                <div :key="svgKey" v-html="generatedSVG"></div>
               </div>
             </div>
           </div>
@@ -1673,6 +1673,7 @@ const duplicateName = ref("");
 
 // Calendar state
 const generatedSVG = ref("");
+const svgKey = ref(0); // Key to force re-render of SVG
 const generating = ref(false);
 const holidays = ref(new Set());
 
@@ -2036,6 +2037,8 @@ const generateCalendar = async () => {
       const data = await response.json();
       // Wrap SVG with margins so content fits within printable area
       generatedSVG.value = wrapSvgWithMargins(data.svg);
+      // Increment key to force Vue to re-render the SVG element
+      svgKey.value++;
       // Only reset zoom on initial generation, preserve zoom/pan on updates
       if (isInitialGeneration.value) {
         resetZoom();
