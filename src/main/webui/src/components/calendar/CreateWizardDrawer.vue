@@ -2426,4 +2426,8 @@ onMounted(() => {
   /* Hide the arrow since it won't align properly */
   display: none !important;
 }
+
+.emoji-popover-left .p-popover-content {
+  padding: 0;
+}
 </style>
