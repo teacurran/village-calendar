@@ -1545,12 +1545,23 @@ onMounted(() => {
                   <label class="color-label">Emojis</label>
                   <div
                     class="emoji-color-trigger"
+                    :class="{
+                      'emoji-trigger-swatch': emojiFont !== 'noto-color',
+                    }"
+                    :style="
+                      emojiFont !== 'noto-color'
+                        ? {
+                            backgroundColor:
+                              currentEmojiStyle.color || '#000000',
+                          }
+                        : {}
+                    "
                     :title="currentEmojiStyle.label"
                     @click="toggleEmojiPopover"
                   >
                     <span
+                      v-if="emojiFont === 'noto-color'"
                       class="emoji-trigger-icon"
-                      :style="{ filter: currentEmojiStyle.filter }"
                       >🎄</span
                     >
                   </div>
@@ -1560,20 +1571,27 @@ onMounted(() => {
                   >
                     <div class="emoji-popover-content">
                       <div class="emoji-popover-swatches">
+                        <!-- Full color option shows emoji -->
                         <div
-                          v-for="option in emojiStyleOptions"
-                          :key="option.id"
                           class="emoji-popover-swatch"
+                          :class="{ selected: emojiFont === 'noto-color' }"
+                          title="Full Color"
+                          @click="selectEmojiStyle(emojiStyleOptions[0])"
+                        >
+                          <span class="emoji-popover-icon">🎄</span>
+                        </div>
+                        <!-- Mono options show color swatches -->
+                        <div
+                          v-for="option in emojiStyleOptions.slice(1)"
+                          :key="option.id"
+                          class="emoji-popover-swatch emoji-color-swatch"
                           :class="{ selected: emojiFont === option.id }"
+                          :style="{
+                            backgroundColor: option.color || '#000000',
+                          }"
                           :title="option.label"
                           @click="selectEmojiStyle(option)"
-                        >
-                          <span
-                            class="emoji-popover-icon"
-                            :style="{ filter: option.filter }"
-                            >🎄</span
-                          >
-                        </div>
+                        ></div>
                       </div>
                     </div>
                   </Popover>
@@ -2414,14 +2432,25 @@ onMounted(() => {
 }
 
 .emoji-popover-swatch:hover {
-  background: var(--surface-100);
   transform: scale(1.1);
+}
+
+.emoji-popover-swatch:not(.emoji-color-swatch):hover {
+  background: var(--surface-100);
 }
 
 .emoji-popover-swatch.selected {
   border-color: var(--primary-color);
-  background: var(--primary-50);
   box-shadow: 0 0 0 2px var(--primary-200);
+}
+
+.emoji-popover-swatch:not(.emoji-color-swatch).selected {
+  background: var(--primary-50);
+}
+
+/* Color swatch styling - keeps its background color */
+.emoji-color-swatch {
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 .emoji-popover-icon {
