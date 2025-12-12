@@ -238,8 +238,6 @@ public class CalendarResource {
       case "mono-teal" -> "#0D9488";
       case "mono-brown" -> "#92400E";
       case "mono-navy" -> "#1E3A5F";
-      case "mono-maroon" -> "#7F1D1D";
-      case "mono-olive" -> "#4D7C0F";
       case "mono-coral" -> "#F97316";
       default -> null; // noto-mono (black)
     };

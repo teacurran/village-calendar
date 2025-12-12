@@ -158,8 +158,6 @@ public class CalendarRenderingService {
     EMOJI_COLOR_MAP.put("mono-teal", "#0D9488");
     EMOJI_COLOR_MAP.put("mono-brown", "#92400E");
     EMOJI_COLOR_MAP.put("mono-navy", "#1E3A5F");
-    EMOJI_COLOR_MAP.put("mono-maroon", "#7F1D1D");
-    EMOJI_COLOR_MAP.put("mono-olive", "#4D7C0F");
     EMOJI_COLOR_MAP.put("mono-coral", "#F97316");
   }
 

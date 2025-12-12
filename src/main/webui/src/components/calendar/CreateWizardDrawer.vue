@@ -108,8 +108,6 @@ export type EmojiFontType =
   | "mono-teal"
   | "mono-brown"
   | "mono-navy"
-  | "mono-maroon"
-  | "mono-olive"
   | "mono-coral";
 
 export interface ColorSettings {
@@ -520,20 +518,6 @@ const emojiStyleOptions: {
     filter:
       "grayscale(100%) sepia(100%) saturate(10) hue-rotate(200deg) brightness(0.6)",
     color: "#1E3A5F",
-  },
-  {
-    id: "mono-maroon",
-    label: "Maroon",
-    filter:
-      "grayscale(100%) sepia(100%) saturate(10) hue-rotate(-20deg) brightness(0.6)",
-    color: "#7F1D1D",
-  },
-  {
-    id: "mono-olive",
-    label: "Olive",
-    filter:
-      "grayscale(100%) sepia(100%) saturate(5) hue-rotate(50deg) brightness(0.7)",
-    color: "#4D7C0F",
   },
   {
     id: "mono-coral",
@@ -2396,12 +2380,12 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  max-width: 200px;
+  max-width: 230px;
 }
 
 .emoji-popover-swatch {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2424,8 +2408,8 @@ onMounted(() => {
 }
 
 .emoji-preview-img {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
 }
 </style>
