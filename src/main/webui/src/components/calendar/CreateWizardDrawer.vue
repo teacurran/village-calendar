@@ -1536,7 +1536,7 @@ onMounted(() => {
                     @click="toggleEmojiPopover"
                   >
                     <img
-                      :src="`/api/calendar/emoji-preview?emoji=%F0%9F%8E%84&style=${emojiFont}`"
+                      :src="`/api/calendar/emoji-preview?emoji=${previewEmoji}&style=${emojiFont}`"
                       alt="Emoji style preview"
                       class="emoji-trigger-img"
                     />
