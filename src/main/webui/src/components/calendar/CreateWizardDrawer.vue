@@ -10,6 +10,7 @@ import Checkbox from "primevue/checkbox";
 import RadioButton from "primevue/radiobutton";
 import ProgressSpinner from "primevue/progressspinner";
 import Select from "primevue/select";
+import Popover from "primevue/popover";
 import { VSwatches } from "vue3-swatches";
 import "vue3-swatches/dist/style.css";
 
@@ -164,6 +165,7 @@ const dayNameColor = ref("#666666");
 const gridLineColor = ref("#c1c1c1");
 const holidayColor = ref("#ff5252");
 const emojiFont = ref<EmojiFontType>("noto-color");
+const emojiPopover = ref();
 
 // Holiday settings state
 const primaryHolidaySet = ref<string>("none"); // Current dropdown selection
@@ -194,6 +196,25 @@ const availableHolidaySets = computed(() => {
       opt.value === "none" || !additionalHolidaySets.value.includes(opt.value),
   );
 });
+
+// Get current emoji style option for display
+const currentEmojiStyle = computed(() => {
+  return (
+    emojiStyleOptions.find((o) => o.id === emojiFont.value) ||
+    emojiStyleOptions[0]
+  );
+});
+
+// Toggle emoji popover
+const toggleEmojiPopover = (event: Event) => {
+  emojiPopover.value?.toggle(event);
+};
+
+// Select emoji style and close popover
+const selectEmojiStyle = (option: (typeof emojiStyleOptions)[0]) => {
+  emojiFont.value = option.id;
+  emojiPopover.value?.hide();
+};
 
 // Get label for a holiday set value
 const getHolidaySetLabel = (value: string) => {
@@ -1519,35 +1540,40 @@ onMounted(() => {
                     popover-x="left"
                   />
                 </div>
-              </div>
 
-              <!-- Emoji Style -->
-              <h4 class="subsection-title">Emoji Style</h4>
-              <p class="step-description">
-                Choose how emojis appear in your calendar
-              </p>
-              <div class="emoji-style-picker">
-                <div class="emoji-style-swatches">
+                <div class="color-option">
+                  <label class="color-label">Emojis</label>
                   <div
-                    v-for="option in emojiStyleOptions"
-                    :key="option.id"
-                    class="emoji-swatch"
-                    :class="{ selected: emojiFont === option.id }"
-                    :title="option.label"
-                    @click="emojiFont = option.id"
+                    class="emoji-color-trigger"
+                    :title="currentEmojiStyle.label"
+                    @click="toggleEmojiPopover"
                   >
                     <span
-                      class="emoji-swatch-icon"
-                      :style="{ filter: option.filter }"
+                      class="emoji-trigger-icon"
+                      :style="{ filter: currentEmojiStyle.filter }"
                       >🎄</span
                     >
                   </div>
-                </div>
-                <div class="emoji-style-label">
-                  {{
-                    emojiStyleOptions.find((o) => o.id === emojiFont)?.label ||
-                    "Full Color"
-                  }}
+                  <Popover ref="emojiPopover">
+                    <div class="emoji-popover-content">
+                      <div class="emoji-popover-swatches">
+                        <div
+                          v-for="option in emojiStyleOptions"
+                          :key="option.id"
+                          class="emoji-popover-swatch"
+                          :class="{ selected: emojiFont === option.id }"
+                          :title="option.label"
+                          @click="selectEmojiStyle(option)"
+                        >
+                          <span
+                            class="emoji-popover-icon"
+                            :style="{ filter: option.filter }"
+                            >🎄</span
+                          >
+                        </div>
+                      </div>
+                    </div>
+                  </Popover>
                 </div>
               </div>
 
@@ -2332,27 +2358,47 @@ onMounted(() => {
   color: var(--text-color-secondary);
 }
 
-/* Emoji style swatch picker */
-.emoji-style-picker {
+/* Emoji color trigger (inline with other color pickers) */
+.emoji-color-trigger {
+  width: 24px;
+  height: 24px;
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--surface-50);
+  border: 1px solid var(--surface-200);
 }
 
-.emoji-style-swatches {
+.emoji-color-trigger:hover {
+  background: var(--surface-100);
+  border-color: var(--surface-300);
+}
+
+.emoji-trigger-icon {
+  font-size: 16px;
+  font-family:
+    "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  line-height: 1;
+}
+
+/* Emoji popover picker */
+.emoji-popover-content {
+  padding: 8px;
+}
+
+.emoji-popover-swatches {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  padding: 6px;
-  background: var(--surface-0);
-  border: 1px solid var(--surface-200);
-  border-radius: 8px;
-  max-width: 280px;
+  max-width: 200px;
 }
 
-.emoji-swatch {
-  width: 32px;
-  height: 32px;
+.emoji-popover-swatch {
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2363,27 +2409,21 @@ onMounted(() => {
   border: 2px solid transparent;
 }
 
-.emoji-swatch:hover {
+.emoji-popover-swatch:hover {
   background: var(--surface-100);
   transform: scale(1.1);
 }
 
-.emoji-swatch.selected {
+.emoji-popover-swatch.selected {
   border-color: var(--primary-color);
   background: var(--primary-50);
   box-shadow: 0 0 0 2px var(--primary-200);
 }
 
-.emoji-swatch-icon {
-  font-size: 20px;
+.emoji-popover-icon {
+  font-size: 18px;
   font-family:
     "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
   line-height: 1;
-}
-
-.emoji-style-label {
-  font-size: 0.8125rem;
-  color: var(--text-color-secondary);
-  font-weight: 500;
 }
 </style>
