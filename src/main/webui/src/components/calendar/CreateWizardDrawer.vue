@@ -823,6 +823,32 @@ const emitColorSettings = () => {
   });
 };
 
+// Individual color change handlers - explicitly update ref then emit
+const handleYearColorChange = (color: string) => {
+  yearColor.value = color;
+  emitColorSettings();
+};
+const handleMonthColorChange = (color: string) => {
+  monthColor.value = color;
+  emitColorSettings();
+};
+const handleDayTextColorChange = (color: string) => {
+  dayTextColor.value = color;
+  emitColorSettings();
+};
+const handleDayNameColorChange = (color: string) => {
+  dayNameColor.value = color;
+  emitColorSettings();
+};
+const handleGridLineColorChange = (color: string) => {
+  gridLineColor.value = color;
+  emitColorSettings();
+};
+const handleHolidayColorChange = (color: string) => {
+  holidayColor.value = color;
+  emitColorSettings();
+};
+
 const handleClose = () => {
   isOpen.value = false;
 };
@@ -1469,72 +1495,72 @@ onMounted(() => {
                 <div class="color-option">
                   <label class="color-label">Year Color</label>
                   <VSwatches
-                    v-model="yearColor"
+                    :model-value="yearColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
-                    @update:model-value="emitColorSettings"
+                    @update:model-value="handleYearColorChange"
                   />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Month Names</label>
                   <VSwatches
-                    v-model="monthColor"
+                    :model-value="monthColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
-                    @update:model-value="emitColorSettings"
+                    @update:model-value="handleMonthColorChange"
                   />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Day Numbers</label>
                   <VSwatches
-                    v-model="dayTextColor"
+                    :model-value="dayTextColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
-                    @update:model-value="emitColorSettings"
+                    @update:model-value="handleDayTextColorChange"
                   />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Day Names</label>
                   <VSwatches
-                    v-model="dayNameColor"
+                    :model-value="dayNameColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
-                    @update:model-value="emitColorSettings"
+                    @update:model-value="handleDayNameColorChange"
                   />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Grid Lines</label>
                   <VSwatches
-                    v-model="gridLineColor"
+                    :model-value="gridLineColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
-                    @update:model-value="emitColorSettings"
+                    @update:model-value="handleGridLineColorChange"
                   />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Holidays</label>
                   <VSwatches
-                    v-model="holidayColor"
+                    :model-value="holidayColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
-                    @update:model-value="emitColorSettings"
+                    @update:model-value="handleHolidayColorChange"
                   />
                 </div>
 
