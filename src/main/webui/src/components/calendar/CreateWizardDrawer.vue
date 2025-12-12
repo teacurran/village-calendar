@@ -1554,7 +1554,10 @@ onMounted(() => {
                       >🎄</span
                     >
                   </div>
-                  <Popover ref="emojiPopover" position="left">
+                  <Popover
+                    ref="emojiPopover"
+                    :pt="{ root: { class: 'emoji-popover-left' } }"
+                  >
                     <div class="emoji-popover-content">
                       <div class="emoji-popover-swatches">
                         <div
@@ -2426,5 +2429,18 @@ onMounted(() => {
   font-family:
     "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
   line-height: 1;
+}
+</style>
+
+<!-- Unscoped styles for Popover positioning (appended to body) -->
+<style>
+.emoji-popover-left {
+  transform: translateX(-100%) translateX(-10px);
+}
+
+.emoji-popover-left::before,
+.emoji-popover-left::after {
+  /* Hide the arrow since it won't align properly */
+  display: none !important;
 }
 </style>
