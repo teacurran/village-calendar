@@ -62,6 +62,25 @@ public class CalendarTemplate extends DefaultPanacheEntityWithTimestamps {
     @Column(name = "preview_svg", columnDefinition = "TEXT")
     public String previewSvg;
 
+    // SEO fields for static product page generation
+    @Size(max = 100)
+    @Column(length = 100, unique = true)
+    public String slug;
+
+    @Size(max = 160)
+    @Column(name = "og_description", length = 160)
+    public String ogDescription;
+
+    @Column(name = "meta_keywords", columnDefinition = "TEXT")
+    public String metaKeywords;
+
+    @Column(name = "price_cents")
+    public Integer priceCents = 2999;
+
+    @Size(max = 500)
+    @Column(name = "generated_thumbnail_url", length = 500)
+    public String generatedThumbnailUrl;
+
     // Relationships
     @OneToMany(mappedBy = "template")
     public List<UserCalendar> userCalendars;
@@ -104,5 +123,24 @@ public class CalendarTemplate extends DefaultPanacheEntityWithTimestamps {
      */
     public static PanacheQuery<CalendarTemplate> findFeatured() {
         return find("isActive = ?1 AND isFeatured = ?2 ORDER BY displayOrder, name", true, true);
+    }
+
+    /**
+     * Find all active templates that have a slug set (for static page generation).
+     *
+     * @return List of templates with slugs for static page generation
+     */
+    public static List<CalendarTemplate> findActiveWithSlug() {
+        return find("isActive = ?1 AND slug IS NOT NULL ORDER BY displayOrder, name", true).list();
+    }
+
+    /**
+     * Find a template by its slug.
+     *
+     * @param slug URL-friendly slug
+     * @return Template if found, null otherwise
+     */
+    public static CalendarTemplate findBySlug(String slug) {
+        return find("slug = ?1 AND isActive = ?2", slug, true).firstResult();
     }
 }

@@ -67,3 +67,6 @@ set-beta-credentials.sh
 
 # CodeMachine
 .codemachine/memory
+
+# Generated static calendar pages (created at build time)
+src/main/resources/content/p/*.html

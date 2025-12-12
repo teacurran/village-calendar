@@ -59,14 +59,121 @@ jobs:
         working-directory: src/main/webui
         run: npm run lint
 
-  docker-build:
-    name: Build & Push Docker Image
+  generate-static-content:
+    name: Generate Static Calendar Pages
     runs-on: ubuntu-latest
     needs: backend-build
+    # Only generate on push to main/beta, not PRs
+    if: github.event_name == 'push'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Determine API URL
+        id: api-url
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            echo "url=https://calendar.villagecompute.com" >> $GITHUB_OUTPUT
+          else
+            echo "url=https://calendar-beta.villagecompute.com" >> $GITHUB_OUTPUT
+          fi
+          echo "Using API: ${{ steps.api-url.outputs.url || 'https://calendar-beta.villagecompute.com' }}"
+
+      - name: Fetch templates and generate static pages
+        run: |
+          API_URL="${{ steps.api-url.outputs.url }}"
+          echo "Fetching templates from: ${API_URL}/api/static-content/templates"
+
+          mkdir -p src/main/resources/content/p
+
+          # Fetch templates from running app (it handles SVG generation and thumbnail upload)
+          RESPONSE=$(curl -s "${API_URL}/api/static-content/templates" || echo "[]")
+
+          # Check if we got valid JSON
+          if ! echo "$RESPONSE" | jq -e '.' > /dev/null 2>&1; then
+            echo "Warning: Invalid JSON response or API not available"
+            echo "Response: $RESPONSE"
+            echo "Continuing with empty p directory..."
+            exit 0
+          fi
+
+          # Count templates
+          COUNT=$(echo "$RESPONSE" | jq 'length')
+          echo "Found $COUNT templates with slugs"
+
+          if [ "$COUNT" == "0" ]; then
+            echo "No templates with slugs found. Skipping content generation."
+            exit 0
+          fi
+
+          # Generate HTML file for each template
+          echo "$RESPONSE" | jq -c '.[]' | while read -r template; do
+            SLUG=$(echo "$template" | jq -r '.slug')
+            TITLE=$(echo "$template" | jq -r '.title')
+            TEMPLATE_ID=$(echo "$template" | jq -r '.templateId')
+            DESCRIPTION=$(echo "$template" | jq -r '.description')
+            OG_DESCRIPTION=$(echo "$template" | jq -r '.ogDescription')
+            KEYWORDS=$(echo "$template" | jq -r '.keywords')
+            THUMBNAIL_URL=$(echo "$template" | jq -r '.thumbnailUrl')
+            PRICE=$(echo "$template" | jq -r '.priceFormatted')
+            SVG_CONTENT=$(echo "$template" | jq -r '.svgContent')
+            SITE_URL=$(echo "$template" | jq -r '.siteUrl')
+
+            echo "Generating page for: $SLUG"
+
+            # Write HTML file with FrontMatter
+            cat > "src/main/resources/content/p/${SLUG}.html" << HTMLEOF
+          ---
+          title: "${TITLE}"
+          layout: calendar-product
+          slug: ${SLUG}
+          templateId: ${TEMPLATE_ID}
+          description: "${DESCRIPTION}"
+          ogDescription: "${OG_DESCRIPTION}"
+          keywords: "${KEYWORDS}"
+          thumbnailUrl: ${THUMBNAIL_URL}
+          priceFormatted: ${PRICE}
+          date: $(date +%Y-%m-%d)
+          ---
+          ${SVG_CONTENT}
+          HTMLEOF
+
+            echo "Created: src/main/resources/content/p/${SLUG}.html"
+          done
+
+          echo "Generated calendar pages:"
+          ls -la src/main/resources/content/p/
+
+      - name: Upload generated content
+        uses: actions/upload-artifact@v4
+        with:
+          name: calendar-static-content
+          path: src/main/resources/content/p/
+          retention-days: 1
+          if-no-files-found: ignore
+
+  docker-build:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [backend-build, generate-static-content]
+    # Run if backend passed and content generation completed (or was skipped for PRs)
+    if: |
+      always() &&
+      needs.backend-build.result == 'success' &&
+      (needs.generate-static-content.result == 'success' || needs.generate-static-content.result == 'skipped')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download generated content
+        if: needs.generate-static-content.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: calendar-static-content
+          path: src/main/resources/content/p/
+        continue-on-error: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

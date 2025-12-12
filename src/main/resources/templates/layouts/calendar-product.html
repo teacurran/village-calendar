@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{page.title} - Village Compute Calendar</title>
+    <meta name="description" content="{page.data.ogDescription ?: page.description ?: 'Custom printable calendar from Village Compute'}">
+    <meta name="keywords" content="{page.data.keywords ?: 'calendar, custom calendar, printable calendar'}">
+
+    <!-- OpenGraph Product Tags -->
+    <meta property="og:type" content="product">
+    <meta property="og:title" content="{page.title}">
+    <meta property="og:description" content="{page.data.ogDescription ?: page.description}">
+    <meta property="og:image" content="{page.data.thumbnailUrl}">
+    <meta property="og:url" content="{site.url}/pages/p/{page.data.slug}">
+    <meta property="product:price:amount" content="{page.data.priceFormatted}">
+    <meta property="product:price:currency" content="USD">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{page.title}">
+    <meta name="twitter:description" content="{page.data.ogDescription ?: page.description}">
+    <meta name="twitter:image" content="{page.data.thumbnailUrl}">
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "{page.title}",
+        "description": "{page.description}",
+        "image": "{page.data.thumbnailUrl}",
+        "brand": {
+            "@type": "Brand",
+            "name": "Village Compute"
+        },
+        "offers": {
+            "@type": "Offer",
+            "price": "{page.data.priceFormatted}",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock",
+            "url": "{site.url}/pages/p/{page.data.slug}"
+        }
+    }
+    </script>
+
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- PrimeIcons -->
+    <link rel="stylesheet" href="https://unpkg.com/primeicons/primeicons.css">
+
+    <style>
+        :root {
+            --p-surface-0: #ffffff;
+            --p-surface-50: #f8fafc;
+            --p-surface-100: #f1f5f9;
+            --p-surface-200: #e2e8f0;
+            --p-surface-300: #cbd5e1;
+            --p-surface-400: #94a3b8;
+            --p-surface-500: #64748b;
+            --p-surface-600: #475569;
+            --p-surface-700: #334155;
+            --p-surface-800: #1e293b;
+            --p-surface-900: #0f172a;
+            --p-primary-color: #10b981;
+            --p-primary-hover: #059669;
+            --p-primary-contrast-color: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--p-surface-50);
+            color: var(--p-surface-800);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: var(--p-surface-0);
+            border-bottom: 1px solid var(--p-surface-200);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            color: var(--p-surface-800);
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+
+        .logo i {
+            color: var(--p-primary-color);
+            font-size: 1.5rem;
+        }
+
+        nav {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        nav a {
+            color: var(--p-surface-600);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+
+        nav a:hover {
+            color: var(--p-primary-color);
+            background-color: var(--p-surface-100);
+        }
+
+        main {
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            width: 100%;
+        }
+
+        .product-container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 3rem;
+            align-items: start;
+        }
+
+        .calendar-preview {
+            background-color: var(--p-surface-0);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .preview-thumbnail {
+            width: 100%;
+            height: auto;
+            display: block;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .preview-thumbnail:hover {
+            opacity: 0.9;
+        }
+
+        .preview-svg-container {
+            display: none;
+        }
+
+        .preview-svg-container.loaded {
+            display: block;
+        }
+
+        .preview-svg-container.loaded + .preview-thumbnail {
+            display: none;
+        }
+
+        .preview-svg-container svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .product-info {
+            background-color: var(--p-surface-0);
+            border-radius: 0.75rem;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 100px;
+        }
+
+        .product-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--p-surface-900);
+            margin-bottom: 0.5rem;
+        }
+
+        .product-price {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--p-primary-color);
+            margin: 1rem 0;
+        }
+
+        .product-description {
+            color: var(--p-surface-600);
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
+        }
+
+        .product-features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .product-features li {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            color: var(--p-surface-700);
+        }
+
+        .product-features li i {
+            color: var(--p-primary-color);
+            font-size: 1rem;
+        }
+
+        .product-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: var(--p-primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--p-primary-hover);
+        }
+
+        .btn-primary:disabled {
+            background-color: var(--p-surface-300);
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--p-primary-color);
+            border: 2px solid var(--p-primary-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--p-surface-100);
+        }
+
+        .product-meta {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--p-surface-200);
+            font-size: 0.875rem;
+            color: var(--p-surface-500);
+        }
+
+        footer {
+            background-color: var(--p-surface-0);
+            border-top: 1px solid var(--p-surface-200);
+            padding: 2rem;
+            margin-top: auto;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .footer-links a {
+            color: var(--p-surface-500);
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+
+        .footer-links a:hover {
+            color: var(--p-primary-color);
+        }
+
+        .copyright {
+            color: var(--p-surface-400);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 900px) {
+            .product-container {
+                grid-template-columns: 1fr;
+            }
+
+            .product-info {
+                position: static;
+            }
+        }
+
+        @media (max-width: 768px) {
+            main {
+                padding: 1rem;
+            }
+
+            .product-info {
+                padding: 1.5rem;
+            }
+
+            .product-title {
+                font-size: 1.5rem;
+            }
+
+            .product-price {
+                font-size: 1.75rem;
+            }
+        }
+
+        /* Loading spinner */
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="/" class="logo">
+                <i class="pi pi-calendar"></i>
+                Village Compute Calendar
+            </a>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/calendars">Calendars</a>
+                <a href="/pages/shipping">Shipping</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="product-container">
+            <div class="calendar-preview">
+                <div class="preview-svg-container" id="svg-container">
+                    {#insert /}
+                </div>
+                <img
+                    class="preview-thumbnail"
+                    src="{page.data.thumbnailUrl}"
+                    alt="{page.title} Preview"
+                    loading="eager"
+                    id="thumbnail"
+                    onclick="showFullSvg()"
+                >
+            </div>
+
+            <div class="product-info">
+                <h1 class="product-title">{page.title}</h1>
+                <div class="product-price">${page.data.priceFormatted}</div>
+
+                <p class="product-description">{page.description}</p>
+
+                <ul class="product-features">
+                    <li><i class="pi pi-check-circle"></i> Premium 35" x 23" poster print</li>
+                    <li><i class="pi pi-check-circle"></i> Vibrant, fade-resistant colors</li>
+                    <li><i class="pi pi-check-circle"></i> Free PDF download included</li>
+                    <li><i class="pi pi-check-circle"></i> Ships within 5-7 business days</li>
+                </ul>
+
+                <div class="product-actions">
+                    <button
+                        class="btn btn-primary"
+                        id="add-to-cart-btn"
+                        data-template-id="{page.data.templateId}"
+                        data-template-name="{page.title}"
+                    >
+                        <i class="pi pi-shopping-cart"></i>
+                        Add to Cart
+                    </button>
+
+                    <a href="/?template={page.data.templateId}" class="btn btn-secondary">
+                        <i class="pi pi-pencil"></i>
+                        Customize This Calendar
+                    </a>
+                </div>
+
+                <div class="product-meta">
+                    <p>Click the preview to see full detail. Customize to change colors, add events, and more.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="/pages/privacy">Privacy Policy</a>
+                <a href="/pages/terms">Terms of Service</a>
+                <a href="/pages/shipping">Shipping Info</a>
+                <a href="/pages/refund">Refund Policy</a>
+            </div>
+            <p class="copyright">&copy; {now.year} Village Compute. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Show full SVG on thumbnail click
+        function showFullSvg() {
+            const svgContainer = document.getElementById('svg-container');
+            const thumbnail = document.getElementById('thumbnail');
+            svgContainer.classList.add('loaded');
+            thumbnail.style.display = 'none';
+        }
+
+        // Add to cart functionality
+        document.getElementById('add-to-cart-btn')?.addEventListener('click', async function() {
+            const btn = this;
+            const templateId = btn.dataset.templateId;
+            const templateName = btn.dataset.templateName;
+            const year = new Date().getFullYear() + 1;
+
+            // Get or create session ID
+            let sessionId = localStorage.getItem('vc-session-id');
+            if (!sessionId) {
+                sessionId = 'sess_' + Math.random().toString(36).substring(2, 15);
+                localStorage.setItem('vc-session-id', sessionId);
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="pi pi-spin pi-spinner spinner"></i> Adding...';
+
+            try {
+                const response = await fetch('/graphql', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Session-ID': sessionId
+                    },
+                    body: JSON.stringify({
+                        query: `
+                            mutation CreateCalendarFromTemplate($input: CreateCalendarFromTemplateInput!) {
+                                createCalendarFromTemplate(input: $input) {
+                                    id
+                                    name
+                                }
+                            }
+                        `,
+                        variables: {
+                            input: {
+                                templateId: templateId,
+                                name: templateName,
+                                year: year
+                            }
+                        }
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.data?.createCalendarFromTemplate?.id) {
+                    // Calendar created, now add to cart
+                    const calendarId = result.data.createCalendarFromTemplate.id;
+
+                    const cartResponse = await fetch('/graphql', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Session-ID': sessionId
+                        },
+                        body: JSON.stringify({
+                            query: `
+                                mutation AddToCart($calendarId: ID!, $productCode: String!, $quantity: Int!) {
+                                    addToCart(calendarId: $calendarId, productCode: $productCode, quantity: $quantity) {
+                                        id
+                                        itemCount
+                                    }
+                                }
+                            `,
+                            variables: {
+                                calendarId: calendarId,
+                                productCode: 'print',
+                                quantity: 1
+                            }
+                        })
+                    });
+
+                    const cartResult = await cartResponse.json();
+
+                    if (cartResult.data?.addToCart) {
+                        btn.innerHTML = '<i class="pi pi-check"></i> Added to Cart!';
+                        btn.style.backgroundColor = '#059669';
+
+                        // Redirect to cart after short delay
+                        setTimeout(() => {
+                            window.location.href = '/cart';
+                        }, 1500);
+                    } else {
+                        throw new Error(cartResult.errors?.[0]?.message || 'Failed to add to cart');
+                    }
+                } else {
+                    throw new Error(result.errors?.[0]?.message || 'Failed to create calendar');
+                }
+            } catch (err) {
+                console.error('Add to cart error:', err);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="pi pi-shopping-cart"></i> Add to Cart';
+                alert('Error adding to cart: ' + err.message);
+            }
+        });
+    </script>
+</body>
+</html>
