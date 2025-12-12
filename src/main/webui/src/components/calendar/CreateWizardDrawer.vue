@@ -2358,27 +2358,27 @@ onMounted(() => {
   color: var(--text-color-secondary);
 }
 
-/* Emoji color trigger (inline with other color pickers) */
+/* Emoji color trigger (inline with other color pickers, matches vue-swatches) */
 .emoji-color-trigger {
-  width: 24px;
-  height: 24px;
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
-  background: var(--surface-50);
-  border: 1px solid var(--surface-200);
+  background: var(--surface-0);
+  border: 1px solid var(--surface-300);
 }
 
 .emoji-color-trigger:hover {
-  background: var(--surface-100);
-  border-color: var(--surface-300);
+  background: var(--surface-50);
+  border-color: var(--surface-400);
 }
 
 .emoji-trigger-icon {
-  font-size: 16px;
+  font-size: 28px;
   font-family:
     "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
   line-height: 1;
