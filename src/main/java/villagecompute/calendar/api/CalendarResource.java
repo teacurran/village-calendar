@@ -9,8 +9,10 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import villagecompute.calendar.services.CalendarRenderingService;
+import villagecompute.calendar.services.EmojiSvgService;
 import villagecompute.calendar.services.HebrewCalendarService;
 import villagecompute.calendar.services.PDFRenderingService;
+import jakarta.ws.rs.QueryParam;
 
 import java.time.DayOfWeek;
 import java.util.HashMap;
@@ -34,6 +36,9 @@ public class CalendarResource {
 
   @Inject
   PDFRenderingService pdfRenderingService;
+
+  @Inject
+  EmojiSvgService emojiSvgService;
 
   // Request/Response types
   public static class CalendarRequest {
@@ -177,6 +182,67 @@ public class CalendarResource {
     themes.put("rainbowWeekends", "Rainbow Weekends");
 
     return Response.ok(themes).build();
+  }
+
+  /**
+   * Get an emoji SVG for preview purposes.
+   * @param emoji The emoji character (URL encoded)
+   * @param style The style: "noto-color", "noto-mono", or "mono-{color}"
+   * @return SVG content
+   */
+  @GET
+  @Path("/emoji-preview")
+  @Produces("image/svg+xml")
+  public Response getEmojiPreview(
+      @QueryParam("emoji") String emoji,
+      @QueryParam("style") String style) {
+
+    if (emoji == null || emoji.isEmpty()) {
+      emoji = "🎄"; // Default to Christmas tree
+    }
+
+    if (style == null || style.isEmpty()) {
+      style = "noto-color";
+    }
+
+    // Determine if monochrome and what color
+    boolean monochrome = !style.equals("noto-color");
+    String colorHex = null;
+
+    if (style.startsWith("mono-")) {
+      // Extract color from style like "mono-red"
+      colorHex = getColorForStyle(style);
+    }
+
+    String svg = emojiSvgService.getStandaloneSvg(emoji, monochrome, colorHex);
+
+    if (svg == null) {
+      return Response.status(Response.Status.NOT_FOUND)
+          .entity("Emoji SVG not found")
+          .build();
+    }
+
+    return Response.ok(svg)
+        .header("Cache-Control", "public, max-age=86400") // Cache for 24 hours
+        .build();
+  }
+
+  private String getColorForStyle(String style) {
+    return switch (style) {
+      case "mono-red" -> "#DC2626";
+      case "mono-blue" -> "#2563EB";
+      case "mono-green" -> "#16A34A";
+      case "mono-orange" -> "#EA580C";
+      case "mono-purple" -> "#9333EA";
+      case "mono-pink" -> "#EC4899";
+      case "mono-teal" -> "#0D9488";
+      case "mono-brown" -> "#92400E";
+      case "mono-navy" -> "#1E3A5F";
+      case "mono-maroon" -> "#7F1D1D";
+      case "mono-olive" -> "#4D7C0F";
+      case "mono-coral" -> "#F97316";
+      default -> null; // noto-mono (black)
+    };
   }
 
   @POST

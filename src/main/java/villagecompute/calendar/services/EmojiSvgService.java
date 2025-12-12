@@ -269,6 +269,53 @@ public class EmojiSvgService {
     }
 
     /**
+     * Get a standalone SVG for preview purposes (not for embedding in another SVG).
+     *
+     * @param emoji      The emoji character(s)
+     * @param monochrome If true, use monochrome SVG variant
+     * @param colorHex   Optional hex color for colorization (requires monochrome=true)
+     * @return Complete standalone SVG string, or null if emoji SVG not available
+     */
+    public String getStandaloneSvg(String emoji, boolean monochrome, String colorHex) {
+        String normalized = normalizeEmoji(emoji);
+
+        String innerContent = null;
+        String viewBox = DEFAULT_VIEWBOX;
+
+        if (monochrome) {
+            innerContent = monoSvgCache.get(normalized);
+            if (innerContent != null) {
+                viewBox = monoViewBoxCache.getOrDefault(normalized, DEFAULT_VIEWBOX);
+            } else {
+                // Fall back to color SVG
+                innerContent = colorSvgCache.get(normalized);
+                viewBox = colorViewBoxCache.getOrDefault(normalized, DEFAULT_VIEWBOX);
+            }
+        } else {
+            innerContent = colorSvgCache.get(normalized);
+            viewBox = colorViewBoxCache.getOrDefault(normalized, DEFAULT_VIEWBOX);
+        }
+
+        if (innerContent == null) {
+            return null;
+        }
+
+        if (colorHex != null && !colorHex.isEmpty() && monochrome) {
+            String color = colorHex.startsWith("#") ? colorHex : "#" + colorHex;
+            return String.format(
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"%s\">" +
+                "<g fill=\"%s\">%s</g></svg>",
+                viewBox, color, innerContent
+            );
+        } else {
+            return String.format(
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"%s\">%s</svg>",
+                viewBox, innerContent
+            );
+        }
+    }
+
+    /**
      * Get the SVG representation of an emoji as an embeddable SVG element.
      *
      * @param emoji The emoji character(s)
