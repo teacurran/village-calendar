@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, nextTick } from "vue";
 import Drawer from "primevue/drawer";
 import Stepper from "primevue/stepper";
 import StepItem from "primevue/stepitem";
@@ -164,6 +164,9 @@ const gridLineColor = ref("#c1c1c1");
 const holidayColor = ref("#ff5252");
 const emojiFont = ref<EmojiFontType>("noto-color");
 const emojiPopover = ref();
+
+// Flag to prevent emitting during initialization
+const isInitializing = ref(false);
 
 // Holiday settings state
 const primaryHolidaySet = ref<string>("none"); // Current dropdown selection
@@ -841,13 +844,19 @@ watch(
     emojiFont,
   ],
   () => {
-    emitColorSettings();
+    // Don't emit during initialization to prevent circular updates
+    if (!isInitializing.value) {
+      emitColorSettings();
+    }
   },
 );
 
 // Initialize wizard state from config
 const initializeFromConfig = () => {
   if (!props.config) return;
+
+  // Set flag to prevent watchers from emitting during initialization
+  isInitializing.value = true;
 
   // Initialize layout
   if (props.config.layoutStyle === "grid") {
@@ -940,6 +949,11 @@ const initializeFromConfig = () => {
   if (props.config.eventDisplayMode) {
     eventDisplayMode.value = props.config.eventDisplayMode as EventDisplayMode;
   }
+
+  // Clear flag after Vue processes watchers
+  nextTick(() => {
+    isInitializing.value = false;
+  });
 };
 
 // Load previews when drawer opens and initialize state from config
