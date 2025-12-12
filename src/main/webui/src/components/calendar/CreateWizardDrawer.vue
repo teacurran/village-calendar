@@ -1549,7 +1549,7 @@ onMounted(() => {
                     @click="toggleEmojiPopover"
                   >
                     <img
-                      :src="`/calendar/emoji-preview?emoji=%F0%9F%8E%84&style=${emojiFont}`"
+                      :src="`/api/calendar/emoji-preview?emoji=%F0%9F%8E%84&style=${emojiFont}`"
                       alt="Emoji style preview"
                       class="emoji-trigger-img"
                     />
@@ -1569,7 +1569,7 @@ onMounted(() => {
                           @click="selectEmojiStyle(option)"
                         >
                           <img
-                            :src="`/calendar/emoji-preview?emoji=%F0%9F%8E%84&style=${option.id}`"
+                            :src="`/api/calendar/emoji-preview?emoji=%F0%9F%8E%84&style=${option.id}`"
                             :alt="option.label"
                             class="emoji-preview-img"
                           />
