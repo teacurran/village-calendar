@@ -2435,7 +2435,8 @@ onMounted(() => {
 <!-- Unscoped styles for Popover positioning (appended to body) -->
 <style>
 .emoji-popover-left {
-  transform: translateX(-100%) translateX(-10px);
+  /* Align right edge of popover with right edge of 42px trigger */
+  transform: translateX(calc(-100% + 42px));
 }
 
 .emoji-popover-left::before,
