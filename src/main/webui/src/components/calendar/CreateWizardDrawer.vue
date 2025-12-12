@@ -2369,7 +2369,8 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.15s ease;
   background: var(--surface-0);
-  border: 1px solid var(--surface-300);
+  border: 1px solid #ccc;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
 
 .emoji-color-trigger:hover {
