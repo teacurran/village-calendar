@@ -829,27 +829,17 @@ const handleClose = () => {
 
 // Watch for display option changes
 watch([showGrid, showDayNames, rotateMonthNames], () => {
-  emitDisplayOptions();
+  if (!isInitializing.value) {
+    emitDisplayOptions();
+  }
 });
 
-// Watch for color changes
-watch(
-  [
-    yearColor,
-    monthColor,
-    dayTextColor,
-    dayNameColor,
-    gridLineColor,
-    holidayColor,
-    emojiFont,
-  ],
-  () => {
-    // Don't emit during initialization to prevent circular updates
-    if (!isInitializing.value) {
-      emitColorSettings();
-    }
-  },
-);
+// Watch for emoji font changes (not a VSwatches component, so needs watch)
+watch(emojiFont, () => {
+  if (!isInitializing.value) {
+    emitColorSettings();
+  }
+});
 
 // Initialize wizard state from config
 const initializeFromConfig = () => {
@@ -1484,6 +1474,7 @@ onMounted(() => {
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
+                    @update:model-value="emitColorSettings"
                   />
                 </div>
 
@@ -1495,6 +1486,7 @@ onMounted(() => {
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
+                    @update:model-value="emitColorSettings"
                   />
                 </div>
 
@@ -1506,6 +1498,7 @@ onMounted(() => {
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
+                    @update:model-value="emitColorSettings"
                   />
                 </div>
 
@@ -1517,6 +1510,7 @@ onMounted(() => {
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
+                    @update:model-value="emitColorSettings"
                   />
                 </div>
 
@@ -1528,6 +1522,7 @@ onMounted(() => {
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
+                    @update:model-value="emitColorSettings"
                   />
                 </div>
 
@@ -1539,6 +1534,7 @@ onMounted(() => {
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
+                    @update:model-value="emitColorSettings"
                   />
                 </div>
 
