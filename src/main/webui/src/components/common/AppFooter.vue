@@ -19,12 +19,7 @@
             <router-link to="/" class="footer-link">Home</router-link>
           </li>
           <li>
-            <router-link to="/" class="footer-link">Templates</router-link>
-          </li>
-          <li v-if="authStore.isAuthenticated">
-            <router-link to="/dashboard" class="footer-link"
-              >My Orders</router-link
-            >
+            <a href="/pages/p/" class="footer-link">Pre-Designed Calendars</a>
           </li>
         </ul>
       </div>
