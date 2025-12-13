@@ -480,28 +480,27 @@
                     },
                     body: JSON.stringify({
                         query: `
-                            mutation CreateCalendarFromTemplate($input: CreateCalendarFromTemplateInput!) {
-                                createCalendarFromTemplate(input: $input) {
+                            mutation CreateSessionCalendar($sessionId: String!, $name: String!, $year: Int!, $templateId: String!) {
+                                createSessionCalendar(sessionId: $sessionId, name: $name, year: $year, templateId: $templateId) {
                                     id
                                     name
                                 }
                             }
                         `,
                         variables: {
-                            input: {
-                                templateId: templateId,
-                                name: templateName,
-                                year: year
-                            }
+                            sessionId: sessionId,
+                            templateId: templateId,
+                            name: templateName,
+                            year: year
                         }
                     })
                 });
 
                 const result = await response.json();
 
-                if (result.data?.createCalendarFromTemplate?.id) {
+                if (result.data?.createSessionCalendar?.id) {
                     // Calendar created, now add to cart
-                    const calendarId = result.data.createCalendarFromTemplate.id;
+                    const calendarId = result.data.createSessionCalendar.id;
 
                     const cartResponse = await fetch('/graphql', {
                         method: 'POST',
