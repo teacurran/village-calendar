@@ -8,7 +8,8 @@
     "ogDescription": "Perfect calendar for Vermont weekend getaways in 2026",
     "keywords": "vermont calendar, weekend calendar, 2026 calendar",
     "priceFormatted": "29.99",
-    "year": 2026
+    "year": 2026,
+    "configuration": "{\"highlightWeekends\":true,\"theme\":\"default\"}"
   },
   {
     "slug": "lunar-first-2026",
@@ -19,6 +20,7 @@
     "ogDescription": "Beautiful lunar calendar for 2026",
     "keywords": "lunar calendar, moon phases, 2026 calendar",
     "priceFormatted": "29.99",
-    "year": 2026
+    "year": 2026,
+    "configuration": "{\"showMoonPhases\":true,\"theme\":\"default\"}"
   }
 ]

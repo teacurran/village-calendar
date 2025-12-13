@@ -12,6 +12,9 @@ public record CalendarProductData(List<CalendarProduct> list) {
 
     /**
      * Individual calendar product data.
+     * The configuration field contains the full calendar configuration JSON that was used
+     * to generate the static preview. This ensures customers get exactly what they saw
+     * on the product page, even if the database template changes later.
      */
     public record CalendarProduct(
         String slug,
@@ -22,6 +25,7 @@ public record CalendarProductData(List<CalendarProduct> list) {
         String ogDescription,
         String keywords,
         String priceFormatted,
-        int year
+        int year,
+        String configuration // Full calendar config JSON, frozen at build time
     ) {}
 }

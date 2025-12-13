@@ -80,6 +80,10 @@ public class StaticContentResource {
             data.keywords = template.metaKeywords != null ? template.metaKeywords : "calendar, custom calendar, printable calendar, " + year;
             data.priceFormatted = String.format("%.2f", (template.priceCents != null ? template.priceCents : 2999) / 100.0);
             data.year = year;
+            // Include full configuration JSON for cart/customization - frozen at build time
+            if (template.configuration != null) {
+                data.configuration = template.configuration.toString();
+            }
             results.add(data);
 
             // Cache template for SVG/PNG generation
@@ -364,6 +368,7 @@ public class StaticContentResource {
         public String keywords;
         public String priceFormatted;
         public int year;
+        public String configuration; // Full calendar config JSON, frozen at build time
     }
 
     /**

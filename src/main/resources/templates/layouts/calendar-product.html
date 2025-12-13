@@ -14,7 +14,7 @@
     <meta property="og:type" content="product">
     <meta property="og:title" content="{c.title ?: page.title}">
     <meta property="og:description" content="{c.ogDescription ?: c.description}">
-    <meta property="og:image" content="/api/static-content/calendars/{page.data.slug}.png">
+    <meta property="og:image" content="/static/calendars/{page.data.slug}.png">
     <meta property="og:url" content="/pages/p/{page.data.slug}">
     <meta property="product:price:amount" content="{c.priceFormatted}">
     <meta property="product:price:currency" content="USD">
@@ -23,7 +23,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{c.title ?: page.title}">
     <meta name="twitter:description" content="{c.ogDescription ?: c.description}">
-    <meta name="twitter:image" content="/api/static-content/calendars/{page.data.slug}.png">
+    <meta name="twitter:image" content="/static/calendars/{page.data.slug}.png">
 
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -32,7 +32,7 @@
         "@type": "Product",
         "name": "{c.title ?: page.title}",
         "description": "{c.description}",
-        "image": "/api/static-content/calendars/{page.data.slug}.png",
+        "image": "/static/calendars/{page.data.slug}.png",
         "brand": {
             "@type": "Brand",
             "name": "Village Compute"
@@ -385,10 +385,10 @@
     <main>
         <div class="product-container">
             <div class="calendar-preview">
-                {! SVG is loaded via object tag from API endpoint !}
+                {! SVG is loaded via object tag from static file !}
                 <object
                     type="image/svg+xml"
-                    data="/api/static-content/calendars/{page.data.slug}.svg"
+                    data="/static/calendars/{page.data.slug}.svg"
                     class="preview-svg"
                     id="svg-preview"
                     style="width: 100%; height: auto;"
@@ -396,7 +396,7 @@
                     {! Fallback to PNG thumbnail if SVG doesn't load !}
                     <img
                         class="preview-thumbnail"
-                        src="/api/static-content/calendars/{page.data.slug}.png"
+                        src="/static/calendars/{page.data.slug}.png"
                         alt="{c.title ?: page.title} Preview"
                         loading="eager"
                         style="width: 100%; height: auto;"
@@ -422,8 +422,9 @@
                         type="button"
                         class="btn btn-primary"
                         id="add-to-cart-btn"
-                        data-template-id="{c.templateId}"
                         data-template-name="{c.title}"
+                        data-year="{c.year}"
+                        data-configuration='{c.configuration}'
                     >
                         <i class="pi pi-shopping-cart"></i>
                         Add to Cart
@@ -462,11 +463,11 @@
             console.log('Add to cart clicked');
 
             const btn = this;
-            const templateId = btn.dataset.templateId;
             const templateName = btn.dataset.templateName;
-            const year = new Date().getFullYear() + 1;
+            const year = parseInt(btn.dataset.year, 10);
+            const configuration = btn.dataset.configuration;
 
-            console.log('Template:', templateId, templateName, year);
+            console.log('Cart item:', templateName, year, configuration);
 
             // Get or create session ID - must match Vue app's sessionService.ts key
             const SESSION_KEY = 'village_calendar_session_id';
@@ -499,11 +500,11 @@
                         `,
                         variables: {
                             input: {
-                                templateId: templateId,
                                 templateName: templateName,
                                 year: year,
                                 quantity: 1,
-                                productCode: 'print'
+                                productCode: 'print',
+                                configuration: configuration
                             }
                         }
                     })

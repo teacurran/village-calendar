@@ -87,7 +87,7 @@ jobs:
 
           # Create directories for ROQ data extension
           mkdir -p src/main/resources/data
-          mkdir -p src/main/resources/static/calendars
+          mkdir -p src/main/resources/META-INF/resources/static/calendars
           mkdir -p src/main/resources/content/p
 
           # Download calendars.json (for ROQ data extension)
@@ -113,17 +113,17 @@ jobs:
 
             # Download SVG
             curl -sf "${API_URL}/api/static-content/calendars/${SLUG}.svg" \
-              -o "src/main/resources/static/calendars/${SLUG}.svg" || \
+              -o "src/main/resources/META-INF/resources/static/calendars/${SLUG}.svg" || \
               echo "Warning: Could not download ${SLUG}.svg"
 
             # Download PNG (for og:image)
             curl -sf "${API_URL}/api/static-content/calendars/${SLUG}.png" \
-              -o "src/main/resources/static/calendars/${SLUG}.png" || \
+              -o "src/main/resources/META-INF/resources/static/calendars/${SLUG}.png" || \
               echo "Warning: Could not download ${SLUG}.png"
           done
 
           echo "Downloaded assets:"
-          ls -la src/main/resources/static/calendars/
+          ls -la src/main/resources/META-INF/resources/static/calendars/
 
       - name: Create content pages with FrontMatter
         run: |
@@ -160,7 +160,7 @@ jobs:
           name: calendar-static-content
           path: |
             src/main/resources/data/
-            src/main/resources/static/calendars/
+            src/main/resources/META-INF/resources/static/calendars/
             src/main/resources/content/p/
           retention-days: 1
           if-no-files-found: ignore
@@ -192,7 +192,7 @@ jobs:
           echo "Data files:"
           ls -la src/main/resources/data/ 2>/dev/null || echo "No data directory"
           echo "Static files:"
-          ls -la src/main/resources/static/calendars/ 2>/dev/null || echo "No static/calendars directory"
+          ls -la src/main/resources/META-INF/resources/static/calendars/ 2>/dev/null || echo "No static/calendars directory"
           echo "Content pages:"
           ls -la src/main/resources/content/p/ 2>/dev/null || echo "No content/p directory"
 
