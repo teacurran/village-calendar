@@ -96,13 +96,20 @@ const loadCalendarSvgs = async () => {
 
   for (const item of cartStore.items) {
     const config = getCalendarConfig(item);
+    const calendarKey = item.id;
+
+    // Skip if we already have SVG for this item
+    if (calendarSvgs.value[calendarKey]) continue;
 
     if (config) {
-      const calendarKey = item.id;
-
+      // Priority 1: SVG already stored in configuration (homepage or static product page)
       if (config.svgContent) {
         calendarSvgs.value[calendarKey] = config.svgContent;
-      } else if (config.calendarId) {
+      } else if (config.generatedSvg) {
+        calendarSvgs.value[calendarKey] = config.generatedSvg;
+      }
+      // Priority 2: Has calendarId - fetch from user calendars endpoint
+      else if (config.calendarId) {
         const svg = await fetchCalendarSvg(config.calendarId);
         if (svg) {
           calendarSvgs.value[calendarKey] = svg;

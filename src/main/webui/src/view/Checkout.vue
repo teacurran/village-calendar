@@ -150,17 +150,24 @@ const loadCalendarSvgs = async () => {
 
   // Process each cart item
   for (const item of cartStore.items) {
+    // Skip items with templateId - they use the PNG/SVG endpoint directly
+    if (item.templateId) continue;
+
     const config = getCalendarConfig(item);
     if (config) {
       const calendarKey = item.id;
 
-      // Check for embedded SVG content first
+      // Skip if we already have SVG for this item
+      if (calendarSvgs.value[calendarKey]) continue;
+
+      // Check for embedded SVG content (homepage or static product page)
       if (config.svgContent) {
         calendarSvgs.value[calendarKey] = config.svgContent;
       } else if (config.generatedSvg) {
         calendarSvgs.value[calendarKey] = config.generatedSvg;
-      } else if (config.calendarId) {
-        // Fall back to fetching from server
+      }
+      // Fallback: Has calendarId - fetch from user calendars endpoint
+      else if (config.calendarId) {
         const svg = await fetchCalendarSvg(config.calendarId);
         if (svg) {
           calendarSvgs.value[calendarKey] = svg;

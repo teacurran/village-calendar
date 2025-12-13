@@ -11,6 +11,46 @@ export interface CalendarConfiguration {
   year?: number;
   name?: string;
   productCode?: string;
+  // Full calendar rendering configuration (from static product pages)
+  theme?: string;
+  latitude?: number;
+  longitude?: number;
+  moonSize?: number;
+  showGrid?: boolean;
+  showMoonPhases?: boolean;
+  showMoonIllumination?: boolean;
+  showWeekNumbers?: boolean;
+  compactMode?: boolean;
+  showDayNames?: boolean;
+  showDayNumbers?: boolean;
+  highlightWeekends?: boolean;
+  rotateMonthNames?: boolean;
+  layoutStyle?: string;
+  calendarType?: string;
+  firstDayOfWeek?: string;
+  holidaySets?: string[];
+  emojiFont?: string;
+  emojiPosition?: string;
+  eventDisplayMode?: string;
+  moonPosition?: string;
+  moonDisplayMode?: string;
+  moonOffsetX?: number;
+  moonOffsetY?: number;
+  moonBorderColor?: string;
+  moonBorderWidth?: number;
+  moonDarkColor?: string;
+  moonLightColor?: string;
+  yearColor?: string;
+  monthColor?: string;
+  dayTextColor?: string;
+  dayNameColor?: string;
+  gridLineColor?: string;
+  weekendBgColor?: string;
+  holidayColor?: string;
+  customDateColor?: string;
+  customDates?: Record<string, unknown>;
+  eventTitles?: Record<string, string>;
+  showHolidays?: boolean;
 }
 
 export interface CartItem {

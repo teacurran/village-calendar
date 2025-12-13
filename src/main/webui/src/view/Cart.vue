@@ -23,8 +23,12 @@ const toast = useToast();
 // Preview modal state
 const showPreviewModal = ref(false);
 const previewImageUrl = ref("");
+const previewCalendarSvg = ref("");
 const previewCalendarName = ref("");
 const loading = ref(false);
+
+// Store for calendar SVGs (for items without templateId)
+const calendarSvgs = ref<Record<string, string>>({});
 
 // Breadcrumbs
 const breadcrumbItems = computed(() => [{ label: "Cart" }]);
@@ -34,7 +38,7 @@ const cartItems = computed(() => cartStore.items || []);
 const cartSubtotal = computed(() => cartStore.subtotal || 0);
 const cartItemCount = computed(() => cartStore.itemCount || 0);
 
-// Check if item is a calendar (has productCode 'print' or 'pdf', or has templateId)
+// Check if item is a calendar (has productCode 'print' or 'pdf', has templateId, or has calendar config)
 const isCalendarItem = (item: CartItem) => {
   // Check productCode
   if (item.productCode === "print" || item.productCode === "pdf") {
@@ -42,6 +46,11 @@ const isCalendarItem = (item: CartItem) => {
   }
   // Has templateId means it's a calendar
   if (item.templateId) {
+    return true;
+  }
+  // Has calendar configuration (from static product page or custom calendar)
+  const config = getCalendarConfig(item);
+  if (config && (config.year || config.theme || config.svgContent || config.generatedSvg)) {
     return true;
   }
   return false;
@@ -68,6 +77,71 @@ const getCalendarConfig = (item: CartItem): CalendarConfiguration | null => {
   return null;
 };
 
+// Check if configuration has rendering properties (from static product page)
+const hasRenderingConfig = (config: CalendarConfiguration): boolean => {
+  return !!(config.year && (config.theme || config.layoutStyle));
+};
+
+// Generate calendar SVG from configuration (for static product page purchases)
+const generateCalendarSvgFromConfig = async (
+  config: CalendarConfiguration,
+): Promise<string | null> => {
+  try {
+    const response = await fetch("/calendar/generate-json", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(config),
+    });
+    if (response.ok) {
+      const result = await response.json();
+      return result.svg;
+    }
+  } catch (error) {
+    console.error("Failed to generate calendar SVG from config:", error);
+  }
+  return null;
+};
+
+// Load calendar SVGs for items without templateId
+const loadCalendarSvgs = async () => {
+  if (!cartStore.items || cartStore.items.length === 0) return;
+
+  for (const item of cartStore.items) {
+    // Skip items with templateId - they use the PNG endpoint
+    if (item.templateId) continue;
+
+    const config = getCalendarConfig(item);
+    const calendarKey = item.id;
+
+    // Skip if we already have SVG for this item
+    if (calendarSvgs.value[calendarKey]) continue;
+
+    if (config) {
+      // Priority 1: SVG already stored in configuration (homepage or static product page)
+      if (config.svgContent) {
+        calendarSvgs.value[calendarKey] = config.svgContent;
+      } else if (config.generatedSvg) {
+        calendarSvgs.value[calendarKey] = config.generatedSvg;
+      }
+      // Priority 2: Has rendering config - generate SVG on demand (fallback)
+      else if (hasRenderingConfig(config)) {
+        const svg = await generateCalendarSvgFromConfig(config);
+        if (svg) {
+          calendarSvgs.value[calendarKey] = svg;
+        }
+      }
+    }
+  }
+};
+
+// Check if item has SVG available (either from templateId or generated)
+const hasSvgAvailable = (item: CartItem): boolean => {
+  if (item.templateId) return true;
+  return !!calendarSvgs.value[item.id];
+};
+
 // Get thumbnail URL for a cart item
 const getThumbnailUrl = (item: CartItem): string => {
   // Use template-based PNG endpoint
@@ -79,10 +153,19 @@ const getThumbnailUrl = (item: CartItem): string => {
 
 // Show calendar preview in modal
 const showCalendarPreview = (item: CartItem) => {
+  const config = getCalendarConfig(item);
+  previewCalendarName.value =
+    config?.name || item.templateName || `Calendar ${item.year}`;
+
   if (item.templateId) {
-    // Use SVG for higher quality in modal
+    // Use SVG endpoint for template-based items
     previewImageUrl.value = `/api/static-content/template/${item.templateId}.svg`;
-    previewCalendarName.value = item.templateName || `Calendar ${item.year}`;
+    previewCalendarSvg.value = "";
+    showPreviewModal.value = true;
+  } else if (calendarSvgs.value[item.id]) {
+    // Use generated SVG for items without templateId
+    previewImageUrl.value = "";
+    previewCalendarSvg.value = calendarSvgs.value[item.id];
     showPreviewModal.value = true;
   }
 };
@@ -174,6 +257,7 @@ onMounted(async () => {
   loading.value = true;
   try {
     await cartStore.fetchCart();
+    await loadCalendarSvgs();
   } finally {
     loading.value = false;
   }
@@ -238,7 +322,7 @@ onMounted(async () => {
                 <div class="flex gap-4">
                   <!-- Item Image/Preview -->
                   <div class="flex-shrink-0">
-                    <!-- Calendar Thumbnail (PNG from API) -->
+                    <!-- Calendar Thumbnail (PNG from API for template-based items) -->
                     <img
                       v-if="isCalendarItem(item) && item.templateId"
                       :src="getThumbnailUrl(item)"
@@ -246,6 +330,24 @@ onMounted(async () => {
                       class="calendar-thumbnail"
                       @click="showCalendarPreview(item)"
                     />
+                    <!-- Calendar SVG Thumbnail (for items without templateId) -->
+                    <div
+                      v-else-if="isCalendarItem(item) && calendarSvgs[item.id]"
+                      class="calendar-svg-thumbnail"
+                      @click="showCalendarPreview(item)"
+                    >
+                      <div
+                        class="svg-container"
+                        v-html="calendarSvgs[item.id]"
+                      ></div>
+                    </div>
+                    <!-- Calendar Loading Placeholder -->
+                    <div
+                      v-else-if="isCalendarItem(item) && !item.templateId"
+                      class="calendar-thumbnail-placeholder"
+                    >
+                      <i class="pi pi-spin pi-spinner text-gray-400"></i>
+                    </div>
                     <!-- Regular Product Image -->
                     <img
                       v-else-if="item.imageUrl"
@@ -401,8 +503,15 @@ onMounted(async () => {
       :style="{ width: '90vw', maxWidth: '900px' }"
     >
       <div class="calendar-preview bg-white p-4 rounded">
+        <!-- Inline SVG content (for generated/fetched SVGs) -->
+        <div
+          v-if="previewCalendarSvg"
+          class="calendar-preview-svg"
+          v-html="previewCalendarSvg"
+        ></div>
+        <!-- URL-based SVG (for template-based items) -->
         <object
-          v-if="previewImageUrl"
+          v-else-if="previewImageUrl"
           :data="previewImageUrl"
           type="image/svg+xml"
           class="w-full h-auto"
@@ -421,7 +530,8 @@ onMounted(async () => {
 <style scoped>
 /* Thumbnails for full cart page */
 .product-thumbnail,
-.product-thumbnail-placeholder {
+.product-thumbnail-placeholder,
+.calendar-thumbnail-placeholder {
   width: 128px;
   height: 80px;
   background: #f5f5f5;
@@ -432,6 +542,47 @@ onMounted(async () => {
   justify-content: center;
   position: relative;
   overflow: hidden;
+}
+
+.calendar-thumbnail-placeholder {
+  background: white;
+  border-color: #90caf9;
+}
+
+/* SVG thumbnail container for items without templateId */
+.calendar-svg-thumbnail {
+  width: 180px;
+  height: 116px;
+  background: white;
+  border: 1px solid #90caf9;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.calendar-svg-thumbnail:hover {
+  border-color: #1976d2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-svg-thumbnail .svg-container {
+  width: 800px;
+  height: 800px;
+  transform: scale(0.225);
+  transform-origin: top left;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.calendar-svg-thumbnail .svg-container :deep(svg) {
+  width: 100%;
+  height: auto;
 }
 
 /* Calendar thumbnail as img element with correct aspect ratio (3500:2250) */
@@ -463,6 +614,12 @@ img.calendar-thumbnail:hover {
 
 /* Modal preview styles */
 .calendar-preview :deep(svg) {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+}
+
+.calendar-preview-svg :deep(svg) {
   width: 100%;
   height: auto;
   max-height: 70vh;

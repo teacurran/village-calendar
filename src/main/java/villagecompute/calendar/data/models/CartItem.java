@@ -27,9 +27,11 @@ public class CartItem extends DefaultPanacheEntityWithTimestamps {
     @Ignore
     public Cart cart;
 
-    @NotNull
-    @Size(min = 1, max = 255)
-    @Column(name = "template_id", nullable = false, length = 255)
+    /**
+     * Template ID from database (null for static product pages with frozen configuration)
+     */
+    @Size(max = 255)
+    @Column(name = "template_id", length = 255)
     public String templateId;
 
     @NotNull

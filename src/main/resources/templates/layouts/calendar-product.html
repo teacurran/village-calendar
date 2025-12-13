@@ -424,6 +424,7 @@
                         id="add-to-cart-btn"
                         data-template-name="{c.title}"
                         data-year="{c.year}"
+                        data-svg-url="/static/calendars/{page.data.slug}.svg"
                         data-configuration='{c.configuration}'
                     >
                         <i class="pi pi-shopping-cart"></i>
@@ -465,9 +466,33 @@
             const btn = this;
             const templateName = btn.dataset.templateName;
             const year = parseInt(btn.dataset.year, 10);
-            const configuration = btn.dataset.configuration;
+            const svgUrl = btn.dataset.svgUrl;
 
-            console.log('Cart item:', templateName, year, configuration);
+            // Parse the base configuration
+            let configuration;
+            try {
+                configuration = JSON.parse(btn.dataset.configuration || '{}');
+            } catch (e) {
+                configuration = {};
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="pi pi-spin pi-spinner spinner"></i> Adding...';
+
+            // Fetch the pre-generated SVG and embed it as generatedSvg
+            // This makes cart display work identically to homepage custom calendars
+            try {
+                const svgResponse = await fetch(svgUrl);
+                if (svgResponse.ok) {
+                    configuration.generatedSvg = await svgResponse.text();
+                }
+            } catch (err) {
+                console.warn('Could not fetch SVG for cart thumbnail:', err);
+            }
+
+            configuration = JSON.stringify(configuration);
+
+            console.log('Cart item:', templateName, year);
 
             // Get or create session ID - must match Vue app's sessionService.ts key
             const SESSION_KEY = 'village_calendar_session_id';
@@ -476,10 +501,6 @@
                 sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
                 localStorage.setItem(SESSION_KEY, sessionId);
             }
-            console.log('Session ID:', sessionId);
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="pi pi-spin pi-spinner spinner"></i> Adding...';
 
             try {
                 // Add directly to cart using template - cart stores template info

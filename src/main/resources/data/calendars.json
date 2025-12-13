@@ -1,26 +1,26 @@
 [
   {
+    "configuration": "{\"year\":2025,\"theme\":\"vermontWeekends\",\"latitude\":0,\"moonSize\":10,\"showGrid\":true,\"longitude\":0,\"yearColor\":\"#1b5e20\",\"monthColor\":\"#1b5e20\",\"compactMode\":false,\"customDates\":{},\"eventTitles\":{},\"layoutStyle\":\"grid\",\"moonOffsetX\":32,\"moonOffsetY\":14,\"calendarType\":\"gregorian\",\"dayNameColor\":\"#333333\",\"dayTextColor\":\"#000000\",\"holidayColor\":\"#ff5252\",\"moonPosition\":\"center\",\"showDayNames\":true,\"showHolidays\":true,\"emojiPosition\":\"bottom-left\",\"gridLineColor\":\"#c1c1c1\",\"moonDarkColor\":\"#c1c1c1\",\"firstDayOfWeek\":\"SUNDAY\",\"moonLightColor\":\"#FFFFFF\",\"showDayNumbers\":true,\"showMoonPhases\":false,\"weekendBgColor\":\"\",\"customDateColor\":\"#4caf50\",\"moonBorderColor\":\"#c1c1c1\",\"moonBorderWidth\":0.5,\"moonDisplayMode\":\"phases\",\"showWeekNumbers\":false,\"rotateMonthNames\":false,\"highlightWeekends\":true,\"showMoonIllumination\":false}",
+    "description": "Elegant calendar highlighting weekends with Vermont theme",
+    "keywords": "vermont calendar, weekend calendar, 2026 calendar",
+    "name": "Vermont Weekends",
+    "ogDescription": "Perfect calendar for Vermont weekend getaways in 2026",
+    "priceFormatted": "29.99",
     "slug": "vermont-weekends-2026",
     "templateId": "1d31046c-705f-4559-a0a7-c811f8ef9c05",
-    "name": "Vermont Weekends",
     "title": "Vermont Weekends 2026 Calendar",
-    "description": "Elegant calendar highlighting weekends with Vermont theme",
-    "ogDescription": "Perfect calendar for Vermont weekend getaways in 2026",
-    "keywords": "vermont calendar, weekend calendar, 2026 calendar",
-    "priceFormatted": "29.99",
-    "year": 2026,
-    "configuration": "{\"highlightWeekends\":true,\"theme\":\"default\"}"
+    "year": 2026
   },
   {
+    "configuration": "{\"year\":2026,\"theme\":\"rainbowWeekends\",\"latitude\":44.2172,\"moonSize\":20,\"showGrid\":false,\"emojiFont\":\"noto-mono\",\"longitude\":-72.2011,\"yearColor\":\"#cccccc\",\"monthColor\":\"#bfbfbf\",\"compactMode\":false,\"customDates\":{},\"eventTitles\":{},\"holidaySets\":[\"us\"],\"layoutStyle\":\"grid\",\"moonOffsetX\":25,\"moonOffsetY\":45,\"calendarType\":\"gregorian\",\"dayNameColor\":\"#333333\",\"dayTextColor\":\"#000000\",\"holidayColor\":\"#ff5252\",\"moonPosition\":\"center\",\"showDayNames\":false,\"showHolidays\":false,\"emojiPosition\":\"bottom-left\",\"gridLineColor\":\"#c1c1c1\",\"moonDarkColor\":\"#dddddd\",\"firstDayOfWeek\":\"SUNDAY\",\"moonLightColor\":\"#FFFFFF\",\"showDayNumbers\":true,\"showMoonPhases\":false,\"weekendBgColor\":\"\",\"customDateColor\":\"#4caf50\",\"moonBorderColor\":\"#666666\",\"moonBorderWidth\":1.5,\"moonDisplayMode\":\"illumination\",\"showWeekNumbers\":false,\"eventDisplayMode\":\"large\",\"rotateMonthNames\":false,\"highlightWeekends\":true,\"showMoonIllumination\":true}",
+    "description": "Moon-focused calendar with illumination display",
+    "keywords": "moon calendar, lunar calendar, 2026 calendar",
+    "name": "Lunar First",
+    "ogDescription": "Moon phase calendar for 2026 with detailed lunar information",
+    "priceFormatted": "29.99",
     "slug": "lunar-first-2026",
     "templateId": "7cf6462b-15c1-42e4-9870-43201cc6e636",
-    "name": "Lunar First",
     "title": "Lunar First 2026 Calendar",
-    "description": "Calendar with moon phases, week starting on Monday",
-    "ogDescription": "Beautiful lunar calendar for 2026",
-    "keywords": "lunar calendar, moon phases, 2026 calendar",
-    "priceFormatted": "29.99",
-    "year": 2026,
-    "configuration": "{\"showMoonPhases\":true,\"theme\":\"default\"}"
+    "year": 2026
   }
 ]
