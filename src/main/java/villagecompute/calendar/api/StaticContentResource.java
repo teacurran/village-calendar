@@ -106,7 +106,7 @@ public class StaticContentResource {
         String svgContent = generateSvgForTemplate(template);
 
         return Response.ok(svgContent)
-                .header("Content-Disposition", "attachment; filename=\"" + slug + ".svg\"")
+                .header("Content-Disposition", "inline; filename=\"" + slug + ".svg\"")
                 .build();
     }
 
@@ -132,7 +132,7 @@ public class StaticContentResource {
             byte[] pngBytes = pdfRenderingService.renderSVGToPNG(svgContent, 1200);
 
             return Response.ok(pngBytes)
-                    .header("Content-Disposition", "attachment; filename=\"" + slug + ".png\"")
+                    .header("Content-Disposition", "inline; filename=\"" + slug + ".png\"")
                     .build();
         } catch (Exception e) {
             LOG.errorf(e, "Failed to generate PNG for calendar: %s", slug);

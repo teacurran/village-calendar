@@ -14,7 +14,7 @@
     <meta property="og:type" content="product">
     <meta property="og:title" content="{c.title ?: page.title}">
     <meta property="og:description" content="{c.ogDescription ?: c.description}">
-    <meta property="og:image" content="/static/calendars/{page.data.slug}.png">
+    <meta property="og:image" content="/api/static-content/calendars/{page.data.slug}.png">
     <meta property="og:url" content="/pages/p/{page.data.slug}">
     <meta property="product:price:amount" content="{c.priceFormatted}">
     <meta property="product:price:currency" content="USD">
@@ -23,7 +23,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{c.title ?: page.title}">
     <meta name="twitter:description" content="{c.ogDescription ?: c.description}">
-    <meta name="twitter:image" content="/static/calendars/{page.data.slug}.png">
+    <meta name="twitter:image" content="/api/static-content/calendars/{page.data.slug}.png">
 
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -32,7 +32,7 @@
         "@type": "Product",
         "name": "{c.title ?: page.title}",
         "description": "{c.description}",
-        "image": "/static/calendars/{page.data.slug}.png",
+        "image": "/api/static-content/calendars/{page.data.slug}.png",
         "brand": {
             "@type": "Brand",
             "name": "Village Compute"
@@ -385,10 +385,10 @@
     <main>
         <div class="product-container">
             <div class="calendar-preview">
-                {! SVG is loaded via object tag from static file !}
+                {! SVG is loaded via object tag from API endpoint !}
                 <object
                     type="image/svg+xml"
-                    data="/static/calendars/{page.data.slug}.svg"
+                    data="/api/static-content/calendars/{page.data.slug}.svg"
                     class="preview-svg"
                     id="svg-preview"
                     style="width: 100%; height: auto;"
@@ -396,7 +396,7 @@
                     {! Fallback to PNG thumbnail if SVG doesn't load !}
                     <img
                         class="preview-thumbnail"
-                        src="/static/calendars/{page.data.slug}.png"
+                        src="/api/static-content/calendars/{page.data.slug}.png"
                         alt="{c.title ?: page.title} Preview"
                         loading="eager"
                         style="width: 100%; height: auto;"
