@@ -11,7 +11,7 @@
     <meta property="og:type" content="website">
     <meta property="og:title" content="{page.title}">
     <meta property="og:description" content="{page.description}">
-    <meta property="og:url" content="{site.url}/p/">
+    <meta property="og:url" content="/pages/p/">
 
     <!-- Google Fonts - Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -349,7 +349,28 @@
         </div>
 
         <div class="products-grid">
-            {#insert /}
+            {#for calendar in cdi:calendars.list}
+            <a href="/pages/p/{calendar.slug}" class="product-card">
+                <img
+                    class="product-image"
+                    src="/static/calendars/{calendar.slug}.png"
+                    alt="{calendar.name}"
+                    loading="lazy"
+                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                >
+                <div class="product-image-placeholder" style="display:none">
+                    <i class="pi pi-calendar"></i>
+                </div>
+                <div class="product-details">
+                    <h2 class="product-name">{calendar.name}</h2>
+                    <p class="product-description">{calendar.description}</p>
+                    <div class="product-footer">
+                        <span class="product-price">${calendar.priceFormatted}</span>
+                        <span class="view-btn">View <i class="pi pi-arrow-right"></i></span>
+                    </div>
+                </div>
+            </a>
+            {/for}
         </div>
 
         <div class="cta-section">

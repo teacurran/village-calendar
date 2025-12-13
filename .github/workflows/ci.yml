@@ -60,7 +60,7 @@ jobs:
         run: npm run lint
 
   generate-static-content:
-    name: Generate Static Calendar Pages
+    name: Download Calendar Data & Assets
     runs-on: ubuntu-latest
     needs: backend-build
     # Only generate on push to main/beta, not PRs
@@ -80,143 +80,88 @@ jobs:
           fi
           echo "Using API: ${{ steps.api-url.outputs.url || 'https://calendar-beta.villagecompute.com' }}"
 
-      - name: Fetch templates and generate static pages
+      - name: Download calendar data and assets
         run: |
           API_URL="${{ steps.api-url.outputs.url }}"
-          echo "Fetching templates from: ${API_URL}/api/static-content/templates"
+          echo "Downloading calendar data from: ${API_URL}"
 
+          # Create directories for ROQ data extension
+          mkdir -p src/main/resources/data
+          mkdir -p src/main/resources/static/calendars
           mkdir -p src/main/resources/content/p
 
-          # Fetch templates from running app (it handles SVG generation and thumbnail upload)
-          RESPONSE=$(curl -s "${API_URL}/api/static-content/templates" || echo "[]")
-
-          # Check if we got valid JSON
-          if ! echo "$RESPONSE" | jq -e '.' > /dev/null 2>&1; then
-            echo "Warning: Invalid JSON response or API not available"
-            echo "Response: $RESPONSE"
-            echo "Continuing with empty p directory..."
+          # Download calendars.json (for ROQ data extension)
+          echo "Downloading calendars.json..."
+          curl -sf "${API_URL}/api/static-content/calendars.json" -o src/main/resources/data/calendars.json || {
+            echo "Warning: Could not download calendars.json, creating empty array"
+            echo "[]" > src/main/resources/data/calendars.json
             exit 0
-          fi
+          }
 
-          # Count templates
-          COUNT=$(echo "$RESPONSE" | jq 'length')
-          echo "Found $COUNT templates with slugs"
+          # Count calendars
+          COUNT=$(cat src/main/resources/data/calendars.json | jq 'length')
+          echo "Found $COUNT calendars"
 
           if [ "$COUNT" == "0" ]; then
-            echo "No templates with slugs found. Skipping content generation."
+            echo "No calendars found. Skipping asset download."
             exit 0
           fi
 
-          # Generate HTML file for each template
-          echo "$RESPONSE" | jq -c '.[]' | while read -r template; do
-            SLUG=$(echo "$template" | jq -r '.slug')
-            TITLE=$(echo "$template" | jq -r '.title')
-            TEMPLATE_ID=$(echo "$template" | jq -r '.templateId')
-            DESCRIPTION=$(echo "$template" | jq -r '.description')
-            OG_DESCRIPTION=$(echo "$template" | jq -r '.ogDescription')
-            KEYWORDS=$(echo "$template" | jq -r '.keywords')
-            THUMBNAIL_URL=$(echo "$template" | jq -r '.thumbnailUrl')
-            PRICE=$(echo "$template" | jq -r '.priceFormatted')
-            SVG_CONTENT=$(echo "$template" | jq -r '.svgContent')
-            SITE_URL=$(echo "$template" | jq -r '.siteUrl')
+          # Download SVG and PNG for each calendar
+          for SLUG in $(cat src/main/resources/data/calendars.json | jq -r '.[].slug'); do
+            echo "Downloading assets for: $SLUG"
 
-            echo "Generating page for: $SLUG"
+            # Download SVG
+            curl -sf "${API_URL}/api/static-content/calendars/${SLUG}.svg" \
+              -o "src/main/resources/static/calendars/${SLUG}.svg" || \
+              echo "Warning: Could not download ${SLUG}.svg"
 
-            # Write HTML file with FrontMatter
-            cat > "src/main/resources/content/p/${SLUG}.html" << HTMLEOF
-          ---
-          title: "${TITLE}"
-          layout: calendar-product
-          slug: ${SLUG}
-          templateId: ${TEMPLATE_ID}
-          description: "${DESCRIPTION}"
-          ogDescription: "${OG_DESCRIPTION}"
-          keywords: "${KEYWORDS}"
-          thumbnailUrl: ${THUMBNAIL_URL}
-          priceFormatted: ${PRICE}
-          date: $(date +%Y-%m-%d)
-          ---
-          ${SVG_CONTENT}
-          HTMLEOF
-
-            echo "Created: src/main/resources/content/p/${SLUG}.html"
+            # Download PNG (for og:image)
+            curl -sf "${API_URL}/api/static-content/calendars/${SLUG}.png" \
+              -o "src/main/resources/static/calendars/${SLUG}.png" || \
+              echo "Warning: Could not download ${SLUG}.png"
           done
 
-          echo "Generated calendar pages:"
-          ls -la src/main/resources/content/p/
+          echo "Downloaded assets:"
+          ls -la src/main/resources/static/calendars/
 
-      - name: Generate index page
+      - name: Create content pages with FrontMatter
         run: |
-          API_URL="${{ steps.api-url.outputs.url }}"
-          RESPONSE=$(curl -s "${API_URL}/api/static-content/templates" || echo "[]")
-
-          # Check if we got valid JSON with templates
-          if ! echo "$RESPONSE" | jq -e '.' > /dev/null 2>&1; then
-            echo "No valid response, skipping index generation"
-            exit 0
-          fi
-
-          COUNT=$(echo "$RESPONSE" | jq 'length')
-          if [ "$COUNT" == "0" ]; then
-            echo "No templates found, skipping index generation"
-            exit 0
-          fi
-
-          echo "Generating index page with $COUNT products"
-
-          # Build product cards HTML
-          PRODUCT_CARDS=""
-          echo "$RESPONSE" | jq -c '.[]' | while read -r template; do
-            SLUG=$(echo "$template" | jq -r '.slug')
-            NAME=$(echo "$template" | jq -r '.name')
-            DESCRIPTION=$(echo "$template" | jq -r '.description')
-            THUMBNAIL_URL=$(echo "$template" | jq -r '.thumbnailUrl')
-            PRICE=$(echo "$template" | jq -r '.priceFormatted')
-
-            # Append card to file (using file to preserve across subshell)
-            cat >> /tmp/product_cards.html << CARDEOF
-          <a href="/pages/p/${SLUG}" class="product-card">
-              <img class="product-image" src="${THUMBNAIL_URL}" alt="${NAME}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-              <div class="product-image-placeholder" style="display:none">
-                  <i class="pi pi-calendar"></i>
-              </div>
-              <div class="product-details">
-                  <h2 class="product-name">${NAME}</h2>
-                  <p class="product-description">${DESCRIPTION}</p>
-                  <div class="product-footer">
-                      <span class="product-price">\$${PRICE}</span>
-                      <span class="view-btn">View <i class="pi pi-arrow-right"></i></span>
-                  </div>
-              </div>
-          </a>
-          CARDEOF
-          done
-
-          # Read product cards from temp file
-          PRODUCT_CARDS=""
-          if [ -f /tmp/product_cards.html ]; then
-            PRODUCT_CARDS=$(cat /tmp/product_cards.html)
-          fi
-
-          # Write index.html
-          cat > src/main/resources/content/p/index.html << INDEXEOF
+          # Create index page for product listing
+          cat > src/main/resources/content/p/index.html << 'EOF'
           ---
           title: "Pre-Designed Calendars"
           layout: calendar-index
           description: "Browse our collection of beautiful, customizable calendars. Premium prints shipped to your door."
-          date: $(date +%Y-%m-%d)
           ---
-          ${PRODUCT_CARDS}
-          INDEXEOF
+          EOF
 
-          echo "Created: src/main/resources/content/p/index.html"
-          cat src/main/resources/content/p/index.html | head -30
+          # Create individual product pages (minimal FrontMatter, data comes from cdi:calendars)
+          for SLUG in $(cat src/main/resources/data/calendars.json | jq -r '.[].slug'); do
+            TITLE=$(cat src/main/resources/data/calendars.json | jq -r ".[] | select(.slug==\"$SLUG\") | .title")
 
-      - name: Upload generated content
+            cat > "src/main/resources/content/p/${SLUG}.html" << EOF
+          ---
+          title: "${TITLE}"
+          layout: calendar-product
+          slug: ${SLUG}
+          ---
+          EOF
+
+            echo "Created: src/main/resources/content/p/${SLUG}.html"
+          done
+
+          echo "Generated content pages:"
+          ls -la src/main/resources/content/p/
+
+      - name: Upload generated content and assets
         uses: actions/upload-artifact@v4
         with:
           name: calendar-static-content
-          path: src/main/resources/content/p/
+          path: |
+            src/main/resources/data/
+            src/main/resources/static/calendars/
+            src/main/resources/content/p/
           retention-days: 1
           if-no-files-found: ignore
 
@@ -234,13 +179,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download generated content
+      - name: Download generated content and assets
         if: needs.generate-static-content.result == 'success'
         uses: actions/download-artifact@v4
         with:
           name: calendar-static-content
-          path: src/main/resources/content/p/
+          path: src/main/resources/
         continue-on-error: true
+
+      - name: Verify downloaded content
+        run: |
+          echo "Data files:"
+          ls -la src/main/resources/data/ 2>/dev/null || echo "No data directory"
+          echo "Static files:"
+          ls -la src/main/resources/static/calendars/ 2>/dev/null || echo "No static/calendars directory"
+          echo "Content pages:"
+          ls -la src/main/resources/content/p/ 2>/dev/null || echo "No content/p directory"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

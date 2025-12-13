@@ -1,45 +1,48 @@
+{! Find matching calendar by iterating through list !}
+{#for c in cdi:calendars.list}
+{#if c.slug == page.data.slug}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{page.title} - Village Compute Calendar</title>
-    <meta name="description" content="{page.data.ogDescription ?: page.description ?: 'Custom printable calendar from Village Compute'}">
-    <meta name="keywords" content="{page.data.keywords ?: 'calendar, custom calendar, printable calendar'}">
+    <title>{c.title ?: page.title} - Village Compute Calendar</title>
+    <meta name="description" content="{c.ogDescription ?: c.description ?: 'Custom printable calendar from Village Compute'}">
+    <meta name="keywords" content="{c.keywords ?: 'calendar, custom calendar, printable calendar'}">
 
     <!-- OpenGraph Product Tags -->
     <meta property="og:type" content="product">
-    <meta property="og:title" content="{page.title}">
-    <meta property="og:description" content="{page.data.ogDescription ?: page.description}">
-    <meta property="og:image" content="{page.data.thumbnailUrl}">
-    <meta property="og:url" content="{site.url}/p/{page.data.slug}">
-    <meta property="product:price:amount" content="{page.data.priceFormatted}">
+    <meta property="og:title" content="{c.title ?: page.title}">
+    <meta property="og:description" content="{c.ogDescription ?: c.description}">
+    <meta property="og:image" content="/static/calendars/{page.data.slug}.png">
+    <meta property="og:url" content="/pages/p/{page.data.slug}">
+    <meta property="product:price:amount" content="{c.priceFormatted}">
     <meta property="product:price:currency" content="USD">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{page.title}">
-    <meta name="twitter:description" content="{page.data.ogDescription ?: page.description}">
-    <meta name="twitter:image" content="{page.data.thumbnailUrl}">
+    <meta name="twitter:title" content="{c.title ?: page.title}">
+    <meta name="twitter:description" content="{c.ogDescription ?: c.description}">
+    <meta name="twitter:image" content="/static/calendars/{page.data.slug}.png">
 
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
         "@type": "Product",
-        "name": "{page.title}",
-        "description": "{page.description}",
-        "image": "{page.data.thumbnailUrl}",
+        "name": "{c.title ?: page.title}",
+        "description": "{c.description}",
+        "image": "/static/calendars/{page.data.slug}.png",
         "brand": {
             "@type": "Brand",
             "name": "Village Compute"
         },
         "offers": {
             "@type": "Offer",
-            "price": "{page.data.priceFormatted}",
+            "price": "{c.priceFormatted}",
             "priceCurrency": "USD",
             "availability": "https://schema.org/InStock",
-            "url": "{site.url}/p/{page.data.slug}"
+            "url": "/pages/p/{page.data.slug}"
         }
     }
     </script>
@@ -382,24 +385,30 @@
     <main>
         <div class="product-container">
             <div class="calendar-preview">
-                <div class="preview-svg-container" id="svg-container">
-                    {#insert /}
-                </div>
-                <img
-                    class="preview-thumbnail"
-                    src="{page.data.thumbnailUrl}"
-                    alt="{page.title} Preview"
-                    loading="eager"
-                    id="thumbnail"
-                    onclick="showFullSvg()"
+                {! SVG is loaded via object tag from static file !}
+                <object
+                    type="image/svg+xml"
+                    data="/static/calendars/{page.data.slug}.svg"
+                    class="preview-svg"
+                    id="svg-preview"
+                    style="width: 100%; height: auto;"
                 >
+                    {! Fallback to PNG thumbnail if SVG doesn't load !}
+                    <img
+                        class="preview-thumbnail"
+                        src="/static/calendars/{page.data.slug}.png"
+                        alt="{c.title ?: page.title} Preview"
+                        loading="eager"
+                        style="width: 100%; height: auto;"
+                    >
+                </object>
             </div>
 
             <div class="product-info">
-                <h1 class="product-title">{page.title}</h1>
-                <div class="product-price">${page.data.priceFormatted}</div>
+                <h1 class="product-title">{c.title ?: page.title}</h1>
+                <div class="product-price">${c.priceFormatted}</div>
 
-                <p class="product-description">{page.description}</p>
+                <p class="product-description">{c.description}</p>
 
                 <ul class="product-features">
                     <li><i class="pi pi-check-circle"></i> Premium 35" x 23" poster print</li>
@@ -412,14 +421,14 @@
                     <button
                         class="btn btn-primary"
                         id="add-to-cart-btn"
-                        data-template-id="{page.data.templateId}"
-                        data-template-name="{page.title}"
+                        data-template-id="{c.templateId}"
+                        data-template-name="{c.title}"
                     >
                         <i class="pi pi-shopping-cart"></i>
                         Add to Cart
                     </button>
 
-                    <a href="/?template={page.data.templateId}" class="btn btn-secondary">
+                    <a href="/?template={c.templateId}" class="btn btn-secondary">
                         <i class="pi pi-pencil"></i>
                         Customize This Calendar
                     </a>
@@ -445,14 +454,6 @@
     </footer>
 
     <script>
-        // Show full SVG on thumbnail click
-        function showFullSvg() {
-            const svgContainer = document.getElementById('svg-container');
-            const thumbnail = document.getElementById('thumbnail');
-            svgContainer.classList.add('loaded');
-            thumbnail.style.display = 'none';
-        }
-
         // Add to cart functionality
         document.getElementById('add-to-cart-btn')?.addEventListener('click', async function() {
             const btn = this;
@@ -551,3 +552,5 @@
     </script>
 </body>
 </html>
+{/if}
+{/for}
