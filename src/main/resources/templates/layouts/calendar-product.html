@@ -419,6 +419,7 @@
 
                 <div class="product-actions">
                     <button
+                        type="button"
                         class="btn btn-primary"
                         id="add-to-cart-btn"
                         data-template-id="{c.templateId}"
@@ -455,11 +456,17 @@
 
     <script>
         // Add to cart functionality
-        document.getElementById('add-to-cart-btn')?.addEventListener('click', async function() {
+        document.getElementById('add-to-cart-btn')?.addEventListener('click', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Add to cart clicked');
+
             const btn = this;
             const templateId = btn.dataset.templateId;
             const templateName = btn.dataset.templateName;
             const year = new Date().getFullYear() + 1;
+
+            console.log('Template:', templateId, templateName, year);
 
             // Get or create session ID
             let sessionId = localStorage.getItem('vc-session-id');
@@ -467,6 +474,7 @@
                 sessionId = 'sess_' + Math.random().toString(36).substring(2, 15);
                 localStorage.setItem('vc-session-id', sessionId);
             }
+            console.log('Session ID:', sessionId);
 
             btn.disabled = true;
             btn.innerHTML = '<i class="pi pi-spin pi-spinner spinner"></i> Adding...';
