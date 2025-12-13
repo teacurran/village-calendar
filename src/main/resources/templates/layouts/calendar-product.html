@@ -512,13 +512,13 @@
                 const result = await response.json();
 
                 if (result.data?.addToCart) {
-                    btn.innerHTML = '<i class="pi pi-check"></i> Added to Cart!';
+                    btn.innerHTML = '<i class="pi pi-check"></i> Added! Redirecting...';
                     btn.style.backgroundColor = '#059669';
 
-                    // Redirect to cart after short delay
+                    // Redirect to checkout after short delay
                     setTimeout(() => {
-                        window.location.href = '/cart';
-                    }, 1500);
+                        window.location.href = '/checkout';
+                    }, 800);
                 } else {
                     throw new Error(result.errors?.[0]?.message || 'Failed to add to cart');
                 }

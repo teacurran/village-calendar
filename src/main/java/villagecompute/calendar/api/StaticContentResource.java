@@ -141,6 +141,57 @@ public class StaticContentResource {
     }
 
     /**
+     * Get SVG for a specific calendar by template ID.
+     * Used by the cart page to show thumbnails.
+     *
+     * GET /api/static-content/template/{templateId}.svg
+     */
+    @GET
+    @Path("/template/{templateId}.svg")
+    @Produces("image/svg+xml")
+    @Transactional
+    public Response getCalendarSvgByTemplateId(@PathParam("templateId") String templateId) {
+        LOG.infof("Generating SVG for template ID: %s", templateId);
+
+        CalendarTemplate template = getTemplateById(templateId);
+        String svgContent = generateSvgForTemplateById(template);
+
+        return Response.ok(svgContent)
+                .header("Content-Disposition", "inline; filename=\"" + templateId + ".svg\"")
+                .build();
+    }
+
+    /**
+     * Get PNG thumbnail for a specific calendar by template ID.
+     * Used by the cart page to show thumbnails.
+     *
+     * GET /api/static-content/template/{templateId}.png
+     */
+    @GET
+    @Path("/template/{templateId}.png")
+    @Produces("image/png")
+    @Transactional
+    public Response getCalendarPngByTemplateId(@PathParam("templateId") String templateId) {
+        LOG.infof("Generating PNG for template ID: %s", templateId);
+
+        CalendarTemplate template = getTemplateById(templateId);
+        String svgContent = generateSvgForTemplateById(template);
+
+        try {
+            // Generate PNG thumbnail (400px width for cart)
+            byte[] pngBytes = pdfRenderingService.renderSVGToPNG(svgContent, 400);
+
+            return Response.ok(pngBytes)
+                    .header("Content-Disposition", "inline; filename=\"" + templateId + ".png\"")
+                    .header("Cache-Control", "public, max-age=86400") // Cache for 1 day
+                    .build();
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to generate PNG for template ID: %s", templateId);
+            throw new WebApplicationException("Failed to generate PNG", Response.Status.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
      * Legacy endpoint - kept for backwards compatibility.
      * Returns all template data including SVG content.
      *
@@ -187,9 +238,30 @@ public class StaticContentResource {
         return template;
     }
 
-    private String generateSvgForTemplate(CalendarTemplate template) {
+    private CalendarTemplate getTemplateById(String templateId) {
         // Check cache first
-        String cached = svgCache.get(template.slug);
+        CalendarTemplate cached = templateCache.get(templateId);
+        if (cached != null) {
+            return cached;
+        }
+
+        // Query database
+        try {
+            CalendarTemplate template = CalendarTemplate.findById(java.util.UUID.fromString(templateId));
+            if (template == null) {
+                throw new WebApplicationException("Template not found: " + templateId, Response.Status.NOT_FOUND);
+            }
+            templateCache.put(templateId, template);
+            return template;
+        } catch (IllegalArgumentException e) {
+            throw new WebApplicationException("Invalid template ID: " + templateId, Response.Status.BAD_REQUEST);
+        }
+    }
+
+    private String generateSvgForTemplate(CalendarTemplate template) {
+        // Check cache first - use slug as key
+        String cacheKey = template.slug != null ? template.slug : template.id.toString();
+        String cached = svgCache.get(cacheKey);
         if (cached != null) {
             return cached;
         }
@@ -198,7 +270,23 @@ public class StaticContentResource {
         CalendarRenderingService.CalendarConfig config = buildConfigFromTemplate(template, year);
         String svgContent = calendarRenderingService.generateCalendarSVG(config);
 
-        svgCache.put(template.slug, svgContent);
+        svgCache.put(cacheKey, svgContent);
+        return svgContent;
+    }
+
+    private String generateSvgForTemplateById(CalendarTemplate template) {
+        // Use ID as cache key
+        String cacheKey = template.id.toString();
+        String cached = svgCache.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        int year = LocalDate.now().getYear() + 1;
+        CalendarRenderingService.CalendarConfig config = buildConfigFromTemplate(template, year);
+        String svgContent = calendarRenderingService.generateCalendarSVG(config);
+
+        svgCache.put(cacheKey, svgContent);
         return svgContent;
     }
 

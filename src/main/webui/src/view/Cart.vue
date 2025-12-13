@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import {
   useCartStore,
@@ -20,21 +20,11 @@ const router = useRouter();
 const cartStore = useCartStore();
 const toast = useToast();
 
-// Store for calendar SVGs
-const calendarSvgs = ref<Record<string, string>>({});
+// Preview modal state
 const showPreviewModal = ref(false);
-const previewCalendarSvg = ref("");
+const previewImageUrl = ref("");
 const previewCalendarName = ref("");
 const loading = ref(false);
-
-interface UserCalendar {
-  id: string;
-  name?: string;
-  year?: number;
-  generatedSvg?: string;
-  svgContent?: string;
-}
-const allUserCalendars = ref<UserCalendar[]>([]);
 
 // Breadcrumbs
 const breadcrumbItems = computed(() => [{ label: "Cart" }]);
@@ -44,23 +34,15 @@ const cartItems = computed(() => cartStore.items || []);
 const cartSubtotal = computed(() => cartStore.subtotal || 0);
 const cartItemCount = computed(() => cartStore.itemCount || 0);
 
-// Check if item is a calendar (has productCode 'print' or 'pdf', or has calendar config)
+// Check if item is a calendar (has productCode 'print' or 'pdf', or has templateId)
 const isCalendarItem = (item: CartItem) => {
   // Check productCode
   if (item.productCode === "print" || item.productCode === "pdf") {
     return true;
   }
-  // Check configuration for calendar data
-  if (item.configuration) {
-    try {
-      const config =
-        typeof item.configuration === "string"
-          ? JSON.parse(item.configuration)
-          : item.configuration;
-      return config.svgContent || config.year || config.productCode;
-    } catch {
-      // Ignore JSON parse errors
-    }
+  // Has templateId means it's a calendar
+  if (item.templateId) {
+    return true;
   }
   return false;
 };
@@ -86,77 +68,22 @@ const getCalendarConfig = (item: CartItem): CalendarConfiguration | null => {
   return null;
 };
 
-// Get calendar SVG for a specific calendar ID
-const fetchCalendarSvg = async (calendarId: string) => {
-  if (calendarSvgs.value[calendarId]) {
-    return calendarSvgs.value[calendarId];
+// Get thumbnail URL for a cart item
+const getThumbnailUrl = (item: CartItem): string => {
+  // Use template-based PNG endpoint
+  if (item.templateId) {
+    return `/api/static-content/template/${item.templateId}.png`;
   }
-
-  try {
-    // Fetch only the specific calendar's SVG
-    const response = await fetch(
-      `/api/calendar-templates/user/calendars/${calendarId}/preview`,
-    );
-    if (response.ok) {
-      const svg = await response.text();
-      calendarSvgs.value[calendarId] = svg;
-      return svg;
-    }
-  } catch (error) {
-    console.error(`Failed to fetch calendar SVG for ${calendarId}:`, error);
-  }
-
-  return null;
+  return "";
 };
 
-// Load calendar SVGs for cart items
-const loadCalendarSvgs = async () => {
-  if (!cartStore.items || cartStore.items.length === 0) return;
-
-  for (const item of cartStore.items) {
-    const config = getCalendarConfig(item);
-
-    if (config) {
-      const calendarKey = item.id;
-
-      if (config.svgContent) {
-        calendarSvgs.value[calendarKey] = config.svgContent;
-      } else if (config.generatedSvg) {
-        calendarSvgs.value[calendarKey] = config.generatedSvg;
-      } else if (config.calendarId) {
-        const svg = await fetchCalendarSvg(config.calendarId);
-        if (svg) {
-          calendarSvgs.value[calendarKey] = svg;
-        } else {
-          const calendar = allUserCalendars.value.find(
-            (c) => c.id === config.calendarId,
-          );
-          if (calendar) {
-            if (calendar.generatedSvg) {
-              calendarSvgs.value[calendarKey] = calendar.generatedSvg;
-            } else if (calendar.svgContent) {
-              calendarSvgs.value[calendarKey] = calendar.svgContent;
-            }
-          }
-        }
-      }
-    }
-  }
-};
-
-// Show calendar preview
+// Show calendar preview in modal
 const showCalendarPreview = (item: CartItem) => {
-  const config = getCalendarConfig(item);
-  if (config) {
-    const calendarKey = item.id;
-    if (calendarSvgs.value[calendarKey]) {
-      previewCalendarSvg.value = calendarSvgs.value[calendarKey];
-      previewCalendarName.value =
-        config.name ||
-        item.templateName ||
-        `Calendar ${item.year || config.year}`;
-      showPreviewModal.value = true;
-    }
+  if (item.templateId) {
+    // Use SVG for higher quality in modal
+    previewImageUrl.value = `/api/static-content/template/${item.templateId}.svg`;
+    previewCalendarName.value = item.templateName || `Calendar ${item.year}`;
+    showPreviewModal.value = true;
   }
 };
 
@@ -216,7 +143,6 @@ async function removeItem(item: CartItem) {
 async function clearCart() {
   try {
     await cartStore.clearCart();
-    calendarSvgs.value = {};
     toast.add({
       severity: "success",
       summary: "Cart Cleared",
@@ -248,20 +174,10 @@ onMounted(async () => {
   loading.value = true;
   try {
     await cartStore.fetchCart();
-    await loadCalendarSvgs();
   } finally {
     loading.value = false;
   }
 });
-
-// Watch for cart changes and reload SVGs
-watch(
-  () => cartStore.items,
-  async () => {
-    await loadCalendarSvgs();
-  },
-  { deep: true },
-);
 </script>
 
 <template>
@@ -322,26 +238,14 @@ watch(
                 <div class="flex gap-4">
                   <!-- Item Image/Preview -->
                   <div class="flex-shrink-0">
-                    <!-- Calendar Preview -->
-                    <div
-                      v-if="isCalendarItem(item) && calendarSvgs[item.id]"
+                    <!-- Calendar Thumbnail (PNG from API) -->
+                    <img
+                      v-if="isCalendarItem(item) && item.templateId"
+                      :src="getThumbnailUrl(item)"
+                      :alt="item.templateName"
                       class="calendar-thumbnail"
                       @click="showCalendarPreview(item)"
-                    >
-                      <div
-                        style="
-                          width: 3500px;
-                          height: 2250px;
-                          transform: scale(0.0514);
-                          transform-origin: top left;
-                          pointer-events: none;
-                          position: absolute;
-                          top: 0;
-                          left: 0;
-                        "
-                        v-html="calendarSvgs[item.id]"
-                      ></div>
-                    </div>
+                    />
                     <!-- Regular Product Image -->
                     <img
                       v-else-if="item.imageUrl"
@@ -494,13 +398,22 @@ watch(
       :header="previewCalendarName"
       :modal="true"
       :dismissable-mask="true"
-      :style="{ width: '90vw', maxWidth: '800px' }"
+      :style="{ width: '90vw', maxWidth: '900px' }"
     >
-      <div
-        v-if="previewCalendarSvg"
-        class="calendar-preview bg-white p-4 rounded"
-        v-html="previewCalendarSvg"
-      />
+      <div class="calendar-preview bg-white p-4 rounded">
+        <object
+          v-if="previewImageUrl"
+          :data="previewImageUrl"
+          type="image/svg+xml"
+          class="w-full h-auto"
+        >
+          <img
+            :src="previewImageUrl.replace('.svg', '.png')"
+            alt="Calendar preview"
+            class="w-full h-auto"
+          />
+        </object>
+      </div>
     </Dialog>
   </div>
 </template>
@@ -521,22 +434,21 @@ watch(
   overflow: hidden;
 }
 
-/* Calendar thumbnail shows full design with correct aspect ratio (3500:2250) */
-.calendar-thumbnail {
+/* Calendar thumbnail as img element with correct aspect ratio (3500:2250) */
+img.calendar-thumbnail {
   width: 180px;
   height: 116px;
+  object-fit: cover;
   background: white;
   border: 1px solid #90caf9;
   border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
   cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
-.calendar-thumbnail:hover {
+img.calendar-thumbnail:hover {
   border-color: #1976d2;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
