@@ -12,7 +12,7 @@
     <meta property="og:title" content="{page.title}">
     <meta property="og:description" content="{page.data.ogDescription ?: page.description}">
     <meta property="og:image" content="{page.data.thumbnailUrl}">
-    <meta property="og:url" content="{site.url}/pages/p/{page.data.slug}">
+    <meta property="og:url" content="{site.url}/p/{page.data.slug}">
     <meta property="product:price:amount" content="{page.data.priceFormatted}">
     <meta property="product:price:currency" content="USD">
 
@@ -39,7 +39,7 @@
             "price": "{page.data.priceFormatted}",
             "priceCurrency": "USD",
             "availability": "https://schema.org/InStock",
-            "url": "{site.url}/pages/p/{page.data.slug}"
+            "url": "{site.url}/p/{page.data.slug}"
         }
     }
     </script>

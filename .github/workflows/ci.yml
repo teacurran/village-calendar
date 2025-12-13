@@ -145,6 +145,73 @@ jobs:
           echo "Generated calendar pages:"
           ls -la src/main/resources/content/p/
 
+      - name: Generate index page
+        run: |
+          API_URL="${{ steps.api-url.outputs.url }}"
+          RESPONSE=$(curl -s "${API_URL}/api/static-content/templates" || echo "[]")
+
+          # Check if we got valid JSON with templates
+          if ! echo "$RESPONSE" | jq -e '.' > /dev/null 2>&1; then
+            echo "No valid response, skipping index generation"
+            exit 0
+          fi
+
+          COUNT=$(echo "$RESPONSE" | jq 'length')
+          if [ "$COUNT" == "0" ]; then
+            echo "No templates found, skipping index generation"
+            exit 0
+          fi
+
+          echo "Generating index page with $COUNT products"
+
+          # Build product cards HTML
+          PRODUCT_CARDS=""
+          echo "$RESPONSE" | jq -c '.[]' | while read -r template; do
+            SLUG=$(echo "$template" | jq -r '.slug')
+            NAME=$(echo "$template" | jq -r '.name')
+            DESCRIPTION=$(echo "$template" | jq -r '.description')
+            THUMBNAIL_URL=$(echo "$template" | jq -r '.thumbnailUrl')
+            PRICE=$(echo "$template" | jq -r '.priceFormatted')
+
+            # Append card to file (using file to preserve across subshell)
+            cat >> /tmp/product_cards.html << CARDEOF
+          <a href="/pages/p/${SLUG}" class="product-card">
+              <img class="product-image" src="${THUMBNAIL_URL}" alt="${NAME}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+              <div class="product-image-placeholder" style="display:none">
+                  <i class="pi pi-calendar"></i>
+              </div>
+              <div class="product-details">
+                  <h2 class="product-name">${NAME}</h2>
+                  <p class="product-description">${DESCRIPTION}</p>
+                  <div class="product-footer">
+                      <span class="product-price">\$${PRICE}</span>
+                      <span class="view-btn">View <i class="pi pi-arrow-right"></i></span>
+                  </div>
+              </div>
+          </a>
+          CARDEOF
+          done
+
+          # Read product cards from temp file
+          PRODUCT_CARDS=""
+          if [ -f /tmp/product_cards.html ]; then
+            PRODUCT_CARDS=$(cat /tmp/product_cards.html)
+          fi
+
+          # Write index.html
+          cat > src/main/resources/content/p/index.html << INDEXEOF
+          ---
+          title: "Pre-Designed Calendars"
+          layout: calendar-index
+          description: "Browse our collection of beautiful, customizable calendars. Premium prints shipped to your door."
+          date: $(date +%Y-%m-%d)
+          ---
+          ${PRODUCT_CARDS}
+          INDEXEOF
+
+          echo "Created: src/main/resources/content/p/index.html"
+          cat src/main/resources/content/p/index.html | head -30
+
       - name: Upload generated content
         uses: actions/upload-artifact@v4
         with:
