@@ -472,6 +472,7 @@
             btn.innerHTML = '<i class="pi pi-spin pi-spinner spinner"></i> Adding...';
 
             try {
+                // Add directly to cart using template - cart stores template info
                 const response = await fetch('/graphql', {
                     method: 'POST',
                     headers: {
@@ -480,66 +481,37 @@
                     },
                     body: JSON.stringify({
                         query: `
-                            mutation CreateSessionCalendar($sessionId: String!, $name: String!, $year: Int!, $templateId: String!) {
-                                createSessionCalendar(sessionId: $sessionId, name: $name, year: $year, templateId: $templateId) {
+                            mutation AddToCart($input: AddToCartInput!) {
+                                addToCart(input: $input) {
                                     id
-                                    name
+                                    itemCount
                                 }
                             }
                         `,
                         variables: {
-                            sessionId: sessionId,
-                            templateId: templateId,
-                            name: templateName,
-                            year: year
+                            input: {
+                                templateId: templateId,
+                                templateName: templateName,
+                                year: year,
+                                quantity: 1,
+                                productCode: 'print'
+                            }
                         }
                     })
                 });
 
                 const result = await response.json();
 
-                if (result.data?.createSessionCalendar?.id) {
-                    // Calendar created, now add to cart
-                    const calendarId = result.data.createSessionCalendar.id;
+                if (result.data?.addToCart) {
+                    btn.innerHTML = '<i class="pi pi-check"></i> Added to Cart!';
+                    btn.style.backgroundColor = '#059669';
 
-                    const cartResponse = await fetch('/graphql', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Session-ID': sessionId
-                        },
-                        body: JSON.stringify({
-                            query: `
-                                mutation AddToCart($calendarId: ID!, $productCode: String!, $quantity: Int!) {
-                                    addToCart(calendarId: $calendarId, productCode: $productCode, quantity: $quantity) {
-                                        id
-                                        itemCount
-                                    }
-                                }
-                            `,
-                            variables: {
-                                calendarId: calendarId,
-                                productCode: 'print',
-                                quantity: 1
-                            }
-                        })
-                    });
-
-                    const cartResult = await cartResponse.json();
-
-                    if (cartResult.data?.addToCart) {
-                        btn.innerHTML = '<i class="pi pi-check"></i> Added to Cart!';
-                        btn.style.backgroundColor = '#059669';
-
-                        // Redirect to cart after short delay
-                        setTimeout(() => {
-                            window.location.href = '/cart';
-                        }, 1500);
-                    } else {
-                        throw new Error(cartResult.errors?.[0]?.message || 'Failed to add to cart');
-                    }
+                    // Redirect to cart after short delay
+                    setTimeout(() => {
+                        window.location.href = '/cart';
+                    }, 1500);
                 } else {
-                    throw new Error(result.errors?.[0]?.message || 'Failed to create calendar');
+                    throw new Error(result.errors?.[0]?.message || 'Failed to add to cart');
                 }
             } catch (err) {
                 console.error('Add to cart error:', err);
