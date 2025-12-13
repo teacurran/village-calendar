@@ -468,11 +468,12 @@
 
             console.log('Template:', templateId, templateName, year);
 
-            // Get or create session ID
-            let sessionId = localStorage.getItem('vc-session-id');
+            // Get or create session ID - must match Vue app's sessionService.ts key
+            const SESSION_KEY = 'village_calendar_session_id';
+            let sessionId = localStorage.getItem(SESSION_KEY);
             if (!sessionId) {
-                sessionId = 'sess_' + Math.random().toString(36).substring(2, 15);
-                localStorage.setItem('vc-session-id', sessionId);
+                sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
+                localStorage.setItem(SESSION_KEY, sessionId);
             }
             console.log('Session ID:', sessionId);
 
