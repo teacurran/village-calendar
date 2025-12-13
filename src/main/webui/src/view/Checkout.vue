@@ -32,11 +32,16 @@ const calendarSvgs = ref<Record<string, string>>({});
 const showPreviewModal = ref(false);
 const previewCalendarSvg = ref("");
 const previewCalendarName = ref("");
+const previewImageUrl = ref("");
 
-// Check if item is a calendar (has productCode 'print' or 'pdf', or has calendar config)
+// Check if item is a calendar (has productCode 'print' or 'pdf', templateId, or has calendar config)
 const isCalendarItem = (item: any) => {
   // Check productCode
   if (item.productCode === "print" || item.productCode === "pdf") {
+    return true;
+  }
+  // Check for templateId (template-based cart items)
+  if (item.templateId) {
     return true;
   }
   // Check configuration for calendar data
@@ -52,6 +57,14 @@ const isCalendarItem = (item: any) => {
     }
   }
   return false;
+};
+
+// Get thumbnail URL for a cart item (use template-based PNG endpoint)
+const getThumbnailUrl = (item: any): string => {
+  if (item.templateId) {
+    return `/api/static-content/template/${item.templateId}.png`;
+  }
+  return "";
 };
 
 // Check if item is a digital product (PDF)
@@ -159,11 +172,21 @@ const loadCalendarSvgs = async () => {
 
 // Show calendar preview
 const showCalendarPreview = (item: any) => {
+  // Handle template-based items (pre-designed calendars)
+  if (item.templateId) {
+    previewImageUrl.value = `/api/static-content/template/${item.templateId}.svg`;
+    previewCalendarSvg.value = ""; // Clear SVG, use image instead
+    previewCalendarName.value = item.templateName || `${item.year} Calendar`;
+    showPreviewModal.value = true;
+    return;
+  }
+  // Handle custom calendars with configuration
   const config = getCalendarConfig(item);
   if (config) {
     const calendarKey = item.id;
     if (calendarSvgs.value[calendarKey]) {
       previewCalendarSvg.value = calendarSvgs.value[calendarKey];
+      previewImageUrl.value = ""; // Clear image, use SVG instead
       previewCalendarName.value = config.name || `${config.year} Calendar`;
       showPreviewModal.value = true;
     }
@@ -1228,9 +1251,24 @@ watch(
         <div class="cart-items">
           <div v-for="item in cartItems" :key="item.id" class="cart-item">
             <div class="item-image">
-              <!-- Calendar item display -->
+              <!-- Template-based calendar thumbnail (from pre-designed calendars) -->
               <div
-                v-if="isCalendarItem(item) && getCalendarConfig(item)"
+                v-if="item.templateId"
+                class="image-placeholder calendar-preview"
+                :title="`Click to preview ${item.templateName || 'calendar'}`"
+                style="cursor: pointer; position: relative"
+                @click="showCalendarPreview(item)"
+              >
+                <img
+                  :src="getThumbnailUrl(item)"
+                  :alt="item.templateName"
+                  class="checkout-calendar-thumbnail"
+                />
+                <span class="item-quantity">{{ item.quantity }}</span>
+              </div>
+              <!-- Custom calendar with configuration -->
+              <div
+                v-else-if="isCalendarItem(item) && getCalendarConfig(item)"
                 class="image-placeholder calendar-preview"
                 :title="`Click to preview ${getCalendarConfig(item).name || 'calendar'}`"
                 style="cursor: pointer; position: relative"
@@ -1289,7 +1327,7 @@ watch(
             </div>
             <div class="item-details">
               <div class="item-name">
-                {{ item.productName }}
+                {{ item.templateName || item.productName }}
                 <span
                   v-if="isCalendarItem(item) && getCalendarConfig(item)"
                   class="calendar-name"
@@ -1300,8 +1338,11 @@ watch(
                   }}
                 </span>
               </div>
+              <div v-if="item.templateId && item.year" class="item-variant">
+                <i class="pi pi-calendar mr-1"></i>{{ item.year }} Calendar
+              </div>
               <div
-                v-if="isCalendarItem(item) && getCalendarConfig(item)"
+                v-else-if="isCalendarItem(item) && getCalendarConfig(item)"
                 class="item-variant"
               >
                 <i class="pi pi-calendar mr-1"></i
@@ -1370,8 +1411,22 @@ watch(
     :modal="true"
     :dismissable-mask="true"
   >
+    <!-- SVG from API (for template-based calendars) -->
+    <object
+      v-if="previewImageUrl"
+      :data="previewImageUrl"
+      type="image/svg+xml"
+      class="calendar-preview-object"
+    >
+      <img
+        :src="previewImageUrl.replace('.svg', '.png')"
+        alt="Calendar preview"
+        class="calendar-preview-fallback"
+      />
+    </object>
+    <!-- Inline SVG (for custom calendars with configuration) -->
     <div
-      v-if="previewCalendarSvg"
+      v-else-if="previewCalendarSvg"
       class="calendar-preview-content"
       v-html="previewCalendarSvg"
     />
@@ -1693,6 +1748,13 @@ watch(
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.checkout-calendar-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
 .calendar-icon {
   display: flex;
   flex-direction: column;
@@ -1821,6 +1883,19 @@ watch(
 }
 
 .calendar-preview-content :deep(svg) {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+}
+
+.calendar-preview-object {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  display: block;
+}
+
+.calendar-preview-fallback {
   width: 100%;
   height: auto;
   max-height: 70vh;
