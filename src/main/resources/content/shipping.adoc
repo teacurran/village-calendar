@@ -7,7 +7,7 @@ description: Shipping information for Village Compute Calendar - Learn about our
 
 == Shipping Overview
 
-Village Compute Calendar ships to addresses within the United States. We partner with reliable carriers to ensure your custom calendars arrive safely and on time.
+Village Compute Calendar ships to addresses within the United States and Canada.
 
 == Processing Time
 
@@ -15,18 +15,9 @@ Village Compute Calendar ships to addresses within the United States. We partner
 
 Orders typically require **5-7 business days** for production before shipping. This includes:
 
-* Quality printing of your custom calendar
-* Careful inspection and quality control
-* Professional packaging
-
 === Rush Processing
 
-Need it faster? Rush processing is available for an additional fee:
-
-* **Express (3-5 business days)**: +$10
-* **Priority (1-2 business days)**: +$20
-
-_Rush processing times do not include shipping transit time._
+We do not offer rush processing at this time.  All orders are processed in the order they are received.
 
 == Shipping Options
 
@@ -60,35 +51,6 @@ Once your order ships, you'll receive a confirmation email with tracking informa
 1. Logging into your account
 2. Visiting the "Orders" section
 3. Clicking on your order to view tracking details
-
-== Delivery Information
-
-=== Delivery Address
-
-Please ensure your shipping address is accurate and complete. We are not responsible for orders delivered to incorrect addresses provided by the customer.
-
-=== Delivery Attempts
-
-Carriers typically make multiple delivery attempts. If delivery is unsuccessful, your package may be:
-
-* Left at a nearby pickup location
-* Returned to sender after 5 business days
-
-=== Signature Requirements
-
-Orders over $100 may require a signature upon delivery for security purposes.
-
-== Holiday Shipping
-
-During peak holiday seasons (November-December), we recommend:
-
-* Ordering early to ensure timely delivery
-* Selecting expedited shipping for guaranteed delivery dates
-* Checking our holiday shipping deadlines (published annually)
-
-== International Shipping
-
-Currently, we only ship within the United States. We're working on expanding our shipping options and will announce international shipping when available.
 
 == Damaged or Lost Packages
 

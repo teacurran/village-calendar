@@ -2,100 +2,28 @@
 title: Refund Policy
 layout: page
 date: 2025-12-11
-description: Refund Policy for Village Compute Calendar - Learn about our return, refund, and exchange policies.
+description: Refund Policy for Village Compute Calendar
 ---
 
-== Our Commitment
+== Refunds & Returns
 
-At Village Compute, we take pride in the quality of our custom calendars. If you're not completely satisfied with your order, we're here to help.
+Our calendars are custom-made to order. We offer refunds or replacements for:
 
-== Custom Products Policy
+* **Printing defects** - misprints, smudges, blurry images (not from low-res uploads)
+* **Production errors** - wrong format, missing pages, incorrect layout
+* **Shipping damage** - bent, torn, or water-damaged items
 
-Because our calendars are custom-made with your personal photos and content, we handle returns and refunds on a case-by-case basis. However, we guarantee:
+Refunds are not available for customer-provided errors or change of mind after printing.
 
-* **Quality Assurance**: Every calendar must meet our quality standards
-* **Accurate Printing**: Your photos and content will be printed as previewed
-* **Safe Delivery**: Products should arrive undamaged
+== How to Request
 
-== Eligible for Refund
+Email **support@villagecompute.com** within 14 days of delivery with your order number and photos of the issue. We'll respond within 2-3 business days.
 
-You may be eligible for a full refund or replacement if:
+== Cancellations
 
-=== Print Quality Issues
+Orders can be cancelled for a full refund before production starts (typically within 24 hours).
 
-* Significant color discrepancies from the preview
-* Blurry or distorted images (not due to low-resolution source photos)
-* Misprints, smudges, or ink problems
-* Missing pages or incorrect binding
+== Contact
 
-=== Production Errors
-
-* Wrong calendar format delivered
-* Incorrect dates or layout errors caused by our system
-* Missing customizations that were part of your order
-
-=== Shipping Damage
-
-* Calendars that arrive bent, torn, or water-damaged
-* Crushed or damaged packaging affecting the product
-
-== Not Eligible for Refund
-
-Refunds typically cannot be provided for:
-
-* Low quality due to low-resolution source images (we provide warnings during upload)
-* Typos or errors in text you provided
-* Change of mind after order has been printed
-* Color variations within normal printing tolerances
-* Orders placed with incorrect shipping information
-
-== How to Request a Refund
-
-=== Step 1: Contact Us
-
-Email us at **refunds@villagecompute.com** within **14 days** of receiving your order. Include:
-
-* Your order number
-* Description of the issue
-* Photos showing the problem (for quality/damage issues)
-
-=== Step 2: Review Process
-
-Our team will review your request within **2-3 business days** and respond with:
-
-* Approval for refund or replacement
-* Request for additional information
-* Explanation if the request doesn't qualify
-
-=== Step 3: Resolution
-
-If approved, you can choose:
-
-* **Full Refund**: Returned to original payment method within 5-7 business days
-* **Replacement**: We'll reprint and ship a new calendar at no cost
-* **Store Credit**: Receive credit for a future order (with 10% bonus)
-
-== Cancellation Policy
-
-=== Before Production
-
-Orders can be cancelled with a full refund if production hasn't started (typically within 24 hours of placing the order).
-
-=== During Production
-
-Once production begins, orders cannot be cancelled. However, you may be eligible for the refund process described above if there are quality issues.
-
-== Exchange Policy
-
-We don't offer direct exchanges, but if you receive a defective product, we'll happily send a replacement as described in our refund process.
-
-== Contact Information
-
-For refund inquiries:
-
-* **Email**: refunds@villagecompute.com
-* **Response Time**: 2-3 business days
+* **Email**: support@villagecompute.com
 * **Phone**: 802-222-6147
-* **Hours**: Monday-Friday, 9am-5pm EST
-
-We're committed to ensuring you love your custom calendar. Don't hesitate to reach out if you have any concerns!
