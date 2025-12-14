@@ -1464,6 +1464,80 @@ public class CalendarRenderingService {
     return wrapper.toString();
   }
 
+  /**
+   * Wraps the generated SVG with a white background and margins for preview/thumbnail rendering.
+   * Uses the same page aspect ratio (35:23) as the print layout to match the artboard.
+   * This is a public method for use by StaticContentResource for PNG generation.
+   */
+  public String wrapSvgForPreview(String innerSvg) {
+    // Extract the viewBox from the inner SVG to get its dimensions
+    java.util.regex.Pattern viewBoxPattern = java.util.regex.Pattern.compile("viewBox=\"([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\"");
+    java.util.regex.Matcher matcher = viewBoxPattern.matcher(innerSvg);
+
+    if (!matcher.find()) {
+      // If no viewBox, return original SVG with just a white background added
+      return innerSvg.replaceFirst("<svg([^>]*)>", "<svg$1><rect width=\"100%\" height=\"100%\" fill=\"white\"/>");
+    }
+
+    float innerWidth = Float.parseFloat(matcher.group(3));
+    float innerHeight = Float.parseFloat(matcher.group(4));
+
+    // Use the same page aspect ratio as print (35:23)
+    // We'll use a coordinate system where the page is PAGE_WIDTH_INCHES x PAGE_HEIGHT_INCHES scaled by 100
+    float pageWidth = PAGE_WIDTH_INCHES * 100;  // 3500
+    float pageHeight = PAGE_HEIGHT_INCHES * 100; // 2300
+    float marginSize = MARGIN_INCHES * 100;  // 50
+    float printableWidth = PRINTABLE_WIDTH_INCHES * 100;  // 3400
+    float printableHeight = PRINTABLE_HEIGHT_INCHES * 100; // 2200
+
+    // Calculate scale to fit inner SVG within printable area while maintaining aspect ratio
+    float scaleX = printableWidth / innerWidth;
+    float scaleY = printableHeight / innerHeight;
+    float scale = Math.min(scaleX, scaleY);
+
+    // Calculate the actual size of the scaled content
+    float scaledWidth = innerWidth * scale;
+    float scaledHeight = innerHeight * scale;
+
+    // Calculate offset - center horizontally, align to top vertically (with margin)
+    float offsetX = marginSize + (printableWidth - scaledWidth) / 2;
+    float offsetY = marginSize;
+
+    // Remove the <?xml...?> declaration if present from inner SVG
+    String cleanedInnerSvg = innerSvg.replaceFirst("<\\?xml[^?]*\\?>\\s*", "");
+
+    // Build the wrapper SVG
+    StringBuilder wrapper = new StringBuilder();
+    wrapper.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+    wrapper.append(String.format(
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%.0f\" height=\"%.0f\" viewBox=\"0 0 %.0f %.0f\">\n",
+      pageWidth, pageHeight, pageWidth, pageHeight
+    ));
+
+    // Add a white background for the full page
+    wrapper.append(String.format(
+      "  <rect width=\"%.0f\" height=\"%.0f\" fill=\"white\"/>\n",
+      pageWidth, pageHeight
+    ));
+
+    // Position and scale the inner SVG content within the margins
+    wrapper.append(String.format(
+      "  <g transform=\"translate(%.2f, %.2f) scale(%.6f)\">\n",
+      offsetX, offsetY, scale
+    ));
+
+    // Insert the inner SVG content (strip the outer <svg> tags)
+    String innerContent = cleanedInnerSvg
+      .replaceFirst("<svg[^>]*>", "")  // Remove opening <svg> tag
+      .replaceFirst("</svg>\\s*$", ""); // Remove closing </svg> tag
+
+    wrapper.append(innerContent);
+    wrapper.append("\n  </g>\n");
+    wrapper.append("</svg>");
+
+    return wrapper.toString();
+  }
+
   // Get common holidays for a year
   public Set<String> getHolidays(int year, String country) {
     Set<String> holidays = new HashSet<>();

@@ -131,9 +131,12 @@ public class StaticContentResource {
         CalendarTemplate template = getTemplateBySlug(slug);
         String svgContent = generateSvgForTemplate(template);
 
+        // Wrap SVG with white background and margins to match print artboard
+        String wrappedSvg = calendarRenderingService.wrapSvgForPreview(svgContent);
+
         try {
             // Generate PNG thumbnail (1200px width for social sharing)
-            byte[] pngBytes = pdfRenderingService.renderSVGToPNG(svgContent, 1200);
+            byte[] pngBytes = pdfRenderingService.renderSVGToPNG(wrappedSvg, 1200);
 
             return Response.ok(pngBytes)
                     .header("Content-Disposition", "inline; filename=\"" + slug + ".png\"")
@@ -181,9 +184,12 @@ public class StaticContentResource {
         CalendarTemplate template = getTemplateById(templateId);
         String svgContent = generateSvgForTemplateById(template);
 
+        // Wrap SVG with white background and margins to match print artboard
+        String wrappedSvg = calendarRenderingService.wrapSvgForPreview(svgContent);
+
         try {
             // Generate PNG thumbnail (400px width for cart)
-            byte[] pngBytes = pdfRenderingService.renderSVGToPNG(svgContent, 400);
+            byte[] pngBytes = pdfRenderingService.renderSVGToPNG(wrappedSvg, 400);
 
             return Response.ok(pngBytes)
                     .header("Content-Disposition", "inline; filename=\"" + templateId + ".png\"")
