@@ -322,4 +322,209 @@ public class CalendarGenerationServiceTest {
         assertEquals("#cccccc", capturedConfig.moonBorderColor);
         assertEquals(1.0, capturedConfig.moonBorderWidth, 0.001);
     }
+
+    @Test
+    public void testGenerateCalendar_MoonDisplayModeIllumination_DerivesBoolean() {
+        // Arrange: Config has moonDisplayMode but NOT explicit showMoonIllumination
+        String moonDisplayModeJson = """
+            {
+              "moonDisplayMode": "illumination",
+              "moonSize": 20,
+              "latitude": 44.2172,
+              "longitude": -72.2011
+            }
+            """;
+
+        try {
+            testUserCalendar.configuration = objectMapper.readTree(moonDisplayModeJson);
+            testUserCalendar.template = null; // No template to avoid merging
+        } catch (Exception e) {
+            fail("Failed to parse JSON: " + e.getMessage());
+        }
+
+        String mockSvg = "<svg>test</svg>";
+        byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
+        String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
+
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
+        when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
+
+        // Act
+        String result = calendarGenerationService.generateCalendar(testUserCalendar);
+
+        // Assert: moonDisplayMode="illumination" should derive showMoonIllumination=true
+        assertNotNull(result);
+
+        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
+                ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
+        verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
+
+        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        assertTrue(capturedConfig.showMoonIllumination,
+                "showMoonIllumination should be derived from moonDisplayMode='illumination'");
+        assertFalse(capturedConfig.showMoonPhases,
+                "showMoonPhases should be false when moonDisplayMode='illumination'");
+        assertFalse(capturedConfig.showFullMoonOnly,
+                "showFullMoonOnly should be false when moonDisplayMode='illumination'");
+    }
+
+    @Test
+    public void testGenerateCalendar_MoonDisplayModePhases_DerivesBoolean() {
+        // Arrange: Config has moonDisplayMode="phases"
+        String moonDisplayModeJson = """
+            {
+              "moonDisplayMode": "phases",
+              "moonSize": 15
+            }
+            """;
+
+        try {
+            testUserCalendar.configuration = objectMapper.readTree(moonDisplayModeJson);
+            testUserCalendar.template = null;
+        } catch (Exception e) {
+            fail("Failed to parse JSON: " + e.getMessage());
+        }
+
+        String mockSvg = "<svg>test</svg>";
+        byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
+        String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
+
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
+        when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
+
+        // Act
+        calendarGenerationService.generateCalendar(testUserCalendar);
+
+        // Assert: moonDisplayMode="phases" should derive showMoonPhases=true
+        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
+                ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
+        verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
+
+        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        assertTrue(capturedConfig.showMoonPhases,
+                "showMoonPhases should be derived from moonDisplayMode='phases'");
+        assertFalse(capturedConfig.showMoonIllumination,
+                "showMoonIllumination should be false when moonDisplayMode='phases'");
+    }
+
+    @Test
+    public void testGenerateCalendar_MoonDisplayModeFullOnly_DerivesBoolean() {
+        // Arrange: Config has moonDisplayMode="full-only"
+        String moonDisplayModeJson = """
+            {
+              "moonDisplayMode": "full-only"
+            }
+            """;
+
+        try {
+            testUserCalendar.configuration = objectMapper.readTree(moonDisplayModeJson);
+            testUserCalendar.template = null;
+        } catch (Exception e) {
+            fail("Failed to parse JSON: " + e.getMessage());
+        }
+
+        String mockSvg = "<svg>test</svg>";
+        byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
+        String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
+
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
+        when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
+
+        // Act
+        calendarGenerationService.generateCalendar(testUserCalendar);
+
+        // Assert: moonDisplayMode="full-only" should derive showFullMoonOnly=true
+        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
+                ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
+        verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
+
+        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        assertTrue(capturedConfig.showFullMoonOnly,
+                "showFullMoonOnly should be derived from moonDisplayMode='full-only'");
+    }
+
+    @Test
+    public void testGenerateCalendar_ExplicitBooleanOverridesMoonDisplayMode() {
+        // Arrange: Config has BOTH moonDisplayMode and explicit boolean
+        // The explicit boolean should be used, not derived from moonDisplayMode
+        String configJson = """
+            {
+              "moonDisplayMode": "phases",
+              "showMoonIllumination": true
+            }
+            """;
+
+        try {
+            testUserCalendar.configuration = objectMapper.readTree(configJson);
+            testUserCalendar.template = null;
+        } catch (Exception e) {
+            fail("Failed to parse JSON: " + e.getMessage());
+        }
+
+        String mockSvg = "<svg>test</svg>";
+        byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
+        String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
+
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
+        when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
+
+        // Act
+        calendarGenerationService.generateCalendar(testUserCalendar);
+
+        // Assert: explicit showMoonIllumination should be used, derivation should be skipped
+        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
+                ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
+        verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
+
+        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        assertTrue(capturedConfig.showMoonIllumination,
+                "Explicit showMoonIllumination=true should be used");
+        assertFalse(capturedConfig.showMoonPhases,
+                "showMoonPhases should NOT be derived when explicit boolean exists");
+    }
+
+    @Test
+    public void testGenerateCalendar_MoonDisplayModeNone_NoMoons() {
+        // Arrange: Config has moonDisplayMode="none"
+        String moonDisplayModeJson = """
+            {
+              "moonDisplayMode": "none"
+            }
+            """;
+
+        try {
+            testUserCalendar.configuration = objectMapper.readTree(moonDisplayModeJson);
+            testUserCalendar.template = null;
+        } catch (Exception e) {
+            fail("Failed to parse JSON: " + e.getMessage());
+        }
+
+        String mockSvg = "<svg>test</svg>";
+        byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
+        String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
+
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
+        when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
+
+        // Act
+        calendarGenerationService.generateCalendar(testUserCalendar);
+
+        // Assert: moonDisplayMode="none" means all moon booleans should be false
+        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
+                ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
+        verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
+
+        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        assertFalse(capturedConfig.showMoonPhases,
+                "showMoonPhases should be false when moonDisplayMode='none'");
+        assertFalse(capturedConfig.showMoonIllumination,
+                "showMoonIllumination should be false when moonDisplayMode='none'");
+        assertFalse(capturedConfig.showFullMoonOnly,
+                "showFullMoonOnly should be false when moonDisplayMode='none'");
+    }
 }

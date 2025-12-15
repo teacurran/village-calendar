@@ -160,6 +160,18 @@ public class CalendarGenerationService {
             if (jsonConfig.has("showMoonIllumination"))
                 config.showMoonIllumination = jsonConfig.get("showMoonIllumination").asBoolean();
             if (jsonConfig.has("showFullMoonOnly")) config.showFullMoonOnly = jsonConfig.get("showFullMoonOnly").asBoolean();
+
+            // Derive moon display flags from moonDisplayMode if explicit booleans not set
+            // This matches how CalendarGenerator.vue derives these values at render time
+            if (jsonConfig.has("moonDisplayMode")
+                    && !jsonConfig.has("showMoonPhases")
+                    && !jsonConfig.has("showMoonIllumination")
+                    && !jsonConfig.has("showFullMoonOnly")) {
+                String moonDisplayMode = jsonConfig.get("moonDisplayMode").asText();
+                config.showMoonPhases = "phases".equals(moonDisplayMode);
+                config.showMoonIllumination = "illumination".equals(moonDisplayMode);
+                config.showFullMoonOnly = "full-only".equals(moonDisplayMode);
+            }
             if (jsonConfig.has("showWeekNumbers")) config.showWeekNumbers = jsonConfig.get("showWeekNumbers").asBoolean();
             if (jsonConfig.has("compactMode")) config.compactMode = jsonConfig.get("compactMode").asBoolean();
             if (jsonConfig.has("showDayNames")) config.showDayNames = jsonConfig.get("showDayNames").asBoolean();
