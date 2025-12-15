@@ -314,9 +314,11 @@ public class StaticContentResource {
 
     private void applyJsonConfiguration(CalendarRenderingService.CalendarConfig config, JsonNode jsonConfig) {
         try {
+            // Boolean fields
             if (jsonConfig.has("theme")) config.theme = jsonConfig.get("theme").asText();
             if (jsonConfig.has("showMoonPhases")) config.showMoonPhases = jsonConfig.get("showMoonPhases").asBoolean();
             if (jsonConfig.has("showMoonIllumination")) config.showMoonIllumination = jsonConfig.get("showMoonIllumination").asBoolean();
+            if (jsonConfig.has("showFullMoonOnly")) config.showFullMoonOnly = jsonConfig.get("showFullMoonOnly").asBoolean();
             if (jsonConfig.has("showWeekNumbers")) config.showWeekNumbers = jsonConfig.get("showWeekNumbers").asBoolean();
             if (jsonConfig.has("compactMode")) config.compactMode = jsonConfig.get("compactMode").asBoolean();
             if (jsonConfig.has("showDayNames")) config.showDayNames = jsonConfig.get("showDayNames").asBoolean();
@@ -324,17 +326,105 @@ public class StaticContentResource {
             if (jsonConfig.has("showGrid")) config.showGrid = jsonConfig.get("showGrid").asBoolean();
             if (jsonConfig.has("highlightWeekends")) config.highlightWeekends = jsonConfig.get("highlightWeekends").asBoolean();
             if (jsonConfig.has("rotateMonthNames")) config.rotateMonthNames = jsonConfig.get("rotateMonthNames").asBoolean();
+
+            // Numeric fields
             if (jsonConfig.has("latitude")) config.latitude = jsonConfig.get("latitude").asDouble();
             if (jsonConfig.has("longitude")) config.longitude = jsonConfig.get("longitude").asDouble();
             if (jsonConfig.has("moonSize")) config.moonSize = jsonConfig.get("moonSize").asInt();
+            if (jsonConfig.has("moonOffsetX")) config.moonOffsetX = jsonConfig.get("moonOffsetX").asInt();
+            if (jsonConfig.has("moonOffsetY")) config.moonOffsetY = jsonConfig.get("moonOffsetY").asInt();
+            if (jsonConfig.has("moonBorderWidth")) config.moonBorderWidth = jsonConfig.get("moonBorderWidth").asDouble();
+
+            // Color fields
             if (jsonConfig.has("yearColor")) config.yearColor = jsonConfig.get("yearColor").asText();
             if (jsonConfig.has("monthColor")) config.monthColor = jsonConfig.get("monthColor").asText();
             if (jsonConfig.has("dayTextColor")) config.dayTextColor = jsonConfig.get("dayTextColor").asText();
             if (jsonConfig.has("dayNameColor")) config.dayNameColor = jsonConfig.get("dayNameColor").asText();
             if (jsonConfig.has("gridLineColor")) config.gridLineColor = jsonConfig.get("gridLineColor").asText();
+            if (jsonConfig.has("weekendBgColor")) config.weekendBgColor = jsonConfig.get("weekendBgColor").asText();
             if (jsonConfig.has("holidayColor")) config.holidayColor = jsonConfig.get("holidayColor").asText();
+            if (jsonConfig.has("customDateColor")) config.customDateColor = jsonConfig.get("customDateColor").asText();
+            if (jsonConfig.has("moonDarkColor")) config.moonDarkColor = jsonConfig.get("moonDarkColor").asText();
+            if (jsonConfig.has("moonLightColor")) config.moonLightColor = jsonConfig.get("moonLightColor").asText();
+            if (jsonConfig.has("moonBorderColor")) config.moonBorderColor = jsonConfig.get("moonBorderColor").asText();
+
+            // String fields
+            if (jsonConfig.has("emojiPosition")) config.emojiPosition = jsonConfig.get("emojiPosition").asText();
             if (jsonConfig.has("emojiFont")) config.emojiFont = jsonConfig.get("emojiFont").asText();
+            if (jsonConfig.has("eventDisplayMode")) config.eventDisplayMode = jsonConfig.get("eventDisplayMode").asText();
+            if (jsonConfig.has("locale")) config.locale = jsonConfig.get("locale").asText();
             if (jsonConfig.has("layoutStyle")) config.layoutStyle = jsonConfig.get("layoutStyle").asText();
+            if (jsonConfig.has("timeZone")) config.timeZone = jsonConfig.get("timeZone").asText();
+
+            // Enum fields
+            if (jsonConfig.has("firstDayOfWeek")) {
+                String dow = jsonConfig.get("firstDayOfWeek").asText();
+                try {
+                    config.firstDayOfWeek = java.time.DayOfWeek.valueOf(dow);
+                } catch (IllegalArgumentException e) {
+                    LOG.warnf("Invalid firstDayOfWeek value: %s", dow);
+                }
+            }
+
+            // Complex types: customDates (Map<String, Object>)
+            if (jsonConfig.has("customDates") && jsonConfig.get("customDates").isObject()) {
+                JsonNode customDates = jsonConfig.get("customDates");
+                customDates.fields().forEachRemaining(entry -> {
+                    String date = entry.getKey();
+                    JsonNode value = entry.getValue();
+                    if (value.isTextual()) {
+                        config.customDates.put(date, value.asText());
+                    } else if (value.isObject()) {
+                        // Convert to Map for complex event display objects
+                        java.util.Map<String, Object> map = new java.util.HashMap<>();
+                        value.fields().forEachRemaining(f -> {
+                            if (f.getValue().isTextual()) map.put(f.getKey(), f.getValue().asText());
+                            else if (f.getValue().isNumber()) map.put(f.getKey(), f.getValue().asDouble());
+                            else if (f.getValue().isBoolean()) map.put(f.getKey(), f.getValue().asBoolean());
+                        });
+                        config.customDates.put(date, map);
+                    }
+                });
+            }
+
+            // Complex types: eventTitles (Map<String, String>)
+            if (jsonConfig.has("eventTitles") && jsonConfig.get("eventTitles").isObject()) {
+                JsonNode eventTitles = jsonConfig.get("eventTitles");
+                eventTitles.fields().forEachRemaining(entry -> {
+                    config.eventTitles.put(entry.getKey(), entry.getValue().asText());
+                });
+            }
+
+            // Complex types: holidays (Set<String>)
+            if (jsonConfig.has("holidays") && jsonConfig.get("holidays").isArray()) {
+                jsonConfig.get("holidays").forEach(holiday -> {
+                    config.holidays.add(holiday.asText());
+                });
+            }
+
+            // Complex types: holidaySets (List<String>)
+            if (jsonConfig.has("holidaySets") && jsonConfig.get("holidaySets").isArray()) {
+                jsonConfig.get("holidaySets").forEach(set -> {
+                    config.holidaySets.add(set.asText());
+                });
+            }
+
+            // Complex types: holidayEmojis (Map<String, String>)
+            if (jsonConfig.has("holidayEmojis") && jsonConfig.get("holidayEmojis").isObject()) {
+                JsonNode holidayEmojis = jsonConfig.get("holidayEmojis");
+                holidayEmojis.fields().forEachRemaining(entry -> {
+                    config.holidayEmojis.put(entry.getKey(), entry.getValue().asText());
+                });
+            }
+
+            // Complex types: holidayNames (Map<String, String>)
+            if (jsonConfig.has("holidayNames") && jsonConfig.get("holidayNames").isObject()) {
+                JsonNode holidayNames = jsonConfig.get("holidayNames");
+                holidayNames.fields().forEachRemaining(entry -> {
+                    config.holidayNames.put(entry.getKey(), entry.getValue().asText());
+                });
+            }
+
         } catch (Exception e) {
             LOG.warnf(e, "Error applying JSON configuration");
         }
