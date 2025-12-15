@@ -313,6 +313,273 @@ public class CalendarRenderingService {
     return result.toString();
   }
 
+  /**
+   * Renders all content inside a day cell. Shared between grid and weekday-grid layouts.
+   * Both layouts calculate cellX, cellY based on their own structure, then call this method
+   * to render identical day content.
+   *
+   * @param svg StringBuilder to append SVG content to
+   * @param cellX Cell X position
+   * @param cellY Cell Y position
+   * @param cellWidth Cell width
+   * @param cellHeight Cell height
+   * @param date The date being rendered
+   * @param dayOfWeek Day of week for this date
+   * @param isWeekend Whether this is a weekend day
+   * @param monthNum Month number (1-12)
+   * @param weekendIndex Weekend index for Vermont colors
+   * @param locale Locale for day name formatting
+   * @param config Calendar configuration
+   * @param theme Theme colors
+   */
+  private void renderDayCell(StringBuilder svg, int cellX, int cellY, int cellWidth, int cellHeight,
+      LocalDate date, DayOfWeek dayOfWeek, boolean isWeekend, int monthNum, int weekendIndex,
+      Locale locale, CalendarConfig config, ThemeColors theme) {
+
+    int day = date.getDayOfMonth();
+    String dateStr = date.toString();
+
+    // Cell background
+    String cellBackground = getCellBackgroundColor(config, date, monthNum, day, isWeekend, weekendIndex);
+    String pdfSafeColor = convertColorForPDF(cellBackground);
+    if (pdfSafeColor != null && !pdfSafeColor.equals("none") && !pdfSafeColor.equals("#ffffff")) {
+      svg.append(String.format(
+        "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\"/>%n",
+        cellX, cellY, cellWidth, cellHeight, pdfSafeColor
+      ));
+    }
+
+    // Moon display (illumination, phase symbols, or full moon only)
+    boolean shouldShowMoon = config.showMoonIllumination ||
+      (config.showMoonPhases && isMoonPhaseDay(date)) ||
+      (config.showFullMoonOnly && isFullMoonDay(date));
+
+    if (shouldShowMoon) {
+      int moonX = cellX + config.moonOffsetX;
+      int moonY = cellY + config.moonOffsetY;
+      // Move moon up by 3px when text will be displayed below
+      boolean hasTextBelow = "large-text".equals(config.eventDisplayMode) || "text".equals(config.eventDisplayMode);
+      if (hasTextBelow) {
+        moonY -= 3;
+      }
+
+      if (config.showMoonPhases && !isMoonPhaseDay(date)) {
+        // Skip non-phase days
+      } else if (config.showFullMoonOnly && !isFullMoonDay(date)) {
+        // Skip non-full-moon days
+      } else {
+        svg.append(generateMoonIlluminationSVG(date, moonX, moonY,
+          config.latitude, config.longitude, config));
+      }
+    }
+
+    // Check for holidays or custom dates
+    String holidayEmoji = substituteEmojiForMonochrome(
+        config.holidayEmojis.getOrDefault(dateStr, ""), config);
+    String customEmoji = "";
+    boolean isHoliday = config.holidays.contains(dateStr);
+    boolean isCustomDate = config.customDates.containsKey(dateStr);
+
+    CustomEventDisplay eventDisplay = null;
+    if (isCustomDate) {
+      Object customData = config.customDates.get(dateStr);
+
+      if (customData instanceof String) {
+        customEmoji = substituteEmojiForMonochrome((String) customData, config);
+      } else if (customData instanceof Map) {
+        Map<String, Object> dataMap = (Map<String, Object>) customData;
+        if (dataMap.containsKey("emoji")) {
+          customEmoji = substituteEmojiForMonochrome((String) dataMap.get("emoji"), config);
+          if (dataMap.containsKey("displaySettings") && dataMap.get("displaySettings") instanceof Map) {
+            Map<String, Object> settings = (Map<String, Object>) dataMap.get("displaySettings");
+            eventDisplay = new CustomEventDisplay(customEmoji, settings);
+          } else {
+            eventDisplay = new CustomEventDisplay(customEmoji);
+          }
+        }
+      }
+    }
+
+    // Holiday emoji/text
+    String holidayName = config.holidayNames.getOrDefault(dateStr, "");
+    svg.append(renderHolidayContent(holidayEmoji, holidayName,
+        cellX, cellY, cellWidth, cellHeight, shouldShowMoon, config));
+
+    // Custom emoji - skip if holiday emoji already rendered
+    if (!customEmoji.isEmpty() && holidayEmoji.isEmpty()) {
+      if (eventDisplay != null) {
+        double emojiX = cellX + (cellWidth * eventDisplay.getEmojiX(50) / 100.0);
+        double emojiY = cellY + (cellHeight * eventDisplay.getEmojiY(50) / 100.0);
+
+        double scaleFactor = cellWidth / 100.0;
+        int scaledSize = (int) (eventDisplay.getEmojiSize(12) * scaleFactor);
+        int emojiSize = Math.max(8, Math.min(24, scaledSize));
+
+        svg.append(renderEmoji(customEmoji, emojiX, emojiY, emojiSize, config, true));
+        svg.append("\n");
+      } else {
+        int emojiX = cellX;
+        int emojiY = cellY;
+
+        switch (config.emojiPosition) {
+          case "top-left":
+            emojiX += 5;
+            emojiY += 13;
+            break;
+          case "top-center":
+            emojiX += cellWidth / 2 - 5;
+            emojiY += 13;
+            break;
+          case "top-right":
+            emojiX += cellWidth - 15;
+            emojiY += 13;
+            break;
+          case "middle-left":
+            emojiX += 5;
+            emojiY += cellHeight / 2 + 5;
+            break;
+          case "middle-center":
+            emojiX += cellWidth / 2 - 5;
+            emojiY += cellHeight / 2 + 5;
+            break;
+          case "middle-right":
+            emojiX += cellWidth - 15;
+            emojiY += cellHeight / 2 + 5;
+            break;
+          case "bottom-left":
+          default:
+            emojiX += 5;
+            emojiY += cellHeight - 5;
+            break;
+          case "bottom-center":
+            emojiX += cellWidth / 2 - 5;
+            emojiY += cellHeight - 5;
+            break;
+          case "bottom-right":
+            emojiX += cellWidth - 15;
+            emojiY += cellHeight - 5;
+            break;
+        }
+
+        svg.append(renderEmoji(customEmoji, emojiX, emojiY, 12, config, false));
+        svg.append("\n");
+      }
+    }
+
+    // Event title
+    if (config.eventTitles.containsKey(dateStr)) {
+      String title = config.eventTitles.get(dateStr);
+
+      if (eventDisplay != null) {
+        double textX = cellX + (cellWidth * eventDisplay.getTextX(50) / 100.0);
+        double textY = cellY + (cellHeight * eventDisplay.getTextY(70) / 100.0);
+
+        double scaleFactor = cellWidth / 100.0;
+        int scaledSize = (int) (eventDisplay.getTextSize(7) * scaleFactor);
+        int textSize = Math.max(5, Math.min(12, scaledSize));
+        String textColor = eventDisplay.getTextColor(config.customDateColor);
+        String textAlign = eventDisplay.getTextAlign("center");
+        double rotation = eventDisplay.getTextRotation();
+        String fontWeight = eventDisplay.isTextBold() ? "bold" : "normal";
+
+        String textAnchor = "middle";
+        if ("left".equals(textAlign)) textAnchor = "start";
+        else if ("right".equals(textAlign)) textAnchor = "end";
+
+        if (eventDisplay.isTextWrap() && title.length() > 8) {
+          String[] words = title.split(" ");
+          StringBuilder line1 = new StringBuilder();
+          StringBuilder line2 = new StringBuilder();
+          int charCount = 0;
+
+          for (String word : words) {
+            if (charCount + word.length() <= 8) {
+              if (line1.length() > 0) line1.append(" ");
+              line1.append(word);
+              charCount += word.length() + 1;
+            } else if (line2.length() == 0) {
+              line2.append(word);
+            } else {
+              line2.append("…");
+              break;
+            }
+          }
+
+          String transform = rotation != 0
+            ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", rotation, textX, textY)
+            : "";
+
+          double lineHeight = textSize * 1.2;
+          svg.append(String.format(
+            "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s; font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
+            textX, textY - lineHeight/2, textSize, textColor, fontWeight, textAnchor, transform, line1.toString()
+          ));
+          if (line2.length() > 0) {
+            svg.append(String.format(
+              "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s; font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
+              textX, textY + lineHeight/2, textSize, textColor, fontWeight, textAnchor, transform, line2.toString()
+            ));
+          }
+        } else {
+          if (!eventDisplay.isTextWrap() && title.length() > 10) {
+            title = title.substring(0, 9) + "…";
+          }
+
+          String transform = rotation != 0
+            ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", rotation, textX, textY)
+            : "";
+
+          svg.append(String.format(
+            "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s; font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
+            textX, textY, textSize, textColor, fontWeight, textAnchor, transform, title
+          ));
+        }
+      } else {
+        if (title.length() > 10) {
+          title = title.substring(0, 9) + "…";
+        }
+        svg.append(String.format(
+          "<text x=\"%d\" y=\"%d\" style=\"font-size: 7px; fill: %s;\">%s</text>%n",
+          cellX + 5, cellY + 38, config.customDateColor, title
+        ));
+      }
+    }
+
+    // Day number
+    if (config.showDayNumbers) {
+      String dayFill = config.dayTextColor != null ? config.dayTextColor : theme.text;
+      String fontWeight = "normal";
+      if (isHoliday && config.holidayColor != null) {
+        dayFill = config.holidayColor;
+        fontWeight = "bold";
+      } else if (isCustomDate && config.customDateColor != null) {
+        dayFill = config.customDateColor;
+      }
+      svg.append(String.format(
+        "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-weight=\"%s\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"12px\">%d</text>%n",
+        cellX + 5, cellY + 14, dayFill, fontWeight, day
+      ));
+    }
+
+    // Day name
+    if (config.showDayNames) {
+      String dayName = dayOfWeek.getDisplayName(TextStyle.SHORT, locale).substring(0, 2);
+      String dayNameFill = config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader;
+      svg.append(String.format(
+        "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-family=\"Arial, sans-serif\" font-size=\"8px\">%s</text>%n",
+        cellX + 5, cellY + 26, dayNameFill, dayName
+      ));
+    }
+
+    // Grid lines
+    if (config.showGrid) {
+      svg.append(String.format(
+        "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"1\"/>%n",
+        cellX, cellY, cellWidth, cellHeight, config.gridLineColor
+      ));
+    }
+  }
+
   // Color themes
   private static final Map<String, ThemeColors> THEMES = new HashMap<>();
 
@@ -658,273 +925,9 @@ public class CalendarRenderingService {
           weekendIndex++;
         }
 
-        // Cell background
-        String cellBackground = getCellBackgroundColor(config, date, monthNum, day, isWeekend, weekendIndex - 1);
-        String pdfSafeColor = convertColorForPDF(cellBackground);
-        if (pdfSafeColor != null && !pdfSafeColor.equals("none") && !pdfSafeColor.equals("#ffffff")) {
-          svg.append(String.format(
-            "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\"/>%n",
-            cellX, cellY, cellWidth, cellHeight, pdfSafeColor
-          ));
-        }
-
-        // Moon display (illumination, phase symbols, or full moon only)
-        boolean shouldShowMoon = config.showMoonIllumination ||
-          (config.showMoonPhases && isMoonPhaseDay(date)) ||
-          (config.showFullMoonOnly && isFullMoonDay(date));
-
-        if (shouldShowMoon) {
-          // Use X/Y offset settings for precise positioning
-          int moonX = cellX + config.moonOffsetX;
-          int moonY = cellY + config.moonOffsetY;
-          // Move moon up by 3px when text will be displayed below
-          boolean hasTextBelow = "large-text".equals(config.eventDisplayMode) || "text".equals(config.eventDisplayMode);
-          if (hasTextBelow) {
-            moonY -= 3;
-          }
-
-          // For moon phases, only show on phase days
-          if (config.showMoonPhases && !isMoonPhaseDay(date)) {
-            // Skip non-phase days
-          } else if (config.showFullMoonOnly && !isFullMoonDay(date)) {
-            // Skip non-full-moon days
-          } else {
-            // Use same size for both modes
-            svg.append(generateMoonIlluminationSVG(date, moonX, moonY,
-              config.latitude, config.longitude, config));
-          }
-        }
-
-        // Check for holidays or custom dates
-        String dateStr = date.toString();
-        String dayClass = "day-text"; // Always use same class for consistent styling
-        String dayText = String.valueOf(day);
-        String holidayEmoji = substituteEmojiForMonochrome(
-            config.holidayEmojis.getOrDefault(dateStr, ""), config);
-        String customEmoji = "";
-        boolean isHoliday = config.holidays.contains(dateStr);
-
-        CustomEventDisplay eventDisplay = null;
-        if (config.customDates.containsKey(dateStr)) {
-          Object customData = config.customDates.get(dateStr);
-
-          if (customData instanceof String) {
-            // Old format: just emoji string
-            customEmoji = substituteEmojiForMonochrome((String) customData, config);
-          } else if (customData instanceof Map) {
-            // New format: object with emoji and display settings
-            Map<String, Object> dataMap = (Map<String, Object>) customData;
-            if (dataMap.containsKey("emoji")) {
-              customEmoji = substituteEmojiForMonochrome((String) dataMap.get("emoji"), config);
-              if (dataMap.containsKey("displaySettings") && dataMap.get("displaySettings") instanceof Map) {
-                Map<String, Object> settings = (Map<String, Object>) dataMap.get("displaySettings");
-                eventDisplay = new CustomEventDisplay(customEmoji, settings);
-              } else {
-                eventDisplay = new CustomEventDisplay(customEmoji);
-              }
-            }
-          }
-        }
-
-        // Holiday emoji/text (if applicable) - render using shared helper
-        String holidayName = config.holidayNames.getOrDefault(dateStr, "");
-        svg.append(renderHolidayContent(holidayEmoji, holidayName,
-            cellX, cellY, cellWidth, cellHeight, shouldShowMoon, config));
-
-        // Apply holiday color to day number if it's a holiday
-        if (isHoliday && config.holidayColor != null) {
-          dayClass = "holiday";
-        }
-
-        // Custom emoji with enhanced positioning
-        // Skip if holiday emoji already rendered for this date to avoid duplicates
-        if (!customEmoji.isEmpty() && holidayEmoji.isEmpty()) {
-          if (eventDisplay != null) {
-            // Use custom display settings
-            double emojiX = cellX + (cellWidth * eventDisplay.getEmojiX(50) / 100.0);
-            double emojiY = cellY + (cellHeight * eventDisplay.getEmojiY(50) / 100.0);
-
-            // Scale emoji size proportionally to cell size
-            // Preview is 100x140, actual cell is 50x75 (or 40x60 compact)
-            // So scale factor is roughly 0.5 for width
-            double scaleFactor = cellWidth / 100.0;
-            int scaledSize = (int) (eventDisplay.getEmojiSize(12) * scaleFactor);
-            int emojiSize = Math.max(8, Math.min(24, scaledSize)); // Clamp between 8-24px
-
-            svg.append(renderEmoji(customEmoji, emojiX, emojiY, emojiSize, config, true));
-            svg.append("\n");
-          } else {
-            // Fall back to original positioning logic
-            int emojiX = cellX;
-            int emojiY = cellY;
-
-            // Calculate position based on config.emojiPosition
-            switch (config.emojiPosition) {
-              case "top-left":
-                emojiX += 5;
-                emojiY += 13;
-                break;
-              case "top-center":
-                emojiX += cellWidth / 2 - 5;
-                emojiY += 13;
-                break;
-              case "top-right":
-                emojiX += cellWidth - 15;
-                emojiY += 13;
-                break;
-              case "middle-left":
-                emojiX += 5;
-                emojiY += cellHeight / 2 + 5;
-                break;
-              case "middle-center":
-                emojiX += cellWidth / 2 - 5;
-                emojiY += cellHeight / 2 + 5;
-                break;
-              case "middle-right":
-                emojiX += cellWidth - 15;
-                emojiY += cellHeight / 2 + 5;
-                break;
-              case "bottom-left":
-              default:
-                emojiX += 5;
-                emojiY += cellHeight - 5;
-                break;
-              case "bottom-center":
-                emojiX += cellWidth / 2 - 5;
-                emojiY += cellHeight - 5;
-                break;
-              case "bottom-right":
-                emojiX += cellWidth - 15;
-                emojiY += cellHeight - 5;
-                break;
-            }
-
-            svg.append(renderEmoji(customEmoji, emojiX, emojiY, 12, config, false));
-            svg.append("\n");
-          }
-        }
-
-        // Event title with enhanced positioning
-        if (config.eventTitles.containsKey(dateStr)) {
-          String title = config.eventTitles.get(dateStr);
-
-          if (eventDisplay != null) {
-            // Use custom text display settings
-            double textX = cellX + (cellWidth * eventDisplay.getTextX(50) / 100.0);
-            double textY = cellY + (cellHeight * eventDisplay.getTextY(70) / 100.0);
-
-            // Scale text size proportionally
-            double scaleFactor = cellWidth / 100.0;
-            int scaledSize = (int) (eventDisplay.getTextSize(7) * scaleFactor);
-            int textSize = Math.max(5, Math.min(12, scaledSize)); // Clamp between 5-12px
-            String textColor = eventDisplay.getTextColor(config.customDateColor);
-            String textAlign = eventDisplay.getTextAlign("center");
-            double rotation = eventDisplay.getTextRotation();
-            String fontWeight = eventDisplay.isTextBold() ? "bold" : "normal";
-
-            // Text anchor based on alignment
-            String textAnchor = "middle";
-            if ("left".equals(textAlign)) textAnchor = "start";
-            else if ("right".equals(textAlign)) textAnchor = "end";
-
-            // Handle text wrapping for SVG
-            if (eventDisplay.isTextWrap() && title.length() > 8) {
-              // Split text into multiple lines for wrapping effect
-              String[] words = title.split(" ");
-              StringBuilder line1 = new StringBuilder();
-              StringBuilder line2 = new StringBuilder();
-              int charCount = 0;
-
-              for (String word : words) {
-                if (charCount + word.length() <= 8) {
-                  if (line1.length() > 0) line1.append(" ");
-                  line1.append(word);
-                  charCount += word.length() + 1;
-                } else if (line2.length() == 0) {
-                  line2.append(word);
-                } else {
-                  line2.append("…");
-                  break;
-                }
-              }
-
-              String transform = rotation != 0
-                ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", rotation, textX, textY)
-                : "";
-
-              // Render two lines with proper spacing
-              double lineHeight = textSize * 1.2;
-              svg.append(String.format(
-                "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s; font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
-                textX, textY - lineHeight/2, textSize, textColor, fontWeight, textAnchor, transform, line1.toString()
-              ));
-              if (line2.length() > 0) {
-                svg.append(String.format(
-                  "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s; font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
-                  textX, textY + lineHeight/2, textSize, textColor, fontWeight, textAnchor, transform, line2.toString()
-                ));
-              }
-            } else {
-              // Single line text
-              if (!eventDisplay.isTextWrap() && title.length() > 10) {
-                title = title.substring(0, 9) + "…";
-              }
-
-              String transform = rotation != 0
-                ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", rotation, textX, textY)
-                : "";
-
-              svg.append(String.format(
-                "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s; font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
-                textX, textY, textSize, textColor, fontWeight, textAnchor, transform, title
-              ));
-            }
-          } else {
-            // Original title rendering
-            // Truncate title if too long
-            if (title.length() > 10) {
-              title = title.substring(0, 9) + "…";
-            }
-            svg.append(String.format(
-              "<text x=\"%d\" y=\"%d\" style=\"font-size: 7px; fill: %s;\">%s</text>%n",
-              cellX + 5, cellY + 38, config.customDateColor, title
-            ));
-          }
-        }
-
-        // Day number - use inline styles for better PDF compatibility
-        if (config.showDayNumbers) {
-          String dayFill = config.dayTextColor != null ? config.dayTextColor : theme.text;
-          String fontWeight = "normal";
-          if (isHoliday && config.holidayColor != null) {
-            dayFill = config.holidayColor;
-            fontWeight = "bold";
-          } else if (config.customDates.containsKey(dateStr) && config.customDateColor != null) {
-            dayFill = config.customDateColor;
-          }
-          svg.append(String.format(
-            "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-weight=\"%s\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"12px\">%s</text>%n",
-            cellX + 5, cellY + 14, dayFill, fontWeight, dayText
-          ));
-        }
-
-        // Day name (if enabled) - use inline styles for immediate visual update
-        if (config.showDayNames) {
-          String dayName = dayOfWeek.getDisplayName(TextStyle.SHORT, locale).substring(0, 2);
-          String dayNameFill = config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader;
-          svg.append(String.format(
-            "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-family=\"Arial, sans-serif\" font-size=\"8px\">%s</text>%n",
-            cellX + 5, cellY + 26, dayNameFill, dayName
-          ));
-        }
-
-        // Grid lines - use inline styles only (no CSS class) for immediate visual update
-        if (config.showGrid) {
-          svg.append(String.format(
-            "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"1\"/>%n",
-            cellX, cellY, cellWidth, cellHeight, config.gridLineColor
-          ));
-        }
+        // Render day cell content using shared method
+        renderDayCell(svg, cellX, cellY, cellWidth, cellHeight, date, dayOfWeek, isWeekend,
+            monthNum, weekendIndex - 1, locale, config, theme);
       }
     }
 
@@ -1020,106 +1023,9 @@ public class CalendarRenderingService {
         int col = startCol + day - 1;
         int cellX = cellWidth + col * cellWidth;
 
-        // Cell background
-        String cellBackground = getCellBackgroundColor(config, date, monthNum, day, isWeekend, weekendIndex - 1);
-        String pdfSafeColor = convertColorForPDF(cellBackground);
-        if (pdfSafeColor != null && !pdfSafeColor.equals("none") && !pdfSafeColor.equals("#ffffff")) {
-          svg.append(String.format(
-            "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\"/>%n",
-            cellX, cellY, cellWidth, cellHeight, pdfSafeColor
-          ));
-        }
-
-        // Check for holidays and custom dates
-        String dateStr = String.format("%d-%02d-%02d", year, monthNum, day);
-        boolean isHoliday = config.holidays != null && config.holidays.contains(dateStr);
-        boolean isCustomDate = config.customDates != null && config.customDates.containsKey(dateStr);
-        String holidayEmoji = config.holidayEmojis != null ?
-            substituteEmojiForMonochrome(config.holidayEmojis.getOrDefault(dateStr, ""), config) : "";
-
-        // Day number - positioned at top-left like grid layout, use inline styles for PDF compatibility
-        if (config.showDayNumbers) {
-          String dayFill = config.dayTextColor != null ? config.dayTextColor : theme.text;
-          String fontWeight = "normal";
-          if (isHoliday && config.holidayColor != null) {
-            dayFill = config.holidayColor;
-            fontWeight = "bold";
-          } else if (isCustomDate && config.customDateColor != null) {
-            dayFill = config.customDateColor;
-          }
-          svg.append(String.format(
-            "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-weight=\"%s\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"12px\">%d</text>%n",
-            cellX + 5, cellY + 14, dayFill, fontWeight, day
-          ));
-        }
-
-        // Day name (if enabled) - positioned below day number like grid layout
-        // Use inline styles for immediate visual update
-        if (config.showDayNames) {
-          String dayName = dayOfWeek.getDisplayName(TextStyle.SHORT, locale).substring(0, 2);
-          String dayNameFill = config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader;
-          svg.append(String.format(
-            "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-family=\"Arial, sans-serif\" font-size=\"8px\">%s</text>%n",
-            cellX + 5, cellY + 26, dayNameFill, dayName
-          ));
-        }
-
-        // Moon display (illumination, phase symbols, or full moon only)
-        // Rendered before emojis so emojis appear on top
-        boolean shouldShowMoon = config.showMoonIllumination ||
-          (config.showMoonPhases && isMoonPhaseDay(date)) ||
-          (config.showFullMoonOnly && isFullMoonDay(date));
-
-        if (shouldShowMoon) {
-          // Use X/Y offset settings for precise positioning
-          int moonX = cellX + config.moonOffsetX;
-          int moonY = cellY + config.moonOffsetY;
-
-          // For moon phases, only show on phase days
-          if (config.showMoonPhases && !isMoonPhaseDay(date)) {
-            // Skip non-phase days
-          } else if (config.showFullMoonOnly && !isFullMoonDay(date)) {
-            // Skip non-full-moon days
-          } else {
-            // Use generateMoonIlluminationSVG for proper rendering with user settings
-            svg.append(generateMoonIlluminationSVG(date, moonX, moonY,
-              config.latitude, config.longitude, config));
-          }
-        }
-
-        // Holiday emoji/text (if applicable) - render using shared helper
-        String holidayName = config.holidayNames.getOrDefault(dateStr, "");
-        svg.append(renderHolidayContent(holidayEmoji, holidayName,
-            cellX, cellY, cellWidth, cellHeight, shouldShowMoon, config));
-
-        // Custom emoji - skip if holiday emoji already rendered to avoid duplicates
-        if (isCustomDate && config.customDates.get(dateStr) != null && holidayEmoji.isEmpty()) {
-          Object customDataObj = config.customDates.get(dateStr);
-          String emoji = "📅";
-          if (customDataObj instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> customData = (Map<String, Object>) customDataObj;
-            emoji = customData.get("emoji") != null ? customData.get("emoji").toString() : "📅";
-          } else if (customDataObj != null) {
-            emoji = customDataObj.toString();
-          }
-
-          String position = config.emojiPosition != null ? config.emojiPosition : "bottom-left";
-
-          int emojiX = cellX + (position.contains("right") ? cellWidth - 10 : 5);
-          int emojiY = cellY + (position.contains("top") ? 15 : cellHeight - 5);
-
-          svg.append(renderEmoji(emoji, emojiX, emojiY, 12, config, false));
-          svg.append("\n");
-        }
-
-        // Grid lines - use inline styles only (no CSS class) for immediate visual update
-        if (config.showGrid) {
-          svg.append(String.format(
-            "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"1\"/>%n",
-            cellX, cellY, cellWidth, cellHeight, config.gridLineColor
-          ));
-        }
+        // Render day cell content using shared method
+        renderDayCell(svg, cellX, cellY, cellWidth, cellHeight, date, dayOfWeek, isWeekend,
+            monthNum, weekendIndex - 1, locale, config, theme);
       }
     }
 
