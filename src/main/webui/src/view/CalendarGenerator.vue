@@ -2759,7 +2759,7 @@ const autoSaveCalendar = async () => {
     clearTimeout(autoSaveTimeout.value);
   }
 
-  // Debounce autosave by 1 second
+  // Debounce autosave by 500ms (reduced from 1s since this now handles SVG regeneration too)
   autoSaveTimeout.value = setTimeout(async () => {
     isAutoSaving.value = true;
 
@@ -2851,7 +2851,7 @@ const autoSaveCalendar = async () => {
     } finally {
       isAutoSaving.value = false;
     }
-  }, 1000);
+  }, 500);
 };
 
 // Load calendar from ID or template
