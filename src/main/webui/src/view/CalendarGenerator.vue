@@ -831,7 +831,6 @@ const templatePreviews = ref({});
 // Session calendar state
 const currentCalendarId = ref(null);
 const isAutoSaving = ref(false);
-const pendingSave = ref(false); // True if another save was requested while one was in progress
 const isViewingSharedCalendar = ref(false); // True when viewing someone else's calendar
 const originalCalendarId = ref(null); // Store the original calendar ID when viewing shared
 
@@ -2753,14 +2752,7 @@ const loadTemplate = async () => {
 };
 
 // Session-based calendar management - saves config and regenerates SVG in one call
-// Uses mutex pattern: only one save in flight at a time, queues latest change if busy
 const autoSaveCalendar = async () => {
-  // If already saving, queue another save when current finishes
-  if (isAutoSaving.value) {
-    pendingSave.value = true;
-    return;
-  }
-
   isAutoSaving.value = true;
 
   try {
@@ -2850,11 +2842,6 @@ const autoSaveCalendar = async () => {
     console.error("Autosave failed:", error);
   } finally {
     isAutoSaving.value = false;
-    // If another save was requested while we were busy, do it now
-    if (pendingSave.value) {
-      pendingSave.value = false;
-      autoSaveCalendar();
-    }
   }
 };
 
