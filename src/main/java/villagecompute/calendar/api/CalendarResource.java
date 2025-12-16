@@ -45,9 +45,7 @@ public class CalendarResource {
     public String calendarType; // "gregorian" or "hebrew"
     public Integer year;
     public String theme;
-    public Boolean showMoonPhases;
-    public Boolean showMoonIllumination;
-    public Boolean showFullMoonOnly;
+    public String moonDisplayMode; // "none", "illumination", "phases", "full-only"
     public Boolean showWeekNumbers;
     public Boolean compactMode;
     public Boolean showDayNames;
@@ -145,9 +143,7 @@ public class CalendarResource {
       hebrewConfig.compactMode = config.compactMode;
       hebrewConfig.rotateMonthNames = config.rotateMonthNames;
       // Copy all moon-related settings
-      hebrewConfig.showMoonPhases = config.showMoonPhases;
-      hebrewConfig.showMoonIllumination = config.showMoonIllumination;
-      hebrewConfig.showFullMoonOnly = config.showFullMoonOnly;
+      hebrewConfig.moonDisplayMode = config.moonDisplayMode;
       hebrewConfig.moonSize = config.moonSize;
       hebrewConfig.moonOffsetX = config.moonOffsetX;
       hebrewConfig.moonOffsetY = config.moonOffsetY;
@@ -303,9 +299,7 @@ public class CalendarResource {
           hebrewConfig.compactMode = config.compactMode;
           hebrewConfig.rotateMonthNames = config.rotateMonthNames;
           // Copy all moon-related settings
-          hebrewConfig.showMoonPhases = config.showMoonPhases;
-          hebrewConfig.showMoonIllumination = config.showMoonIllumination;
-          hebrewConfig.showFullMoonOnly = config.showFullMoonOnly;
+          hebrewConfig.moonDisplayMode = config.moonDisplayMode;
           hebrewConfig.moonSize = config.moonSize;
           hebrewConfig.moonOffsetX = config.moonOffsetX;
           hebrewConfig.moonOffsetY = config.moonOffsetY;
@@ -385,14 +379,8 @@ public class CalendarResource {
     if (request.theme != null) {
       config.theme = request.theme;
     }
-    if (request.showMoonPhases != null) {
-      config.showMoonPhases = request.showMoonPhases;
-    }
-    if (request.showMoonIllumination != null) {
-      config.showMoonIllumination = request.showMoonIllumination;
-    }
-    if (request.showFullMoonOnly != null) {
-      config.showFullMoonOnly = request.showFullMoonOnly;
+    if (request.moonDisplayMode != null) {
+      config.moonDisplayMode = request.moonDisplayMode;
     }
     if (request.latitude != null) {
       config.latitude = request.latitude;

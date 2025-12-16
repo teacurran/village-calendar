@@ -82,7 +82,7 @@ public class CalendarGenerationServiceTest {
             String json = """
                 {
                   "theme": "default",
-                  "showMoonPhases": true,
+                  "moonDisplayMode": "phases",
                   "showGrid": true,
                   "layoutStyle": "grid"
                 }
@@ -97,7 +97,7 @@ public class CalendarGenerationServiceTest {
         try {
             String json = """
                 {
-                  "showMoonIllumination": true,
+                  "moonDisplayMode": "illumination",
                   "latitude": 44.4759,
                   "longitude": -73.2121
                 }
@@ -242,8 +242,7 @@ public class CalendarGenerationServiceTest {
         // Assert: Configuration should merge template + user settings
         assertEquals(2025, capturedConfig.year);
         assertEquals("default", capturedConfig.theme); // From template
-        assertTrue(capturedConfig.showMoonPhases); // From template
-        assertTrue(capturedConfig.showMoonIllumination); // From user override
+        assertEquals("illumination", capturedConfig.moonDisplayMode); // From user override (overrides template's "phases")
         assertEquals(44.4759, capturedConfig.latitude, 0.001); // From user
         assertEquals(-73.2121, capturedConfig.longitude, 0.001); // From user
     }
@@ -280,7 +279,7 @@ public class CalendarGenerationServiceTest {
         // Arrange
         String moonConfigJson = """
             {
-              "showMoonPhases": true,
+              "moonDisplayMode": "phases",
               "moonSize": 32,
               "moonOffsetX": 40,
               "moonOffsetY": 40,
@@ -315,7 +314,7 @@ public class CalendarGenerationServiceTest {
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
         CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
-        assertTrue(capturedConfig.showMoonPhases);
+        assertEquals("phases", capturedConfig.moonDisplayMode);
         assertEquals(32, capturedConfig.moonSize);
         assertEquals(40, capturedConfig.moonOffsetX);
         assertEquals(40, capturedConfig.moonOffsetY);
@@ -324,8 +323,8 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_MoonDisplayModeIllumination_DerivesBoolean() {
-        // Arrange: Config has moonDisplayMode but NOT explicit showMoonIllumination
+    public void testGenerateCalendar_MoonDisplayModeIllumination() {
+        // Arrange: Config has moonDisplayMode="illumination"
         String moonDisplayModeJson = """
             {
               "moonDisplayMode": "illumination",
@@ -353,7 +352,7 @@ public class CalendarGenerationServiceTest {
         // Act
         String result = calendarGenerationService.generateCalendar(testUserCalendar);
 
-        // Assert: moonDisplayMode="illumination" should derive showMoonIllumination=true
+        // Assert: moonDisplayMode should be propagated correctly
         assertNotNull(result);
 
         ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
@@ -361,16 +360,12 @@ public class CalendarGenerationServiceTest {
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
         CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
-        assertTrue(capturedConfig.showMoonIllumination,
-                "showMoonIllumination should be derived from moonDisplayMode='illumination'");
-        assertFalse(capturedConfig.showMoonPhases,
-                "showMoonPhases should be false when moonDisplayMode='illumination'");
-        assertFalse(capturedConfig.showFullMoonOnly,
-                "showFullMoonOnly should be false when moonDisplayMode='illumination'");
+        assertEquals("illumination", capturedConfig.moonDisplayMode,
+                "moonDisplayMode should be 'illumination'");
     }
 
     @Test
-    public void testGenerateCalendar_MoonDisplayModePhases_DerivesBoolean() {
+    public void testGenerateCalendar_MoonDisplayModePhases() {
         // Arrange: Config has moonDisplayMode="phases"
         String moonDisplayModeJson = """
             {
@@ -397,20 +392,18 @@ public class CalendarGenerationServiceTest {
         // Act
         calendarGenerationService.generateCalendar(testUserCalendar);
 
-        // Assert: moonDisplayMode="phases" should derive showMoonPhases=true
+        // Assert: moonDisplayMode should be propagated correctly
         ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
                 ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
         CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
-        assertTrue(capturedConfig.showMoonPhases,
-                "showMoonPhases should be derived from moonDisplayMode='phases'");
-        assertFalse(capturedConfig.showMoonIllumination,
-                "showMoonIllumination should be false when moonDisplayMode='phases'");
+        assertEquals("phases", capturedConfig.moonDisplayMode,
+                "moonDisplayMode should be 'phases'");
     }
 
     @Test
-    public void testGenerateCalendar_MoonDisplayModeFullOnly_DerivesBoolean() {
+    public void testGenerateCalendar_MoonDisplayModeFullOnly() {
         // Arrange: Config has moonDisplayMode="full-only"
         String moonDisplayModeJson = """
             {
@@ -436,21 +429,20 @@ public class CalendarGenerationServiceTest {
         // Act
         calendarGenerationService.generateCalendar(testUserCalendar);
 
-        // Assert: moonDisplayMode="full-only" should derive showFullMoonOnly=true
+        // Assert: moonDisplayMode should be propagated correctly
         ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
                 ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
         CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
-        assertTrue(capturedConfig.showFullMoonOnly,
-                "showFullMoonOnly should be derived from moonDisplayMode='full-only'");
+        assertEquals("full-only", capturedConfig.moonDisplayMode,
+                "moonDisplayMode should be 'full-only'");
     }
 
     @Test
-    public void testGenerateCalendar_MoonDisplayModeAlwaysOverridesExplicitBooleans() {
-        // Arrange: Config has BOTH moonDisplayMode and explicit booleans
-        // moonDisplayMode is authoritative and should ALWAYS override explicit booleans
-        // (Vue sends stale boolean values alongside moonDisplayMode)
+    public void testGenerateCalendar_MoonDisplayModeIgnoresLegacyBooleans() {
+        // Arrange: Config has BOTH moonDisplayMode and legacy booleans
+        // Only moonDisplayMode is used; legacy booleans are ignored
         String configJson = """
             {
               "moonDisplayMode": "phases",
@@ -478,22 +470,18 @@ public class CalendarGenerationServiceTest {
         // Act
         calendarGenerationService.generateCalendar(testUserCalendar);
 
-        // Assert: moonDisplayMode="phases" should override ALL explicit booleans
+        // Assert: moonDisplayMode is used (legacy booleans are ignored)
         ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
                 ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
         CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
-        assertTrue(capturedConfig.showMoonPhases,
-                "moonDisplayMode='phases' should set showMoonPhases=true, overriding explicit false");
-        assertFalse(capturedConfig.showMoonIllumination,
-                "moonDisplayMode='phases' should set showMoonIllumination=false, overriding explicit true");
-        assertFalse(capturedConfig.showFullMoonOnly,
-                "moonDisplayMode='phases' should set showFullMoonOnly=false");
+        assertEquals("phases", capturedConfig.moonDisplayMode,
+                "moonDisplayMode should be 'phases' (legacy booleans are ignored)");
     }
 
     @Test
-    public void testGenerateCalendar_MoonDisplayModeNone_NoMoons() {
+    public void testGenerateCalendar_MoonDisplayModeNone() {
         // Arrange: Config has moonDisplayMode="none"
         String moonDisplayModeJson = """
             {
@@ -519,17 +507,13 @@ public class CalendarGenerationServiceTest {
         // Act
         calendarGenerationService.generateCalendar(testUserCalendar);
 
-        // Assert: moonDisplayMode="none" means all moon booleans should be false
+        // Assert: moonDisplayMode should be "none" (no moons displayed)
         ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
                 ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
         CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
-        assertFalse(capturedConfig.showMoonPhases,
-                "showMoonPhases should be false when moonDisplayMode='none'");
-        assertFalse(capturedConfig.showMoonIllumination,
-                "showMoonIllumination should be false when moonDisplayMode='none'");
-        assertFalse(capturedConfig.showFullMoonOnly,
-                "showFullMoonOnly should be false when moonDisplayMode='none'");
+        assertEquals("none", capturedConfig.moonDisplayMode,
+                "moonDisplayMode should be 'none'");
     }
 }

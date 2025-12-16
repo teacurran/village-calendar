@@ -166,21 +166,11 @@ public class CalendarGenerationService {
      */
     private void applyJsonConfiguration(CalendarRenderingService.CalendarConfig config, JsonNode jsonConfig) {
         try {
-            // Boolean fields
+            // String fields
             if (jsonConfig.has("theme")) config.theme = jsonConfig.get("theme").asText();
-            if (jsonConfig.has("showMoonPhases")) config.showMoonPhases = jsonConfig.get("showMoonPhases").asBoolean();
-            if (jsonConfig.has("showMoonIllumination"))
-                config.showMoonIllumination = jsonConfig.get("showMoonIllumination").asBoolean();
-            if (jsonConfig.has("showFullMoonOnly")) config.showFullMoonOnly = jsonConfig.get("showFullMoonOnly").asBoolean();
+            if (jsonConfig.has("moonDisplayMode")) config.moonDisplayMode = jsonConfig.get("moonDisplayMode").asText();
 
-            // Derive moon display flags from moonDisplayMode - this ALWAYS overrides explicit booleans
-            // because moonDisplayMode is the authoritative source (Vue sends stale boolean values)
-            if (jsonConfig.has("moonDisplayMode")) {
-                String moonDisplayMode = jsonConfig.get("moonDisplayMode").asText();
-                config.showMoonPhases = "phases".equals(moonDisplayMode);
-                config.showMoonIllumination = "illumination".equals(moonDisplayMode);
-                config.showFullMoonOnly = "full-only".equals(moonDisplayMode);
-            }
+            // Boolean fields
             if (jsonConfig.has("showWeekNumbers")) config.showWeekNumbers = jsonConfig.get("showWeekNumbers").asBoolean();
             if (jsonConfig.has("compactMode")) config.compactMode = jsonConfig.get("compactMode").asBoolean();
             if (jsonConfig.has("showDayNames")) config.showDayNames = jsonConfig.get("showDayNames").asBoolean();

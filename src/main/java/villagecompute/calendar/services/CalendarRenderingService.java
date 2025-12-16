@@ -59,9 +59,7 @@ public class CalendarRenderingService {
   public static class CalendarConfig {
     public int year = LocalDate.now().getYear();
     public String theme = "default";
-    public boolean showMoonPhases = false;
-    public boolean showMoonIllumination = false;
-    public boolean showFullMoonOnly = false;
+    public String moonDisplayMode = "none"; // "none", "illumination", "phases", "full-only"
     public boolean showWeekNumbers = false;
     public boolean compactMode = false;
     public boolean showDayNames = true;
@@ -349,10 +347,10 @@ public class CalendarRenderingService {
       ));
     }
 
-    // Moon display (illumination, phase symbols, or full moon only)
-    boolean shouldShowMoon = config.showMoonIllumination ||
-      (config.showMoonPhases && isMoonPhaseDay(date)) ||
-      (config.showFullMoonOnly && isFullMoonDay(date));
+    // Moon display based on moonDisplayMode
+    boolean shouldShowMoon = "illumination".equals(config.moonDisplayMode) ||
+      ("phases".equals(config.moonDisplayMode) && isMoonPhaseDay(date)) ||
+      ("full-only".equals(config.moonDisplayMode) && isFullMoonDay(date));
 
     if (shouldShowMoon) {
       int moonX = cellX + config.moonOffsetX;
@@ -363,14 +361,8 @@ public class CalendarRenderingService {
         moonY -= 3;
       }
 
-      if (config.showMoonPhases && !isMoonPhaseDay(date)) {
-        // Skip non-phase days
-      } else if (config.showFullMoonOnly && !isFullMoonDay(date)) {
-        // Skip non-full-moon days
-      } else {
-        svg.append(generateMoonIlluminationSVG(date, moonX, moonY,
-          config.latitude, config.longitude, config));
-      }
+      svg.append(generateMoonIlluminationSVG(date, moonX, moonY,
+        config.latitude, config.longitude, config));
     }
 
     // Check for holidays or custom dates

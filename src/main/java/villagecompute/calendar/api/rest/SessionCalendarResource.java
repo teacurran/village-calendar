@@ -411,9 +411,7 @@ public class SessionCalendarResource {
         config.year = defaultYear;
         config.theme = "default";
         config.layoutStyle = "grid";
-        config.showMoonPhases = false;
-        config.showMoonIllumination = false;
-        config.showFullMoonOnly = false;
+        config.moonDisplayMode = "none";
         config.showWeekNumbers = false;
         config.compactMode = false;
         config.showDayNames = true;
