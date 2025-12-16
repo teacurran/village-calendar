@@ -3,6 +3,7 @@ package villagecompute.calendar.api.rest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
+import jakarta.persistence.LockModeType;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -240,7 +241,8 @@ public class SessionCalendarResource {
     }
 
     /**
-     * Auto-save calendar configuration
+     * Auto-save calendar configuration.
+     * Uses pessimistic locking to handle concurrent updates gracefully - last write wins.
      */
     @PUT
     @Path("/{id}/autosave")
@@ -255,7 +257,9 @@ public class SessionCalendarResource {
                 .build();
         }
 
-        UserCalendar calendar = UserCalendar.findById(id);
+        // Use pessimistic lock to serialize concurrent autosaves for the same calendar
+        UserCalendar calendar = UserCalendar.getEntityManager()
+            .find(UserCalendar.class, id, LockModeType.PESSIMISTIC_WRITE);
         if (calendar == null) {
             return Response.status(Response.Status.NOT_FOUND)
                 .entity(Map.of("error", "Calendar not found"))
