@@ -173,12 +173,9 @@ public class CalendarGenerationService {
                 config.showMoonIllumination = jsonConfig.get("showMoonIllumination").asBoolean();
             if (jsonConfig.has("showFullMoonOnly")) config.showFullMoonOnly = jsonConfig.get("showFullMoonOnly").asBoolean();
 
-            // Derive moon display flags from moonDisplayMode if explicit booleans not set
-            // This matches how CalendarGenerator.vue derives these values at render time
-            if (jsonConfig.has("moonDisplayMode")
-                    && !jsonConfig.has("showMoonPhases")
-                    && !jsonConfig.has("showMoonIllumination")
-                    && !jsonConfig.has("showFullMoonOnly")) {
+            // Derive moon display flags from moonDisplayMode - this ALWAYS overrides explicit booleans
+            // because moonDisplayMode is the authoritative source (Vue sends stale boolean values)
+            if (jsonConfig.has("moonDisplayMode")) {
                 String moonDisplayMode = jsonConfig.get("moonDisplayMode").asText();
                 config.showMoonPhases = "phases".equals(moonDisplayMode);
                 config.showMoonIllumination = "illumination".equals(moonDisplayMode);

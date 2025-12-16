@@ -447,13 +447,16 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_ExplicitBooleanOverridesMoonDisplayMode() {
-        // Arrange: Config has BOTH moonDisplayMode and explicit boolean
-        // The explicit boolean should be used, not derived from moonDisplayMode
+    public void testGenerateCalendar_MoonDisplayModeAlwaysOverridesExplicitBooleans() {
+        // Arrange: Config has BOTH moonDisplayMode and explicit booleans
+        // moonDisplayMode is authoritative and should ALWAYS override explicit booleans
+        // (Vue sends stale boolean values alongside moonDisplayMode)
         String configJson = """
             {
               "moonDisplayMode": "phases",
-              "showMoonIllumination": true
+              "showMoonIllumination": true,
+              "showMoonPhases": false,
+              "showFullMoonOnly": false
             }
             """;
 
@@ -475,16 +478,18 @@ public class CalendarGenerationServiceTest {
         // Act
         calendarGenerationService.generateCalendar(testUserCalendar);
 
-        // Assert: explicit showMoonIllumination should be used, derivation should be skipped
+        // Assert: moonDisplayMode="phases" should override ALL explicit booleans
         ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
                 ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
         CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
-        assertTrue(capturedConfig.showMoonIllumination,
-                "Explicit showMoonIllumination=true should be used");
-        assertFalse(capturedConfig.showMoonPhases,
-                "showMoonPhases should NOT be derived when explicit boolean exists");
+        assertTrue(capturedConfig.showMoonPhases,
+                "moonDisplayMode='phases' should set showMoonPhases=true, overriding explicit false");
+        assertFalse(capturedConfig.showMoonIllumination,
+                "moonDisplayMode='phases' should set showMoonIllumination=false, overriding explicit true");
+        assertFalse(capturedConfig.showFullMoonOnly,
+                "moonDisplayMode='phases' should set showFullMoonOnly=false");
     }
 
     @Test
