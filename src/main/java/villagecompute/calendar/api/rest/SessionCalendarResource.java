@@ -10,6 +10,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.UserCalendar;
+import villagecompute.calendar.services.CalendarGenerationService;
 import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.services.SessionService;
 
@@ -28,6 +29,9 @@ public class SessionCalendarResource {
 
     @Inject
     CalendarRenderingService calendarRenderingService;
+
+    @Inject
+    CalendarGenerationService calendarGenerationService;
 
     @Inject
     ObjectMapper objectMapper;
@@ -290,9 +294,7 @@ public class SessionCalendarResource {
         // Regenerate SVG from the updated configuration
         String svg = null;
         try {
-            CalendarRenderingService.CalendarConfig calendarConfig =
-                objectMapper.treeToValue(calendar.configuration, CalendarRenderingService.CalendarConfig.class);
-            svg = calendarRenderingService.generateCalendarSVG(calendarConfig);
+            svg = calendarGenerationService.generateCalendarSVG(calendar);
             calendar.generatedSvg = svg;
         } catch (Exception e) {
             // Log but don't fail the save - SVG generation is secondary

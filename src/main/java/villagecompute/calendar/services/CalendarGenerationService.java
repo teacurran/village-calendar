@@ -115,6 +115,18 @@ public class CalendarGenerationService {
     }
 
     /**
+     * Generate calendar SVG only (without PDF rendering or upload).
+     * Uses buildCalendarConfig to properly derive moonDisplayMode -> boolean flags.
+     *
+     * @param userCalendar The UserCalendar entity
+     * @return SVG content string
+     */
+    public String generateCalendarSVG(UserCalendar userCalendar) {
+        CalendarRenderingService.CalendarConfig config = buildCalendarConfig(userCalendar);
+        return calendarRenderingService.generateCalendarSVG(config);
+    }
+
+    /**
      * Build a CalendarConfig by merging template configuration with user configuration.
      * User settings override template defaults.
      *
