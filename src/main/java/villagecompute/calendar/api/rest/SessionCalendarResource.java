@@ -283,9 +283,27 @@ public class SessionCalendarResource {
             calendar.name = request.name;
         }
 
+        // Regenerate SVG from the updated configuration
+        String svg = null;
+        try {
+            CalendarRenderingService.CalendarConfig calendarConfig =
+                objectMapper.treeToValue(calendar.configuration, CalendarRenderingService.CalendarConfig.class);
+            svg = calendarRenderingService.generateCalendarSVG(calendarConfig);
+            calendar.generatedSvg = svg;
+        } catch (Exception e) {
+            // Log but don't fail the save - SVG generation is secondary
+            e.printStackTrace();
+        }
+
         calendar.persist();
 
-        return Response.ok(Map.of("success", true, "id", calendar.id)).build();
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("id", calendar.id);
+        if (svg != null) {
+            response.put("svg", svg);
+        }
+        return Response.ok(response).build();
     }
 
     /**

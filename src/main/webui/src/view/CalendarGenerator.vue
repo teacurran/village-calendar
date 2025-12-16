@@ -1913,35 +1913,8 @@ watch(
   },
 );
 
-// Watch for configuration changes with debouncing
-// Use flush: 'sync' so the watcher runs immediately when config changes,
-// allowing the generatedSVG.value check to work correctly during initialization
-let configUpdateTimer: ReturnType<typeof setTimeout> | null = null;
-watch(
-  config,
-  (newConfig, oldConfig) => {
-    // Only auto-generate if we have already generated once (not during initial load)
-    // During initializeNewCalendar(), config is set BEFORE generatedSVG, so this check
-    // prevents regeneration when loading from the backend
-    if (generatedSVG.value && !isInitialGeneration.value) {
-      if (configUpdateTimer) {
-        clearTimeout(configUpdateTimer);
-      }
-      configUpdateTimer = setTimeout(() => {
-        generateCalendar();
-      }, 500);
-    }
-  },
-  { deep: true, flush: "sync" },
-);
-
-// Function to clear pending config timer (called during initialization)
-const clearPendingConfigTimer = () => {
-  if (configUpdateTimer) {
-    clearTimeout(configUpdateTimer);
-    configUpdateTimer = null;
-  }
-};
+// Note: No separate regeneration watcher needed - autoSaveCalendar() regenerates SVG on backend
+// and returns it in the response, eliminating the need for separate generate-json calls
 
 // Fetch holidays for the selected year (only if year changed)
 const fetchHolidays = async () => {
@@ -2826,7 +2799,7 @@ const autoSaveCalendar = async () => {
       }
 
       if (currentCalendarId.value) {
-        // Update existing calendar
+        // Update existing calendar - autosave also regenerates SVG
         const response = await sessionFetch(
           `/api/session-calendar/${currentCalendarId.value}/autosave`,
           {
@@ -2841,6 +2814,13 @@ const autoSaveCalendar = async () => {
 
         if (!response.ok) {
           throw new Error("Failed to autosave");
+        }
+
+        // Use the regenerated SVG from the response
+        const data = await response.json();
+        if (data.svg) {
+          generatedSVG.value = wrapSvgWithMargins(data.svg);
+          svgKey.value++;
         }
       } else {
         // Create new calendar
