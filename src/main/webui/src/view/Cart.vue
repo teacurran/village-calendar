@@ -50,7 +50,10 @@ const isCalendarItem = (item: CartItem) => {
   }
   // Has calendar configuration (from static product page or custom calendar)
   const config = getCalendarConfig(item);
-  if (config && (config.year || config.theme || config.svgContent || config.generatedSvg)) {
+  if (
+    config &&
+    (config.year || config.theme || config.svgContent || config.generatedSvg)
+  ) {
     return true;
   }
   return false;

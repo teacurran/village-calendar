@@ -1768,24 +1768,15 @@ onMounted(async () => {
   // Fetch user data to ensure store is populated
   await userStore.fetchCurrentUser();
 
-  // Load templates for admin management
-  if (isAdmin.value) {
-    await loadTemplates();
-  }
-
-  // Load all active templates for all users (for template drawer)
-  await loadAllTemplates();
-
   // Load holidays (but don't show them by default)
   await fetchHolidays();
 
   // Load calendar or template from URL if specified
   const calendarLoaded = await loadCalendarFromUrl();
 
-  // If nothing was loaded from URL, generate a fresh default calendar
+  // If nothing was loaded from URL, initialize a new calendar with backend defaults
   if (!calendarLoaded) {
-    generateCalendar();
-    await autoSaveCalendar();
+    await initializeNewCalendar();
   }
 
   // Check if wizard should open from query param
@@ -1795,8 +1786,9 @@ onMounted(async () => {
     router.replace({ query: { ...route.query, wizard: undefined } });
   }
 
-  // Check if manage templates dialog should open from query param
-  if (route.query["manage-templates"] === "true") {
+  // Check if manage templates dialog should open from query param (admin only)
+  if (route.query["manage-templates"] === "true" && isAdmin.value) {
+    await loadAllTemplates(); // Load templates only when admin opens dialog
     showTemplatesDialog.value = true;
     router.replace({
       query: { ...route.query, "manage-templates": undefined },
@@ -1823,8 +1815,9 @@ watch(
 // Watch for manage-templates query param changes (for when already on page)
 watch(
   () => route.query["manage-templates"],
-  (manageTemplates) => {
-    if (manageTemplates === "true") {
+  async (manageTemplates) => {
+    if (manageTemplates === "true" && isAdmin.value) {
+      await loadAllTemplates(); // Load templates only when admin opens dialog
       showTemplatesDialog.value = true;
       router.replace({
         query: { ...route.query, "manage-templates": undefined },
@@ -1921,22 +1914,34 @@ watch(
 );
 
 // Watch for configuration changes with debouncing
-let updateTimer = null;
+// Use flush: 'sync' so the watcher runs immediately when config changes,
+// allowing the generatedSVG.value check to work correctly during initialization
+let configUpdateTimer: ReturnType<typeof setTimeout> | null = null;
 watch(
   config,
   (newConfig, oldConfig) => {
-    // Only auto-generate if we have already generated once
-    if (generatedSVG.value) {
-      if (updateTimer) {
-        clearTimeout(updateTimer);
+    // Only auto-generate if we have already generated once (not during initial load)
+    // During initializeNewCalendar(), config is set BEFORE generatedSVG, so this check
+    // prevents regeneration when loading from the backend
+    if (generatedSVG.value && !isInitialGeneration.value) {
+      if (configUpdateTimer) {
+        clearTimeout(configUpdateTimer);
       }
-      updateTimer = setTimeout(() => {
+      configUpdateTimer = setTimeout(() => {
         generateCalendar();
       }, 500);
     }
   },
-  { deep: true },
+  { deep: true, flush: "sync" },
 );
+
+// Function to clear pending config timer (called during initialization)
+const clearPendingConfigTimer = () => {
+  if (configUpdateTimer) {
+    clearTimeout(configUpdateTimer);
+    configUpdateTimer = null;
+  }
+};
 
 // Fetch holidays for the selected year (only if year changed)
 const fetchHolidays = async () => {
@@ -2060,6 +2065,76 @@ const generateCalendar = async () => {
       severity: "error",
       summary: "Generation Failed",
       detail: "Failed to generate calendar. Please try again.",
+      life: 5000,
+    });
+  } finally {
+    generating.value = false;
+  }
+};
+
+/**
+ * Initialize a new session calendar with default configuration.
+ * Calls /api/session-calendar/new which returns pre-generated SVG and config.
+ * This replaces the separate generateCalendar() + autoSaveCalendar() calls on mount.
+ */
+const initializeNewCalendar = async () => {
+  generating.value = true;
+  try {
+    const response = await sessionFetch("/api/session-calendar/new", {
+      method: "POST",
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+
+      // Set the calendar ID
+      currentCalendarId.value = data.id;
+
+      // Apply configuration from backend
+      if (data.configuration) {
+        Object.assign(config.value, data.configuration);
+
+        // Load custom events if any
+        if (data.configuration.customDates) {
+          customEvents.value = Object.entries(
+            data.configuration.customDates,
+          ).map(([date, eventData]) => {
+            const isNewFormat =
+              typeof eventData === "object" && eventData !== null;
+            return {
+              date: new Date(date),
+              emoji: isNewFormat ? eventData.emoji : eventData,
+              title: data.configuration.eventTitles?.[date] || "",
+              showTitle: !!data.configuration.eventTitles?.[date],
+              displaySettings: isNewFormat ? eventData.displaySettings : {},
+              id: Date.now() + Math.random(),
+            };
+          });
+        }
+
+        // Update calendar editor store with the year
+        calendarEditorStore.setCalendarYear(config.value.year);
+      }
+
+      // Use pre-generated SVG from backend
+      if (data.svg) {
+        generatedSVG.value = wrapSvgWithMargins(data.svg);
+        svgKey.value++;
+        resetZoom();
+      }
+
+      // Mark initialization complete - watchers use flush: 'sync' so they've already
+      // checked isInitialGeneration synchronously and returned early
+      isInitialGeneration.value = false;
+    } else {
+      throw new Error("Failed to initialize calendar");
+    }
+  } catch (error) {
+    console.error("Error initializing calendar:", error);
+    toast.add({
+      severity: "error",
+      summary: "Initialization Failed",
+      detail: "Failed to initialize calendar. Please refresh the page.",
       life: 5000,
     });
   } finally {
@@ -2909,27 +2984,36 @@ const loadCalendarFromUrl = async () => {
 };
 
 // Watch for configuration changes and autosave
+// Use flush: 'sync' so the isInitialGeneration check works correctly
 watch(
   config,
   () => {
+    // Skip during initial load - initializeNewCalendar handles this
+    if (isInitialGeneration.value) {
+      return;
+    }
     // Auto-save if we have a calendar ID OR if viewing a shared calendar (will trigger copy)
     if (currentCalendarId.value || isViewingSharedCalendar.value) {
       autoSaveCalendar();
     }
   },
-  { deep: true },
+  { deep: true, flush: "sync" },
 );
 
 // Watch for custom events changes
 watch(
   customEvents,
   () => {
+    // Skip during initial load - initializeNewCalendar handles this
+    if (isInitialGeneration.value) {
+      return;
+    }
     // Auto-save if we have a calendar ID OR if viewing a shared calendar (will trigger copy)
     if (currentCalendarId.value || isViewingSharedCalendar.value) {
       autoSaveCalendar();
     }
   },
-  { deep: true },
+  { deep: true, flush: "sync" },
 );
 
 // Build complete configuration including custom events
@@ -2957,69 +3041,21 @@ const buildFullConfiguration = () => {
   return fullConfig;
 };
 
-// Load all templates for admin
-const loadTemplates = async () => {
+// Load all templates for admin management dialog (lazy loaded when dialog opens)
+const loadAllTemplates = async () => {
   if (!isAdmin.value) return;
 
+  loadingAllTemplates.value = true;
   loadingTemplates.value = true;
   try {
-    // Use GraphQL to fetch all templates (admin can see inactive templates)
+    // Admin gets all templates (including inactive)
     templates.value = await fetchTemplates(undefined, undefined);
-  } catch (error) {
-    console.error("Error loading templates:", error);
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: "Failed to load templates",
-      life: 3000,
-    });
-  } finally {
-    loadingTemplates.value = false;
-  }
-};
-
-// Load all active templates for all users
-const loadAllTemplates = async () => {
-  loadingAllTemplates.value = true;
-  try {
-    // Fetch only active templates for regular users
-    allTemplates.value = await fetchTemplates(true, undefined);
-    // Generate previews for templates
-    await generateTemplatePreviewsForDrawer();
+    allTemplates.value = templates.value;
   } catch (error) {
     console.error("Error loading templates:", error);
   } finally {
     loadingAllTemplates.value = false;
-  }
-};
-
-// Generate preview thumbnails for templates in the drawer
-const generateTemplatePreviewsForDrawer = async () => {
-  for (const template of allTemplates.value) {
-    if (templatePreviews.value[template.id]) continue; // Skip if already loaded
-
-    try {
-      if (template.previewSvg) {
-        templatePreviews.value[template.id] = scaleSvgForPreview(
-          template.previewSvg,
-        );
-      } else if (template.configuration) {
-        const response = await fetch("/api/calendar/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(template.configuration),
-        });
-        if (response.ok) {
-          const svg = await response.text();
-          templatePreviews.value[template.id] = scaleSvgForPreview(svg);
-        }
-      }
-    } catch (error) {
-      console.error(
-        `Error generating preview for template ${template.id}:`,
-        error,
-      );
-    }
+    loadingTemplates.value = false;
   }
 };
 
@@ -3468,7 +3504,7 @@ const confirmSaveTemplate = async () => {
       life: 3000,
     });
     showSaveTemplateDialog.value = false;
-    loadTemplates(); // Reload templates list
+    loadAllTemplates(); // Reload templates list
   } catch (error) {
     console.error("Error saving template:", error);
     toast.add({
@@ -3521,7 +3557,7 @@ const updateTemplate = async (template) => {
       detail: `Template "${template.name}" has been updated.`,
       life: 3000,
     });
-    loadTemplates(); // Reload templates list
+    loadAllTemplates(); // Reload templates list
   } catch (error) {
     console.error("Error updating template:", error);
     toast.add({
@@ -3562,7 +3598,7 @@ const confirmDuplicateTemplate = async () => {
       life: 3000,
     });
     showDuplicateDialog.value = false;
-    loadTemplates(); // Reload templates list
+    loadAllTemplates(); // Reload templates list
   } catch (error) {
     console.error("Error duplicating template:", error);
     toast.add({

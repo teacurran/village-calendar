@@ -12,6 +12,7 @@ import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.services.SessionService;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -285,5 +286,140 @@ public class SessionCalendarResource {
         calendar.persist();
 
         return Response.ok(Map.of("success", true, "id", calendar.id)).build();
+    }
+
+    /**
+     * Create a new session calendar with default configuration.
+     * Looks for a template with slug='default', otherwise uses hardcoded defaults.
+     * Returns the calendar ID, configuration, and pre-generated SVG.
+     */
+    @POST
+    @Path("/new")
+    @Transactional
+    public Response createNewCalendar(@HeaderParam("X-Session-ID") String sessionId) {
+        if (sessionId == null || sessionId.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(Map.of("error", "No session found"))
+                .build();
+        }
+
+        // Check if this session already has a calendar - return existing one
+        UserCalendar existingCalendar = UserCalendar.<UserCalendar>find("sessionId", sessionId)
+            .firstResult();
+
+        if (existingCalendar != null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", existingCalendar.id);
+            response.put("configuration", existingCalendar.configuration);
+            response.put("svg", existingCalendar.generatedSvg);
+            response.put("existing", true);
+            return Response.ok(response).build();
+        }
+
+        // Look for default template
+        CalendarTemplate defaultTemplate = CalendarTemplate.<CalendarTemplate>find("slug", "default")
+            .firstResult();
+
+        CalendarRenderingService.CalendarConfig config;
+        String calendarName;
+
+        if (defaultTemplate != null && defaultTemplate.isActive) {
+            // Use template configuration
+            try {
+                config = objectMapper.treeToValue(
+                    defaultTemplate.configuration,
+                    CalendarRenderingService.CalendarConfig.class
+                );
+                calendarName = defaultTemplate.name;
+            } catch (Exception e) {
+                config = getDefaultCalendarConfig();
+                calendarName = "Default Calendar";
+            }
+        } else {
+            // Use hardcoded defaults
+            config = getDefaultCalendarConfig();
+            calendarName = "Default Calendar";
+        }
+
+        // Create new calendar
+        UserCalendar calendar = new UserCalendar();
+        calendar.sessionId = sessionId;
+        calendar.name = calendarName;
+        calendar.year = config.year;
+        calendar.isPublic = true;
+
+        // Convert config to JsonNode for storage
+        try {
+            calendar.configuration = objectMapper.valueToTree(config);
+        } catch (Exception e) {
+            calendar.configuration = objectMapper.createObjectNode();
+        }
+
+        // Generate SVG
+        try {
+            calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        calendar.persist();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", calendar.id);
+        response.put("configuration", calendar.configuration);
+        response.put("svg", calendar.generatedSvg);
+        response.put("existing", false);
+
+        return Response.ok(response).build();
+    }
+
+    /**
+     * Get default calendar configuration (hardcoded fallback).
+     * Used when no template with slug='default' exists.
+     */
+    private CalendarRenderingService.CalendarConfig getDefaultCalendarConfig() {
+        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+
+        // Calculate default year: current year if Jan-Mar, next year if Apr-Dec
+        LocalDate now = LocalDate.now();
+        int defaultYear = now.getMonthValue() <= 3 ? now.getYear() : now.getYear() + 1;
+
+        config.year = defaultYear;
+        config.theme = "default";
+        config.layoutStyle = "grid";
+        config.showMoonPhases = false;
+        config.showMoonIllumination = false;
+        config.showFullMoonOnly = false;
+        config.showWeekNumbers = false;
+        config.compactMode = false;
+        config.showDayNames = true;
+        config.showDayNumbers = true;
+        config.showGrid = true;
+        config.highlightWeekends = true;
+        config.rotateMonthNames = false;
+        config.firstDayOfWeek = java.time.DayOfWeek.SUNDAY;
+        config.latitude = 0;
+        config.longitude = 0;
+        config.moonSize = 20;
+        config.moonOffsetX = 25;
+        config.moonOffsetY = 45;
+        config.moonBorderColor = "#c1c1c1";
+        config.moonBorderWidth = 0.5;
+        config.yearColor = "#000000";
+        config.monthColor = "#000000";
+        config.dayTextColor = "#000000";
+        config.dayNameColor = "#666666";
+        config.gridLineColor = "#c1c1c1";
+        config.weekendBgColor = "";
+        config.holidayColor = "#ff5252";
+        config.customDateColor = "#4caf50";
+        config.moonDarkColor = "#c1c1c1";
+        config.moonLightColor = "#FFFFFF";
+        config.emojiPosition = "bottom-left";
+        config.eventDisplayMode = "large";
+        config.emojiFont = "noto-color";
+        config.locale = "en-US";
+
+        return config;
     }
 }
