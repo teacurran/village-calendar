@@ -831,6 +831,7 @@ const templatePreviews = ref({});
 // Session calendar state
 const currentCalendarId = ref(null);
 const isAutoSaving = ref(false);
+const autoSaveTimeout = ref(null);
 const isViewingSharedCalendar = ref(false); // True when viewing someone else's calendar
 const originalCalendarId = ref(null); // Store the original calendar ID when viewing shared
 
@@ -2751,98 +2752,106 @@ const loadTemplate = async () => {
   }
 };
 
-// Session-based calendar management - saves config and regenerates SVG in one call
+// Session-based calendar management
 const autoSaveCalendar = async () => {
-  isAutoSaving.value = true;
+  // Clear any existing timeout
+  if (autoSaveTimeout.value) {
+    clearTimeout(autoSaveTimeout.value);
+  }
 
-  try {
-    const fullConfig = buildFullConfiguration();
+  // Debounce autosave by 500ms (reduced from 1s since this now handles SVG regeneration too)
+  autoSaveTimeout.value = setTimeout(async () => {
+    isAutoSaving.value = true;
 
-    // If viewing a shared calendar, copy it to session first
-    if (isViewingSharedCalendar.value && originalCalendarId.value) {
-      const copyResponse = await fetch(
-        `/api/session-calendar/${originalCalendarId.value}/copy-to-session`,
-        {
-          method: "POST",
-        },
-      );
+    try {
+      const fullConfig = buildFullConfiguration();
 
-      if (copyResponse.ok) {
-        const calendar = await copyResponse.json();
-        currentCalendarId.value = calendar.id;
-        isViewingSharedCalendar.value = false;
-        originalCalendarId.value = null;
+      // If viewing a shared calendar, copy it to session first
+      if (isViewingSharedCalendar.value && originalCalendarId.value) {
+        const copyResponse = await fetch(
+          `/api/session-calendar/${originalCalendarId.value}/copy-to-session`,
+          {
+            method: "POST",
+          },
+        );
 
-        // Update URL to new calendar ID
-        router.replace({
-          path: route.path,
-          query: { id: calendar.id },
-        });
+        if (copyResponse.ok) {
+          const calendar = await copyResponse.json();
+          currentCalendarId.value = calendar.id;
+          isViewingSharedCalendar.value = false;
+          originalCalendarId.value = null;
 
-        toast.add({
-          severity: "info",
-          summary: "Calendar Copied",
-          detail: "This calendar has been copied to your session",
-          life: 3000,
-        });
-      } else {
-        throw new Error("Failed to copy calendar to session");
+          // Update URL to new calendar ID
+          router.replace({
+            path: route.path,
+            query: { id: calendar.id },
+          });
+
+          toast.add({
+            severity: "info",
+            summary: "Calendar Copied",
+            detail: "This calendar has been copied to your session",
+            life: 3000,
+          });
+        } else {
+          throw new Error("Failed to copy calendar to session");
+        }
       }
-    }
 
-    if (currentCalendarId.value) {
-      // Update existing calendar - autosave also regenerates SVG
-      const response = await sessionFetch(
-        `/api/session-calendar/${currentCalendarId.value}/autosave`,
-        {
-          method: "PUT",
+      if (currentCalendarId.value) {
+        // Update existing calendar - autosave also regenerates SVG
+        const response = await sessionFetch(
+          `/api/session-calendar/${currentCalendarId.value}/autosave`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              configuration: fullConfig,
+              name: config.value.name || "Untitled Calendar",
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to autosave");
+        }
+
+        // Use the regenerated SVG from the response
+        const data = await response.json();
+        if (data.svg) {
+          generatedSVG.value = wrapSvgWithMargins(data.svg);
+          svgKey.value++;
+        }
+      } else {
+        // Create new calendar
+        const response = await sessionFetch("/api/session-calendar/save", {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             configuration: fullConfig,
             name: config.value.name || "Untitled Calendar",
           }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to autosave");
-      }
-
-      // Use the regenerated SVG from the response
-      const data = await response.json();
-      if (data.svg) {
-        generatedSVG.value = wrapSvgWithMargins(data.svg);
-        svgKey.value++;
-      }
-    } else {
-      // Create new calendar
-      const response = await sessionFetch("/api/session-calendar/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          configuration: fullConfig,
-          name: config.value.name || "Untitled Calendar",
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        currentCalendarId.value = data.id;
-
-        // Update URL with calendar ID
-        router.replace({
-          path: route.path,
-          query: { id: data.id },
         });
-      } else {
-        throw new Error("Failed to save calendar");
+
+        if (response.ok) {
+          const data = await response.json();
+          currentCalendarId.value = data.id;
+
+          // Update URL with calendar ID
+          router.replace({
+            path: route.path,
+            query: { id: data.id },
+          });
+        } else {
+          throw new Error("Failed to save calendar");
+        }
       }
+    } catch (error) {
+      console.error("Autosave failed:", error);
+    } finally {
+      isAutoSaving.value = false;
     }
-  } catch (error) {
-    console.error("Autosave failed:", error);
-  } finally {
-    isAutoSaving.value = false;
-  }
+  }, 500);
 };
 
 // Load calendar from ID or template
