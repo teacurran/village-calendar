@@ -227,7 +227,8 @@ async function handleCheckoutCompletion() {
 onMounted(async () => {
   try {
     await handleCheckoutCompletion();
-    await cartStore.fetchCart();
+    // Force fresh fetch to avoid race condition with appInit's cached empty cart
+    await cartStore.fetchCart(true);
     await loadCalendarSvgs();
 
     if (cartStore.isEmpty) {

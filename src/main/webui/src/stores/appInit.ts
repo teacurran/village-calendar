@@ -56,11 +56,11 @@ export const useAppInitStore = defineStore("appInit", {
                 }
                 currentUser {
                   id
-                  username
                   email
-                  name
-                  provider
-                  avatarUrl
+                  displayName
+                  oauthProvider
+                  profileImageUrl
+                  isAdmin
                 }
               }
             `,

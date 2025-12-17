@@ -772,8 +772,6 @@
 
             configuration = JSON.stringify(configuration);
 
-            console.log('Cart item:', templateName, year);
-
             // Get or create session ID - must match Vue app's sessionService.ts key
             const SESSION_KEY = 'village_calendar_session_id';
             let sessionId = localStorage.getItem(SESSION_KEY);
