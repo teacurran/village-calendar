@@ -664,7 +664,7 @@
 
             function updateZoomDisplay() {
                 zoomLevelDisplay.textContent = Math.round(currentZoom * 100) + '%';
-                svgContainer.style.transform = `scale(${currentZoom})`;
+                svgContainer.style.transform = 'scale(' + currentZoom + ')';
             }
 
             function openModal() {
