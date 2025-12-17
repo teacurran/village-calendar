@@ -14,7 +14,6 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import { RouterView } from "vue-router";
-import { useAuthStore } from "@/stores/authStore";
 import { useAppInitStore } from "@/stores/appInit";
 import Toast from "primevue/toast";
 import ConfirmDialog from "primevue/confirmdialog";
@@ -22,15 +21,12 @@ import AppHeader from "@/components/common/AppHeader.vue";
 import AppFooter from "@/components/common/AppFooter.vue";
 import CartDrawer from "@/components/CartDrawer.vue";
 
-const authStore = useAuthStore();
 const appInitStore = useAppInitStore();
 
-// Initialize app data (cart + user) and authentication on mount
+// Initialize app data (cart + user) in single GraphQL call on mount
+// Note: JWT auth is initialized earlier in main.ts before mount
 onMounted(() => {
-  // Combined fetch for cart + currentUser in single GraphQL call
   appInitStore.initialize();
-  // Initialize JWT-based auth (separate from session-based currentUser)
-  authStore.initialize();
 });
 </script>
 

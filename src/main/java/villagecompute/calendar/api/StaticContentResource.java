@@ -396,21 +396,27 @@ public class StaticContentResource {
             }
 
             // Complex types: holidays (Set<String>)
+            // Clear first to allow user config to replace template values
             if (jsonConfig.has("holidays") && jsonConfig.get("holidays").isArray()) {
+                config.holidays.clear();
                 jsonConfig.get("holidays").forEach(holiday -> {
                     config.holidays.add(holiday.asText());
                 });
             }
 
             // Complex types: holidaySets (List<String>)
+            // Clear first to allow user config to replace template values (e.g., empty array means no holidays)
             if (jsonConfig.has("holidaySets") && jsonConfig.get("holidaySets").isArray()) {
+                config.holidaySets.clear();
                 jsonConfig.get("holidaySets").forEach(set -> {
                     config.holidaySets.add(set.asText());
                 });
             }
 
             // Complex types: holidayEmojis (Map<String, String>)
+            // Clear first to allow user config to replace template values
             if (jsonConfig.has("holidayEmojis") && jsonConfig.get("holidayEmojis").isObject()) {
+                config.holidayEmojis.clear();
                 JsonNode holidayEmojis = jsonConfig.get("holidayEmojis");
                 holidayEmojis.fields().forEachRemaining(entry -> {
                     config.holidayEmojis.put(entry.getKey(), entry.getValue().asText());
@@ -418,7 +424,9 @@ public class StaticContentResource {
             }
 
             // Complex types: holidayNames (Map<String, String>)
+            // Clear first to allow user config to replace template values
             if (jsonConfig.has("holidayNames") && jsonConfig.get("holidayNames").isObject()) {
+                config.holidayNames.clear();
                 JsonNode holidayNames = jsonConfig.get("holidayNames");
                 holidayNames.fields().forEachRemaining(entry -> {
                     config.holidayNames.put(entry.getKey(), entry.getValue().asText());
