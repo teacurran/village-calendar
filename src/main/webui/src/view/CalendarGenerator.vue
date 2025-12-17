@@ -1765,8 +1765,7 @@ onMounted(async () => {
   calendarEditorStore.registerZoomCallbacks(zoomIn, zoomOut, resetZoom);
   calendarEditorStore.registerSaveAsTemplateCallback(saveAsTemplate);
 
-  // Fetch user data to ensure store is populated
-  await userStore.fetchCurrentUser();
+  // Note: User data is fetched centrally in App.vue via appInit store
 
   // Load holidays (but don't show them by default)
   await fetchHolidays();

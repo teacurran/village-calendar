@@ -133,9 +133,8 @@ const showCalendarPreview = (item: CartItem) => {
   }
 };
 
-// Fetch cart on component mount
+// Load SVGs on component mount (cart is fetched centrally in App.vue)
 onMounted(async () => {
-  await cartStore.fetchCart(true);
   await loadCalendarSvgs();
 });
 

@@ -124,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/authStore";
 import { useCartStore } from "@/stores/cart";
@@ -134,6 +134,7 @@ import Button from "primevue/button";
 import Badge from "primevue/badge";
 import Menu from "primevue/menu";
 import type { MenuItem } from "primevue/menuitem";
+// Note: Cart is fetched centrally in App.vue via appInit store
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -210,11 +211,6 @@ const handleLogout = () => {
 const toggleCart = () => {
   cartStore.toggleCart();
 };
-
-// Fetch cart on mount
-onMounted(() => {
-  cartStore.fetchCart();
-});
 </script>
 
 <style scoped>
