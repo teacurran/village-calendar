@@ -165,6 +165,105 @@
             width: 100%;
             height: auto;
             display: block;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .preview-thumbnail:hover {
+            opacity: 0.9;
+        }
+
+        .calendar-preview-hint {
+            text-align: center;
+            padding: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--p-surface-500);
+            background: var(--p-surface-50);
+            border-top: 1px solid var(--p-surface-200);
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            background: var(--p-surface-800);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .modal-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--p-surface-700);
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: background 0.2s;
+        }
+
+        .modal-btn:hover {
+            background: var(--p-surface-600);
+        }
+
+        .modal-btn-close {
+            background: #dc2626;
+        }
+
+        .modal-btn-close:hover {
+            background: #b91c1c;
+        }
+
+        .zoom-level {
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            font-size: 0.875rem;
+            min-width: 60px;
+            justify-content: center;
+        }
+
+        .modal-content {
+            max-width: 95vw;
+            max-height: calc(100vh - 120px);
+            overflow: auto;
+            background: white;
+            border-radius: 0.5rem;
+            position: relative;
+        }
+
+        .modal-svg-container {
+            transform-origin: top left;
+            transition: transform 0.2s ease-out;
+        }
+
+        .modal-svg-container svg {
+            display: block;
+            max-width: none;
         }
 
         .product-info {
@@ -426,11 +525,40 @@
             <div class="calendar-preview">
                 <img
                     class="preview-thumbnail"
+                    id="preview-thumbnail"
                     src="/static/calendars/{page.data.slug}.png"
                     alt="{c.title ?: page.title} Preview"
                     loading="eager"
                     style="width: 100%; height: auto;"
+                    data-svg-url="/static/calendars/{page.data.slug}.svg"
                 >
+                <div class="calendar-preview-hint">
+                    <i class="pi pi-search-plus"></i> Click to view full detail
+                </div>
+            </div>
+
+            <!-- SVG Preview Modal -->
+            <div class="modal-overlay" id="svg-modal">
+                <div class="modal-controls">
+                    <button class="modal-btn" id="zoom-out-btn" title="Zoom Out">
+                        <i class="pi pi-minus"></i>
+                    </button>
+                    <span class="zoom-level" id="zoom-level">100%</span>
+                    <button class="modal-btn" id="zoom-in-btn" title="Zoom In">
+                        <i class="pi pi-plus"></i>
+                    </button>
+                    <button class="modal-btn" id="zoom-reset-btn" title="Reset Zoom">
+                        <i class="pi pi-refresh"></i>
+                    </button>
+                    <button class="modal-btn modal-btn-close" id="modal-close-btn" title="Close">
+                        <i class="pi pi-times"></i>
+                    </button>
+                </div>
+                <div class="modal-content" id="modal-content">
+                    <div class="modal-svg-container" id="svg-container">
+                        <!-- SVG will be loaded here -->
+                    </div>
+                </div>
             </div>
 
             <div class="product-info">
@@ -467,7 +595,7 @@
                 </div>
 
                 <div class="product-meta">
-                    <p>Click the preview to see full detail. Customize to change colors, add events, and more.</p>
+                    <p>Customize to change colors, add events, and more.</p>
                 </div>
             </div>
         </div>
@@ -516,6 +644,99 @@
     </footer>
 
     <script>
+        // SVG Preview Modal functionality
+        (function() {
+            const modal = document.getElementById('svg-modal');
+            const thumbnail = document.getElementById('preview-thumbnail');
+            const svgContainer = document.getElementById('svg-container');
+            const modalContent = document.getElementById('modal-content');
+            const zoomLevelDisplay = document.getElementById('zoom-level');
+            const zoomInBtn = document.getElementById('zoom-in-btn');
+            const zoomOutBtn = document.getElementById('zoom-out-btn');
+            const zoomResetBtn = document.getElementById('zoom-reset-btn');
+            const closeBtn = document.getElementById('modal-close-btn');
+
+            let currentZoom = 1;
+            let svgLoaded = false;
+            const zoomStep = 0.25;
+            const minZoom = 0.25;
+            const maxZoom = 3;
+
+            function updateZoomDisplay() {
+                zoomLevelDisplay.textContent = Math.round(currentZoom * 100) + '%';
+                svgContainer.style.transform = `scale(${currentZoom})`;
+            }
+
+            function openModal() {
+                if (!svgLoaded) {
+                    const svgUrl = thumbnail.dataset.svgUrl;
+                    svgContainer.innerHTML = '<div style="padding: 2rem; color: #666;">Loading...</div>';
+                    fetch(svgUrl)
+                        .then(response => response.text())
+                        .then(svgContent => {
+                            svgContainer.innerHTML = svgContent;
+                            svgLoaded = true;
+                            // Reset zoom when first loaded
+                            currentZoom = 1;
+                            updateZoomDisplay();
+                        })
+                        .catch(err => {
+                            svgContainer.innerHTML = '<div style="padding: 2rem; color: #dc2626;">Failed to load preview</div>';
+                            console.error('Failed to load SVG:', err);
+                        });
+                }
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeModal() {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            function zoomIn() {
+                if (currentZoom < maxZoom) {
+                    currentZoom = Math.min(currentZoom + zoomStep, maxZoom);
+                    updateZoomDisplay();
+                }
+            }
+
+            function zoomOut() {
+                if (currentZoom > minZoom) {
+                    currentZoom = Math.max(currentZoom - zoomStep, minZoom);
+                    updateZoomDisplay();
+                }
+            }
+
+            function resetZoom() {
+                currentZoom = 1;
+                updateZoomDisplay();
+                modalContent.scrollTop = 0;
+                modalContent.scrollLeft = 0;
+            }
+
+            // Event listeners
+            thumbnail.addEventListener('click', openModal);
+            closeBtn.addEventListener('click', closeModal);
+            zoomInBtn.addEventListener('click', zoomIn);
+            zoomOutBtn.addEventListener('click', zoomOut);
+            zoomResetBtn.addEventListener('click', resetZoom);
+
+            // Close on overlay click (but not on content click)
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+
+            // Close on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modal.classList.contains('active')) {
+                    closeModal();
+                }
+            });
+        })();
+
         // Add to cart functionality
         document.getElementById('add-to-cart-btn')?.addEventListener('click', async function(e) {
             e.preventDefault();
