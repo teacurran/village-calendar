@@ -115,11 +115,24 @@ const router = createRouter({
     },
     // Admin routes
     ...adminRoutes,
-    // Legacy routes - keep for backward compatibility
+    // Calendar generator routes
     {
       path: "/generator",
-      name: "generator",
+      name: "generator-legacy",
+      redirect: "/calendars/generator",
+      meta: { requiresAuth: false },
+    },
+    {
+      path: "/calendars/generator",
+      name: "calendar-generator",
       component: () => import("./view/CalendarGenerator.vue"),
+      meta: { requiresAuth: false },
+    },
+    // Maze generator route
+    {
+      path: "/mazes/generator",
+      name: "maze-generator",
+      component: () => import("./view/maze/MazeGenerator.vue"),
       meta: { requiresAuth: false },
     },
     {
