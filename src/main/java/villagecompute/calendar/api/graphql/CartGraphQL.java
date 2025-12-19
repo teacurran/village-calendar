@@ -42,15 +42,23 @@ public class CartGraphQL {
     }
 
     /**
-     * Add an item to the cart
+     * Add an item to the cart.
+     * Supports both new generator-based items (with generatorType and assets) and legacy calendar items.
      */
     @Mutation("addToCart")
-    @Description("Add a calendar to the shopping cart")
+    @Description("Add an item to the shopping cart")
     @Transactional
     public Cart addToCart(@Name("input") AddToCartInput input) {
         String sessionId = sessionService.getCurrentSessionId();
-        LOG.info(String.format("Adding to cart for session %s: template=%s, year=%d, quantity=%d",
-            sessionId, input.templateId, input.year, input.quantity));
+
+        if (input.generatorType != null) {
+            int assetCount = input.assets != null ? input.assets.size() : 0;
+            LOG.info(String.format("Adding to cart for session %s: generatorType=%s, description=%s, quantity=%d, assets=%d",
+                sessionId, input.generatorType, input.description, input.quantity, assetCount));
+        } else {
+            LOG.info(String.format("Adding to cart for session %s: template=%s, year=%s, quantity=%d",
+                sessionId, input.templateId, input.year, input.quantity));
+        }
 
         return cartService.addToCart(sessionId, input);
     }

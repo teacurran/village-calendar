@@ -5,8 +5,10 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 import villagecompute.calendar.api.graphql.inputs.AddToCartInput;
+import villagecompute.calendar.api.graphql.inputs.AssetInput;
 import villagecompute.calendar.api.graphql.types.Cart;
 import villagecompute.calendar.api.graphql.types.CartItem;
+import villagecompute.calendar.data.models.ItemAsset;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -38,7 +40,8 @@ public class CartService {
     }
 
     /**
-     * Add item to cart
+     * Add item to cart.
+     * Supports both new generator-based items (with generatorType and assets) and legacy calendar items.
      */
     @Transactional
     public Cart addToCart(String sessionId, AddToCartInput input) {
@@ -62,15 +65,53 @@ public class CartService {
             LOG.infof("Using default product '%s' price: $%.2f", productCode, unitPrice);
         }
 
-        cartEntity.addOrUpdateItem(
-            input.templateId,
-            input.templateName != null ? input.templateName : "Calendar " + input.year,
-            input.year,
-            input.quantity != null ? input.quantity : 1,
-            unitPrice,
-            input.configuration,
-            productCode
-        );
+        int quantity = input.quantity != null ? input.quantity : 1;
+        villagecompute.calendar.data.models.CartItem cartItem;
+
+        // Check if using new generator-based format
+        if (input.generatorType != null) {
+            LOG.infof("Adding generator-based item: type=%s, description=%s, quantity=%d",
+                input.generatorType, input.description, quantity);
+
+            // Create new cart item (generator items are always new line items since SVGs are unique)
+            cartItem = cartEntity.addItem(
+                input.generatorType,
+                input.description,
+                quantity,
+                unitPrice,
+                input.configuration,
+                productCode
+            );
+
+            // Create and attach asset records if provided
+            if (input.assets != null && !input.assets.isEmpty()) {
+                for (AssetInput assetInput : input.assets) {
+                    ItemAsset asset = ItemAsset.create(
+                        assetInput.assetKey,
+                        assetInput.svgContent,
+                        assetInput.widthInches,
+                        assetInput.heightInches
+                    );
+                    asset.persist();
+                    cartItem.addAsset(asset);
+                    LOG.infof("Added asset '%s' to cart item", assetInput.assetKey);
+                }
+            }
+        } else {
+            // Legacy calendar format - use addOrUpdateItem for backward compatibility
+            LOG.infof("Adding legacy calendar item: template=%s, year=%d, quantity=%d",
+                input.templateId, input.year, quantity);
+
+            cartItem = cartEntity.addOrUpdateItem(
+                input.templateId,
+                input.templateName != null ? input.templateName : "Calendar " + input.year,
+                input.year != null ? input.year : 0,
+                quantity,
+                unitPrice,
+                input.configuration,
+                productCode
+            );
+        }
 
         return toGraphQLCart(cartEntity);
     }
@@ -150,16 +191,6 @@ public class CartService {
      * Convert database cart item to GraphQL cart item
      */
     private CartItem toGraphQLCartItem(villagecompute.calendar.data.models.CartItem itemEntity) {
-        CartItem item = new CartItem();
-        item.id = itemEntity.id.toString();
-        item.templateId = itemEntity.templateId;
-        item.templateName = itemEntity.templateName;
-        item.year = itemEntity.year;
-        item.quantity = itemEntity.quantity;
-        item.unitPrice = itemEntity.unitPrice.doubleValue();
-        item.lineTotal = itemEntity.getLineTotal().doubleValue();
-        item.productCode = itemEntity.productCode;
-        item.configuration = itemEntity.configuration; // Already a String in the database
-        return item;
+        return CartItem.fromEntity(itemEntity);
     }
 }

@@ -19,14 +19,24 @@ const cartStore = useCartStore();
 const toast = useToast();
 const router = useRouter();
 
-// Store for calendar SVGs
+// Store for calendar SVGs and maze SVGs
 const calendarSvgs = ref<Record<string, string>>({});
+const mazeSvgs = ref<Record<string, string>>({});
 const showPreviewModal = ref(false);
 const previewCalendarSvg = ref("");
 const previewCalendarName = ref("");
 
+// Check if item is a maze
+const isMazeItem = (item: CartItem): boolean => {
+  return item.generatorType === "maze";
+};
+
 // Check if item is a calendar (has productCode 'print' or 'pdf', or has calendar config)
 const isCalendarItem = (item: CartItem): boolean => {
+  // Mazes are not calendars
+  if (isMazeItem(item)) {
+    return false;
+  }
   // Check productCode
   if (item.productCode === "print" || item.productCode === "pdf") {
     return true;
@@ -44,6 +54,54 @@ const isCalendarItem = (item: CartItem): boolean => {
     }
   }
   return false;
+};
+
+// Get display name for an item
+const getItemDisplayName = (item: CartItem): string => {
+  if (isMazeItem(item)) {
+    return item.description || "Maze";
+  }
+  if (item.templateName) {
+    return item.templateName;
+  }
+  if (item.productName) {
+    return item.productName;
+  }
+  const config = getCalendarConfig(item);
+  if (config?.name) {
+    return config.name;
+  }
+  return "Item";
+};
+
+// Fetch item thumbnail SVG from unified endpoint
+const fetchItemThumbnail = async (itemId: string): Promise<string | null> => {
+  try {
+    const response = await fetch(`/api/cart-items/${itemId}/thumbnail.svg`);
+    if (response.ok) {
+      return await response.text();
+    }
+  } catch (error) {
+    console.error(`Failed to fetch thumbnail for item ${itemId}:`, error);
+  }
+  return null;
+};
+
+// Load maze SVGs when cart items change
+const loadMazeSvgs = async () => {
+  if (!cartStore.items || cartStore.items.length === 0) return;
+
+  for (const item of cartStore.items) {
+    if (!isMazeItem(item)) continue;
+
+    const itemKey = item.id;
+    if (mazeSvgs.value[itemKey]) continue;
+
+    const svg = await fetchItemThumbnail(item.id);
+    if (svg) {
+      mazeSvgs.value[itemKey] = svg;
+    }
+  }
 };
 
 // Parse configuration and get calendar details
@@ -135,14 +193,14 @@ const showCalendarPreview = (item: CartItem) => {
 
 // Load SVGs on component mount (cart is fetched centrally in App.vue)
 onMounted(async () => {
-  await loadCalendarSvgs();
+  await Promise.all([loadCalendarSvgs(), loadMazeSvgs()]);
 });
 
 // Watch for cart changes
 watch(
   () => cartStore.items,
   async () => {
-    await loadCalendarSvgs();
+    await Promise.all([loadCalendarSvgs(), loadMazeSvgs()]);
   },
 );
 
@@ -152,6 +210,7 @@ const isOpen = computed({
     if (value) {
       cartStore.openCart();
       loadCalendarSvgs();
+      loadMazeSvgs();
     } else {
       cartStore.closeCart();
     }
@@ -247,11 +306,26 @@ const viewFullCart = () => {
           <div v-for="item in cartStore.items" :key="item.id" class="cart-item">
             <!-- Product Image -->
             <div class="item-image">
+              <!-- Maze Preview -->
+              <div
+                v-if="isMazeItem(item)"
+                class="image-placeholder maze-preview"
+                :title="item.description || 'Maze'"
+              >
+                <div
+                  v-if="mazeSvgs[item.id]"
+                  class="maze-svg-container"
+                  v-html="mazeSvgs[item.id]"
+                ></div>
+                <div v-else class="maze-icon">
+                  <i class="pi pi-spin pi-spinner"></i>
+                </div>
+              </div>
               <!-- Calendar Preview -->
               <div
-                v-if="isCalendarItem(item) && getCalendarConfig(item)"
+                v-else-if="isCalendarItem(item) && getCalendarConfig(item)"
                 class="image-placeholder calendar-preview"
-                :title="`Click to preview ${getCalendarConfig(item).name || 'calendar'}`"
+                :title="`Click to preview ${getCalendarConfig(item)?.name || 'calendar'}`"
                 @click="showCalendarPreview(item)"
               >
                 <div
@@ -270,7 +344,7 @@ const viewFullCart = () => {
                 ></div>
                 <div v-else class="calendar-icon">
                   <div class="calendar-year">
-                    {{ getCalendarConfig(item).year }}
+                    {{ getCalendarConfig(item)?.year }}
                   </div>
                   <i class="pi pi-calendar"></i>
                 </div>
@@ -284,23 +358,19 @@ const viewFullCart = () => {
             <!-- Product Details -->
             <div class="item-details">
               <div class="item-name">
-                {{ item.productName }}
-                <span
-                  v-if="isCalendarItem(item) && getCalendarConfig(item)"
-                  class="calendar-name"
-                >
-                  -
-                  {{
-                    getCalendarConfig(item).name || getCalendarConfig(item).year
-                  }}
-                </span>
+                {{ getItemDisplayName(item) }}
               </div>
+              <!-- Maze variant info -->
+              <div v-if="isMazeItem(item)" class="item-variant">
+                <i class="pi pi-th-large mr-1"></i>Print Poster
+              </div>
+              <!-- Calendar variant info -->
               <div
-                v-if="isCalendarItem(item) && getCalendarConfig(item)"
+                v-else-if="isCalendarItem(item) && getCalendarConfig(item)"
                 class="item-variant"
               >
                 <i class="pi pi-calendar mr-1"></i
-                >{{ getCalendarConfig(item).year }} Calendar
+                >{{ getCalendarConfig(item)?.year }} Calendar
               </div>
               <div v-else-if="item.notes" class="item-variant">
                 {{ item.notes }}
@@ -480,6 +550,34 @@ const viewFullCart = () => {
 .calendar-icon .pi {
   font-size: 0.875rem;
   margin-top: 2px;
+}
+
+.image-placeholder.maze-preview {
+  background: white;
+  border-color: #81c784;
+  overflow: hidden;
+}
+
+.maze-svg-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.maze-svg-container :deep(svg) {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.maze-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #81c784;
 }
 
 .item-details {

@@ -1,64 +1,94 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import Button from 'primevue/button'
-import ProgressSpinner from 'primevue/progressspinner'
-import Toolbar from 'primevue/toolbar'
-import ToggleButton from 'primevue/togglebutton'
-import MazeWizardDrawer from '../../components/maze/MazeWizardDrawer.vue'
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import Button from "primevue/button";
+import ProgressSpinner from "primevue/progressspinner";
+import MazeWizardDrawer from "../../components/maze/MazeWizardDrawer.vue";
+import AddToCartModal from "../../components/calendar/AddToCartModal.vue";
+import { useMazeEditorStore } from "../../stores/mazeEditor";
+import { useCartStore } from "../../stores/cart";
+
+// Store
+const mazeEditorStore = useMazeEditorStore();
+const cartStore = useCartStore();
 
 // PRINT DIMENSIONS (35" x 23" at 100 units per inch)
-const PAGE_WIDTH_INCHES = 35
-const PAGE_HEIGHT_INCHES = 23
-const UNITS_PER_INCH = 100
-const PAGE_WIDTH = PAGE_WIDTH_INCHES * UNITS_PER_INCH // 3500
-const PAGE_HEIGHT = PAGE_HEIGHT_INCHES * UNITS_PER_INCH // 2300
+const PAGE_WIDTH_INCHES = 35;
+const PAGE_HEIGHT_INCHES = 23;
+const UNITS_PER_INCH = 100;
+const PAGE_WIDTH = PAGE_WIDTH_INCHES * UNITS_PER_INCH; // 3500
+const PAGE_HEIGHT = PAGE_HEIGHT_INCHES * UNITS_PER_INCH; // 2300
 
 // Maze configuration
 const config = ref({
-  mazeType: 'ORTHOGONAL',
-  size: 10,           // 1-20: controls cell count
-  difficulty: 3,      // 1-5: controls shortcuts (1=easy/many, 5=hard/none)
+  mazeType: "ORTHOGONAL",
+  size: 10, // 1-20: controls cell count
+  difficulty: 3, // 1-5: controls shortcuts (1=easy/many, 5=hard/none)
   showSolution: false,
-  innerWallColor: '#000000',
-  outerWallColor: '#000000',
-  pathColor: '#4CAF50',
-})
+  innerWallColor: "#000000",
+  outerWallColor: "#000000",
+  pathColor: "#4CAF50",
+});
 
 // UI State
-const mazeSvg = ref('')
-const loading = ref(false)
-const error = ref('')
-const showWizard = ref(false)
-const showRulers = ref(true)
-const zoomLevel = ref(0.25)
-const previewContainer = ref<HTMLElement | null>(null)
+const mazeSvg = ref("");
+const loading = ref(false);
+const error = ref("");
+const showWizard = ref(false);
+const previewContainer = ref<HTMLElement | null>(null);
+
+// Computed properties synced with store
+const zoomLevel = computed({
+  get: () => mazeEditorStore.zoomLevel,
+  set: (value) => mazeEditorStore.setZoomLevel(value),
+});
+
+const showRulers = computed({
+  get: () => mazeEditorStore.showRulers,
+  set: (value) => {
+    if (value !== mazeEditorStore.showRulers) {
+      mazeEditorStore.toggleRulers();
+    }
+  },
+});
+
+// Add to cart modal visibility - synced with store for header access
+const showAddToCartModal = computed({
+  get: () => mazeEditorStore.showAddToCartModal,
+  set: (value) => {
+    if (value) {
+      mazeEditorStore.openAddToCartModal();
+    } else {
+      mazeEditorStore.closeAddToCartModal();
+    }
+  },
+});
 
 // Session management
 const getSessionId = () => {
-  let sessionId = localStorage.getItem('maze_session_id')
+  let sessionId = localStorage.getItem("maze_session_id");
   if (!sessionId) {
-    sessionId = 'session_' + Math.random().toString(36).substring(2, 15)
-    localStorage.setItem('maze_session_id', sessionId)
+    sessionId = "session_" + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem("maze_session_id", sessionId);
   }
-  return sessionId
-}
+  return sessionId;
+};
 
 // Generate maze preview (deterministic seed for preview)
 const generatePreview = async () => {
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = "";
 
   try {
     const query = `
       query MazePreview($type: MazeType!, $size: Int!, $difficulty: Int!, $showSolution: Boolean!) {
         mazePreview(type: $type, size: $size, difficulty: $difficulty, showSolution: $showSolution)
       }
-    `
+    `;
 
-    const response = await fetch('/graphql', {
-      method: 'POST',
+    const response = await fetch("/graphql", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         query,
@@ -66,30 +96,32 @@ const generatePreview = async () => {
           type: config.value.mazeType,
           size: config.value.size,
           difficulty: config.value.difficulty,
-          showSolution: config.value.showSolution
-        }
-      })
-    })
+          showSolution: config.value.showSolution,
+        },
+      }),
+    });
 
-    const result = await response.json()
+    const result = await response.json();
 
     if (result.errors) {
-      throw new Error(result.errors[0].message)
+      throw new Error(result.errors[0].message);
     }
 
-    mazeSvg.value = result.data.mazePreview
+    mazeSvg.value = result.data.mazePreview;
+    mazeEditorStore.setHasGeneratedSVG(true);
   } catch (e: any) {
-    error.value = e.message || 'Failed to generate maze'
-    console.error('Maze generation error:', e)
+    error.value = e.message || "Failed to generate maze";
+    console.error("Maze generation error:", e);
+    mazeEditorStore.setHasGeneratedSVG(false);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // Create a new maze (with random seed)
 const createMaze = async () => {
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = "";
 
   try {
     const mutation = `
@@ -100,18 +132,18 @@ const createMaze = async () => {
           generatedSvg
         }
       }
-    `
+    `;
 
-    const response = await fetch('/graphql', {
-      method: 'POST',
+    const response = await fetch("/graphql", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         query: mutation,
         variables: {
           input: {
-            name: 'My Maze',
+            name: "My Maze",
             mazeType: config.value.mazeType,
             size: config.value.size,
             difficulty: config.value.difficulty,
@@ -119,110 +151,264 @@ const createMaze = async () => {
             innerWallColor: config.value.innerWallColor,
             outerWallColor: config.value.outerWallColor,
             pathColor: config.value.pathColor,
-            sessionId: getSessionId()
-          }
-        }
-      })
-    })
+            sessionId: getSessionId(),
+          },
+        },
+      }),
+    });
 
-    const result = await response.json()
+    const result = await response.json();
 
     if (result.errors) {
-      throw new Error(result.errors[0].message)
+      throw new Error(result.errors[0].message);
     }
 
-    mazeSvg.value = result.data.createMaze.generatedSvg
+    mazeSvg.value = result.data.createMaze.generatedSvg;
+    mazeEditorStore.setHasGeneratedSVG(true);
   } catch (e: any) {
-    error.value = e.message || 'Failed to create maze'
-    console.error('Maze creation error:', e)
+    error.value = e.message || "Failed to create maze";
+    console.error("Maze creation error:", e);
+    mazeEditorStore.setHasGeneratedSVG(false);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 // Zoom controls
 const zoomIn = () => {
-  zoomLevel.value = Math.min(zoomLevel.value + 0.05, 1)
-}
+  mazeEditorStore.setZoomLevel(Math.min(zoomLevel.value + 0.05, 1));
+};
 
 const zoomOut = () => {
-  zoomLevel.value = Math.max(zoomLevel.value - 0.05, 0.1)
-}
+  mazeEditorStore.setZoomLevel(Math.max(zoomLevel.value - 0.05, 0.1));
+};
 
 const resetZoom = () => {
   // Calculate zoom to fill the available width
   if (previewContainer.value) {
-    const containerWidth = previewContainer.value.clientWidth - 80 // Account for rulers/padding
-    const calculatedZoom = Math.max(0.15, Math.min(containerWidth / PAGE_WIDTH, 1.0))
-    zoomLevel.value = calculatedZoom
+    const containerWidth = previewContainer.value.clientWidth - 80; // Account for rulers/padding
+    const calculatedZoom = Math.max(
+      0.15,
+      Math.min(containerWidth / PAGE_WIDTH, 1.0),
+    );
+    mazeEditorStore.setZoomLevel(calculatedZoom);
   } else {
-    zoomLevel.value = 0.25
+    mazeEditorStore.setZoomLevel(0.25);
   }
-}
+};
 
 // Wizard event handlers
 const handleMazeTypeChange = (type: string) => {
-  config.value.mazeType = type
-  generatePreview()
-}
+  config.value.mazeType = type;
+  generatePreview();
+};
 
-const handleConfigChange = (newConfig: { size: number; difficulty: number; showSolution: boolean }) => {
-  config.value.size = newConfig.size
-  config.value.difficulty = newConfig.difficulty
-  config.value.showSolution = newConfig.showSolution
-  generatePreview()
-}
+const handleConfigChange = (newConfig: {
+  size: number;
+  difficulty: number;
+  showSolution: boolean;
+}) => {
+  config.value.size = newConfig.size;
+  config.value.difficulty = newConfig.difficulty;
+  config.value.showSolution = newConfig.showSolution;
+  generatePreview();
+};
 
-const handleColorsChange = (colors: { innerWallColor: string; outerWallColor: string; pathColor: string }) => {
-  config.value.innerWallColor = colors.innerWallColor
-  config.value.outerWallColor = colors.outerWallColor
-  config.value.pathColor = colors.pathColor
-}
+const handleColorsChange = (colors: {
+  innerWallColor: string;
+  outerWallColor: string;
+  pathColor: string;
+}) => {
+  config.value.innerWallColor = colors.innerWallColor;
+  config.value.outerWallColor = colors.outerWallColor;
+  config.value.pathColor = colors.pathColor;
+};
 
-// Download PDF placeholder
-const downloadPdf = () => {
-  // TODO: Implement PDF download
-  alert('PDF download coming soon!')
-}
+// Handle product selection from modal - add to cart
+const handleAddToCartSelect = async (productCode: string, _price: number) => {
+  await addToCart(productCode);
+};
+
+// Generate maze SVG with specific showSolution setting (for cart)
+const generateMazeSvgForCart = async (
+  showSolution: boolean,
+): Promise<string | null> => {
+  try {
+    const query = `
+      query MazePreview($type: MazeType!, $size: Int!, $difficulty: Int!, $showSolution: Boolean!) {
+        mazePreview(type: $type, size: $size, difficulty: $difficulty, showSolution: $showSolution)
+      }
+    `;
+
+    const response = await fetch("/graphql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query,
+        variables: {
+          type: config.value.mazeType,
+          size: config.value.size,
+          difficulty: config.value.difficulty,
+          showSolution,
+        },
+      }),
+    });
+
+    const result = await response.json();
+
+    if (result.errors) {
+      throw new Error(result.errors[0].message);
+    }
+
+    return result.data.mazePreview;
+  } catch (e: any) {
+    console.error("Failed to generate maze SVG:", e);
+    return null;
+  }
+};
+
+// Build description for the maze
+const getMazeDescription = () => {
+  const typeNames: Record<string, string> = {
+    ORTHOGONAL: "Orthogonal",
+    HEXAGONAL: "Hexagonal",
+    TRIANGULAR: "Triangular",
+    CIRCULAR: "Circular",
+  };
+  const difficultyNames = [
+    "",
+    "Very Easy",
+    "Easy",
+    "Medium",
+    "Hard",
+    "Very Hard",
+  ];
+  const typeName = typeNames[config.value.mazeType] || config.value.mazeType;
+  const diffName = difficultyNames[config.value.difficulty] || "";
+  return `${diffName} ${typeName} Maze (${config.value.size}x${config.value.size})`;
+};
+
+const addToCart = async (productCode: string = "print") => {
+  loading.value = true;
+  error.value = "";
+
+  try {
+    // Generate main maze SVG (without solution) - use current SVG if available and not showing solution
+    let mainSvg = config.value.showSolution ? null : mazeSvg.value;
+    if (!mainSvg) {
+      mainSvg = await generateMazeSvgForCart(false);
+    }
+
+    // Generate answer key SVG (with solution)
+    const answerKeySvg = await generateMazeSvgForCart(true);
+
+    if (!mainSvg) {
+      throw new Error("Failed to generate maze SVG");
+    }
+
+    // Build assets array
+    const assets = [
+      {
+        assetKey: "main",
+        svgContent: mainSvg,
+        widthInches: PAGE_WIDTH_INCHES,
+        heightInches: PAGE_HEIGHT_INCHES,
+      },
+    ];
+
+    // Add answer key if generated
+    if (answerKeySvg) {
+      assets.push({
+        assetKey: "answer_key",
+        svgContent: answerKeySvg,
+        widthInches: PAGE_WIDTH_INCHES,
+        heightInches: PAGE_HEIGHT_INCHES,
+      });
+    }
+
+    // Add to cart with generic method
+    await cartStore.addGenericItem({
+      generatorType: "maze",
+      description: getMazeDescription(),
+      quantity: 1,
+      productCode,
+      configuration: {
+        mazeType: config.value.mazeType,
+        size: config.value.size,
+        difficulty: config.value.difficulty,
+        innerWallColor: config.value.innerWallColor,
+        outerWallColor: config.value.outerWallColor,
+        pathColor: config.value.pathColor,
+      },
+      assets,
+    });
+
+    // Close the modal and show success
+    showAddToCartModal.value = false;
+    cartStore.openCart();
+  } catch (e: any) {
+    error.value = e.message || "Failed to add to cart";
+    console.error("Failed to add to cart:", e);
+  } finally {
+    loading.value = false;
+  }
+};
 
 // Keyboard shortcuts
 const handleKeydown = (e: KeyboardEvent) => {
-  if (e.key === '+' || e.key === '=') {
-    zoomIn()
-  } else if (e.key === '-') {
-    zoomOut()
-  } else if (e.key === '0') {
-    resetZoom()
+  if (e.key === "+" || e.key === "=") {
+    zoomIn();
+  } else if (e.key === "-") {
+    zoomOut();
+  } else if (e.key === "0") {
+    resetZoom();
   }
-}
+};
+
+// Open wizard handler
+const openWizard = () => {
+  showWizard.value = true;
+};
 
 // Generate initial preview on mount
 onMounted(() => {
-  generatePreview()
-  resetZoom()
-  window.addEventListener('keydown', handleKeydown)
-})
+  // Activate the maze editor in the store
+  mazeEditorStore.activate();
+
+  // Register callbacks for header toolbar
+  mazeEditorStore.registerZoomCallbacks(zoomIn, zoomOut, resetZoom);
+  mazeEditorStore.registerOpenWizardCallback(openWizard);
+  mazeEditorStore.registerGenerateNewCallback(createMaze);
+
+  generatePreview();
+  resetZoom();
+  window.addEventListener("keydown", handleKeydown);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
-})
+  // Deactivate the maze editor
+  mazeEditorStore.deactivate();
+  window.removeEventListener("keydown", handleKeydown);
+});
 
 // Watch for window resize to adjust zoom
-let resizeTimeout: ReturnType<typeof setTimeout>
+let resizeTimeout: ReturnType<typeof setTimeout>;
 const handleResize = () => {
-  clearTimeout(resizeTimeout)
+  clearTimeout(resizeTimeout);
   resizeTimeout = setTimeout(() => {
-    resetZoom()
-  }, 100)
-}
+    resetZoom();
+  }, 100);
+};
 
 onMounted(() => {
-  window.addEventListener('resize', handleResize)
-})
+  window.addEventListener("resize", handleResize);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-})
+  window.removeEventListener("resize", handleResize);
+});
 </script>
 
 <template>
@@ -236,74 +422,13 @@ onUnmounted(() => {
       @colors-change="handleColorsChange"
     />
 
-    <!-- Toolbar -->
-    <Toolbar class="maze-toolbar">
-      <template #start>
-        <Button
-          icon="pi pi-palette"
-          label="Customize"
-          severity="secondary"
-          outlined
-          @click="showWizard = true"
-        />
-        <div class="toolbar-divider" />
-        <Button
-          icon="pi pi-refresh"
-          label="Generate New"
-          @click="createMaze"
-          :loading="loading"
-        />
-      </template>
-
-      <template #center>
-        <div class="zoom-controls">
-          <Button
-            icon="pi pi-minus"
-            text
-            rounded
-            size="small"
-            @click="zoomOut"
-            v-tooltip.bottom="'Zoom Out (-)'"
-          />
-          <span class="zoom-level">{{ Math.round(zoomLevel * 100) }}%</span>
-          <Button
-            icon="pi pi-plus"
-            text
-            rounded
-            size="small"
-            @click="zoomIn"
-            v-tooltip.bottom="'Zoom In (+)'"
-          />
-          <Button
-            icon="pi pi-arrows-alt"
-            text
-            rounded
-            size="small"
-            @click="resetZoom"
-            v-tooltip.bottom="'Fit to Window (0)'"
-          />
-          <div class="toolbar-divider" />
-          <ToggleButton
-            v-model="showRulers"
-            on-icon="pi pi-eye"
-            off-icon="pi pi-eye-slash"
-            on-label=""
-            off-label=""
-            v-tooltip.bottom="'Toggle Rulers'"
-            class="ruler-toggle"
-          />
-        </div>
-      </template>
-
-      <template #end>
-        <Button
-          icon="pi pi-download"
-          label="Download PDF"
-          severity="success"
-          @click="downloadPdf"
-        />
-      </template>
-    </Toolbar>
+    <!-- Add to Cart Modal -->
+    <AddToCartModal
+      v-model:visible="showAddToCartModal"
+      :calendar-year="new Date().getFullYear()"
+      :default-product-code="mazeEditorStore.defaultProductCode"
+      @select="handleAddToCartSelect"
+    />
 
     <!-- Preview Area -->
     <div ref="previewContainer" class="maze-preview">
@@ -315,7 +440,11 @@ onUnmounted(() => {
       <div v-else-if="error" class="error-message">
         <i class="pi pi-exclamation-triangle"></i>
         <p>{{ error }}</p>
-        <Button label="Try Again" icon="pi pi-refresh" @click="generatePreview" />
+        <Button
+          label="Try Again"
+          icon="pi pi-refresh"
+          @click="generatePreview"
+        />
       </div>
 
       <div
@@ -372,7 +501,11 @@ onUnmounted(() => {
       <div v-else class="empty-state">
         <i class="pi pi-th-large"></i>
         <p>Configure your maze and click "Generate New" to create one</p>
-        <Button label="Open Configurator" icon="pi pi-palette" @click="showWizard = true" />
+        <Button
+          label="Open Configurator"
+          icon="pi pi-palette"
+          @click="openWizard"
+        />
       </div>
     </div>
   </div>
@@ -384,38 +517,6 @@ onUnmounted(() => {
   flex-direction: column;
   height: 100vh;
   background: #f5f5f5;
-}
-
-/* Toolbar */
-.maze-toolbar {
-  flex-shrink: 0;
-  border-bottom: 1px solid #e0e0e0;
-  background: white;
-}
-
-.toolbar-divider {
-  width: 1px;
-  height: 24px;
-  background: #e0e0e0;
-  margin: 0 0.75rem;
-}
-
-.zoom-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.zoom-level {
-  min-width: 50px;
-  text-align: center;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #666;
-}
-
-.ruler-toggle {
-  border: none;
 }
 
 /* Preview Area */
@@ -556,17 +657,6 @@ onUnmounted(() => {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .maze-toolbar :deep(.p-toolbar-start),
-  .maze-toolbar :deep(.p-toolbar-end) {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .zoom-controls {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
   .maze-preview {
     padding: 1rem;
   }

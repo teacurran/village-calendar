@@ -72,6 +72,60 @@
             />
           </div>
 
+          <!-- Maze Editor Toolbar (only visible when editing a maze) -->
+          <div v-if="mazeEditorStore.isActive" class="editor-toolbar">
+            <Button
+              v-tooltip.bottom="'Zoom In'"
+              icon="pi pi-search-plus"
+              text
+              rounded
+              :disabled="!mazeEditorStore.hasGeneratedSVG"
+              @click="mazeEditorStore.zoomIn()"
+            />
+            <Button
+              v-tooltip.bottom="'Zoom Out'"
+              icon="pi pi-search-minus"
+              text
+              rounded
+              :disabled="!mazeEditorStore.hasGeneratedSVG"
+              @click="mazeEditorStore.zoomOut()"
+            />
+            <Button
+              v-tooltip.bottom="'Reset Zoom'"
+              icon="pi pi-refresh"
+              text
+              rounded
+              :disabled="!mazeEditorStore.hasGeneratedSVG"
+              @click="mazeEditorStore.resetZoom()"
+            />
+            <Button
+              v-tooltip.bottom="'Toggle Rulers'"
+              icon="pi pi-arrows-h"
+              text
+              rounded
+              :disabled="!mazeEditorStore.hasGeneratedSVG"
+              :class="{ 'ruler-active': mazeEditorStore.showRulers }"
+              @click="mazeEditorStore.toggleRulers()"
+            />
+            <div class="toolbar-divider"></div>
+            <Button
+              v-tooltip.bottom="'Download PDF'"
+              icon="pi pi-download"
+              text
+              rounded
+              :disabled="!mazeEditorStore.hasGeneratedSVG"
+              @click="mazeEditorStore.openAddToCartModal('pdf')"
+            />
+            <Button
+              label="Order a Print"
+              icon="pi pi-print"
+              text
+              :disabled="!mazeEditorStore.hasGeneratedSVG"
+              class="order-print-btn"
+              @click="mazeEditorStore.openAddToCartModal('print')"
+            />
+          </div>
+
           <!-- Cart Icon (always visible) -->
           <div class="cart-icon-wrapper">
             <Button
@@ -129,6 +183,7 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/authStore";
 import { useCartStore } from "@/stores/cart";
 import { useCalendarEditorStore } from "@/stores/calendarEditor";
+import { useMazeEditorStore } from "@/stores/mazeEditor";
 import Menubar from "primevue/menubar";
 import Button from "primevue/button";
 import Badge from "primevue/badge";
@@ -140,22 +195,36 @@ const router = useRouter();
 const authStore = useAuthStore();
 const cartStore = useCartStore();
 const calendarEditorStore = useCalendarEditorStore();
+const mazeEditorStore = useMazeEditorStore();
 
 // State
 const userMenuRef = ref();
 
 // Navigation menu items
 const menuItems = computed<MenuItem[]>(() => {
-  const items: MenuItem[] = [
-    {
+  const items: MenuItem[] = [];
+
+  // Show "Customize" and "Generate New" for maze editor, "Design Your Own" for calendar
+  if (mazeEditorStore.isActive) {
+    items.push({
+      label: "Customize",
+      icon: "pi pi-sparkles",
+      command: () => mazeEditorStore.openWizard(),
+    });
+    items.push({
+      icon: "pi pi-refresh",
+      command: () => mazeEditorStore.generateNew(),
+    });
+  } else {
+    items.push({
       label: "Design Your Own",
       icon: "pi pi-sparkles",
       command: () => router.push("/?wizard=true"),
-    },
-  ];
+    });
+  }
 
-  // Add admin menu items
-  if (authStore.isAdmin) {
+  // Add admin menu items (only for calendar, not maze)
+  if (authStore.isAdmin && !mazeEditorStore.isActive) {
     items.push({
       label: "Manage Templates",
       icon: "pi pi-book",

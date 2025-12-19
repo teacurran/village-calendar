@@ -27,8 +27,9 @@ const previewCalendarSvg = ref("");
 const previewCalendarName = ref("");
 const loading = ref(false);
 
-// Store for calendar SVGs (for items without templateId)
+// Store for calendar SVGs (for items without templateId) and maze SVGs
 const calendarSvgs = ref<Record<string, string>>({});
+const mazeSvgs = ref<Record<string, string>>({});
 
 // Breadcrumbs
 const breadcrumbItems = computed(() => [{ label: "Cart" }]);
@@ -38,8 +39,17 @@ const cartItems = computed(() => cartStore.items || []);
 const cartSubtotal = computed(() => cartStore.subtotal || 0);
 const cartItemCount = computed(() => cartStore.itemCount || 0);
 
+// Check if item is a maze
+const isMazeItem = (item: CartItem) => {
+  return item.generatorType === "maze";
+};
+
 // Check if item is a calendar (has productCode 'print' or 'pdf', has templateId, or has calendar config)
 const isCalendarItem = (item: CartItem) => {
+  // Mazes are not calendars
+  if (isMazeItem(item)) {
+    return false;
+  }
   // Check productCode
   if (item.productCode === "print" || item.productCode === "pdf") {
     return true;
@@ -57,6 +67,54 @@ const isCalendarItem = (item: CartItem) => {
     return true;
   }
   return false;
+};
+
+// Get display name for an item
+const getItemDisplayName = (item: CartItem): string => {
+  if (isMazeItem(item)) {
+    return item.description || "Maze";
+  }
+  if (item.templateName) {
+    return item.templateName;
+  }
+  if (item.productName) {
+    return item.productName;
+  }
+  const config = getCalendarConfig(item);
+  if (config?.name) {
+    return config.name;
+  }
+  return "Item";
+};
+
+// Fetch item thumbnail SVG from unified endpoint
+const fetchItemThumbnail = async (itemId: string): Promise<string | null> => {
+  try {
+    const response = await fetch(`/api/cart-items/${itemId}/thumbnail.svg`);
+    if (response.ok) {
+      return await response.text();
+    }
+  } catch (error) {
+    console.error(`Failed to fetch thumbnail for item ${itemId}:`, error);
+  }
+  return null;
+};
+
+// Load maze SVGs when cart items change
+const loadMazeSvgs = async () => {
+  if (!cartStore.items || cartStore.items.length === 0) return;
+
+  for (const item of cartStore.items) {
+    if (!isMazeItem(item)) continue;
+
+    const itemKey = item.id;
+    if (mazeSvgs.value[itemKey]) continue;
+
+    const svg = await fetchItemThumbnail(item.id);
+    if (svg) {
+      mazeSvgs.value[itemKey] = svg;
+    }
+  }
 };
 
 // Parse configuration and get calendar details
@@ -260,7 +318,7 @@ onMounted(async () => {
   loading.value = true;
   try {
     await cartStore.fetchCart();
-    await loadCalendarSvgs();
+    await Promise.all([loadCalendarSvgs(), loadMazeSvgs()]);
   } finally {
     loading.value = false;
   }
@@ -325,9 +383,24 @@ onMounted(async () => {
                 <div class="flex gap-4">
                   <!-- Item Image/Preview -->
                   <div class="flex-shrink-0">
+                    <!-- Maze Thumbnail -->
+                    <div
+                      v-if="isMazeItem(item)"
+                      class="maze-thumbnail"
+                      :title="item.description || 'Maze'"
+                    >
+                      <div
+                        v-if="mazeSvgs[item.id]"
+                        class="maze-svg-container"
+                        v-html="mazeSvgs[item.id]"
+                      ></div>
+                      <div v-else class="maze-loading">
+                        <i class="pi pi-spin pi-spinner"></i>
+                      </div>
+                    </div>
                     <!-- Calendar Thumbnail (PNG from API for template-based items) -->
                     <img
-                      v-if="isCalendarItem(item) && item.templateId"
+                      v-else-if="isCalendarItem(item) && item.templateId"
                       :src="getThumbnailUrl(item)"
                       :alt="item.templateName"
                       class="calendar-thumbnail"
@@ -367,26 +440,28 @@ onMounted(async () => {
                   <!-- Item Details -->
                   <div class="flex-1">
                     <h3 class="font-semibold text-lg mb-1">
-                      {{ item.templateName || item.productName }}
+                      {{ getItemDisplayName(item) }}
                     </h3>
-                    <p
-                      v-if="item.description"
-                      class="text-sm text-surface-600 mb-2"
+
+                    <!-- Maze Details -->
+                    <div
+                      v-if="isMazeItem(item)"
+                      class="text-sm text-surface-600"
                     >
-                      {{ item.description }}
-                    </p>
+                      <p><i class="pi pi-th-large mr-1"></i>Print Poster</p>
+                    </div>
 
                     <!-- Calendar Details -->
                     <div
-                      v-if="isCalendarItem(item)"
+                      v-else-if="isCalendarItem(item)"
                       class="text-sm text-surface-600"
                     >
                       <template v-if="getCalendarConfig(item)">
-                        <p v-if="getCalendarConfig(item).name">
-                          {{ getCalendarConfig(item).name }}
+                        <p v-if="getCalendarConfig(item)?.name">
+                          {{ getCalendarConfig(item)?.name }}
                         </p>
                         <p>
-                          Year: {{ item.year || getCalendarConfig(item).year }}
+                          Year: {{ item.year || getCalendarConfig(item)?.year }}
                         </p>
                       </template>
                       <template v-else>
@@ -613,6 +688,40 @@ img.calendar-thumbnail:hover {
 
 .product-thumbnail-placeholder {
   background: #f5f5f5;
+}
+
+/* Maze thumbnail styles */
+.maze-thumbnail {
+  width: 180px;
+  height: 116px;
+  background: white;
+  border: 1px solid #81c784;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.maze-svg-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.maze-svg-container :deep(svg) {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.maze-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #81c784;
 }
 
 /* Modal preview styles */

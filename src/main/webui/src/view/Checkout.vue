@@ -27,15 +27,25 @@ const cartStore = useCartStore();
 const userStore = useUserStore();
 const toast = useToast();
 
-// Store for calendar SVGs
+// Store for calendar SVGs and maze SVGs
 const calendarSvgs = ref<Record<string, string>>({});
+const mazeSvgs = ref<Record<string, string>>({});
 const showPreviewModal = ref(false);
 const previewCalendarSvg = ref("");
 const previewCalendarName = ref("");
 const previewImageUrl = ref("");
 
+// Check if item is a maze
+const isMazeItem = (item: any) => {
+  return item.generatorType === "maze";
+};
+
 // Check if item is a calendar (has productCode 'print' or 'pdf', templateId, or has calendar config)
 const isCalendarItem = (item: any) => {
+  // Mazes are not calendars
+  if (isMazeItem(item)) {
+    return false;
+  }
   // Check productCode
   if (item.productCode === "print" || item.productCode === "pdf") {
     return true;
@@ -57,6 +67,54 @@ const isCalendarItem = (item: any) => {
     }
   }
   return false;
+};
+
+// Get display name for an item
+const getItemDisplayName = (item: any): string => {
+  if (isMazeItem(item)) {
+    return item.description || "Maze";
+  }
+  if (item.templateName) {
+    return item.templateName;
+  }
+  if (item.productName) {
+    return item.productName;
+  }
+  const config = getCalendarConfig(item);
+  if (config?.name) {
+    return config.name;
+  }
+  return "Item";
+};
+
+// Fetch item thumbnail SVG from unified endpoint
+const fetchItemThumbnail = async (itemId: string): Promise<string | null> => {
+  try {
+    const response = await fetch(`/api/cart-items/${itemId}/thumbnail.svg`);
+    if (response.ok) {
+      return await response.text();
+    }
+  } catch (error) {
+    console.error(`Failed to fetch thumbnail for item ${itemId}:`, error);
+  }
+  return null;
+};
+
+// Load maze SVGs when cart items change
+const loadMazeSvgs = async () => {
+  if (!cartStore.items || cartStore.items.length === 0) return;
+
+  for (const item of cartStore.items) {
+    if (!isMazeItem(item)) continue;
+
+    const itemKey = item.id;
+    if (mazeSvgs.value[itemKey]) continue;
+
+    const svg = await fetchItemThumbnail(item.id);
+    if (svg) {
+      mazeSvgs.value[itemKey] = svg;
+    }
+  }
 };
 
 // Get thumbnail URL for a cart item (use template-based PNG endpoint)
@@ -404,11 +462,11 @@ const hasPhysicalItems = computed(() => {
   return cartItems.value.some((item: any) => !isDigitalItem(item));
 });
 
-// Watch for cart changes to load calendar SVGs
+// Watch for cart changes to load SVGs
 watch(
   cartItems,
   async () => {
-    await loadCalendarSvgs();
+    await Promise.all([loadCalendarSvgs(), loadMazeSvgs()]);
   },
   { immediate: false },
 );
@@ -450,7 +508,7 @@ const breadcrumbItems = computed(() => {
 onMounted(async () => {
   try {
     await cartStore.fetchCart();
-    await loadCalendarSvgs();
+    await Promise.all([loadCalendarSvgs(), loadMazeSvgs()]);
 
     if (cartStore.isEmpty) {
       router.push({ name: "templates" });
@@ -1258,9 +1316,26 @@ watch(
         <div class="cart-items">
           <div v-for="item in cartItems" :key="item.id" class="cart-item">
             <div class="item-image">
+              <!-- Maze thumbnail -->
+              <div
+                v-if="isMazeItem(item)"
+                class="image-placeholder maze-preview"
+                :title="item.description || 'Maze'"
+                style="position: relative"
+              >
+                <div
+                  v-if="mazeSvgs[item.id]"
+                  class="maze-svg-container"
+                  v-html="mazeSvgs[item.id]"
+                ></div>
+                <div v-else class="maze-loading">
+                  <i class="pi pi-spin pi-spinner"></i>
+                </div>
+                <span class="item-quantity">{{ item.quantity }}</span>
+              </div>
               <!-- Template-based calendar thumbnail (from pre-designed calendars) -->
               <div
-                v-if="item.templateId"
+                v-else-if="item.templateId"
                 class="image-placeholder calendar-preview"
                 :title="`Click to preview ${item.templateName || 'calendar'}`"
                 style="cursor: pointer; position: relative"
@@ -1277,7 +1352,7 @@ watch(
               <div
                 v-else-if="isCalendarItem(item) && getCalendarConfig(item)"
                 class="image-placeholder calendar-preview"
-                :title="`Click to preview ${getCalendarConfig(item).name || 'calendar'}`"
+                :title="`Click to preview ${getCalendarConfig(item)?.name || 'calendar'}`"
                 style="cursor: pointer; position: relative"
                 @click="showCalendarPreview(item)"
               >
@@ -1320,7 +1395,7 @@ watch(
                     "
                   >
                     <div class="calendar-year">
-                      {{ getCalendarConfig(item).year }}
+                      {{ getCalendarConfig(item)?.year }}
                     </div>
                     <i class="pi pi-calendar"></i>
                   </div>
@@ -1334,32 +1409,26 @@ watch(
             </div>
             <div class="item-details">
               <div class="item-name">
-                {{ item.templateName || item.productName }}
-                <span
-                  v-if="isCalendarItem(item) && getCalendarConfig(item)"
-                  class="calendar-name"
-                >
-                  -
-                  {{
-                    getCalendarConfig(item).name || getCalendarConfig(item).year
-                  }}
-                </span>
+                {{ getItemDisplayName(item) }}
               </div>
-              <div v-if="item.templateId && item.year" class="item-variant">
+              <!-- Maze variant info -->
+              <div v-if="isMazeItem(item)" class="item-variant">
+                <i class="pi pi-th-large mr-1"></i>Print Poster
+              </div>
+              <!-- Template-based calendar -->
+              <div
+                v-else-if="item.templateId && item.year"
+                class="item-variant"
+              >
                 <i class="pi pi-calendar mr-1"></i>{{ item.year }} Calendar
               </div>
+              <!-- Custom calendar -->
               <div
                 v-else-if="isCalendarItem(item) && getCalendarConfig(item)"
                 class="item-variant"
               >
                 <i class="pi pi-calendar mr-1"></i
-                >{{ getCalendarConfig(item).year }} Calendar
-              </div>
-              <div
-                v-else-if="item.configuration && !isCalendarItem(item)"
-                class="item-variant"
-              >
-                {{ item.configuration }}
+                >{{ getCalendarConfig(item)?.year }} Calendar
               </div>
             </div>
             <div class="item-price">{{ formatCurrency(item.lineTotal) }}</div>
@@ -1779,6 +1848,33 @@ watch(
 
 .calendar-icon .pi-calendar {
   font-size: 0.8rem;
+}
+
+.image-placeholder.maze-preview {
+  background: white;
+  border-color: #81c784;
+  overflow: hidden;
+}
+
+.maze-svg-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.maze-svg-container :deep(svg) {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.maze-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #81c784;
 }
 
 .calendar-name {

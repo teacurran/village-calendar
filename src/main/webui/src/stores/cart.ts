@@ -53,21 +53,53 @@ export interface CalendarConfiguration {
   showHolidays?: boolean;
 }
 
+// Input for adding assets (SVGs) to cart
+export interface AssetInput {
+  assetKey: string;
+  svgContent: string;
+  widthInches?: number;
+  heightInches?: number;
+}
+
+// Input for adding generator-based items to cart
+export interface AddToCartGenericInput {
+  generatorType: string;
+  description: string;
+  quantity: number;
+  productCode: string;
+  configuration?: Record<string, unknown>;
+  assets?: AssetInput[];
+}
+
+// Asset returned from the server (SVG content not included to avoid large payloads)
+export interface Asset {
+  id: string;
+  assetKey: string;
+  contentType: string;
+  widthInches?: number;
+  heightInches?: number;
+}
+
 export interface CartItem {
   id: string;
-  templateId: string;
-  templateName: string;
-  year: number;
+  // New generic fields
+  generatorType?: string;
+  description?: string;
+  assets?: Asset[];
+  // Common fields
   quantity: number;
   unitPrice: number;
   lineTotal: number;
   productCode?: string;
+  configuration?: CalendarConfiguration | string;
+  // Legacy fields (deprecated)
+  templateId?: string;
+  templateName?: string;
+  year?: number;
   productName?: string;
-  description?: string;
   imageUrl?: string;
   notes?: string;
   options?: Record<string, string>;
-  configuration?: CalendarConfiguration | string;
 }
 
 export interface Cart {
@@ -116,6 +148,8 @@ export const useCartStore = defineStore("cart", {
                   itemCount
                   items {
                     id
+                    generatorType
+                    description
                     templateId
                     templateName
                     year
@@ -124,6 +158,13 @@ export const useCartStore = defineStore("cart", {
                     lineTotal
                     productCode
                     configuration
+                    assets {
+                      id
+                      assetKey
+                      contentType
+                      widthInches
+                      heightInches
+                    }
                   }
                 }
               }
@@ -200,6 +241,8 @@ export const useCartStore = defineStore("cart", {
                   itemCount
                   items {
                     id
+                    generatorType
+                    description
                     templateId
                     templateName
                     year
@@ -208,6 +251,13 @@ export const useCartStore = defineStore("cart", {
                     lineTotal
                     productCode
                     configuration
+                    assets {
+                      id
+                      assetKey
+                      contentType
+                      widthInches
+                      heightInches
+                    }
                   }
                 }
               }
@@ -222,6 +272,89 @@ export const useCartStore = defineStore("cart", {
                 configuration: configuration
                   ? JSON.stringify(configuration)
                   : null,
+              },
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to add item to cart");
+        }
+
+        const result = await response.json();
+
+        if (result.errors) {
+          throw new Error(
+            result.errors[0]?.message || "Failed to add item to cart",
+          );
+        }
+
+        if (result.data?.addToCart) {
+          this.cart = result.data.addToCart;
+          this.lastFetchTime = Date.now();
+        }
+      } catch (err: unknown) {
+        this.error =
+          err instanceof Error ? err.message : "Failed to add item to cart";
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
+     * Add a generator-based item to cart (maze, calendar, etc.) with SVG assets.
+     * This is the new generic method that stores SVGs at cart time.
+     */
+    async addGenericItem(input: AddToCartGenericInput) {
+      this.loading = true;
+      this.error = null;
+      try {
+        const response = await fetch("/graphql", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Session-ID": getSessionId(),
+          },
+          body: JSON.stringify({
+            query: `
+              mutation AddToCart($input: AddToCartInput!) {
+                addToCart(input: $input) {
+                  id
+                  subtotal
+                  taxAmount
+                  totalAmount
+                  itemCount
+                  items {
+                    id
+                    generatorType
+                    description
+                    quantity
+                    unitPrice
+                    lineTotal
+                    productCode
+                    configuration
+                    assets {
+                      id
+                      assetKey
+                      contentType
+                      widthInches
+                      heightInches
+                    }
+                  }
+                }
+              }
+            `,
+            variables: {
+              input: {
+                generatorType: input.generatorType,
+                description: input.description,
+                quantity: input.quantity,
+                productCode: input.productCode,
+                configuration: input.configuration
+                  ? JSON.stringify(input.configuration)
+                  : null,
+                assets: input.assets,
               },
             },
           }),
@@ -273,6 +406,8 @@ export const useCartStore = defineStore("cart", {
                   itemCount
                   items {
                     id
+                    generatorType
+                    description
                     templateId
                     templateName
                     year
@@ -281,6 +416,13 @@ export const useCartStore = defineStore("cart", {
                     lineTotal
                     productCode
                     configuration
+                    assets {
+                      id
+                      assetKey
+                      contentType
+                      widthInches
+                      heightInches
+                    }
                   }
                 }
               }
@@ -336,6 +478,8 @@ export const useCartStore = defineStore("cart", {
                   itemCount
                   items {
                     id
+                    generatorType
+                    description
                     templateId
                     templateName
                     year
@@ -344,6 +488,13 @@ export const useCartStore = defineStore("cart", {
                     lineTotal
                     productCode
                     configuration
+                    assets {
+                      id
+                      assetKey
+                      contentType
+                      widthInches
+                      heightInches
+                    }
                   }
                 }
               }

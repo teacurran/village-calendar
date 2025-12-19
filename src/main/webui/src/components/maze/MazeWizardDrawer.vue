@@ -35,8 +35,18 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   (e: "update:visible", value: boolean): void;
   (e: "mazeTypeChange", type: string): void;
-  (e: "configChange", config: { size: number; difficulty: number; showSolution: boolean }): void;
-  (e: "colorsChange", colors: { innerWallColor: string; outerWallColor: string; pathColor: string }): void;
+  (
+    e: "configChange",
+    config: { size: number; difficulty: number; showSolution: boolean },
+  ): void;
+  (
+    e: "colorsChange",
+    colors: {
+      innerWallColor: string;
+      outerWallColor: string;
+      pathColor: string;
+    },
+  ): void;
 }>();
 
 // Types
@@ -53,7 +63,7 @@ export interface MazeTypeOption {
 const activeStep = ref<string>("1");
 const selectedMazeType = ref<MazeTypeId>("ORTHOGONAL");
 const size = ref(10);
-const difficulty = ref(3);  // 1-5 scale, 3 = medium
+const difficulty = ref(3); // 1-5 scale, 3 = medium
 const showSolution = ref(false);
 const innerWallColor = ref("#000000");
 const outerWallColor = ref("#000000");
@@ -63,11 +73,11 @@ const typePreviews = ref<Record<string, string>>({});
 
 // Difficulty options for SelectButton
 const difficultyOptions = [
-  { label: '1', value: 1 },
-  { label: '2', value: 2 },
-  { label: '3', value: 3 },
-  { label: '4', value: 4 },
-  { label: '5', value: 5 },
+  { label: "1", value: 1 },
+  { label: "2", value: 2 },
+  { label: "3", value: 3 },
+  { label: "4", value: 4 },
+  { label: "5", value: 5 },
 ];
 
 // Computed labels for sliders
@@ -80,12 +90,18 @@ const sizeLabel = computed(() => {
 
 const difficultyLabel = computed(() => {
   switch (difficulty.value) {
-    case 1: return "Very easy - many shortcuts";
-    case 2: return "Easy - some shortcuts";
-    case 3: return "Medium - standard maze";
-    case 4: return "Hard - fewer shortcuts";
-    case 5: return "Very hard - no shortcuts";
-    default: return "Standard maze";
+    case 1:
+      return "Very easy - many shortcuts";
+    case 2:
+      return "Easy - some shortcuts";
+    case 3:
+      return "Medium - standard maze";
+    case 4:
+      return "Hard - fewer shortcuts";
+    case 5:
+      return "Very hard - no shortcuts";
+    default:
+      return "Standard maze";
   }
 });
 
@@ -100,37 +116,60 @@ const mazeTypeOptions: MazeTypeOption[] = [
   {
     id: "ORTHOGONAL",
     name: "Orthogonal (Rectangular)",
-    description: "Standard rectangular grid with right-angle passages. The classic maze style.",
+    description:
+      "Standard rectangular grid with right-angle passages. The classic maze style.",
     available: true,
   },
   {
     id: "DELTA",
     name: "Delta (Triangular)",
-    description: "Interlocking triangles creating a tessellated pattern with up to 3 passages per cell.",
+    description:
+      "Interlocking triangles creating a tessellated pattern with up to 3 passages per cell.",
     available: false,
   },
   {
     id: "SIGMA",
     name: "Sigma (Hexagonal)",
-    description: "Honeycomb pattern with hexagonal cells allowing up to 6 passages per cell.",
+    description:
+      "Honeycomb pattern with hexagonal cells allowing up to 6 passages per cell.",
     available: false,
   },
   {
     id: "THETA",
     name: "Theta (Circular)",
-    description: "Concentric circles radiating from center to edge, like a labyrinth.",
+    description:
+      "Concentric circles radiating from center to edge, like a labyrinth.",
     available: false,
   },
 ];
 
-
 // Color swatches
 const colorSwatches = [
-  "#000000", "#333333", "#666666", "#999999", "#CCCCCC",
-  "#8B0000", "#DC143C", "#FF6347", "#FF8C00", "#FFD700",
-  "#006400", "#228B22", "#4CAF50", "#90EE90", "#00CED1",
-  "#00008B", "#0000FF", "#4169E1", "#87CEEB", "#9932CC",
-  "#4B0082", "#8B4513", "#D2691E", "#F4A460", "#FFFFFF",
+  "#000000",
+  "#333333",
+  "#666666",
+  "#999999",
+  "#CCCCCC",
+  "#8B0000",
+  "#DC143C",
+  "#FF6347",
+  "#FF8C00",
+  "#FFD700",
+  "#006400",
+  "#228B22",
+  "#4CAF50",
+  "#90EE90",
+  "#00CED1",
+  "#00008B",
+  "#0000FF",
+  "#4169E1",
+  "#87CEEB",
+  "#9932CC",
+  "#4B0082",
+  "#8B4513",
+  "#D2691E",
+  "#F4A460",
+  "#FFFFFF",
 ];
 
 // Generate static SVG thumbnails for each maze type
@@ -228,7 +267,7 @@ const loadTypePreviews = () => {
 
 // Methods
 const selectMazeType = (typeId: MazeTypeId) => {
-  const option = mazeTypeOptions.find(t => t.id === typeId);
+  const option = mazeTypeOptions.find((t) => t.id === typeId);
   if (option?.available) {
     selectedMazeType.value = typeId;
     emit("mazeTypeChange", typeId);
@@ -299,7 +338,7 @@ watch(
     if (visible) {
       initializeFromConfig();
     }
-  }
+  },
 );
 </script>
 
@@ -420,9 +459,9 @@ watch(
                   <SelectButton
                     v-model="difficulty"
                     :options="difficultyOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    :allowEmpty="false"
+                    option-label="label"
+                    option-value="value"
+                    :allow-empty="false"
                   />
                 </div>
                 <p class="control-description">
@@ -436,13 +475,17 @@ watch(
                 <div class="toggle-row">
                   <ToggleButton
                     v-model="showSolution"
-                    onLabel="Showing"
-                    offLabel="Hidden"
-                    onIcon="pi pi-eye"
-                    offIcon="pi pi-eye-slash"
+                    on-label="Showing"
+                    off-label="Hidden"
+                    on-icon="pi pi-eye"
+                    off-icon="pi pi-eye-slash"
                     class="solution-toggle"
                   />
-                  <span class="toggle-hint">{{ showSolution ? 'Solution path is visible' : 'Solution path is hidden' }}</span>
+                  <span class="toggle-hint">{{
+                    showSolution
+                      ? "Solution path is visible"
+                      : "Solution path is hidden"
+                  }}</span>
                 </div>
               </div>
 
@@ -500,7 +543,12 @@ watch(
                 </div>
 
                 <div class="color-option">
-                  <label class="color-label">Solution Path</label>
+                  <div class="color-label-group">
+                    <label class="color-label">Solution Path</label>
+                    <small class="color-note"
+                      >(only printed on answer key)</small
+                    >
+                  </div>
                   <VSwatches
                     v-model="pathColor"
                     :swatches="colorSwatches"
@@ -934,10 +982,21 @@ watch(
   justify-content: space-between;
 }
 
+.color-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
 .color-label {
   font-weight: 500;
   font-size: 0.875rem;
   color: var(--text-color);
+}
+
+.color-note {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
 }
 
 .color-option :deep(.vue-swatches__trigger) {

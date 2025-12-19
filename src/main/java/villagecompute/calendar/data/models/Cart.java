@@ -158,6 +158,26 @@ public class Cart extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
+     * Add a generic item to cart (supports new generator-based items with assets).
+     * Unlike legacy items, generator-based items with SVGs are always treated as new line items
+     * since each generated SVG is unique and should not be merged.
+     */
+    public CartItem addItem(String generatorType, String description, int quantity,
+                            BigDecimal unitPrice, String configuration, String productCode) {
+        CartItem newItem = new CartItem();
+        newItem.cart = this;
+        newItem.generatorType = generatorType;
+        newItem.description = description;
+        newItem.quantity = quantity;
+        newItem.unitPrice = unitPrice;
+        newItem.configuration = configuration;
+        newItem.productCode = productCode;
+        newItem.persist();
+        items.add(newItem);
+        return newItem;
+    }
+
+    /**
      * Remove item from cart
      */
     public void removeItem(CartItem item) {

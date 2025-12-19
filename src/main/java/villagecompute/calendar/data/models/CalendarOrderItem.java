@@ -11,10 +11,12 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- * Entity representing a line item within a calendar order.
- * Each order can have multiple items (prints, PDFs, etc.)
+ * Entity representing a line item within an order.
+ * Supports multiple generator types (calendar, maze, etc.) with frozen SVG assets.
  */
 @Entity
 @Table(
@@ -38,8 +40,24 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     public CalendarOrder order;
 
     /**
+     * Type of generator: 'calendar', 'maze', etc.
+     */
+    @Size(max = 50)
+    @Column(name = "generator_type", length = 50)
+    public String generatorType;
+
+    /**
+     * User-facing description like "2026 Calendar" or "Hard Orthogonal Maze"
+     */
+    @Size(max = 500)
+    @Column(name = "description", length = 500)
+    public String description;
+
+    /**
+     * @deprecated Use generatorType instead. Kept for backward compatibility.
      * The calendar design for this line item (optional - may be null for non-calendar products)
      */
+    @Deprecated
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "calendar_id", foreignKey = @ForeignKey(name = "fk_order_items_calendar"))
     @Ignore
@@ -54,15 +72,19 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     public String productType = "PRINT";
 
     /**
+     * @deprecated Use description instead. Kept for backward compatibility.
      * Product name/description for display
      */
+    @Deprecated
     @Size(max = 255)
     @Column(name = "product_name", length = 255)
     public String productName;
 
     /**
+     * @deprecated Use configuration JSON instead. Kept for backward compatibility.
      * Calendar year (for calendar products)
      */
+    @Deprecated
     @Column(name = "calendar_year")
     public Integer calendarYear;
 
@@ -90,6 +112,18 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     public JsonNode configuration;
 
     /**
+     * Assets (SVGs) associated with this order item.
+     */
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+        name = "order_item_assets",
+        joinColumns = @JoinColumn(name = "order_item_id"),
+        inverseJoinColumns = @JoinColumn(name = "asset_id")
+    )
+    @Ignore
+    public Set<ItemAsset> assets = new HashSet<>();
+
+    /**
      * Shipment this item belongs to (null until shipped)
      */
     @ManyToOne(fetch = FetchType.LAZY)
@@ -108,6 +142,10 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     // Product type constants
     public static final String TYPE_PRINT = "PRINT";
     public static final String TYPE_PDF = "PDF";
+
+    // Generator type constants
+    public static final String GENERATOR_CALENDAR = "calendar";
+    public static final String GENERATOR_MAZE = "maze";
 
     // Item status constants
     public static final String STATUS_PENDING = "PENDING";
@@ -138,5 +176,29 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
      */
     public boolean isDigital() {
         return TYPE_PDF.equals(productType);
+    }
+
+    /**
+     * Add an asset to this order item.
+     */
+    public void addAsset(ItemAsset asset) {
+        assets.add(asset);
+    }
+
+    /**
+     * Get an asset by key (e.g., "main", "answer_key").
+     */
+    public ItemAsset getAsset(String assetKey) {
+        return assets.stream()
+            .filter(a -> assetKey.equals(a.assetKey))
+            .findFirst()
+            .orElse(null);
+    }
+
+    /**
+     * Get the main SVG asset.
+     */
+    public ItemAsset getMainAsset() {
+        return getAsset(ItemAsset.KEY_MAIN);
     }
 }
