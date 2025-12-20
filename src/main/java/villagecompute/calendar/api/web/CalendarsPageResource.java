@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.qute.Template;
 import io.quarkus.vertx.web.Route;
 import io.quarkus.vertx.web.RouteBase;
+import io.smallrye.common.annotation.Blocking;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
@@ -37,6 +38,7 @@ public class CalendarsPageResource {
      * Calendar product index page at /calendars/
      */
     @Route(path = "/", methods = Route.HttpMethod.GET)
+    @Blocking
     public void index(RoutingContext rc) {
         List<CalendarTemplate> calendars = CalendarTemplate.findActiveWithSlug();
 
@@ -56,6 +58,7 @@ public class CalendarsPageResource {
      * Individual calendar product page at /calendars/{slug}
      */
     @Route(path = "/:slug", methods = Route.HttpMethod.GET)
+    @Blocking
     public void product(RoutingContext rc) {
         String slug = rc.pathParam("slug");
 
@@ -96,6 +99,7 @@ public class CalendarsPageResource {
      * Serve SVG content for a calendar
      */
     @Route(path = "/:slug/preview.svg", methods = Route.HttpMethod.GET)
+    @Blocking
     public void svgPreview(RoutingContext rc) {
         String slug = rc.pathParam("slug");
         CalendarTemplate calendar = CalendarTemplate.findBySlug(slug);
