@@ -31,6 +31,8 @@ const config = ref({
 
 // UI State
 const mazeSvg = ref("");
+const previousSvg = ref(""); // For crossfade transition
+const isTransitioning = ref(false);
 const loading = ref(false);
 const error = ref("");
 const showWizard = ref(false);
@@ -73,9 +75,34 @@ const getSessionId = () => {
   return sessionId;
 };
 
+// Crossfade to new SVG content
+const crossfadeToNewSvg = (newSvg: string) => {
+  if (mazeSvg.value && mazeSvg.value !== newSvg) {
+    // Store the current SVG for crossfade
+    previousSvg.value = mazeSvg.value;
+    isTransitioning.value = true;
+
+    // Update to new SVG
+    mazeSvg.value = newSvg;
+
+    // After transition completes, clean up
+    setTimeout(() => {
+      previousSvg.value = "";
+      isTransitioning.value = false;
+    }, 250); // Slightly longer than the CSS transition
+  } else {
+    // First load or same content, just set directly
+    mazeSvg.value = newSvg;
+  }
+};
+
 // Generate maze preview (deterministic seed for preview)
 const generatePreview = async () => {
-  loading.value = true;
+  // Don't show loading spinner during regeneration - keep old maze visible
+  const isFirstLoad = !mazeSvg.value;
+  if (isFirstLoad) {
+    loading.value = true;
+  }
   error.value = "";
 
   try {
@@ -107,7 +134,7 @@ const generatePreview = async () => {
       throw new Error(result.errors[0].message);
     }
 
-    mazeSvg.value = result.data.mazePreview;
+    crossfadeToNewSvg(result.data.mazePreview);
     mazeEditorStore.setHasGeneratedSVG(true);
   } catch (e: any) {
     error.value = e.message || "Failed to generate maze";
@@ -120,7 +147,11 @@ const generatePreview = async () => {
 
 // Create a new maze (with random seed)
 const createMaze = async () => {
-  loading.value = true;
+  // Don't show loading spinner - keep old maze visible during generation
+  const isFirstLoad = !mazeSvg.value;
+  if (isFirstLoad) {
+    loading.value = true;
+  }
   error.value = "";
 
   try {
@@ -163,7 +194,7 @@ const createMaze = async () => {
       throw new Error(result.errors[0].message);
     }
 
-    mazeSvg.value = result.data.createMaze.generatedSvg;
+    crossfadeToNewSvg(result.data.createMaze.generatedSvg);
     mazeEditorStore.setHasGeneratedSVG(true);
   } catch (e: any) {
     error.value = e.message || "Failed to create maze";
@@ -467,8 +498,20 @@ onUnmounted(() => {
               transformOrigin: 'top left',
             }"
           >
-            <div class="page-border">
-              <div v-html="mazeSvg"></div>
+            <div class="page-border svg-crossfade-container">
+              <!-- Previous SVG (fading out) -->
+              <div
+                v-if="previousSvg"
+                class="svg-layer svg-previous"
+                :class="{ 'fade-out': isTransitioning }"
+                v-html="previousSvg"
+              ></div>
+              <!-- Current SVG (fading in) -->
+              <div
+                class="svg-layer svg-current"
+                :class="{ 'fade-in': isTransitioning }"
+                v-html="mazeSvg"
+              ></div>
             </div>
           </div>
         </div>
@@ -589,6 +632,34 @@ onUnmounted(() => {
   border-bottom: 2px solid #999;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   background: white;
+}
+
+/* Crossfade container */
+.svg-crossfade-container {
+  position: relative;
+}
+
+.svg-layer {
+  transition: opacity 200ms ease-in-out;
+}
+
+.svg-previous {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 1;
+}
+
+.svg-previous.fade-out {
+  opacity: 0;
+}
+
+.svg-current {
+  opacity: 1;
+}
+
+.svg-current.fade-in {
+  opacity: 1;
 }
 
 :deep(.svg-container svg) {
