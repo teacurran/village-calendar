@@ -5,11 +5,13 @@ import io.quarkus.qute.Template;
 import io.quarkus.vertx.web.Route;
 import io.quarkus.vertx.web.RouteBase;
 import io.smallrye.common.annotation.Blocking;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.services.CalendarRenderingService;
+import villagecompute.calendar.services.PDFRenderingService;
 
 import java.text.NumberFormat;
 import java.time.LocalDate;
@@ -33,6 +35,9 @@ public class CalendarsPageResource {
 
     @Inject
     CalendarRenderingService calendarRenderingService;
+
+    @Inject
+    PDFRenderingService pdfRenderingService;
 
     /**
      * Calendar product index page at /calendars/
@@ -62,8 +67,8 @@ public class CalendarsPageResource {
     public void product(RoutingContext rc) {
         String slug = rc.pathParam("slug");
 
-        // Don't handle preview.svg requests here
-        if (slug.endsWith("/preview.svg") || slug.equals("preview.svg")) {
+        // Don't handle asset requests here (they have file extensions)
+        if (slug.contains(".")) {
             rc.next();
             return;
         }
@@ -96,27 +101,85 @@ public class CalendarsPageResource {
     }
 
     /**
-     * Serve SVG content for a calendar
+     * Serve SVG content for a calendar at /calendars/{slug}/{slug}.svg
      */
-    @Route(path = "/:slug/preview.svg", methods = Route.HttpMethod.GET)
+    @Route(path = "/:slug/:filename", methods = Route.HttpMethod.GET)
     @Blocking
-    public void svgPreview(RoutingContext rc) {
+    public void asset(RoutingContext rc) {
         String slug = rc.pathParam("slug");
-        CalendarTemplate calendar = CalendarTemplate.findBySlug(slug);
+        String filename = rc.pathParam("filename");
 
-        if (calendar == null) {
+        // Handle SVG requests
+        if (filename.endsWith(".svg")) {
+            String expectedFilename = slug + ".svg";
+            if (!filename.equals(expectedFilename)) {
+                rc.response()
+                    .setStatusCode(404)
+                    .end("Asset not found");
+                return;
+            }
+
+            CalendarTemplate calendar = CalendarTemplate.findBySlug(slug);
+            if (calendar == null) {
+                rc.response()
+                    .setStatusCode(404)
+                    .end("Calendar not found");
+                return;
+            }
+
+            String svgContent = generateSvgForTemplate(calendar);
+
             rc.response()
-                .setStatusCode(404)
-                .end("Calendar not found");
+                .putHeader("Content-Type", "image/svg+xml")
+                .putHeader("Cache-Control", "public, max-age=3600")
+                .end(svgContent);
             return;
         }
 
-        String svgContent = generateSvgForTemplate(calendar);
+        // Handle PNG requests - renders with white borders like print preview
+        if (filename.endsWith(".png")) {
+            String expectedFilename = slug + ".png";
+            if (!filename.equals(expectedFilename)) {
+                rc.response()
+                    .setStatusCode(404)
+                    .end("Asset not found");
+                return;
+            }
 
+            CalendarTemplate calendar = CalendarTemplate.findBySlug(slug);
+            if (calendar == null) {
+                rc.response()
+                    .setStatusCode(404)
+                    .end("Calendar not found");
+                return;
+            }
+
+            String svgContent = generateSvgForTemplate(calendar);
+
+            // Wrap SVG with white background and margins to match print artboard
+            String wrappedSvg = calendarRenderingService.wrapSvgForPreview(svgContent);
+
+            try {
+                // Generate PNG thumbnail (1200px width for good quality on index page)
+                byte[] pngBytes = pdfRenderingService.renderSVGToPNG(wrappedSvg, 1200);
+
+                rc.response()
+                    .putHeader("Content-Type", "image/png")
+                    .putHeader("Cache-Control", "public, max-age=3600")
+                    .end(Buffer.buffer(pngBytes));
+            } catch (Exception e) {
+                LOG.errorf(e, "Failed to generate PNG for calendar: %s", slug);
+                rc.response()
+                    .setStatusCode(500)
+                    .end("Failed to generate PNG");
+            }
+            return;
+        }
+
+        // Unknown asset type
         rc.response()
-            .putHeader("Content-Type", "image/svg+xml")
-            .putHeader("Cache-Control", "public, max-age=3600") // Cache for 1 hour in dev
-            .end(svgContent);
+            .setStatusCode(404)
+            .end("Asset not found");
     }
 
     /**
