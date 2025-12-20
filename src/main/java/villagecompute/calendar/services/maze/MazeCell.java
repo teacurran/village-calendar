@@ -19,6 +19,10 @@ public class MazeCell {
     public boolean onSolutionPath = false;
     public MazeCell parent = null;
 
+    // For visualization - cells not on solution path are dead ends (false paths)
+    public boolean isDeadEnd = false;
+    public int deadEndDepth = 0; // How deep into a dead-end branch (0 = on solution path)
+
     public MazeCell(int x, int y) {
         this.x = x;
         this.y = y;

@@ -24,6 +24,7 @@ const config = ref({
   size: 10, // 1-20: controls cell count
   difficulty: 3, // 1-5: controls shortcuts (1=easy/many, 5=hard/none)
   showSolution: false,
+  showDeadEnds: false, // Highlight dead-end paths for visualization
   innerWallColor: "#000000",
   outerWallColor: "#000000",
   pathColor: "#4CAF50",
@@ -107,8 +108,8 @@ const generatePreview = async () => {
 
   try {
     const query = `
-      query MazePreview($type: MazeType!, $size: Int!, $difficulty: Int!, $showSolution: Boolean!) {
-        mazePreview(type: $type, size: $size, difficulty: $difficulty, showSolution: $showSolution)
+      query MazePreview($type: MazeType!, $size: Int!, $difficulty: Int!, $showSolution: Boolean!, $showDeadEnds: Boolean!) {
+        mazePreview(type: $type, size: $size, difficulty: $difficulty, showSolution: $showSolution, showDeadEnds: $showDeadEnds)
       }
     `;
 
@@ -124,6 +125,7 @@ const generatePreview = async () => {
           size: config.value.size,
           difficulty: config.value.difficulty,
           showSolution: config.value.showSolution,
+          showDeadEnds: config.value.showDeadEnds,
         },
       }),
     });
@@ -238,10 +240,12 @@ const handleConfigChange = (newConfig: {
   size: number;
   difficulty: number;
   showSolution: boolean;
+  showDeadEnds: boolean;
 }) => {
   config.value.size = newConfig.size;
   config.value.difficulty = newConfig.difficulty;
   config.value.showSolution = newConfig.showSolution;
+  config.value.showDeadEnds = newConfig.showDeadEnds;
   generatePreview();
 };
 

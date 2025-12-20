@@ -58,6 +58,7 @@ public class MazeGrid {
                 break;
         }
         findSolution();
+        markDeadEnds();
     }
 
     /**
@@ -134,11 +135,15 @@ public class MazeGrid {
     /**
      * Apply difficulty-based modifications to the maze.
      * Difficulty 1-5:
-     *   1 = Very easy (many shortcuts)
-     *   2 = Easy (some shortcuts)
-     *   3 = Medium (standard maze)
-     *   4 = Hard (add some dead-end extensions)
-     *   5 = Very hard (long winding path, extended dead ends)
+     *   1 = Very easy (many shortcuts - about 25% of cells get extra openings)
+     *   2 = Easy (some shortcuts - about 12.5% of cells get extra openings)
+     *   3 = Medium (few shortcuts - about 5% of cells get extra openings)
+     *   4 = Hard (minimal shortcuts - about 2% of cells get extra openings)
+     *   5 = Very hard (pure perfect maze - no shortcuts, single solution path)
+     *
+     * The recursive backtracker creates a "perfect" maze with exactly one path
+     * between any two points. Adding shortcuts (removing walls) creates alternative
+     * routes that can make the solution shorter and easier to find.
      */
     private void applyDifficultyModifications() {
         int totalCells = width * height;
@@ -153,16 +158,16 @@ public class MazeGrid {
                 removeWallsForShortcuts(totalCells / 8);
                 break;
             case 3:
-                // Medium: Standard maze, no modifications
+                // Medium: Remove few walls
+                removeWallsForShortcuts(totalCells / 20);
                 break;
             case 4:
-                // Hard: Add dead-end extensions
-                addDeadEndExtensions(totalCells / 15);
+                // Hard: Remove very few walls
+                removeWallsForShortcuts(totalCells / 50);
                 break;
             case 5:
-                // Very hard: Extend all dead ends to be long winding paths
-                extendAllDeadEnds();
-                addDeadEndExtensions(totalCells / 8);
+                // Very hard: Pure perfect maze, no modifications
+                // The recursive backtracker already creates the hardest possible maze
                 break;
         }
     }
@@ -182,97 +187,6 @@ public class MazeGrid {
                 MazeCell neighbor = blocked.get(random.nextInt(blocked.size()));
                 cell.removeWallTo(neighbor);
             }
-        }
-    }
-
-    /**
-     * Add dead-end extensions to make the maze harder.
-     * This adds confusing branches that lead nowhere.
-     */
-    private void addDeadEndExtensions(int count) {
-        // Find cells that could be extended into dead ends
-        for (int i = 0; i < count; i++) {
-            int x = random.nextInt(width);
-            int y = random.nextInt(height);
-            MazeCell cell = cells[x][y];
-
-            // Find neighbors that have walls we could open to create false paths
-            List<MazeCell> blocked = getBlockedNeighbors(cell);
-            if (!blocked.isEmpty()) {
-                MazeCell neighbor = blocked.get(random.nextInt(blocked.size()));
-                // Only open if the neighbor is a potential dead end (has few connections)
-                List<MazeCell> neighborConnections = getAccessibleNeighbors(neighbor);
-                if (neighborConnections.size() <= 1) {
-                    cell.removeWallTo(neighbor);
-                }
-            }
-        }
-    }
-
-    /**
-     * Extend all dead ends into long winding paths.
-     * This makes the maze much harder by creating long false paths.
-     */
-    private void extendAllDeadEnds() {
-        // Find all dead ends (cells with only one connection)
-        List<MazeCell> deadEnds = new ArrayList<>();
-        for (int x = 0; x < width; x++) {
-            for (int y = 0; y < height; y++) {
-                MazeCell cell = cells[x][y];
-                // Skip start and end cells
-                if ((x == startX && y == startY) || (x == endX && y == endY)) {
-                    continue;
-                }
-                if (getAccessibleNeighbors(cell).size() == 1) {
-                    deadEnds.add(cell);
-                }
-            }
-        }
-
-        // Extend each dead end as far as possible
-        for (MazeCell deadEnd : deadEnds) {
-            extendDeadEnd(deadEnd, 10 + random.nextInt(10)); // Extend 10-20 cells
-        }
-    }
-
-    /**
-     * Extend a single dead end by carving a winding path from it.
-     */
-    private void extendDeadEnd(MazeCell start, int maxLength) {
-        MazeCell current = start;
-        int extended = 0;
-
-        while (extended < maxLength) {
-            List<MazeCell> blocked = getBlockedNeighbors(current);
-            if (blocked.isEmpty()) {
-                break; // No more walls to remove
-            }
-
-            // Prefer to continue in the same general direction for longer paths
-            // but occasionally turn to create winding paths
-            MazeCell next = blocked.get(random.nextInt(blocked.size()));
-
-            // Check if opening this wall would create a loop (connect to non-dead-end)
-            List<MazeCell> nextConnections = getAccessibleNeighbors(next);
-            if (nextConnections.size() > 0) {
-                // This would create a shortcut, skip it
-                // Try another direction
-                boolean foundValid = false;
-                for (MazeCell candidate : blocked) {
-                    if (getAccessibleNeighbors(candidate).isEmpty()) {
-                        next = candidate;
-                        foundValid = true;
-                        break;
-                    }
-                }
-                if (!foundValid) {
-                    break; // Can't extend without creating shortcuts
-                }
-            }
-
-            current.removeWallTo(next);
-            current = next;
-            extended++;
         }
     }
 
@@ -338,6 +252,55 @@ public class MazeGrid {
                 if (!neighbor.visited) {
                     neighbor.visited = true;
                     neighbor.parent = current;
+                    queue.add(neighbor);
+                }
+            }
+        }
+    }
+
+    /**
+     * Mark all cells that are not on the solution path as dead ends.
+     * Also calculates the depth of each dead end (how far from the solution path).
+     */
+    private void markDeadEnds() {
+        // First pass: mark all non-solution cells as dead ends
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                MazeCell cell = cells[x][y];
+                cell.isDeadEnd = !cell.onSolutionPath;
+            }
+        }
+
+        // Second pass: calculate dead-end depth using BFS from solution path
+        // Reset visited flags
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                cells[x][y].visited = false;
+            }
+        }
+
+        Queue<MazeCell> queue = new LinkedList<>();
+
+        // Start from all cells on the solution path
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                MazeCell cell = cells[x][y];
+                if (cell.onSolutionPath) {
+                    cell.deadEndDepth = 0;
+                    cell.visited = true;
+                    queue.add(cell);
+                }
+            }
+        }
+
+        // BFS to calculate depth of each dead-end cell
+        while (!queue.isEmpty()) {
+            MazeCell current = queue.poll();
+
+            for (MazeCell neighbor : getAccessibleNeighbors(current)) {
+                if (!neighbor.visited) {
+                    neighbor.visited = true;
+                    neighbor.deadEndDepth = current.deadEndDepth + 1;
                     queue.add(neighbor);
                 }
             }

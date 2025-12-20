@@ -19,6 +19,7 @@ interface MazeConfig {
   size?: number;
   difficulty?: number;
   showSolution?: boolean;
+  showDeadEnds?: boolean;
   innerWallColor?: string;
   outerWallColor?: string;
   pathColor?: string;
@@ -37,7 +38,7 @@ const emit = defineEmits<{
   (e: "mazeTypeChange", type: string): void;
   (
     e: "configChange",
-    config: { size: number; difficulty: number; showSolution: boolean },
+    config: { size: number; difficulty: number; showSolution: boolean; showDeadEnds: boolean },
   ): void;
   (
     e: "colorsChange",
@@ -65,6 +66,7 @@ const selectedMazeType = ref<MazeTypeId>("ORTHOGONAL");
 const size = ref(10);
 const difficulty = ref(3); // 1-5 scale, 3 = medium
 const showSolution = ref(false);
+const showDeadEnds = ref(false); // Highlight dead-end paths
 const innerWallColor = ref("#000000");
 const outerWallColor = ref("#000000");
 const pathColor = ref("#4CAF50");
@@ -85,7 +87,8 @@ const sizeLabel = computed(() => {
   if (size.value <= 5) return "Few large passages";
   if (size.value <= 10) return "Medium complexity";
   if (size.value <= 15) return "Many passages";
-  return "Maximum complexity";
+  if (size.value <= 18) return "Very complex";
+  return "Maximum (1/4\" paths)";
 });
 
 const difficultyLabel = computed(() => {
@@ -95,11 +98,11 @@ const difficultyLabel = computed(() => {
     case 2:
       return "Easy - some shortcuts";
     case 3:
-      return "Medium - standard maze";
+      return "Medium - few shortcuts";
     case 4:
-      return "Hard - fewer shortcuts";
+      return "Hard - minimal shortcuts";
     case 5:
-      return "Very hard - no shortcuts";
+      return "Very hard - perfect maze (no shortcuts)";
     default:
       return "Standard maze";
   }
@@ -279,6 +282,7 @@ const emitConfigChange = () => {
     size: size.value,
     difficulty: difficulty.value,
     showSolution: showSolution.value,
+    showDeadEnds: showDeadEnds.value,
   });
 };
 
@@ -310,6 +314,9 @@ const initializeFromConfig = () => {
   if (props.config.showSolution !== undefined) {
     showSolution.value = props.config.showSolution;
   }
+  if (props.config.showDeadEnds !== undefined) {
+    showDeadEnds.value = props.config.showDeadEnds;
+  }
   if (props.config.innerWallColor) {
     innerWallColor.value = props.config.innerWallColor;
   }
@@ -322,7 +329,7 @@ const initializeFromConfig = () => {
 };
 
 // Watch for config changes
-watch([size, difficulty, showSolution], () => {
+watch([size, difficulty, showSolution, showDeadEnds], () => {
   emitConfigChange();
 });
 
@@ -487,6 +494,29 @@ watch(
                       : "Solution path is hidden"
                   }}</span>
                 </div>
+              </div>
+
+              <!-- Dead Ends Highlight Toggle -->
+              <div class="toggle-control">
+                <label class="control-label">Show Dead Ends</label>
+                <div class="toggle-row">
+                  <ToggleButton
+                    v-model="showDeadEnds"
+                    on-label="Showing"
+                    off-label="Hidden"
+                    on-icon="pi pi-map"
+                    off-icon="pi pi-map"
+                    class="dead-ends-toggle"
+                  />
+                  <span class="toggle-hint">{{
+                    showDeadEnds
+                      ? "Dead-end paths highlighted"
+                      : "Dead ends hidden"
+                  }}</span>
+                </div>
+                <p class="control-description">
+                  Shows all wrong-turn paths branching off from the solution
+                </p>
               </div>
 
               <div class="step-navigation">
@@ -936,6 +966,15 @@ watch(
 .solution-toggle :deep(.p-togglebutton-checked) {
   background: var(--primary-color);
   border-color: var(--primary-color);
+}
+
+.dead-ends-toggle {
+  min-width: 100px;
+}
+
+.dead-ends-toggle :deep(.p-togglebutton-checked) {
+  background: #757575;
+  border-color: #757575;
 }
 
 /* Checkbox options */

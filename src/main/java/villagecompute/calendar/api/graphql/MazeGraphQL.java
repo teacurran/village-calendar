@@ -51,10 +51,11 @@ public class MazeGraphQL {
     public String getMazePreview(
         @Name("type") @DefaultValue("ORTHOGONAL") MazeType type,
         @Name("size") @DefaultValue("10") int size,
-        @Name("difficulty") @DefaultValue("10") int difficulty,
-        @Name("showSolution") @DefaultValue("false") boolean showSolution
+        @Name("difficulty") @DefaultValue("3") int difficulty,
+        @Name("showSolution") @DefaultValue("false") boolean showSolution,
+        @Name("showDeadEnds") @DefaultValue("false") boolean showDeadEnds
     ) {
-        return mazeGenerationService.generatePreview(type, size, difficulty, showSolution);
+        return mazeGenerationService.generatePreview(type, size, difficulty, showSolution, showDeadEnds);
     }
 
     // Mutations

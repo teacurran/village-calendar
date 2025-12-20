@@ -28,16 +28,17 @@ public class MazeGenerationService {
 
     /**
      * Convert size (1-20) to grid dimensions.
-     * Size 1 = ~15 cells wide (simple maze)
-     * Size 20 = ~100 cells wide (complex maze)
+     * Size 1 = ~15 cells wide (simple maze, ~2.2" paths)
+     * Size 20 = ~132 cells wide (complex maze, ~0.25" / 1/4" paths)
      * Height is calculated to maintain aspect ratio.
      */
     private int[] sizeToGridDimensions(int size) {
         // Clamp size to 1-20
         size = Math.max(1, Math.min(20, size));
 
-        // Width: 15 cells at size 1, 100 cells at size 20
-        int width = 15 + (size - 1) * (100 - 15) / 19;
+        // Width: 15 cells at size 1, 132 cells at size 20
+        // At 132 cells: 3300 printable units / 132 = 25 units per cell = 0.25" (1/4 inch)
+        int width = 15 + (size - 1) * (132 - 15) / 19;
 
         // Height maintains aspect ratio of printable area
         int height = (int) Math.round(width / ASPECT_RATIO);
@@ -51,18 +52,30 @@ public class MazeGenerationService {
      *
      * @param type       Maze tessellation type
      * @param size       1-20, controls cell count
-     * @param difficulty 1-20, controls solution path length
+     * @param difficulty 1-5, controls shortcuts (1=many, 5=none)
      * @param seed       Random seed (null for random)
      * @param showSolution Whether to show the solution path
+     * @param showDeadEnds Whether to highlight dead-end paths
+     * @param deadEndColor Color for dead-end highlighting (null for default orange)
      */
     public String generateMazeSvg(MazeType type, int size, int difficulty, Long seed, boolean showSolution,
-                                   String innerWallColor, String outerWallColor, String pathColor) {
+                                   String innerWallColor, String outerWallColor, String pathColor,
+                                   boolean showDeadEnds, String deadEndColor) {
         int[] dims = sizeToGridDimensions(size);
         MazeGrid grid = new MazeGrid(dims[0], dims[1], type, difficulty, seed);
         grid.generate();
 
-        MazeSvgRenderer renderer = new MazeSvgRenderer(grid, innerWallColor, outerWallColor, pathColor, showSolution);
+        MazeSvgRenderer renderer = new MazeSvgRenderer(grid, innerWallColor, outerWallColor, pathColor,
+                showSolution, showDeadEnds, deadEndColor);
         return renderer.render();
+    }
+
+    /**
+     * Generate a maze and return the SVG representation (without dead-end highlighting).
+     */
+    public String generateMazeSvg(MazeType type, int size, int difficulty, Long seed, boolean showSolution,
+                                   String innerWallColor, String outerWallColor, String pathColor) {
+        return generateMazeSvg(type, size, difficulty, seed, showSolution, innerWallColor, outerWallColor, pathColor, false, null);
     }
 
     /**
@@ -107,8 +120,16 @@ public class MazeGenerationService {
      * Generate a preview SVG for given parameters (without persisting).
      * Uses a fixed seed for consistent preview.
      */
+    public String generatePreview(MazeType type, int size, int difficulty, boolean showSolution, boolean showDeadEnds) {
+        return generateMazeSvg(type, size, difficulty, 12345L, showSolution, "#000000", "#000000", "#4CAF50", showDeadEnds, null);
+    }
+
+    /**
+     * Generate a preview SVG for given parameters (without persisting, no dead-end highlighting).
+     * Uses a fixed seed for consistent preview.
+     */
     public String generatePreview(MazeType type, int size, int difficulty, boolean showSolution) {
-        return generateMazeSvg(type, size, difficulty, 12345L, showSolution, "#000000", "#000000", "#4CAF50");
+        return generatePreview(type, size, difficulty, showSolution, false);
     }
 
     /**

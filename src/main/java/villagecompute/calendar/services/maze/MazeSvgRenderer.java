@@ -24,12 +24,15 @@ public class MazeSvgRenderer {
     private static final String DEFAULT_PATH_COLOR = "#4CAF50";
     private static final String DEFAULT_START_COLOR = "#2196F3";
     private static final String DEFAULT_END_COLOR = "#F44336";
+    private static final String DEFAULT_DEAD_END_COLOR = "#9E9E9E"; // Light gray for dead-end paths
 
     private final MazeGrid grid;
     private final String innerWallColor;
     private final String outerWallColor;
     private final String pathColor;
     private final boolean showSolution;
+    private final boolean showDeadEnds;
+    private final String deadEndColor;
 
     // Calculated dimensions
     private final int cellSize;
@@ -39,15 +42,22 @@ public class MazeSvgRenderer {
     private final int offsetY;
 
     public MazeSvgRenderer(MazeGrid grid) {
-        this(grid, DEFAULT_INNER_WALL_COLOR, DEFAULT_OUTER_WALL_COLOR, DEFAULT_PATH_COLOR, false);
+        this(grid, DEFAULT_INNER_WALL_COLOR, DEFAULT_OUTER_WALL_COLOR, DEFAULT_PATH_COLOR, false, false, DEFAULT_DEAD_END_COLOR);
     }
 
     public MazeSvgRenderer(MazeGrid grid, String innerWallColor, String outerWallColor, String pathColor, boolean showSolution) {
+        this(grid, innerWallColor, outerWallColor, pathColor, showSolution, false, DEFAULT_DEAD_END_COLOR);
+    }
+
+    public MazeSvgRenderer(MazeGrid grid, String innerWallColor, String outerWallColor, String pathColor,
+                           boolean showSolution, boolean showDeadEnds, String deadEndColor) {
         this.grid = grid;
         this.innerWallColor = innerWallColor;
         this.outerWallColor = outerWallColor;
         this.pathColor = pathColor;
         this.showSolution = showSolution;
+        this.showDeadEnds = showDeadEnds;
+        this.deadEndColor = deadEndColor != null ? deadEndColor : DEFAULT_DEAD_END_COLOR;
 
         // Calculate cell size to fit the printable area while maintaining square cells
         int maxCellWidth = PRINTABLE_WIDTH / grid.getWidth();
@@ -87,6 +97,40 @@ public class MazeSvgRenderer {
             "  <rect width=\"%d\" height=\"%d\" fill=\"white\"/>\n",
             PAGE_WIDTH, PAGE_HEIGHT
         ));
+
+        // Draw dead-end depth visualization if enabled (before walls so it appears behind)
+        if (showDeadEnds) {
+            svg.append("  <g class=\"dead-end-depth\">\n");
+
+            // Find maximum depth for gradient calculation
+            int maxDepth = 1;
+            for (int x = 0; x < gridWidth; x++) {
+                for (int y = 0; y < gridHeight; y++) {
+                    MazeCell cell = grid.getCell(x, y);
+                    if (cell.deadEndDepth > maxDepth) {
+                        maxDepth = cell.deadEndDepth;
+                    }
+                }
+            }
+
+            // Draw cells colored by depth - deeper dead ends are more visible
+            for (int x = 0; x < gridWidth; x++) {
+                for (int y = 0; y < gridHeight; y++) {
+                    MazeCell cell = grid.getCell(x, y);
+                    if (cell.isDeadEnd && cell.deadEndDepth > 0) {
+                        int cellX = offsetX + x * cellSize;
+                        int cellY = offsetY + y * cellSize;
+                        // Deeper = more opaque (worse wrong turns)
+                        double opacity = 0.1 + (0.5 * cell.deadEndDepth / maxDepth);
+                        svg.append(String.format(
+                            "    <rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\" opacity=\"%.2f\"/>\n",
+                            cellX, cellY, cellSize, cellSize, deadEndColor, opacity
+                        ));
+                    }
+                }
+            }
+            svg.append("  </g>\n");
+        }
 
         // Draw solution path if enabled
         if (showSolution && grid.getSolutionPath() != null) {
