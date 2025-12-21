@@ -52,11 +52,12 @@ jobs:
     runs-on: ubuntu-latest
     # Wait for build if it's running (manual trigger), otherwise proceed (workflow_run)
     needs: [build]
-    # Run if: (workflow_run AND CI passed AND build skipped) OR (workflow_dispatch AND build succeeded)
+    # Run if: (workflow_run from PUSH event AND CI passed AND build skipped) OR (workflow_dispatch AND build succeeded)
+    # Skip deploys triggered by pull_request CI runs - only deploy on push to beta
     if: |
       always() &&
       (
-        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && needs.build.result == 'skipped') ||
+        (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && needs.build.result == 'skipped') ||
         (github.event_name == 'workflow_dispatch' && needs.build.result == 'success')
       )
     environment: beta
