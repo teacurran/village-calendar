@@ -258,7 +258,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible docker
 
-          # Create inventory with SSH connection persistence settings
+          # Create inventory with SSH settings (no ControlMaster - causes issues)
           cat > inventory.yml <<EOF
           all:
             hosts:
@@ -267,16 +267,17 @@ jobs:
                 ansible_user: ${K3S_USER}
                 ansible_ssh_private_key_file: ~/.ssh/id_rsa
                 ansible_python_interpreter: /usr/bin/python3
-                ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o TCPKeepAlive=yes -o ControlMaster=auto -o ControlPersist=60s -o ControlPath=/tmp/ansible-ssh-%h-%p-%r'
-                ansible_ssh_pipelining: true
-                ansible_connection_timeout: 60
+                ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o TCPKeepAlive=yes -o ConnectTimeout=30'
+                ansible_ssh_retries: 3
+                ansible_connection_timeout: 30
           EOF
 
-          # Run deployment (override namespace for beta)
+          # Run deployment with retries
           ansible-playbook \
             -i inventory.yml \
             -e "k8s_namespace=${DEPLOYMENT_NAMESPACE}" \
-            -T 120 \
+            -T 60 \
+            --timeout=60 \
             ansible/deploy-calendar.yml
 
       - name: Wait for rollout completion
