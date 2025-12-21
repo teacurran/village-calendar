@@ -102,17 +102,49 @@ jobs:
             target/jacoco-report/
           retention-days: 7
 
-      - name: Debug - List coverage files
+      - name: Add coverage summary to workflow
         if: always()
         run: |
-          echo "=== Checking for JaCoCo reports ==="
-          find target -name "jacoco*.xml" -o -name "jacoco*.exec" 2>/dev/null || echo "No JaCoCo files found"
-          echo ""
-          echo "=== target/site/jacoco/ ==="
-          ls -la target/site/jacoco/ 2>/dev/null || echo "Directory not found"
-          echo ""
-          echo "=== target/jacoco-report/ ==="
-          ls -la target/jacoco-report/ 2>/dev/null || echo "Directory not found"
+          echo "## Code Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f target/site/jacoco/jacoco.csv ]; then
+            echo "### Package Coverage" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Package | Instruction % | Branch % | Line % |" >> $GITHUB_STEP_SUMMARY
+            echo "|---------|---------------|----------|--------|" >> $GITHUB_STEP_SUMMARY
+            tail -n +2 target/site/jacoco/jacoco.csv | while IFS=, read -r group package class inst_missed inst_covered branch_missed branch_covered line_missed line_covered rest; do
+              if [ -n "$inst_covered" ] && [ -n "$inst_missed" ]; then
+                inst_total=$((inst_missed + inst_covered))
+                if [ $inst_total -gt 0 ]; then
+                  inst_pct=$((inst_covered * 100 / inst_total))
+                else
+                  inst_pct=0
+                fi
+
+                branch_total=$((branch_missed + branch_covered))
+                if [ $branch_total -gt 0 ]; then
+                  branch_pct=$((branch_covered * 100 / branch_total))
+                else
+                  branch_pct="-"
+                fi
+
+                line_total=$((line_missed + line_covered))
+                if [ $line_total -gt 0 ]; then
+                  line_pct=$((line_covered * 100 / line_total))
+                else
+                  line_pct=0
+                fi
+
+                echo "| $package | ${inst_pct}% | ${branch_pct}% | ${line_pct}% |" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+          else
+            echo "No coverage data found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 Full HTML report available in **jacoco-coverage-reports** artifact" >> $GITHUB_STEP_SUMMARY
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5
