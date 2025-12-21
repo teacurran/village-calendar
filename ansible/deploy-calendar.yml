@@ -1,8 +1,7 @@
 ---
 - name: Deploy Village Calendar to K3s
   hosts: k3s_cluster
-  gather_facts: yes
-  become: yes
+  gather_facts: no
   vars:
     # Deployment variables (set by GitHub Actions)
     # Use hash-based tags like 'beta-20167d7' instead of mutable 'beta-latest'
