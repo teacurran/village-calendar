@@ -89,8 +89,19 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      - name: Run tests with coverage
-        run: ./mvnw verify -DskipITs=false
+      - name: Build, Test with Coverage, and SonarCloud Scan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          ./mvnw -B verify sonar:sonar \
+            -DskipITs=false \
+            -Dsonar.projectKey=teacurran_village-calendar \
+            -Dsonar.organization=appi \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml,target/jacoco-report/jacoco.xml \
+            -Dsonar.java.binaries=target/classes \
+            -Dsonar.java.source=21
 
       - name: Upload JaCoCo coverage reports
         uses: actions/upload-artifact@v4
@@ -145,17 +156,6 @@ jobs:
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📦 Full HTML report available in **jacoco-coverage-reports** artifact" >> $GITHUB_STEP_SUMMARY
-
-      - name: SonarCloud Scan (Maven)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-            -Dsonar.projectKey=teacurran_village-calendar \
-            -Dsonar.organization=appi \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml,target/jacoco-report/jacoco.xml
 
   generate-static-content:
     name: Download Calendar Data & Assets
