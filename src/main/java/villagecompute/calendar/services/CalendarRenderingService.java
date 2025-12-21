@@ -1,5 +1,6 @@
 package villagecompute.calendar.services;
 
+import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.apache.batik.transcoder.Transcoder;
@@ -1222,7 +1223,7 @@ public class CalendarRenderingService {
 
     } catch (Exception e) {
       // If cleaning fails, return original PDF
-      System.err.println("Warning: Could not clean PDF metadata: " + e.getMessage());
+      Log.warn("Could not clean PDF metadata", e);
       return pdfBytes;
     }
   }
@@ -1233,8 +1234,7 @@ public class CalendarRenderingService {
       // Generate SVG content
       String svgContent = generateCalendarSVG(config);
 
-      // Debug: Log SVG content length
-      System.out.println("SVG content length: " + svgContent.length());
+      Log.debugf("SVG content length: %d", svgContent.length());
 
       // Wrap SVG with margins for proper print layout
       String wrappedSvg = wrapSvgWithMargins(svgContent);
@@ -1275,13 +1275,12 @@ public class CalendarRenderingService {
       // Post-process the PDF to clean metadata
       pdfBytes = cleanPdfMetadata(pdfBytes, config.year);
 
-      System.out.println("PDF generated successfully, size: " + pdfBytes.length + " bytes");
+      Log.debugf("PDF generated successfully, size: %d bytes", pdfBytes.length);
 
       return pdfBytes;
 
     } catch (Exception e) {
-      System.err.println("Error generating PDF: " + e.getMessage());
-      e.printStackTrace();
+      Log.error("Error generating PDF", e);
       // Return empty array on error
       return new byte[0];
     }
@@ -1299,7 +1298,7 @@ public class CalendarRenderingService {
 
     if (!matcher.find()) {
       // If no viewBox, return original SVG
-      System.out.println("Warning: No viewBox found in SVG, returning without margins");
+      Log.warn("No viewBox found in SVG, returning without margins");
       return innerSvg;
     }
 

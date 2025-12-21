@@ -2,6 +2,7 @@ package villagecompute.calendar.api.rest;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.persistence.LockModeType;
 import jakarta.transaction.Transactional;
@@ -141,7 +142,7 @@ public class SessionCalendarResource {
                 calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.error("Error generating calendar SVG", e);
         }
 
         calendar.persist();
@@ -198,7 +199,7 @@ public class SessionCalendarResource {
             );
             calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.error("Error generating calendar SVG", e);
         }
 
         calendar.persist();
@@ -298,7 +299,7 @@ public class SessionCalendarResource {
             calendar.generatedSvg = svg;
         } catch (Exception e) {
             // Log but don't fail the save - SVG generation is secondary
-            e.printStackTrace();
+            Log.error("Error generating calendar SVG", e);
         }
 
         calendar.persist();
@@ -383,7 +384,7 @@ public class SessionCalendarResource {
         try {
             calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.error("Error generating calendar SVG", e);
         }
 
         calendar.persist();

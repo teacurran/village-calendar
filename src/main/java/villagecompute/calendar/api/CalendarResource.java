@@ -1,5 +1,6 @@
 package villagecompute.calendar.api;
 
+import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -340,7 +341,7 @@ public class CalendarResource {
         .build();
 
     } catch (Exception e) {
-      e.printStackTrace();
+      Log.error("PDF generation failed", e);
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
         .type(MediaType.TEXT_PLAIN)
         .entity("PDF generation failed: " + e.getMessage())
