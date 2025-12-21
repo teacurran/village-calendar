@@ -87,6 +87,28 @@ jobs:
       - name: Run tests with coverage
         run: ./mvnw verify -DskipITs=false
 
+      - name: Upload JaCoCo coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-coverage-reports
+          path: |
+            target/site/jacoco/
+            target/jacoco-report/
+          retention-days: 7
+
+      - name: Debug - List coverage files
+        if: always()
+        run: |
+          echo "=== Checking for JaCoCo reports ==="
+          find target -name "jacoco*.xml" -o -name "jacoco*.exec" 2>/dev/null || echo "No JaCoCo files found"
+          echo ""
+          echo "=== target/site/jacoco/ ==="
+          ls -la target/site/jacoco/ 2>/dev/null || echo "Directory not found"
+          echo ""
+          echo "=== target/jacoco-report/ ==="
+          ls -la target/jacoco-report/ 2>/dev/null || echo "Directory not found"
+
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
