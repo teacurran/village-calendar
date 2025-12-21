@@ -24,10 +24,6 @@ import java.util.UUID;
 )
 public class UserMaze extends DefaultPanacheEntityWithTimestamps {
 
-    @Version
-    @Column(name = "version", nullable = false)
-    public Long version;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_user_mazes_user"))
     @Ignore

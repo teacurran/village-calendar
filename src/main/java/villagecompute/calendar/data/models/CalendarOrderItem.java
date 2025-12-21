@@ -29,10 +29,6 @@ import java.util.Set;
 )
 public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
 
-    @Version
-    @Column(name = "version", nullable = false)
-    public Long version;
-
     @NotNull
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false, foreignKey = @ForeignKey(name = "fk_order_items_order"))

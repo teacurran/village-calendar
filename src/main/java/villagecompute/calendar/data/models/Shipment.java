@@ -23,10 +23,6 @@ import java.util.List;
 )
 public class Shipment extends DefaultPanacheEntityWithTimestamps {
 
-    @Version
-    @Column(name = "version", nullable = false)
-    public Long version;
-
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false, foreignKey = @ForeignKey(name = "fk_shipments_order"))
     @Ignore
