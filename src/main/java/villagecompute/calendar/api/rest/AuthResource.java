@@ -49,6 +49,7 @@ import java.util.UUID;
 public class AuthResource {
 
     private static final Logger LOG = Logger.getLogger(AuthResource.class);
+    private static final String ERROR_REDIRECT_PATH = "/?error=";
 
     @org.eclipse.microprofile.config.inject.ConfigProperty(name = "app.frontend.url")
     java.util.Optional<String> frontendUrl;
@@ -167,7 +168,7 @@ public class AuthResource {
         } catch (Exception e) {
             LOG.errorf(e, "Error handling Google OAuth callback");
             // Redirect to home with error
-            String errorUrl = buildFrontendUrl("/?error=" + java.net.URLEncoder.encode(
+            String errorUrl = buildFrontendUrl(ERROR_REDIRECT_PATH + java.net.URLEncoder.encode(
                 "Authentication failed: " + e.getMessage(),
                 java.nio.charset.StandardCharsets.UTF_8
             ));
@@ -291,7 +292,7 @@ public class AuthResource {
         } catch (Exception e) {
             LOG.errorf(e, "Error handling Facebook OAuth callback");
             // Redirect to home with error
-            String errorUrl = buildFrontendUrl("/?error=" + java.net.URLEncoder.encode(
+            String errorUrl = buildFrontendUrl(ERROR_REDIRECT_PATH + java.net.URLEncoder.encode(
                 "Authentication failed: " + e.getMessage(),
                 java.nio.charset.StandardCharsets.UTF_8
             ));
@@ -398,7 +399,7 @@ public class AuthResource {
         } catch (Exception e) {
             LOG.errorf(e, "Error handling Apple OAuth callback");
             // Redirect to home with error
-            String errorUrl = buildFrontendUrl("/?error=" + java.net.URLEncoder.encode(
+            String errorUrl = buildFrontendUrl(ERROR_REDIRECT_PATH + java.net.URLEncoder.encode(
                 "Authentication failed: " + e.getMessage(),
                 java.nio.charset.StandardCharsets.UTF_8
             ));
