@@ -330,6 +330,12 @@
             <goals>
               <goal>report</goal>
             </goals>
+            <configuration>
+              <formats>
+                <format>XML</format>
+                <format>HTML</format>
+              </formats>
+            </configuration>
           </execution>
           <execution>
             <id>jacoco-check</id>
