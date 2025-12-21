@@ -139,7 +139,7 @@
 
     - name: Generate Kubernetes manifest
       copy:
-        dest: "~/calendar-k8s-{{ k8s_namespace }}.yaml"
+        dest: "~/calendar-k8s-{{ k8s_namespace }}-{{ image_tag }}.yaml"
         content: |
           ---
           apiVersion: apps/v1
@@ -372,7 +372,7 @@
           {% endif %}
 
     - name: Apply Kubernetes manifest
-      shell: "{{ kubectl }} apply -f ~/calendar-k8s-{{ k8s_namespace }}.yaml"
+      shell: "{{ kubectl }} apply -f ~/calendar-k8s-{{ k8s_namespace }}-{{ image_tag }}.yaml"
 
     - name: Wait for deployment to be ready
       shell: "{{ kubectl }} rollout status deployment/{{ app_name }} -n {{ k8s_namespace }} --timeout=5m"
@@ -384,3 +384,6 @@
     - name: Display deployment status
       debug:
         msg: "{{ deployment_status.stdout_lines }}"
+
+    - name: Clean up old manifest files
+      shell: "find ~ -name 'calendar-k8s-*.yaml' -mmin +60 -delete 2>/dev/null || true"
