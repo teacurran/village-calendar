@@ -147,7 +147,7 @@ jobs:
           echo "📦 Full HTML report available in **jacoco-coverage-reports** artifact" >> $GITHUB_STEP_SUMMARY
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
