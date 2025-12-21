@@ -1,0 +1,35 @@
+---
+title: Terms of Service
+layout: page
+date: 2025-12-11
+description: Terms of Service for Village Compute Calendar - Please read these terms carefully before using our service.
+---
+
+== Agreement to Terms
+
+By accessing or using Village Compute Calendar ("Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our Service.
+
+== Description of Service
+
+Village Compute Calendar provides customizable calendar creation and printing services. Users can design, customize, and order printed calendars featuring their own photos and content.
+
+== Orders and Payments
+
+=== Pricing
+
+All prices are displayed in US dollars and are subject to change without notice. Applicable taxes and shipping costs will be calculated at checkout.
+
+=== Payment
+
+We accept major credit cards and other payment methods as displayed during checkout. By submitting an order, you authorize us to charge your selected payment method.
+
+=== Order Acceptance
+
+All orders are subject to acceptance. We reserve the right to refuse or cancel any order for any reason, including but not limited to product availability, errors in pricing or product information, or suspected fraud.
+
+== Contact Information
+
+For questions about these Terms, contact us at:
+
+* Email: support@villagecompute.com
+* Address: 1222 Scott Hwy, Groton Vermont 05046

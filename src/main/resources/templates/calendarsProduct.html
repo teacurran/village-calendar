@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{calendar.title} - Village Compute Calendar</title>
+    <meta name="description" content="{calendar.ogDescription ?: calendar.description ?: 'Custom printable calendar from Village Compute'}">
+    <meta name="keywords" content="{calendar.keywords ?: 'calendar, custom calendar, printable calendar'}">
+
+    <!-- OpenGraph Product Tags -->
+    <meta property="og:type" content="product">
+    <meta property="og:title" content="{calendar.title}">
+    <meta property="og:description" content="{calendar.ogDescription ?: calendar.description}">
+    <meta property="og:url" content="/calendars/{calendar.slug}">
+    <meta property="product:price:amount" content="{calendar.priceFormatted}">
+    <meta property="product:price:currency" content="USD">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{calendar.title}">
+    <meta name="twitter:description" content="{calendar.ogDescription ?: calendar.description}">
+
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "{calendar.title}",
+        "description": "{calendar.description}",
+        "brand": {
+            "@type": "Brand",
+            "name": "Village Compute"
+        },
+        "offers": {
+            "@type": "Offer",
+            "price": "{calendar.priceFormatted}",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock",
+            "url": "/calendars/{calendar.slug}"
+        }
+    }
+    </script>
+
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- PrimeIcons -->
+    <link rel="stylesheet" href="https://unpkg.com/primeicons/primeicons.css">
+
+    <!-- Calendar Pages CSS -->
+    <link rel="stylesheet" href="/assets/calendar-pages.css">
+
+    <style>
+        /* Product page specific styles not in shared CSS */
+        .preview-svg-container {
+            width: 100%;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .preview-svg-container:hover {
+            opacity: 0.9;
+        }
+
+        .preview-svg-container svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="/" class="logo">
+                <i class="pi pi-calendar"></i>
+                Village Compute Calendar
+            </a>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/calendars/">Calendars</a>
+                <a href="/pages/shipping">Shipping</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="product-container">
+            <div class="calendar-preview">
+                <div class="preview-svg-container" id="preview-thumbnail">
+                    {#if svgContent}
+                    {svgContent.raw}
+                    {#else}
+                    <div style="padding: 2rem; text-align: center; color: var(--p-surface-500);">
+                        <i class="pi pi-calendar" style="font-size: 3rem;"></i>
+                        <p>Preview loading...</p>
+                    </div>
+                    {/if}
+                </div>
+                <div class="calendar-preview-hint">
+                    <i class="pi pi-search-plus"></i> Click to view full detail
+                </div>
+            </div>
+
+            <!-- SVG Preview Modal -->
+            <div class="modal-overlay" id="svg-modal">
+                <div class="modal-controls">
+                    <button class="modal-btn" id="zoom-out-btn" title="Zoom Out">
+                        <i class="pi pi-minus"></i>
+                    </button>
+                    <span class="zoom-level" id="zoom-level">100%</span>
+                    <button class="modal-btn" id="zoom-in-btn" title="Zoom In">
+                        <i class="pi pi-plus"></i>
+                    </button>
+                    <button class="modal-btn" id="zoom-reset-btn" title="Reset Zoom">
+                        <i class="pi pi-refresh"></i>
+                    </button>
+                    <button class="modal-btn modal-btn-close" id="modal-close-btn" title="Close">
+                        <i class="pi pi-times"></i>
+                    </button>
+                </div>
+                <div class="modal-content" id="modal-content">
+                    <div class="modal-svg-container" id="svg-container">
+                        <!-- SVG will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="product-info">
+                <h1 class="product-title">{calendar.title}</h1>
+                <div class="product-price">{calendar.priceFormatted}</div>
+
+                <p class="product-description">{calendar.description}</p>
+
+                <ul class="product-features">
+                    <li><i class="pi pi-check-circle"></i> Premium 35" x 23" poster print</li>
+                    <li><i class="pi pi-check-circle"></i> Vibrant, fade-resistant colors</li>
+                    <li><i class="pi pi-check-circle"></i> Free PDF download included</li>
+                    <li><i class="pi pi-check-circle"></i> Ships within 5-7 business days</li>
+                </ul>
+
+                <div class="product-actions">
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        id="add-to-cart-btn"
+                        data-template-name="{calendar.title}"
+                        data-year="{calendar.year}"
+                        data-svg-url="/calendars/{calendar.slug}/{calendar.slug}.svg"
+                        data-configuration='{configuration.raw}'
+                    >
+                        <i class="pi pi-shopping-cart"></i>
+                        Add to Cart
+                    </button>
+
+                    <a href="/?templateId={calendar.templateId}" class="btn btn-secondary">
+                        <i class="pi pi-pencil"></i>
+                        Customize This Calendar
+                    </a>
+                </div>
+
+                <div class="product-meta">
+                    <p>Customize to change colors, add events, and more.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <div class="footer-brand">
+                    <i class="pi pi-calendar"></i>
+                    <span>Village Calendar</span>
+                </div>
+                <p class="footer-tagline">
+                    Custom yearly wall calendars with holidays, moon phases, and lunar illumination
+                </p>
+            </div>
+
+            <div class="footer-section">
+                <h3 class="footer-heading">Quick Links</h3>
+                <ul class="footer-links">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/calendars/">Pre-Designed Calendars</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h3 class="footer-heading">Support</h3>
+                <ul class="footer-links">
+                    <li><a href="/pages/shipping">Shipping Info</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h3 class="footer-heading">Legal</h3>
+                <ul class="footer-links">
+                    <li><a href="/pages/privacy">Privacy Policy</a></li>
+                    <li><a href="/pages/terms">Terms of Service</a></li>
+                    <li><a href="/pages/refund">Refund Policy</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p class="copyright">&copy; {currentYear} Village Compute. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // SVG Preview Modal functionality
+        (function() {
+            const modal = document.getElementById('svg-modal');
+            const thumbnail = document.getElementById('preview-thumbnail');
+            const svgContainer = document.getElementById('svg-container');
+            const modalContent = document.getElementById('modal-content');
+            const zoomLevelDisplay = document.getElementById('zoom-level');
+            const zoomInBtn = document.getElementById('zoom-in-btn');
+            const zoomOutBtn = document.getElementById('zoom-out-btn');
+            const zoomResetBtn = document.getElementById('zoom-reset-btn');
+            const closeBtn = document.getElementById('modal-close-btn');
+
+            let currentZoom = 1;
+            let svgLoaded = false;
+            const zoomStep = 0.25;
+            const minZoom = 0.25;
+            const maxZoom = 3;
+
+            function updateZoomDisplay() {
+                zoomLevelDisplay.textContent = Math.round(currentZoom * 100) + '%';
+                svgContainer.style.transform = 'scale(' + currentZoom + ')';
+            }
+
+            function openModal() {
+                if (!svgLoaded) {
+                    // Copy the inline SVG to the modal
+                    const inlineSvg = thumbnail.querySelector('svg');
+                    if (inlineSvg) {
+                        svgContainer.innerHTML = inlineSvg.outerHTML;
+                        svgLoaded = true;
+                    } else {
+                        svgContainer.innerHTML = '<div style="padding: 2rem; color: #dc2626;">No preview available</div>';
+                    }
+                    currentZoom = 1;
+                    updateZoomDisplay();
+                }
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeModal() {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            function zoomIn() {
+                if (currentZoom < maxZoom) {
+                    currentZoom = Math.min(currentZoom + zoomStep, maxZoom);
+                    updateZoomDisplay();
+                }
+            }
+
+            function zoomOut() {
+                if (currentZoom > minZoom) {
+                    currentZoom = Math.max(currentZoom - zoomStep, minZoom);
+                    updateZoomDisplay();
+                }
+            }
+
+            function resetZoom() {
+                currentZoom = 1;
+                updateZoomDisplay();
+                modalContent.scrollTop = 0;
+                modalContent.scrollLeft = 0;
+            }
+
+            // Event listeners
+            thumbnail.addEventListener('click', openModal);
+            closeBtn.addEventListener('click', closeModal);
+            zoomInBtn.addEventListener('click', zoomIn);
+            zoomOutBtn.addEventListener('click', zoomOut);
+            zoomResetBtn.addEventListener('click', resetZoom);
+
+            // Close on overlay click (but not on content click)
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+
+            // Close on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modal.classList.contains('active')) {
+                    closeModal();
+                }
+            });
+        })();
+
+        // Add to cart functionality
+        document.getElementById('add-to-cart-btn')?.addEventListener('click', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Add to cart clicked');
+
+            const btn = this;
+            const templateName = btn.dataset.templateName;
+            const year = parseInt(btn.dataset.year, 10);
+            const svgUrl = btn.dataset.svgUrl;
+
+            // Parse the base configuration
+            let configuration;
+            try {
+                configuration = JSON.parse(btn.dataset.configuration || '{}');
+            } catch (e) {
+                configuration = {};
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="pi pi-spin pi-spinner spinner"></i> Adding...';
+
+            // Fetch the SVG and embed it as generatedSvg
+            try {
+                const svgResponse = await fetch(svgUrl);
+                if (svgResponse.ok) {
+                    configuration.generatedSvg = await svgResponse.text();
+                }
+            } catch (err) {
+                console.warn('Could not fetch SVG for cart thumbnail:', err);
+            }
+
+            configuration = JSON.stringify(configuration);
+
+            // Get or create session ID - must match Vue app's sessionService.ts key
+            const SESSION_KEY = 'village_calendar_session_id';
+            let sessionId = localStorage.getItem(SESSION_KEY);
+            if (!sessionId) {
+                sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
+                localStorage.setItem(SESSION_KEY, sessionId);
+            }
+
+            try {
+                // Add directly to cart using template - cart stores template info
+                const response = await fetch('/graphql', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Session-ID': sessionId
+                    },
+                    body: JSON.stringify({
+                        query: `
+                            mutation AddToCart($input: AddToCartInput!) {
+                                addToCart(input: $input) {
+                                    id
+                                    itemCount
+                                }
+                            }
+                        `,
+                        variables: {
+                            input: {
+                                templateName: templateName,
+                                year: year,
+                                quantity: 1,
+                                productCode: 'print',
+                                configuration: configuration
+                            }
+                        }
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.data?.addToCart) {
+                    btn.innerHTML = '<i class="pi pi-check"></i> Added! Redirecting...';
+                    btn.style.backgroundColor = '#059669';
+
+                    // Redirect to checkout after short delay
+                    setTimeout(() => {
+                        window.location.href = '/checkout';
+                    }, 800);
+                } else {
+                    throw new Error(result.errors?.[0]?.message || 'Failed to add to cart');
+                }
+            } catch (err) {
+                console.error('Add to cart error:', err);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="pi pi-shopping-cart"></i> Add to Cart';
+                alert('Error adding to cart: ' + err.message);
+            }
+        });
+    </script>
+</body>
+</html>

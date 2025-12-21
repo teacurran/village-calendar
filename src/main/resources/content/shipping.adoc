@@ -1,0 +1,70 @@
+---
+title: Shipping Information
+layout: page
+date: 2025-12-11
+description: Shipping information for Village Compute Calendar - Learn about our shipping options, delivery times, and policies.
+---
+
+== Shipping Overview
+
+Village Compute Calendar ships to addresses within the United States and Canada.
+
+== Processing Time
+
+=== Standard Processing
+
+Orders typically require **5-7 business days** for production before shipping. This includes:
+
+=== Rush Processing
+
+We do not offer rush processing at this time.  All orders are processed in the order they are received.
+
+== Shipping Options
+
+=== Domestic Shipping (US)
+
+[cols="2,1,1"]
+|===
+|Service |Delivery Time |Cost
+
+|Standard Shipping
+|5-7 business days
+|$5.99
+
+|Expedited Shipping
+|3-5 business days
+|$12.99
+
+|Express Shipping
+|1-2 business days
+|$24.99
+|===
+
+=== Free Shipping
+
+Enjoy **FREE standard shipping** on orders over $50!
+
+== Order Tracking
+
+Once your order ships, you'll receive a confirmation email with tracking information. You can also track your order by:
+
+1. Logging into your account
+2. Visiting the "Orders" section
+3. Clicking on your order to view tracking details
+
+== Damaged or Lost Packages
+
+If your package arrives damaged or is lost in transit:
+
+1. Contact us within **48 hours** of delivery (or expected delivery)
+2. Provide photos of any damage
+3. We'll work with the carrier to resolve the issue
+4. Replacement or refund will be processed accordingly
+
+== Contact Us
+
+For shipping questions or concerns:
+
+* Email: shipping@villagecompute.com
+* Phone: 802-222-6147
+* Hours: Monday-Friday, 9am-5pm EST

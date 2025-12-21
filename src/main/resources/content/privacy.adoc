@@ -1,0 +1,83 @@
+---
+title: Privacy Policy
+layout: page
+date: 2025-12-11
+description: Privacy Policy for Village Compute Calendar - Learn how we collect, use, and protect your personal information.
+---
+
+== Introduction
+
+Village Compute ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our calendar service.
+
+== Information We Collect
+
+=== Personal Information
+
+When you create an account or make a purchase, we may collect:
+
+* Name and email address
+* Billing and shipping address
+* Payment information (processed securely through our payment processor)
+* Phone number (optional)
+
+=== Usage Information
+
+We automatically collect certain information when you use our service:
+
+* Browser type and version
+* Device information
+* IP address
+* Pages visited and features used
+* Time and date of your visit
+
+== How We Use Your Information
+
+We use the information we collect to:
+
+* Process and fulfill your orders
+* Send order confirmations and shipping updates
+* Provide customer support
+* Improve our services and user experience
+* Send promotional communications (with your consent)
+* Comply with legal obligations
+
+== Information Sharing
+
+We do not sell your personal information. We may share your information with:
+
+* **Service Providers**: Companies that help us operate our business (payment processors, shipping carriers)
+* **Legal Requirements**: When required by law or to protect our rights
+* **Business Transfers**: In connection with a merger, acquisition, or sale of assets
+
+== Data Security
+
+We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.
+
+== Your Rights
+
+You have the right to:
+
+* Access your personal information
+* Correct inaccurate data
+* Request deletion of your data
+* Opt-out of marketing communications
+* Export your data
+
+== Cookies
+
+We use cookies and similar technologies to enhance your experience. You can control cookie settings through your browser preferences.
+
+== Children's Privacy
+
+Our service is not intended for children under 13. We do not knowingly collect information from children under 13.
+
+== Changes to This Policy
+
+We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new policy on this page and updating the "Last updated" date.
+
+== Contact Us
+
+If you have questions about this Privacy Policy, please contact us at:
+
+* Email: support@villagecompute.com
+* Address: 1222 Scott Hwy, Groton Vermont 05046

@@ -2,22 +2,67 @@ package villagecompute.calendar.api.graphql.inputs;
 
 import org.eclipse.microprofile.graphql.Input;
 
+import java.util.List;
+
 /**
- * Input type for adding items to cart
+ * Input type for adding items to cart.
+ * Supports both legacy calendar-specific fields and new generic generator fields.
  */
 @Input("AddToCartInput")
 public class AddToCartInput {
-    public String templateId;
-    public String templateName;
-    public Integer year;
+    // --- New generic fields ---
+
+    /**
+     * Type of generator: 'calendar', 'maze', etc.
+     */
+    public String generatorType;
+
+    /**
+     * User-facing description like "2026 Calendar" or "Hard Orthogonal Maze"
+     */
+    public String description;
+
+    /**
+     * SVG assets to store with this cart item (main, answer_key, etc.)
+     */
+    public List<AssetInput> assets;
+
+    // --- Common fields ---
+
     public Integer quantity;
     public String productCode;  // Product code (e.g., "print", "pdf") - price looked up from backend
-    public Double unitPrice;    // Deprecated: price now determined by productCode
-    public String configuration;
+    public String configuration; // JSON configuration for the generator
+
+    // --- Legacy fields (deprecated, kept for backward compatibility) ---
+
+    /**
+     * @deprecated Use generatorType and configuration instead
+     */
+    @Deprecated
+    public String templateId;
+
+    /**
+     * @deprecated Use description instead
+     */
+    @Deprecated
+    public String templateName;
+
+    /**
+     * @deprecated Include year in configuration JSON instead
+     */
+    @Deprecated
+    public Integer year;
+
+    /**
+     * @deprecated Price is now determined by productCode
+     */
+    @Deprecated
+    public Double unitPrice;
 
     public AddToCartInput() {
     }
 
+    // Legacy constructor for backward compatibility
     public AddToCartInput(String templateId, String templateName, Integer year, Integer quantity, String productCode, Double unitPrice, String configuration) {
         this.templateId = templateId;
         this.templateName = templateName;
@@ -26,5 +71,15 @@ public class AddToCartInput {
         this.productCode = productCode;
         this.unitPrice = unitPrice;
         this.configuration = configuration;
+    }
+
+    // New constructor for generator-based items
+    public AddToCartInput(String generatorType, String description, Integer quantity, String productCode, String configuration, List<AssetInput> assets) {
+        this.generatorType = generatorType;
+        this.description = description;
+        this.quantity = quantity;
+        this.productCode = productCode;
+        this.configuration = configuration;
+        this.assets = assets;
     }
 }

@@ -275,6 +275,8 @@
                       # Application settings
                       - name: QUARKUS_PROFILE
                         value: "{{ quarkus_profile }}"
+                      - name: APP_BASE_URL
+                        value: "https://{{ ingress_host }}"
                       # Port 8030 is configured in application.properties, no override needed
 
                     resources:

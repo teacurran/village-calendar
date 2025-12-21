@@ -77,8 +77,7 @@ public class PDFRenderingServiceTest {
         config.year = 2025;
         config.theme = "default";
         config.layoutStyle = "grid";
-        config.showMoonPhases = true;
-        config.showMoonIllumination = true;
+        config.moonDisplayMode = "illumination";
         config.holidaySets = List.of("secular");
         config.eventDisplayMode = "large";
         config.emojiFont = "noto-color";
@@ -104,7 +103,6 @@ public class PDFRenderingServiceTest {
             config.year = 2025;
             config.theme = "default";
             config.layoutStyle = "grid";
-            config.showMoonPhases = false;
 
             // Add a custom event with an emoji that uses xlink:href
             config.customDates.put("2025-05-05", "💃"); // Dancing woman emoji
@@ -131,7 +129,6 @@ public class PDFRenderingServiceTest {
                 config.year = 2025;
                 config.theme = "default";
                 config.layoutStyle = "grid";
-                config.showMoonPhases = false;
 
                 config.customDates.put("2025-01-15", emoji);
 
@@ -156,8 +153,7 @@ public class PDFRenderingServiceTest {
         config.year = 2025;
         config.theme = "default";
         config.layoutStyle = "grid";
-        config.showMoonPhases = true;
-        config.showMoonIllumination = true;
+        config.moonDisplayMode = "illumination";
         config.holidaySets = List.of("secular");
         config.eventDisplayMode = "large";
         config.emojiFont = "noto-mono"; // Monochrome mode
@@ -180,9 +176,7 @@ public class PDFRenderingServiceTest {
         config.year = 2025;
         config.theme = "rainbowWeekends";
         config.layoutStyle = "grid";
-        config.showMoonPhases = true;
-        config.showMoonIllumination = true;
-        config.showFullMoonOnly = false;
+        config.moonDisplayMode = "illumination";
         config.showWeekNumbers = true;
         config.showDayNames = true;
         config.showDayNumbers = true;

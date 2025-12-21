@@ -16,10 +16,12 @@ import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.AuthenticationService;
+import villagecompute.calendar.services.CalendarService;
 import villagecompute.calendar.services.SessionService;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * GraphQL resolver for guest session operations.
@@ -40,6 +42,9 @@ public class SessionResolver {
 
     @Inject
     SessionService sessionService;
+
+    @Inject
+    CalendarService calendarService;
 
     // ==================================================================
     // QUERIES
@@ -98,6 +103,75 @@ public class SessionResolver {
     // ==================================================================
     // MUTATIONS
     // ==================================================================
+
+    /**
+     * Create a new calendar for a guest session.
+     * No authentication required - uses sessionId for ownership.
+     *
+     * @param sessionId Session identifier
+     * @param name Calendar name
+     * @param year Calendar year
+     * @param templateId Template ID to base calendar on
+     * @return Created calendar
+     */
+    @Mutation("createSessionCalendar")
+    @Description("Create a new calendar for a guest session. No authentication required.")
+    @PermitAll
+    @Transactional
+    public UserCalendar createSessionCalendar(
+        @Name("sessionId")
+        @Description("Guest session ID")
+        @NotNull
+        final String sessionId,
+
+        @Name("name")
+        @Description("Calendar name")
+        @NotNull
+        final String name,
+
+        @Name("year")
+        @Description("Calendar year")
+        @NotNull
+        final Integer year,
+
+        @Name("templateId")
+        @Description("Template ID to base calendar on")
+        @NotNull
+        final String templateId
+    ) {
+        LOG.infof("Mutation: createSessionCalendar(sessionId=%s, name=%s, year=%d, templateId=%s)",
+                  sessionId, name, year, templateId);
+
+        // Validate session ID format
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new IllegalArgumentException("Session ID is required");
+        }
+
+        // Parse template ID
+        UUID templateUuid;
+        try {
+            templateUuid = UUID.fromString(templateId);
+        } catch (IllegalArgumentException e) {
+            LOG.errorf("Invalid template ID format: %s", templateId);
+            throw new IllegalArgumentException("Invalid template ID format");
+        }
+
+        // Create calendar using service (user=null for guest session)
+        UserCalendar calendar = calendarService.createCalendar(
+            name,
+            year,
+            templateUuid,
+            null, // configuration - use template defaults
+            false, // isPublic
+            null, // user - guest session
+            sessionId
+        );
+
+        LOG.infof("Created session calendar: %s (ID: %s) for session %s",
+                  calendar.name, calendar.id, sessionId);
+
+        return calendar;
+    }
 
     /**
      * Convert guest session calendars to authenticated user calendars.

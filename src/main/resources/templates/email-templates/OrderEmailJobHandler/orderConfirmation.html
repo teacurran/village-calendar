@@ -38,6 +38,31 @@
         </div>
         {/for}
 
+        <div class="detail-box" style="margin-top: 20px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; color: #374151;">Subtotal:</td>
+                    <td style="padding: 8px 0; text-align: right; color: #374151;">${order.subtotal ?: order.totalPrice}</td>
+                </tr>
+                {#if order.shippingCost}
+                <tr>
+                    <td style="padding: 8px 0; color: #374151;">Shipping:</td>
+                    <td style="padding: 8px 0; text-align: right; color: #374151;">${order.shippingCost}</td>
+                </tr>
+                {/if}
+                {#if order.taxAmount}
+                <tr>
+                    <td style="padding: 8px 0; color: #374151;">Tax:</td>
+                    <td style="padding: 8px 0; text-align: right; color: #374151;">${order.taxAmount}</td>
+                </tr>
+                {/if}
+                <tr style="border-top: 2px solid #e5e7eb;">
+                    <td style="padding: 12px 0; font-weight: bold; color: #111827;">Total:</td>
+                    <td style="padding: 12px 0; text-align: right; font-weight: bold; color: #111827; font-size: 18px;">${order.totalPrice}</td>
+                </tr>
+            </table>
+        </div>
+
         <div class="detail-box">
             <strong>Order Date:</strong>
             {order.paidAt ?: order.created}
@@ -88,7 +113,7 @@
         <p>We'll send you another email with tracking information once your order ships.</p>
 
         <div style="text-align: center; margin: 30px 0;">
-            <a href="https://calendar.villagecompute.com/orders" class="button">View Order Status</a>
+            <a href="{baseUrl}/order/{order.orderNumber}/{order.id}" class="button">View Order Status</a>
         </div>
 
         <div class="footer">
@@ -96,7 +121,7 @@
             <p>Contact us at <a href="mailto:support@villagecompute.com">support@villagecompute.com</a></p>
             <p style="margin-top: 20px;">
                 Village Compute Calendar<br>
-                <a href="https://calendar.villagecompute.com">calendar.villagecompute.com</a>
+                <a href="{baseUrl}">{baseUrl}</a>
             </p>
         </div>
     </div>

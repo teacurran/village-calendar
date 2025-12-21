@@ -392,7 +392,7 @@ public class HebrewCalendarService {
                     LocalDate approximateDate = hebrewToGregorian(config.hebrewYear, month, day);
 
                     // Draw moon with illumination
-                    if (config.showMoonIllumination) {
+                    if ("illumination".equals(config.moonDisplayMode)) {
                         int moonX = cellX + cellWidth / 2;
                         int moonY = cellY + cellHeight / 2 + config.moonOffsetY;
 

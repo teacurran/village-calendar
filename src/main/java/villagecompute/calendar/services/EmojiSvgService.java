@@ -269,6 +269,53 @@ public class EmojiSvgService {
     }
 
     /**
+     * Get a standalone SVG for preview purposes (not for embedding in another SVG).
+     *
+     * @param emoji      The emoji character(s)
+     * @param monochrome If true, use monochrome SVG variant
+     * @param colorHex   Optional hex color for colorization (requires monochrome=true)
+     * @return Complete standalone SVG string, or null if emoji SVG not available
+     */
+    public String getStandaloneSvg(String emoji, boolean monochrome, String colorHex) {
+        String normalized = normalizeEmoji(emoji);
+
+        String innerContent = null;
+        String viewBox = DEFAULT_VIEWBOX;
+
+        if (monochrome) {
+            innerContent = monoSvgCache.get(normalized);
+            if (innerContent != null) {
+                viewBox = monoViewBoxCache.getOrDefault(normalized, DEFAULT_VIEWBOX);
+            } else {
+                // Fall back to color SVG
+                innerContent = colorSvgCache.get(normalized);
+                viewBox = colorViewBoxCache.getOrDefault(normalized, DEFAULT_VIEWBOX);
+            }
+        } else {
+            innerContent = colorSvgCache.get(normalized);
+            viewBox = colorViewBoxCache.getOrDefault(normalized, DEFAULT_VIEWBOX);
+        }
+
+        if (innerContent == null) {
+            return null;
+        }
+
+        if (colorHex != null && !colorHex.isEmpty() && monochrome) {
+            String color = colorHex.startsWith("#") ? colorHex : "#" + colorHex;
+            return String.format(
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"%s\">" +
+                "<g fill=\"%s\">%s</g></svg>",
+                viewBox, color, innerContent
+            );
+        } else {
+            return String.format(
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"%s\">%s</svg>",
+                viewBox, innerContent
+            );
+        }
+    }
+
+    /**
      * Get the SVG representation of an emoji as an embeddable SVG element.
      *
      * @param emoji The emoji character(s)
@@ -292,6 +339,21 @@ public class EmojiSvgService {
      * @return SVG element string, or null if emoji SVG not available
      */
     public String getEmojiAsSvg(String emoji, double x, double y, double size, boolean monochrome) {
+        return getEmojiAsSvg(emoji, x, y, size, monochrome, null);
+    }
+
+    /**
+     * Get the SVG representation of an emoji as an embeddable SVG element with optional colorization.
+     *
+     * @param emoji      The emoji character(s)
+     * @param x          X position
+     * @param y          Y position
+     * @param size       Size (width and height) in pixels
+     * @param monochrome If true, use monochrome SVG variant (or fall back to grayscale filter)
+     * @param colorHex   Optional hex color (e.g., "#DC2626") to colorize the emoji (requires monochrome=true)
+     * @return SVG element string, or null if emoji SVG not available
+     */
+    public String getEmojiAsSvg(String emoji, double x, double y, double size, boolean monochrome, String colorHex) {
         String normalized = normalizeEmoji(emoji);
 
         // Choose the appropriate cache
@@ -327,11 +389,20 @@ public class EmojiSvgService {
         // Use the correct viewBox from the original SVG
         // We embed as a nested <svg> element with proper positioning and scaling
         // Include xlink namespace for SVGs that use xlink:href attributes
-        if (monochrome && !usingMonoSvg) {
+        if (colorHex != null && !colorHex.isEmpty() && monochrome) {
+            // Colorized monochrome: wrap content in a group with fill color set
+            // This handles SVGs that have no explicit fill (default black) as well as explicit fills
+            String color = colorHex.startsWith("#") ? colorHex : "#" + colorHex;
+            return String.format(
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
+                "<g fill=\"%s\">%s</g></svg>",
+                x, y, size, size, viewBox, color, innerContent
+            );
+        } else if (monochrome && !usingMonoSvg) {
             // Fall back to grayscale filter for color SVG (when mono SVG not available)
             String filterId = uniquePrefix + "grayscale";
             return String.format(
-                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
                 "<defs><filter id=\"%s\"><feColorMatrix type=\"saturate\" values=\"0\"/></filter></defs>" +
                 "<g filter=\"url(#%s)\">%s</g></svg>",
                 x, y, size, size, viewBox, filterId, filterId, innerContent
@@ -339,7 +410,7 @@ public class EmojiSvgService {
         } else {
             // Use SVG directly (either color or true mono)
             return String.format(
-                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" overflow=\"visible\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">%s</svg>",
+                "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">%s</svg>",
                 x, y, size, size, viewBox, innerContent
             );
         }
@@ -374,6 +445,38 @@ public class EmojiSvgService {
             // Replace href="#id" references (SVG2 style)
             result = result.replace("href=\"#" + id + "\"", "href=\"#" + newId + "\"");
         }
+
+        return result;
+    }
+
+    /**
+     * Replace black fill colors in SVG content with the target color.
+     * Handles various black color representations: #000, #000000, black, rgb(0,0,0)
+     * Also handles fill in style attributes.
+     */
+    private String replaceBlackFills(String svgContent, String targetColor) {
+        String result = svgContent;
+
+        // Ensure target color has # prefix
+        String color = targetColor.startsWith("#") ? targetColor : "#" + targetColor;
+
+        // Replace fill attribute variations of black
+        result = result.replaceAll("fill=\"#000000\"", "fill=\"" + color + "\"");
+        result = result.replaceAll("fill=\"#000\"", "fill=\"" + color + "\"");
+        result = result.replaceAll("fill=\"black\"", "fill=\"" + color + "\"");
+        result = result.replaceAll("fill='#000000'", "fill='" + color + "'");
+        result = result.replaceAll("fill='#000'", "fill='" + color + "'");
+        result = result.replaceAll("fill='black'", "fill='" + color + "'");
+
+        // Replace fill in style attributes
+        result = result.replaceAll("fill:\\s*#000000", "fill:" + color);
+        result = result.replaceAll("fill:\\s*#000(?![0-9a-fA-F])", "fill:" + color);
+        result = result.replaceAll("fill:\\s*black", "fill:" + color);
+
+        // Replace stroke attribute variations of black (for outlined emojis)
+        result = result.replaceAll("stroke=\"#000000\"", "stroke=\"" + color + "\"");
+        result = result.replaceAll("stroke=\"#000\"", "stroke=\"" + color + "\"");
+        result = result.replaceAll("stroke=\"black\"", "stroke=\"" + color + "\"");
 
         return result;
     }

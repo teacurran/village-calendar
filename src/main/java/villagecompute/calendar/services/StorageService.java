@@ -43,26 +43,23 @@ public class StorageService {
     /**
      * Get or create the S3 client for R2.
      * Lazily initialized to avoid startup errors if credentials are not configured.
+     * Uses synchronized method instead of double-checked locking for thread safety.
      *
      * @return S3Client configured for Cloudflare R2
      */
-    private S3Client getS3Client() {
+    private synchronized S3Client getS3Client() {
         if (s3Client == null) {
-            synchronized (this) {
-                if (s3Client == null) {
-                    LOG.infof("Initializing R2 S3 client with endpoint: %s", r2Endpoint);
+            LOG.infof("Initializing R2 S3 client with endpoint: %s", r2Endpoint);
 
-                    AwsBasicCredentials credentials = AwsBasicCredentials.create(r2AccessKey, r2SecretKey);
+            AwsBasicCredentials credentials = AwsBasicCredentials.create(r2AccessKey, r2SecretKey);
 
-                    s3Client = S3Client.builder()
-                            .endpointOverride(URI.create(r2Endpoint))
-                            .region(Region.US_EAST_1) // R2 uses 'auto' region, but SDK requires a region
-                            .credentialsProvider(StaticCredentialsProvider.create(credentials))
-                            .build();
+            s3Client = S3Client.builder()
+                    .endpointOverride(URI.create(r2Endpoint))
+                    .region(Region.US_EAST_1) // R2 uses 'auto' region, but SDK requires a region
+                    .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                    .build();
 
-                    LOG.info("R2 S3 client initialized successfully");
-                }
-            }
+            LOG.info("R2 S3 client initialized successfully");
         }
         return s3Client;
     }

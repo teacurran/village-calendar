@@ -279,13 +279,15 @@ public class PaymentService {
     public boolean processPaymentSuccess(String paymentIntentId, String chargeId) {
         LOG.infof("Processing payment success for PaymentIntent: %s", paymentIntentId);
 
-        // Find the order
+        // Find the order by PaymentIntent ID
         Optional<CalendarOrder> orderOpt = orderService.findByStripePaymentIntent(paymentIntentId);
         if (orderOpt.isEmpty()) {
-            // Order may not be created yet (race condition between frontend order creation and webhook)
-            // Throw exception so webhook returns 500 and Stripe will retry automatically
-            LOG.warnf("Order not found for PaymentIntent: %s (race condition - Stripe will retry)", paymentIntentId);
-            throw new IllegalStateException("Order not found for PaymentIntent: " + paymentIntentId + " (Stripe will retry)");
+            // When using Stripe Checkout, checkout.session.completed is the primary event.
+            // payment_intent.succeeded may arrive before the order's stripePaymentIntentId is set.
+            // This is normal - checkout.session.completed will handle the order update.
+            // Return success to acknowledge the webhook (no retry needed).
+            LOG.infof("Order not found for PaymentIntent: %s (likely using Checkout flow - checkout.session.completed will handle)", paymentIntentId);
+            return false;
         }
 
         CalendarOrder order = orderOpt.get();

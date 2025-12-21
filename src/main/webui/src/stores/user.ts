@@ -3,11 +3,11 @@ import { defineStore } from "pinia";
 
 export interface User {
   id: string;
-  username: string;
   email: string;
-  name: string;
-  provider?: string; // OAuth2 provider (google, facebook)
-  avatarUrl?: string;
+  displayName: string;
+  oauthProvider?: string;
+  profileImageUrl?: string;
+  isAdmin?: boolean;
 }
 
 export const useUserStore = defineStore("user", {
@@ -34,11 +34,11 @@ export const useUserStore = defineStore("user", {
               query GetCurrentUser {
                 currentUser {
                   id
-                  username
                   email
-                  name
-                  provider
-                  avatarUrl
+                  displayName
+                  oauthProvider
+                  profileImageUrl
+                  isAdmin
                 }
               }
             `,
@@ -109,9 +109,8 @@ export const useUserStore = defineStore("user", {
 
   getters: {
     isLoggedIn: (state) => state.isAuthenticated && !!state.currentUser,
-    userName: (state) =>
-      state.currentUser?.name || state.currentUser?.username || "Guest",
+    userName: (state) => state.currentUser?.displayName || "Guest",
     userEmail: (state) => state.currentUser?.email || "",
-    userAvatar: (state) => state.currentUser?.avatarUrl || "",
+    userAvatar: (state) => state.currentUser?.profileImageUrl || "",
   },
 });

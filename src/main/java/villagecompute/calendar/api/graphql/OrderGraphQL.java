@@ -44,6 +44,9 @@ public class OrderGraphQL {
     // Base price per calendar (can be made configurable later)
     private static final BigDecimal BASE_UNIT_PRICE = new BigDecimal("29.99");
 
+    // Product code constants
+    private static final String PRODUCT_CODE_PRINT = "print";
+
     @Inject
     JsonWebToken jwt;
 
@@ -260,6 +263,59 @@ public class OrderGraphQL {
 
         if (order == null) {
             LOG.warnf("Order not found by number: %s", orderNumber);
+            return null;
+        }
+
+        LOG.infof("Found order %s (id=%s) with %d items", orderNumber, order.id,
+            order.items != null ? order.items.size() : 0);
+
+        return order;
+    }
+
+    /**
+     * Get a single order by order number and UUID (secure lookup).
+     * This is a public query for the order status page - no auth required.
+     * Both the order number AND UUID must match for security (prevents enumeration).
+     *
+     * @param orderNumber Order number (e.g., "VC-MB2B-UN2Z")
+     * @param orderId Order UUID
+     * @return Order if found and both identifiers match
+     */
+    @Query("orderByNumberAndId")
+    @Description("Get a single order by order number and UUID. Used for secure public order status pages.")
+    public CalendarOrder orderByNumberAndId(
+        @Name("orderNumber")
+        @Description("Order number (e.g., VC-MB2B-UN2Z)")
+        @NonNull
+        String orderNumber,
+        @Name("orderId")
+        @Description("Order UUID")
+        @NonNull
+        String orderId
+    ) {
+        LOG.infof("Query: orderByNumberAndId(orderNumber=%s, orderId=%s)", orderNumber, orderId);
+
+        // Parse UUID
+        java.util.UUID orderUuid;
+        try {
+            orderUuid = java.util.UUID.fromString(orderId);
+        } catch (IllegalArgumentException e) {
+            LOG.warnf("Invalid orderId format: %s", orderId);
+            return null;
+        }
+
+        // Find order by order number first
+        CalendarOrder order = CalendarOrder.findByOrderNumber(orderNumber).firstResult();
+
+        if (order == null) {
+            LOG.warnf("Order not found by number: %s", orderNumber);
+            return null;
+        }
+
+        // Verify UUID matches (security check to prevent enumeration)
+        if (!order.id.equals(orderUuid)) {
+            LOG.warnf("Order UUID mismatch for order number: %s (expected=%s, got=%s)",
+                orderNumber, order.id, orderId);
             return null;
         }
 
@@ -675,7 +731,7 @@ public class OrderGraphQL {
                         unitAmountCents = Math.round(item.unitPrice * 100);
                     } else {
                         // Look up price from product catalog
-                        String productCode = item.productCode != null ? item.productCode : "print";
+                        String productCode = item.productCode != null ? item.productCode : PRODUCT_CODE_PRINT;
                         BigDecimal price = productService.getPrice(productCode);
                         unitAmountCents = price.multiply(BigDecimal.valueOf(100)).longValue();
                         LOG.infof("Using product catalog price for '%s': $%.2f", productCode, price);
@@ -728,7 +784,7 @@ public class OrderGraphQL {
                     orderItem.order = order;
 
                     // Determine product type from productCode
-                    String productCode = itemInput.productCode != null ? itemInput.productCode : "print";
+                    String productCode = itemInput.productCode != null ? itemInput.productCode : PRODUCT_CODE_PRINT;
                     orderItem.productType = "pdf".equalsIgnoreCase(productCode)
                         ? CalendarOrderItem.TYPE_PDF
                         : CalendarOrderItem.TYPE_PRINT;
@@ -767,7 +823,7 @@ public class OrderGraphQL {
 
             // Determine if shipping is required (any print products)
             boolean shippingRequired = input.items != null && input.items.stream()
-                .anyMatch(item -> "print".equals(item.productCode));
+                .anyMatch(item -> PRODUCT_CODE_PRINT.equals(item.productCode));
 
             // Build success/cancel URLs
             String baseUrl = input.returnUrl != null ? input.returnUrl : "https://villagecompute.com";

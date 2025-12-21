@@ -142,7 +142,7 @@
               }"
             >
               <div class="page-border">
-                <div v-html="generatedSVG"></div>
+                <div :key="svgKey" v-html="generatedSVG"></div>
               </div>
             </div>
           </div>
@@ -1673,8 +1673,10 @@ const duplicateName = ref("");
 
 // Calendar state
 const generatedSVG = ref("");
+const svgKey = ref(0); // Key to force re-render of SVG
 const generating = ref(false);
 const holidays = ref(new Set());
+const lastFetchedHolidayYear = ref(null); // Track which year's holidays we have cached
 
 // ===========================================
 // PRINT DIMENSIONS (must match backend CalendarRenderingService)
@@ -1763,16 +1765,7 @@ onMounted(async () => {
   calendarEditorStore.registerZoomCallbacks(zoomIn, zoomOut, resetZoom);
   calendarEditorStore.registerSaveAsTemplateCallback(saveAsTemplate);
 
-  // Fetch user data to ensure store is populated
-  await userStore.fetchCurrentUser();
-
-  // Load templates for admin management
-  if (isAdmin.value) {
-    await loadTemplates();
-  }
-
-  // Load all active templates for all users (for template drawer)
-  await loadAllTemplates();
+  // Note: User data is fetched centrally in App.vue via appInit store
 
   // Load holidays (but don't show them by default)
   await fetchHolidays();
@@ -1780,10 +1773,9 @@ onMounted(async () => {
   // Load calendar or template from URL if specified
   const calendarLoaded = await loadCalendarFromUrl();
 
-  // If nothing was loaded from URL, generate a fresh default calendar
+  // If nothing was loaded from URL, initialize a new calendar with backend defaults
   if (!calendarLoaded) {
-    generateCalendar();
-    await autoSaveCalendar();
+    await initializeNewCalendar();
   }
 
   // Check if wizard should open from query param
@@ -1793,8 +1785,9 @@ onMounted(async () => {
     router.replace({ query: { ...route.query, wizard: undefined } });
   }
 
-  // Check if manage templates dialog should open from query param
-  if (route.query["manage-templates"] === "true") {
+  // Check if manage templates dialog should open from query param (admin only)
+  if (route.query["manage-templates"] === "true" && isAdmin.value) {
+    await loadAllTemplates(); // Load templates only when admin opens dialog
     showTemplatesDialog.value = true;
     router.replace({
       query: { ...route.query, "manage-templates": undefined },
@@ -1821,8 +1814,9 @@ watch(
 // Watch for manage-templates query param changes (for when already on page)
 watch(
   () => route.query["manage-templates"],
-  (manageTemplates) => {
-    if (manageTemplates === "true") {
+  async (manageTemplates) => {
+    if (manageTemplates === "true" && isAdmin.value) {
+      await loadAllTemplates(); // Load templates only when admin opens dialog
       showTemplatesDialog.value = true;
       router.replace({
         query: { ...route.query, "manage-templates": undefined },
@@ -1918,33 +1912,24 @@ watch(
   },
 );
 
-// Watch for configuration changes with debouncing
-let updateTimer = null;
-watch(
-  config,
-  (newConfig, oldConfig) => {
-    // Only auto-generate if we have already generated once
-    if (generatedSVG.value) {
-      if (updateTimer) {
-        clearTimeout(updateTimer);
-      }
-      updateTimer = setTimeout(() => {
-        generateCalendar();
-      }, 500);
-    }
-  },
-  { deep: true },
-);
+// Note: No separate regeneration watcher needed - autoSaveCalendar() regenerates SVG on backend
+// and returns it in the response, eliminating the need for separate generate-json calls
 
-// Fetch holidays for the selected year
+// Fetch holidays for the selected year (only if year changed)
 const fetchHolidays = async () => {
+  const currentYear = config.value.year;
+  // Skip fetch if we already have this year's holidays
+  if (lastFetchedHolidayYear.value === currentYear) {
+    return;
+  }
   try {
     const response = await fetch(
-      `/api/calendar/holidays?year=${config.value.year}&country=US`,
+      `/api/calendar/holidays?year=${currentYear}&country=US`,
     );
     if (response.ok) {
       const data = await response.json();
       holidays.value = new Set(data.holidays);
+      lastFetchedHolidayYear.value = currentYear;
     }
   } catch (error) {
     console.error("Error fetching holidays:", error);
@@ -1983,9 +1968,7 @@ const generateCalendar = async () => {
       year: config.value.year,
       theme: config.value.theme,
       layoutStyle: config.value.layoutStyle,
-      showMoonPhases: config.value.moonDisplayMode === "phases",
-      showMoonIllumination: config.value.moonDisplayMode === "illumination",
-      showFullMoonOnly: config.value.moonDisplayMode === "full-only",
+      moonDisplayMode: config.value.moonDisplayMode || "none",
       showWeekNumbers: config.value.showWeekNumbers,
       showDayNames: config.value.showDayNames,
       showDayNumbers: config.value.showDayNumbers,
@@ -2036,6 +2019,8 @@ const generateCalendar = async () => {
       const data = await response.json();
       // Wrap SVG with margins so content fits within printable area
       generatedSVG.value = wrapSvgWithMargins(data.svg);
+      // Increment key to force Vue to re-render the SVG element
+      svgKey.value++;
       // Only reset zoom on initial generation, preserve zoom/pan on updates
       if (isInitialGeneration.value) {
         resetZoom();
@@ -2050,6 +2035,76 @@ const generateCalendar = async () => {
       severity: "error",
       summary: "Generation Failed",
       detail: "Failed to generate calendar. Please try again.",
+      life: 5000,
+    });
+  } finally {
+    generating.value = false;
+  }
+};
+
+/**
+ * Initialize a new session calendar with default configuration.
+ * Calls /api/session-calendar/new which returns pre-generated SVG and config.
+ * This replaces the separate generateCalendar() + autoSaveCalendar() calls on mount.
+ */
+const initializeNewCalendar = async () => {
+  generating.value = true;
+  try {
+    const response = await sessionFetch("/api/session-calendar/new", {
+      method: "POST",
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+
+      // Set the calendar ID
+      currentCalendarId.value = data.id;
+
+      // Apply configuration from backend
+      if (data.configuration) {
+        Object.assign(config.value, data.configuration);
+
+        // Load custom events if any
+        if (data.configuration.customDates) {
+          customEvents.value = Object.entries(
+            data.configuration.customDates,
+          ).map(([date, eventData]) => {
+            const isNewFormat =
+              typeof eventData === "object" && eventData !== null;
+            return {
+              date: new Date(date),
+              emoji: isNewFormat ? eventData.emoji : eventData,
+              title: data.configuration.eventTitles?.[date] || "",
+              showTitle: !!data.configuration.eventTitles?.[date],
+              displaySettings: isNewFormat ? eventData.displaySettings : {},
+              id: Date.now() + Math.random(),
+            };
+          });
+        }
+
+        // Update calendar editor store with the year
+        calendarEditorStore.setCalendarYear(config.value.year);
+      }
+
+      // Use pre-generated SVG from backend
+      if (data.svg) {
+        generatedSVG.value = wrapSvgWithMargins(data.svg);
+        svgKey.value++;
+        resetZoom();
+      }
+
+      // Mark initialization complete - watchers use flush: 'sync' so they've already
+      // checked isInitialGeneration synchronously and returned early
+      isInitialGeneration.value = false;
+    } else {
+      throw new Error("Failed to initialize calendar");
+    }
+  } catch (error) {
+    console.error("Error initializing calendar:", error);
+    toast.add({
+      severity: "error",
+      summary: "Initialization Failed",
+      detail: "Failed to initialize calendar. Please refresh the page.",
       life: 5000,
     });
   } finally {
@@ -2433,8 +2488,7 @@ const downloadCalendar = async () => {
         year: config.value.year,
         theme: config.value.theme,
         layoutStyle: config.value.layoutStyle,
-        showMoonPhases: config.value.showMoonPhases,
-        showMoonIllumination: config.value.showMoonIllumination,
+        moonDisplayMode: config.value.moonDisplayMode || "none",
         showWeekNumbers: config.value.showWeekNumbers,
         showDayNumbers: config.value.showDayNumbers,
         showDayNames: config.value.showDayNames,
@@ -2701,7 +2755,7 @@ const autoSaveCalendar = async () => {
     clearTimeout(autoSaveTimeout.value);
   }
 
-  // Debounce autosave by 1 second
+  // Debounce autosave by 500ms (reduced from 1s since this now handles SVG regeneration too)
   autoSaveTimeout.value = setTimeout(async () => {
     isAutoSaving.value = true;
 
@@ -2741,7 +2795,7 @@ const autoSaveCalendar = async () => {
       }
 
       if (currentCalendarId.value) {
-        // Update existing calendar
+        // Update existing calendar - autosave also regenerates SVG
         const response = await sessionFetch(
           `/api/session-calendar/${currentCalendarId.value}/autosave`,
           {
@@ -2756,6 +2810,13 @@ const autoSaveCalendar = async () => {
 
         if (!response.ok) {
           throw new Error("Failed to autosave");
+        }
+
+        // Use the regenerated SVG from the response
+        const data = await response.json();
+        if (data.svg) {
+          generatedSVG.value = wrapSvgWithMargins(data.svg);
+          svgKey.value++;
         }
       } else {
         // Create new calendar
@@ -2786,7 +2847,7 @@ const autoSaveCalendar = async () => {
     } finally {
       isAutoSaving.value = false;
     }
-  }, 1000);
+  }, 500);
 };
 
 // Load calendar from ID or template
@@ -2899,27 +2960,36 @@ const loadCalendarFromUrl = async () => {
 };
 
 // Watch for configuration changes and autosave
+// Use flush: 'sync' so the isInitialGeneration check works correctly
 watch(
   config,
   () => {
+    // Skip during initial load - initializeNewCalendar handles this
+    if (isInitialGeneration.value) {
+      return;
+    }
     // Auto-save if we have a calendar ID OR if viewing a shared calendar (will trigger copy)
     if (currentCalendarId.value || isViewingSharedCalendar.value) {
       autoSaveCalendar();
     }
   },
-  { deep: true },
+  { deep: true, flush: "sync" },
 );
 
 // Watch for custom events changes
 watch(
   customEvents,
   () => {
+    // Skip during initial load - initializeNewCalendar handles this
+    if (isInitialGeneration.value) {
+      return;
+    }
     // Auto-save if we have a calendar ID OR if viewing a shared calendar (will trigger copy)
     if (currentCalendarId.value || isViewingSharedCalendar.value) {
       autoSaveCalendar();
     }
   },
-  { deep: true },
+  { deep: true, flush: "sync" },
 );
 
 // Build complete configuration including custom events
@@ -2947,69 +3017,21 @@ const buildFullConfiguration = () => {
   return fullConfig;
 };
 
-// Load all templates for admin
-const loadTemplates = async () => {
+// Load all templates for admin management dialog (lazy loaded when dialog opens)
+const loadAllTemplates = async () => {
   if (!isAdmin.value) return;
 
+  loadingAllTemplates.value = true;
   loadingTemplates.value = true;
   try {
-    // Use GraphQL to fetch all templates (admin can see inactive templates)
+    // Admin gets all templates (including inactive)
     templates.value = await fetchTemplates(undefined, undefined);
-  } catch (error) {
-    console.error("Error loading templates:", error);
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: "Failed to load templates",
-      life: 3000,
-    });
-  } finally {
-    loadingTemplates.value = false;
-  }
-};
-
-// Load all active templates for all users
-const loadAllTemplates = async () => {
-  loadingAllTemplates.value = true;
-  try {
-    // Fetch only active templates for regular users
-    allTemplates.value = await fetchTemplates(true, undefined);
-    // Generate previews for templates
-    await generateTemplatePreviewsForDrawer();
+    allTemplates.value = templates.value;
   } catch (error) {
     console.error("Error loading templates:", error);
   } finally {
     loadingAllTemplates.value = false;
-  }
-};
-
-// Generate preview thumbnails for templates in the drawer
-const generateTemplatePreviewsForDrawer = async () => {
-  for (const template of allTemplates.value) {
-    if (templatePreviews.value[template.id]) continue; // Skip if already loaded
-
-    try {
-      if (template.previewSvg) {
-        templatePreviews.value[template.id] = scaleSvgForPreview(
-          template.previewSvg,
-        );
-      } else if (template.configuration) {
-        const response = await fetch("/api/calendar/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(template.configuration),
-        });
-        if (response.ok) {
-          const svg = await response.text();
-          templatePreviews.value[template.id] = scaleSvgForPreview(svg);
-        }
-      }
-    } catch (error) {
-      console.error(
-        `Error generating preview for template ${template.id}:`,
-        error,
-      );
-    }
+    loadingTemplates.value = false;
   }
 };
 
@@ -3068,6 +3090,7 @@ const handleWizardDisplayOptionsChange = (options: DisplayOptions) => {
   config.value.showGrid = options.showGrid;
   config.value.showDayNames = options.showDayNames;
   config.value.rotateMonthNames = options.rotateMonthNames;
+  // Config watcher handles generateCalendar() with debounce
 };
 
 // Handle color settings change from wizard
@@ -3079,12 +3102,14 @@ const handleWizardColorsChange = (colors: ColorSettings) => {
   config.value.gridLineColor = colors.gridLineColor;
   config.value.holidayColor = colors.holidayColor;
   config.value.emojiFont = colors.emojiFont;
+  // Config watcher handles generateCalendar() with debounce
 };
 
 // Handle holiday settings change from wizard
 const handleWizardHolidaysChange = (holidays: HolidaySettings) => {
   config.value.holidaySets = holidays.selectedSets;
   config.value.eventDisplayMode = holidays.displayMode;
+  // Config watcher handles generateCalendar() with debounce
 };
 
 // Load saved calendars for the current user
@@ -3455,7 +3480,7 @@ const confirmSaveTemplate = async () => {
       life: 3000,
     });
     showSaveTemplateDialog.value = false;
-    loadTemplates(); // Reload templates list
+    loadAllTemplates(); // Reload templates list
   } catch (error) {
     console.error("Error saving template:", error);
     toast.add({
@@ -3508,7 +3533,7 @@ const updateTemplate = async (template) => {
       detail: `Template "${template.name}" has been updated.`,
       life: 3000,
     });
-    loadTemplates(); // Reload templates list
+    loadAllTemplates(); // Reload templates list
   } catch (error) {
     console.error("Error updating template:", error);
     toast.add({
@@ -3549,7 +3574,7 @@ const confirmDuplicateTemplate = async () => {
       life: 3000,
     });
     showDuplicateDialog.value = false;
-    loadTemplates(); // Reload templates list
+    loadAllTemplates(); // Reload templates list
   } catch (error) {
     console.error("Error duplicating template:", error);
     toast.add({

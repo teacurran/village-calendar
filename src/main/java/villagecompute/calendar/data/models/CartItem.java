@@ -8,9 +8,12 @@ import jakarta.validation.constraints.Size;
 import org.eclipse.microprofile.graphql.Ignore;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- * Item in a shopping cart
+ * Item in a shopping cart.
+ * Supports multiple generator types (calendar, maze, etc.) with frozen SVG assets.
  */
 @Entity
 @Table(
@@ -27,19 +30,44 @@ public class CartItem extends DefaultPanacheEntityWithTimestamps {
     @Ignore
     public Cart cart;
 
-    @NotNull
-    @Size(min = 1, max = 255)
-    @Column(name = "template_id", nullable = false, length = 255)
+    /**
+     * Type of generator: 'calendar', 'maze', etc.
+     */
+    @Size(max = 50)
+    @Column(name = "generator_type", length = 50)
+    public String generatorType;
+
+    /**
+     * User-facing description like "2026 Calendar" or "Hard Orthogonal Maze"
+     */
+    @Size(max = 500)
+    @Column(name = "description", length = 500)
+    public String description;
+
+    /**
+     * @deprecated Use generatorType and description instead. Kept for backward compatibility.
+     * Template ID from database (null for static product pages with frozen configuration)
+     */
+    @Deprecated
+    @Size(max = 255)
+    @Column(name = "template_id", length = 255)
     public String templateId;
 
-    @NotNull
-    @Size(min = 1, max = 255)
-    @Column(name = "template_name", nullable = false, length = 255)
+    /**
+     * @deprecated Use description instead. Kept for backward compatibility.
+     * Template name for display
+     */
+    @Deprecated
+    @Size(max = 255)
+    @Column(name = "template_name", length = 255)
     public String templateName;
 
-    @NotNull
-    @Min(2000)
-    @Column(name = "calendar_year", nullable = false)
+    /**
+     * @deprecated Use configuration JSON instead. Kept for backward compatibility.
+     * Calendar year
+     */
+    @Deprecated
+    @Column(name = "calendar_year")
     public Integer year;
 
     @NotNull
@@ -60,15 +88,55 @@ public class CartItem extends DefaultPanacheEntityWithTimestamps {
     public String productCode;
 
     /**
-     * JSON configuration for the calendar
+     * JSON configuration for the generator (includes year for calendars, size/difficulty for mazes, etc.)
      */
     @Column(name = "configuration", columnDefinition = "TEXT")
     public String configuration;
+
+    /**
+     * Assets (SVGs) associated with this cart item.
+     */
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+        name = "cart_item_assets",
+        joinColumns = @JoinColumn(name = "cart_item_id"),
+        inverseJoinColumns = @JoinColumn(name = "asset_id")
+    )
+    @Ignore
+    public Set<ItemAsset> assets = new HashSet<>();
+
+    // Generator type constants
+    public static final String GENERATOR_CALENDAR = "calendar";
+    public static final String GENERATOR_MAZE = "maze";
 
     /**
      * Calculate line total (quantity * unit price)
      */
     public BigDecimal getLineTotal() {
         return unitPrice.multiply(BigDecimal.valueOf(quantity));
+    }
+
+    /**
+     * Add an asset to this cart item.
+     */
+    public void addAsset(ItemAsset asset) {
+        assets.add(asset);
+    }
+
+    /**
+     * Get an asset by key (e.g., "main", "answer_key").
+     */
+    public ItemAsset getAsset(String assetKey) {
+        return assets.stream()
+            .filter(a -> assetKey.equals(a.assetKey))
+            .findFirst()
+            .orElse(null);
+    }
+
+    /**
+     * Get the main SVG asset.
+     */
+    public ItemAsset getMainAsset() {
+        return getAsset(ItemAsset.KEY_MAIN);
     }
 }

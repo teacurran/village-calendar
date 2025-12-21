@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, nextTick } from "vue";
 import Drawer from "primevue/drawer";
 import Stepper from "primevue/stepper";
 import StepItem from "primevue/stepitem";
@@ -10,6 +10,7 @@ import Checkbox from "primevue/checkbox";
 import RadioButton from "primevue/radiobutton";
 import ProgressSpinner from "primevue/progressspinner";
 import Select from "primevue/select";
+import Popover from "primevue/popover";
 import { VSwatches } from "vue3-swatches";
 import "vue3-swatches/dist/style.css";
 
@@ -95,7 +96,19 @@ export interface DisplayOptions {
   rotateMonthNames: boolean;
 }
 
-export type EmojiFontType = "noto-color" | "noto-mono";
+export type EmojiFontType =
+  | "noto-color"
+  | "noto-mono"
+  | "mono-red"
+  | "mono-blue"
+  | "mono-green"
+  | "mono-orange"
+  | "mono-purple"
+  | "mono-pink"
+  | "mono-teal"
+  | "mono-brown"
+  | "mono-navy"
+  | "mono-coral";
 
 export interface ColorSettings {
   yearColor: string;
@@ -150,6 +163,10 @@ const dayNameColor = ref("#666666");
 const gridLineColor = ref("#c1c1c1");
 const holidayColor = ref("#ff5252");
 const emojiFont = ref<EmojiFontType>("noto-color");
+const emojiPopover = ref();
+
+// Flag to prevent emitting during initialization
+const isInitializing = ref(false);
 
 // Holiday settings state
 const primaryHolidaySet = ref<string>("none"); // Current dropdown selection
@@ -180,6 +197,25 @@ const availableHolidaySets = computed(() => {
       opt.value === "none" || !additionalHolidaySets.value.includes(opt.value),
   );
 });
+
+// Get current emoji style option for display
+const currentEmojiStyle = computed(() => {
+  return (
+    emojiStyleOptions.find((o) => o.id === emojiFont.value) ||
+    emojiStyleOptions[0]
+  );
+});
+
+// Toggle emoji popover
+const toggleEmojiPopover = (event: Event) => {
+  emojiPopover.value?.toggle(event);
+};
+
+// Select emoji style and close popover
+const selectEmojiStyle = (option: (typeof emojiStyleOptions)[0]) => {
+  emojiFont.value = option.id;
+  emojiPopover.value?.hide();
+};
 
 // Get label for a holiday set value
 const getHolidaySetLabel = (value: string) => {
@@ -417,24 +453,88 @@ const colorSwatches = [
   "#ffc0cb",
 ];
 
-// Emoji font options
-const emojiFontOptions = [
+// Emoji style options with CSS filter for preview
+const emojiStyleOptions: {
+  id: EmojiFontType;
+  label: string;
+  filter: string;
+  color?: string;
+}[] = [
+  { id: "noto-color", label: "Full Color", filter: "none" },
   {
-    id: "noto-color" as const,
-    name: "Color Emoji",
-    description: "Full-color emoji (Noto Color Emoji)",
-    preview: "🎄",
+    id: "noto-mono",
+    label: "Black & White",
+    filter: "grayscale(100%) contrast(1.2)",
   },
   {
-    id: "noto-mono" as const,
-    name: "Monochrome",
-    description: "Black and white line art style",
-    preview: "🎄",
+    id: "mono-red",
+    label: "Red",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(-10deg)",
+    color: "#DC2626",
+  },
+  {
+    id: "mono-blue",
+    label: "Blue",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(180deg)",
+    color: "#2563EB",
+  },
+  {
+    id: "mono-green",
+    label: "Green",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(80deg)",
+    color: "#16A34A",
+  },
+  {
+    id: "mono-orange",
+    label: "Orange",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(20deg)",
+    color: "#EA580C",
+  },
+  {
+    id: "mono-purple",
+    label: "Purple",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(240deg)",
+    color: "#9333EA",
+  },
+  {
+    id: "mono-pink",
+    label: "Pink",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(300deg)",
+    color: "#EC4899",
+  },
+  {
+    id: "mono-teal",
+    label: "Teal",
+    filter: "grayscale(100%) sepia(100%) saturate(10) hue-rotate(140deg)",
+    color: "#0D9488",
+  },
+  {
+    id: "mono-brown",
+    label: "Brown",
+    filter:
+      "grayscale(100%) sepia(100%) saturate(5) hue-rotate(350deg) brightness(0.7)",
+    color: "#92400E",
+  },
+  {
+    id: "mono-navy",
+    label: "Navy",
+    filter:
+      "grayscale(100%) sepia(100%) saturate(10) hue-rotate(200deg) brightness(0.6)",
+    color: "#1E3A5F",
+  },
+  {
+    id: "mono-coral",
+    label: "Coral",
+    filter: "grayscale(100%) sepia(100%) saturate(8) hue-rotate(5deg)",
+    color: "#F97316",
   },
 ];
 
 // Random day for preview (1-28 to be safe)
 const previewDay = Math.floor(Math.random() * 28) + 1;
+
+// Emoji for style picker preview (URL-encoded 🎉 Party Popper)
+const previewEmoji = "%F0%9F%8E%89";
 
 // Generate moon preview cell SVG for size options (no day name)
 const generateMoonPreviewSVG = (moonOption: (typeof moonSizeOptions)[0]) => {
@@ -723,34 +823,56 @@ const emitColorSettings = () => {
   });
 };
 
+// Individual color change handlers - explicitly update ref then emit
+const handleYearColorChange = (color: string) => {
+  yearColor.value = color;
+  emitColorSettings();
+};
+const handleMonthColorChange = (color: string) => {
+  monthColor.value = color;
+  emitColorSettings();
+};
+const handleDayTextColorChange = (color: string) => {
+  dayTextColor.value = color;
+  emitColorSettings();
+};
+const handleDayNameColorChange = (color: string) => {
+  dayNameColor.value = color;
+  emitColorSettings();
+};
+const handleGridLineColorChange = (color: string) => {
+  gridLineColor.value = color;
+  emitColorSettings();
+};
+const handleHolidayColorChange = (color: string) => {
+  holidayColor.value = color;
+  emitColorSettings();
+};
+
 const handleClose = () => {
   isOpen.value = false;
 };
 
 // Watch for display option changes
 watch([showGrid, showDayNames, rotateMonthNames], () => {
-  emitDisplayOptions();
+  if (!isInitializing.value) {
+    emitDisplayOptions();
+  }
 });
 
-// Watch for color changes
-watch(
-  [
-    yearColor,
-    monthColor,
-    dayTextColor,
-    dayNameColor,
-    gridLineColor,
-    holidayColor,
-    emojiFont,
-  ],
-  () => {
+// Watch for emoji font changes (not a VSwatches component, so needs watch)
+watch(emojiFont, () => {
+  if (!isInitializing.value) {
     emitColorSettings();
-  },
-);
+  }
+});
 
 // Initialize wizard state from config
 const initializeFromConfig = () => {
   if (!props.config) return;
+
+  // Set flag to prevent watchers from emitting during initialization
+  isInitializing.value = true;
 
   // Initialize layout
   if (props.config.layoutStyle === "grid") {
@@ -843,6 +965,11 @@ const initializeFromConfig = () => {
   if (props.config.eventDisplayMode) {
     eventDisplayMode.value = props.config.eventDisplayMode as EventDisplayMode;
   }
+
+  // Clear flag after Vue processes watchers
+  nextTick(() => {
+    isInitializing.value = false;
+  });
 };
 
 // Load previews when drawer opens and initialize state from config
@@ -961,8 +1088,75 @@ onMounted(() => {
           </StepPanel>
         </StepItem>
 
-        <!-- Step 2: Moon Display -->
+        <!-- Step 2: Additional Options -->
         <StepItem value="2">
+          <Step>Additional Options</Step>
+          <StepPanel v-slot="{ activateCallback }">
+            <div class="step-content">
+              <div class="checkbox-options">
+                <div class="checkbox-option">
+                  <Checkbox
+                    v-model="showGrid"
+                    input-id="showGrid"
+                    :binary="true"
+                  />
+                  <label for="showGrid" class="checkbox-label">
+                    <span class="checkbox-title">Show Grid Lines</span>
+                    <span class="checkbox-description"
+                      >Display lines between calendar cells</span
+                    >
+                  </label>
+                </div>
+
+                <div class="checkbox-option">
+                  <Checkbox
+                    v-model="showDayNames"
+                    input-id="showDayNames"
+                    :binary="true"
+                  />
+                  <label for="showDayNames" class="checkbox-label">
+                    <span class="checkbox-title">Show Day Names</span>
+                    <span class="checkbox-description"
+                      >Display abbreviated day names (Mon, Tue, etc.)</span
+                    >
+                  </label>
+                </div>
+
+                <div class="checkbox-option">
+                  <Checkbox
+                    v-model="rotateMonthNames"
+                    input-id="rotateMonthNames"
+                    :binary="true"
+                  />
+                  <label for="rotateMonthNames" class="checkbox-label">
+                    <span class="checkbox-title">Rotate Month Names</span>
+                    <span class="checkbox-description"
+                      >Display month names vertically</span
+                    >
+                  </label>
+                </div>
+              </div>
+
+              <div class="step-navigation">
+                <Button
+                  label="Previous"
+                  icon="pi pi-arrow-left"
+                  outlined
+                  @click="activateCallback('1')"
+                />
+                <Button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  icon-pos="right"
+                  @click="activateCallback('3')"
+                />
+              </div>
+            </div>
+          </StepPanel>
+        </StepItem>
+
+        <!-- Step 3: Moon Display -->
+        <StepItem value="3">
           <Step>Moon Display</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
@@ -1026,21 +1220,21 @@ onMounted(() => {
                   label="Previous"
                   icon="pi pi-arrow-left"
                   outlined
-                  @click="activateCallback('1')"
+                  @click="activateCallback('2')"
                 />
                 <Button
                   label="Next"
                   icon="pi pi-arrow-right"
                   icon-pos="right"
-                  @click="activateCallback('3')"
+                  @click="activateCallback('4')"
                 />
               </div>
             </div>
           </StepPanel>
         </StepItem>
 
-        <!-- Step 3: Holidays -->
-        <StepItem value="3">
+        <!-- Step 4: Holidays -->
+        <StepItem value="4">
           <Step>Holidays</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
@@ -1248,73 +1442,6 @@ onMounted(() => {
                   label="Previous"
                   icon="pi pi-arrow-left"
                   outlined
-                  @click="activateCallback('2')"
-                />
-                <Button
-                  label="Next"
-                  icon="pi pi-arrow-right"
-                  icon-pos="right"
-                  @click="activateCallback('4')"
-                />
-              </div>
-            </div>
-          </StepPanel>
-        </StepItem>
-
-        <!-- Step 4: Additional Options -->
-        <StepItem value="4">
-          <Step>Additional Options</Step>
-          <StepPanel v-slot="{ activateCallback }">
-            <div class="step-content">
-              <div class="checkbox-options">
-                <div class="checkbox-option">
-                  <Checkbox
-                    v-model="showGrid"
-                    input-id="showGrid"
-                    :binary="true"
-                  />
-                  <label for="showGrid" class="checkbox-label">
-                    <span class="checkbox-title">Show Grid Lines</span>
-                    <span class="checkbox-description"
-                      >Display lines between calendar cells</span
-                    >
-                  </label>
-                </div>
-
-                <div class="checkbox-option">
-                  <Checkbox
-                    v-model="showDayNames"
-                    input-id="showDayNames"
-                    :binary="true"
-                  />
-                  <label for="showDayNames" class="checkbox-label">
-                    <span class="checkbox-title">Show Day Names</span>
-                    <span class="checkbox-description"
-                      >Display abbreviated day names (Mon, Tue, etc.)</span
-                    >
-                  </label>
-                </div>
-
-                <div class="checkbox-option">
-                  <Checkbox
-                    v-model="rotateMonthNames"
-                    input-id="rotateMonthNames"
-                    :binary="true"
-                  />
-                  <label for="rotateMonthNames" class="checkbox-label">
-                    <span class="checkbox-title">Rotate Month Names</span>
-                    <span class="checkbox-description"
-                      >Display month names vertically</span
-                    >
-                  </label>
-                </div>
-              </div>
-
-              <div class="step-navigation">
-                <Button
-                  label="Previous"
-                  icon="pi pi-arrow-left"
-                  outlined
                   @click="activateCallback('3')"
                 />
                 <Button
@@ -1368,102 +1495,111 @@ onMounted(() => {
                 <div class="color-option">
                   <label class="color-label">Year Color</label>
                   <VSwatches
-                    v-model="yearColor"
+                    :model-value="yearColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
+                    @update:model-value="handleYearColorChange"
                   />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Month Names</label>
                   <VSwatches
-                    v-model="monthColor"
+                    :model-value="monthColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
+                    @update:model-value="handleMonthColorChange"
                   />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Day Numbers</label>
                   <VSwatches
-                    v-model="dayTextColor"
+                    :model-value="dayTextColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
+                    @update:model-value="handleDayTextColorChange"
                   />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Day Names</label>
                   <VSwatches
-                    v-model="dayNameColor"
+                    :model-value="dayNameColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
+                    @update:model-value="handleDayNameColorChange"
                   />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Grid Lines</label>
                   <VSwatches
-                    v-model="gridLineColor"
+                    :model-value="gridLineColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
+                    @update:model-value="handleGridLineColorChange"
                   />
                 </div>
 
                 <div class="color-option">
                   <label class="color-label">Holidays</label>
                   <VSwatches
-                    v-model="holidayColor"
+                    :model-value="holidayColor"
                     :swatches="colorSwatches"
                     :swatch-size="24"
                     :row-length="10"
                     popover-x="left"
+                    @update:model-value="handleHolidayColorChange"
                   />
                 </div>
-              </div>
 
-              <!-- Emoji Style -->
-              <h4 class="subsection-title">Emoji Style</h4>
-              <p class="step-description">
-                Choose how emojis appear in your calendar
-              </p>
-              <div class="emoji-font-options">
-                <div
-                  v-for="option in emojiFontOptions"
-                  :key="option.id"
-                  class="emoji-font-option"
-                  :class="{ selected: emojiFont === option.id }"
-                  @click="emojiFont = option.id"
-                >
+                <div class="color-option">
+                  <label class="color-label">Emojis</label>
                   <div
-                    class="emoji-preview"
-                    :class="{ monochrome: option.id === 'noto-mono' }"
+                    class="emoji-color-trigger"
+                    :title="currentEmojiStyle.label"
+                    @click="toggleEmojiPopover"
                   >
-                    {{ option.preview }}
+                    <img
+                      :src="`/api/calendar/emoji-preview?emoji=${previewEmoji}&style=${emojiFont}`"
+                      alt="Emoji style preview"
+                      class="emoji-trigger-img"
+                    />
                   </div>
-                  <div class="emoji-font-info">
-                    <div class="emoji-font-name">{{ option.name }}</div>
-                    <div class="emoji-font-description">
-                      {{ option.description }}
+                  <Popover
+                    ref="emojiPopover"
+                    :pt="{ root: { class: 'emoji-popover-left' } }"
+                  >
+                    <div class="emoji-popover-content">
+                      <div class="emoji-popover-swatches">
+                        <div
+                          v-for="option in emojiStyleOptions"
+                          :key="option.id"
+                          class="emoji-popover-swatch"
+                          :class="{ selected: emojiFont === option.id }"
+                          :title="option.label"
+                          @click="selectEmojiStyle(option)"
+                        >
+                          <img
+                            :src="`/api/calendar/emoji-preview?emoji=${previewEmoji}&style=${option.id}`"
+                            :alt="option.label"
+                            class="emoji-preview-img"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div class="selection-indicator">
-                    <i
-                      v-if="emojiFont === option.id"
-                      class="pi pi-check-circle"
-                    ></i>
-                    <i v-else class="pi pi-circle"></i>
-                  </div>
+                  </Popover>
                 </div>
               </div>
 
@@ -2248,70 +2384,89 @@ onMounted(() => {
   color: var(--text-color-secondary);
 }
 
-/* Emoji font options */
-.emoji-font-options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.emoji-font-option {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border: 2px solid var(--surface-200);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: var(--surface-0);
-}
-
-.emoji-font-option:hover {
-  border-color: var(--primary-300);
-  background: var(--surface-50);
-}
-
-.emoji-font-option.selected {
-  border-color: var(--primary-color);
-  background: var(--primary-50);
-}
-
-.emoji-preview {
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+/* Emoji color trigger (inline with other color pickers, matches vue-swatches) */
+.emoji-color-trigger {
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--surface-0);
+  border: 1px solid #ccc;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.emoji-color-trigger:hover {
+  background: var(--surface-50);
+  border-color: var(--surface-400);
+}
+
+.emoji-trigger-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+/* Emoji popover picker */
+.emoji-popover-content {
+  padding: 8px;
+}
+
+.emoji-popover-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 230px;
+}
+
+.emoji-popover-swatch {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--surface-50);
+  border: 2px solid transparent;
+}
+
+.emoji-popover-swatch:hover {
+  transform: scale(1.1);
   background: var(--surface-100);
-  border-radius: 6px;
-  font-family:
-    "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
 }
 
-.emoji-preview.monochrome {
-  /* Use color emoji font but apply grayscale filter for monochrome preview */
-  font-family:
-    "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-  filter: grayscale(100%) contrast(1.2);
+.emoji-popover-swatch.selected {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-200);
+  background: var(--primary-50);
 }
 
-.emoji-font-info {
-  flex: 1;
-  min-width: 0;
+.emoji-preview-img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+</style>
+
+<!-- Unscoped styles for Popover positioning (appended to body) -->
+<style>
+.emoji-popover-left {
+  /* Align right edge of popover with right edge of 42px trigger */
+  transform: translateX(calc(-100% + 42px));
 }
 
-.emoji-font-name {
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: var(--text-color);
-  margin-bottom: 0.125rem;
+.emoji-popover-left::before,
+.emoji-popover-left::after {
+  /* Hide the arrow since it won't align properly */
+  display: none !important;
 }
 
-.emoji-font-description {
-  font-size: 0.8125rem;
-  color: var(--text-color-secondary);
+.emoji-popover-left .p-popover-content {
+  padding: 0;
 }
 </style>

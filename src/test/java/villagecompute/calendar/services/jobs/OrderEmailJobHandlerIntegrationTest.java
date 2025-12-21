@@ -113,7 +113,7 @@ class OrderEmailJobHandlerIntegrationTest {
             .firstResult();
 
         // When - Render the order confirmation template
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
 
         // Then - Verify template renders without errors
         assertNotNull(html, "Template should render");
@@ -228,7 +228,7 @@ class OrderEmailJobHandlerIntegrationTest {
             .firstResult();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
 
         // Then
         assertNotNull(html, "Template should render");
@@ -269,7 +269,7 @@ class OrderEmailJobHandlerIntegrationTest {
             .firstResult();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
 
         // Then - Should render without exceptions
         assertNotNull(html, "Template should render even with empty items");
@@ -345,7 +345,7 @@ class OrderEmailJobHandlerIntegrationTest {
             .firstResult();
 
         // When
-        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String html = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
 
         // Then
         assertNotNull(html, "Template should render");
@@ -382,7 +382,7 @@ class OrderEmailJobHandlerIntegrationTest {
             .firstResult();
 
         // When - Both templates should handle extreme null cases
-        String customerHtml = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList()).render();
+        String customerHtml = OrderEmailJobHandler.Templates.orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com").render();
         String adminHtml = OrderEmailJobHandler.Templates.adminOrderNotification(order, testCss, "https://example.com", Collections.emptyList()).render();
 
         // Then

@@ -99,15 +99,16 @@ public class Cart extends DefaultPanacheEntityWithTimestamps {
 
     /**
      * Add item to cart or update quantity if already exists.
-     * Items are considered the same if they have the same templateId, year, AND configuration.
+     * Items are considered the same if they have the same templateId (or both null), year, AND configuration.
      * Different calendar designs (different configurations) are separate line items.
      */
     public CartItem addOrUpdateItem(String templateId, String templateName, int year,
                                     int quantity, BigDecimal unitPrice, String configuration,
                                     String productCode) {
         // Check if item already exists with same template, year, AND configuration
+        // When templateId is null (static page purchase), match by configuration + year
         CartItem existing = items.stream()
-            .filter(item -> item.templateId.equals(templateId)
+            .filter(item -> stringEquals(item.templateId, templateId)
                 && item.year == year
                 && configurationEquals(item.configuration, configuration))
             .findFirst()
@@ -135,17 +136,45 @@ public class Cart extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
+     * Compare two strings for equality.
+     * Handles null values - two null strings are considered equal.
+     */
+    private boolean stringEquals(String str1, String str2) {
+        if (str1 == null && str2 == null) {
+            return true;
+        }
+        if (str1 == null || str2 == null) {
+            return false;
+        }
+        return str1.equals(str2);
+    }
+
+    /**
      * Compare two configuration strings for equality.
      * Handles null values - two null configurations are considered equal.
      */
     private boolean configurationEquals(String config1, String config2) {
-        if (config1 == null && config2 == null) {
-            return true;
-        }
-        if (config1 == null || config2 == null) {
-            return false;
-        }
-        return config1.equals(config2);
+        return stringEquals(config1, config2);
+    }
+
+    /**
+     * Add a generic item to cart (supports new generator-based items with assets).
+     * Unlike legacy items, generator-based items with SVGs are always treated as new line items
+     * since each generated SVG is unique and should not be merged.
+     */
+    public CartItem addItem(String generatorType, String description, int quantity,
+                            BigDecimal unitPrice, String configuration, String productCode) {
+        CartItem newItem = new CartItem();
+        newItem.cart = this;
+        newItem.generatorType = generatorType;
+        newItem.description = description;
+        newItem.quantity = quantity;
+        newItem.unitPrice = unitPrice;
+        newItem.configuration = configuration;
+        newItem.productCode = productCode;
+        newItem.persist();
+        items.add(newItem);
+        return newItem;
     }
 
     /**

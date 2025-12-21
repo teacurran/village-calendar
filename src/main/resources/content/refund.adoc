@@ -1,0 +1,29 @@
+---
+title: Refund Policy
+layout: page
+date: 2025-12-11
+description: Refund Policy for Village Compute Calendar
+---
+
+== Refunds & Returns
+
+Our calendars are custom-made to order. We offer refunds or replacements for:
+
+* **Printing defects** - misprints, smudges, blurry images (not from low-res uploads)
+* **Production errors** - wrong format, missing pages, incorrect layout
+* **Shipping damage** - bent, torn, or water-damaged items
+
+Refunds are not available for customer-provided errors or change of mind after printing.
+
+== How to Request
+
+Email **support@villagecompute.com** within 14 days of delivery with your order number and photos of the issue. We'll respond within 2-3 business days.
+
+== Cancellations
+
+Orders can be cancelled for a full refund before production starts (typically within 24 hours).
+
+== Contact
+
+* **Email**: support@villagecompute.com
+* **Phone**: 802-222-6147

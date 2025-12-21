@@ -37,7 +37,7 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
     /**
      * Type-safe Qute templates for cancellation emails.
      */
-    @CheckedTemplate
+    @CheckedTemplate(basePath = "email-templates/OrderCancellationJobHandler")
     public static class Templates {
         /**
          * Order cancellation email template.

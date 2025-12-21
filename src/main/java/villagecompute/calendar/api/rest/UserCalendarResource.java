@@ -2,6 +2,7 @@ package villagecompute.calendar.api.rest;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.quarkus.logging.Log;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -159,7 +160,7 @@ public class UserCalendarResource {
                 );
                 calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.error("Error generating calendar SVG", e);
             }
         }
 

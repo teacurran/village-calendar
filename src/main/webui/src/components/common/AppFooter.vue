@@ -7,7 +7,8 @@
           <span class="brand-name">Village Calendar</span>
         </div>
         <p class="footer-tagline">
-          Create beautiful, personalized calendars for any occasion
+          Custom yearly wall calendars with holidays, moon phases, and lunar
+          illumination
         </p>
       </div>
 
@@ -18,12 +19,7 @@
             <router-link to="/" class="footer-link">Home</router-link>
           </li>
           <li>
-            <router-link to="/" class="footer-link">Templates</router-link>
-          </li>
-          <li v-if="authStore.isAuthenticated">
-            <router-link to="/dashboard" class="footer-link"
-              >My Orders</router-link
-            >
+            <a href="/pages/p/" class="footer-link">Pre-Designed Calendars</a>
           </li>
         </ul>
       </div>
@@ -32,19 +28,7 @@
         <h3 class="footer-heading">Support</h3>
         <ul class="footer-links">
           <li>
-            <a href="#" class="footer-link" @click.prevent="handleContactClick"
-              >Contact Us</a
-            >
-          </li>
-          <li>
-            <a href="#" class="footer-link" @click.prevent="handleFaqClick"
-              >FAQ</a
-            >
-          </li>
-          <li>
-            <a href="#" class="footer-link" @click.prevent="handleShippingClick"
-              >Shipping Info</a
-            >
+            <a href="/pages/shipping" class="footer-link">Shipping Info</a>
           </li>
         </ul>
       </div>
@@ -53,19 +37,13 @@
         <h3 class="footer-heading">Legal</h3>
         <ul class="footer-links">
           <li>
-            <a href="#" class="footer-link" @click.prevent="handlePrivacyClick"
-              >Privacy Policy</a
-            >
+            <a href="/pages/privacy" class="footer-link">Privacy Policy</a>
           </li>
           <li>
-            <a href="#" class="footer-link" @click.prevent="handleTermsClick"
-              >Terms of Service</a
-            >
+            <a href="/pages/terms" class="footer-link">Terms of Service</a>
           </li>
           <li>
-            <a href="#" class="footer-link" @click.prevent="handleRefundClick"
-              >Refund Policy</a
-            >
+            <a href="/pages/refund" class="footer-link">Refund Policy</a>
           </li>
         </ul>
       </div>
@@ -73,34 +51,8 @@
 
     <div class="footer-bottom">
       <p class="copyright">
-        &copy; {{ currentYear }} Village Calendar. All rights reserved.
+        &copy; {{ currentYear }} Village Compute. All rights reserved.
       </p>
-      <div class="social-links">
-        <a
-          href="#"
-          class="social-link"
-          aria-label="Facebook"
-          @click.prevent="handleSocialClick('facebook')"
-        >
-          <i class="pi pi-facebook"></i>
-        </a>
-        <a
-          href="#"
-          class="social-link"
-          aria-label="Twitter"
-          @click.prevent="handleSocialClick('twitter')"
-        >
-          <i class="pi pi-twitter"></i>
-        </a>
-        <a
-          href="#"
-          class="social-link"
-          aria-label="Instagram"
-          @click.prevent="handleSocialClick('instagram')"
-        >
-          <i class="pi pi-instagram"></i>
-        </a>
-      </div>
     </div>
   </footer>
 </template>
@@ -113,15 +65,6 @@ const authStore = useAuthStore();
 
 // Current year for copyright
 const currentYear = computed(() => new Date().getFullYear());
-
-// Placeholder click handlers (can be implemented later)
-const handleContactClick = () => {};
-const handleFaqClick = () => {};
-const handleShippingClick = () => {};
-const handlePrivacyClick = () => {};
-const handleTermsClick = () => {};
-const handleRefundClick = () => {};
-const handleSocialClick = (_platform: string) => {};
 </script>
 
 <style scoped>
@@ -209,22 +152,6 @@ const handleSocialClick = (_platform: string) => {};
   color: #9ca3af;
   font-size: 0.875rem;
   margin: 0;
-}
-
-.social-links {
-  display: flex;
-  gap: 1rem;
-}
-
-.social-link {
-  color: #9ca3af;
-  font-size: 1.25rem;
-  transition: color 0.2s;
-  text-decoration: none;
-}
-
-.social-link:hover {
-  color: white;
 }
 
 /* Responsive styles */

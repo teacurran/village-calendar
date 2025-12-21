@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{page.title} - Village Compute Calendar</title>
+    <meta name="description" content="{page.description ?: 'Browse our collection of beautiful, customizable calendars. Premium prints shipped to your door.'}">
+    <meta name="keywords" content="calendars, custom calendars, printable calendars, wall calendars, 2026 calendars">
+
+    <!-- OpenGraph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{page.title}">
+    <meta property="og:description" content="{page.description}">
+    <meta property="og:url" content="/pages/p/">
+
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- PrimeIcons -->
+    <link rel="stylesheet" href="https://unpkg.com/primeicons/primeicons.css">
+
+    <!-- Calendar Pages CSS (minified by Vite) -->
+    <link rel="stylesheet" href="/assets/calendar-pages.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="/" class="logo">
+                <i class="pi pi-calendar"></i>
+                Village Compute Calendar
+            </a>
+            <nav>
+                <a href="/">Home</a>
+                <a href="/pages/p/">Calendars</a>
+                <a href="/pages/shipping">Shipping</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="page-header">
+            <h1>{page.title}</h1>
+            <p>{page.description}</p>
+        </div>
+
+        <div class="products-grid">
+            {#for calendar in cdi:calendars.list}
+            <a href="/pages/p/{calendar.slug}" class="product-card">
+                <img
+                    class="product-image"
+                    src="/static/calendars/{calendar.slug}.png"
+                    alt="{calendar.name}"
+                    loading="lazy"
+                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                >
+                <div class="product-image-placeholder" style="display:none">
+                    <i class="pi pi-calendar"></i>
+                </div>
+                <div class="product-details">
+                    <h2 class="product-name">{calendar.name}</h2>
+                    <p class="product-description">{calendar.description}</p>
+                    <div class="product-footer">
+                        <span class="product-price">${calendar.priceFormatted}</span>
+                        <span class="view-btn">View <i class="pi pi-arrow-right"></i></span>
+                    </div>
+                </div>
+            </a>
+            {/for}
+        </div>
+
+        <div class="cta-section">
+            <h2>Want Something Unique?</h2>
+            <p>Create your own custom calendar with your choice of colors, fonts, holidays, and more.</p>
+            <a href="/" class="btn btn-primary">
+                <i class="pi pi-pencil"></i>
+                Start Creating
+            </a>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <div class="footer-brand">
+                    <i class="pi pi-calendar"></i>
+                    <span>Village Calendar</span>
+                </div>
+                <p class="footer-tagline">
+                    Custom yearly wall calendars with holidays, moon phases, and lunar illumination
+                </p>
+            </div>
+
+            <div class="footer-section">
+                <h3 class="footer-heading">Quick Links</h3>
+                <ul class="footer-links">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/pages/p/">Pre-Designed Calendars</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h3 class="footer-heading">Support</h3>
+                <ul class="footer-links">
+                    <li><a href="/pages/shipping">Shipping Info</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h3 class="footer-heading">Legal</h3>
+                <ul class="footer-links">
+                    <li><a href="/pages/privacy">Privacy Policy</a></li>
+                    <li><a href="/pages/terms">Terms of Service</a></li>
+                    <li><a href="/pages/refund">Refund Policy</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p class="copyright">&copy; {now.year} Village Compute. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

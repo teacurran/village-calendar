@@ -1060,14 +1060,6 @@ public class HolidayService {
         // Halloween - October 31
         holidays.put(formatDate(LocalDate.of(year, Month.OCTOBER, 31)), "Halloween");
 
-        // Black Friday - Day after Thanksgiving
-        LocalDate thanksgiving = LocalDate.of(year, Month.NOVEMBER, 1)
-            .with(TemporalAdjusters.dayOfWeekInMonth(4, DayOfWeek.THURSDAY));
-        holidays.put(formatDate(thanksgiving.plusDays(1)), "Black Friday");
-
-        // Kwanzaa - December 26 - January 1
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 26)), "Kwanzaa");
-
         // New Year's Eve - December 31
         holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 31)), "New Year's Eve");
 
@@ -1096,14 +1088,8 @@ public class HolidayService {
         holidayEmojis.put(fathersDay.toString(), "👔");                                 // Father's Day
 
         holidayEmojis.put(LocalDate.of(year, Month.JUNE, 1).toString(), "🏳️‍🌈");         // Pride Month
-        holidayEmojis.put(LocalDate.of(year, Month.JULY, 4).toString(), "🦅");          // Independence Day
         holidayEmojis.put(LocalDate.of(year, Month.OCTOBER, 31).toString(), "🎃");      // Halloween
 
-        LocalDate thanksgiving = LocalDate.of(year, Month.NOVEMBER, 1)
-            .with(TemporalAdjusters.dayOfWeekInMonth(4, DayOfWeek.THURSDAY));
-        holidayEmojis.put(thanksgiving.plusDays(1).toString(), "🛒");                   // Black Friday
-
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 26).toString(), "🕯️");    // Kwanzaa
         holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 31).toString(), "🍾");     // New Year's Eve
 
         return holidayEmojis;
