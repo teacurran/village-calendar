@@ -146,24 +146,16 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📦 Full HTML report available in **jacoco-coverage-reports** artifact" >> $GITHUB_STEP_SUMMARY
 
-      - name: Debug - Show JaCoCo report content
-        if: always()
-        run: |
-          echo "=== JaCoCo XML Report (first 50 lines) ==="
-          head -50 target/site/jacoco/jacoco.xml 2>/dev/null || echo "Not found"
-          echo ""
-          echo "=== Package summary from report ==="
-          grep -E '<package name=' target/site/jacoco/jacoco.xml 2>/dev/null | head -10 || echo "No packages found"
-          echo ""
-          echo "=== Source file entries ==="
-          grep -E '<sourcefile name=' target/site/jacoco/jacoco.xml 2>/dev/null | head -10 || echo "No source files found"
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v6
+      - name: SonarCloud Scan (Maven)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_SCANNER_OPTS: "-Dsonar.verbose=true"
+        run: |
+          ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+            -Dsonar.projectKey=teacurran_village-calendar \
+            -Dsonar.organization=appi \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml,target/jacoco-report/jacoco.xml
 
   generate-static-content:
     name: Download Calendar Data & Assets
