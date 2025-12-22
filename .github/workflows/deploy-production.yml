@@ -336,8 +336,14 @@ jobs:
           # Wait a few seconds for pods to be fully ready after rollout
           sleep 5
 
+          # Debug: check connectivity
+          echo "K3S_HOST: ${K3S_HOST}"
+          echo "USE_WIREGUARD: ${{ env.USE_WIREGUARD }}"
+          echo "Testing connectivity..."
+          ping -c 2 ${K3S_HOST} || echo "Ping failed, but continuing..."
+
           echo "Running health check..."
-          HEALTH_OUTPUT=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR ${K3S_USER}@${K3S_HOST} \
+          HEALTH_OUTPUT=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=30 -o ServerAliveInterval=15 ${K3S_USER}@${K3S_HOST} \
             "kubectl run smoke-test-health --rm -i --restart=Never --image=curlimages/curl:latest -n ${DEPLOYMENT_NAMESPACE} -- \
             curl -s -o /dev/null -w '%{http_code}' http://calendar-service.${DEPLOYMENT_NAMESPACE}.svc.cluster.local/q/health/live" 2>&1)
 
@@ -352,7 +358,7 @@ jobs:
           fi
 
           echo "Running GraphQL smoke test..."
-          GRAPHQL_OUTPUT=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR ${K3S_USER}@${K3S_HOST} \
+          GRAPHQL_OUTPUT=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=30 -o ServerAliveInterval=15 ${K3S_USER}@${K3S_HOST} \
             "kubectl run smoke-test-graphql --rm -i --restart=Never --image=curlimages/curl:latest -n ${DEPLOYMENT_NAMESPACE} -- \
             curl -s -X POST http://calendar-service.${DEPLOYMENT_NAMESPACE}.svc.cluster.local/graphql \
             -H 'Content-Type: application/json' \
