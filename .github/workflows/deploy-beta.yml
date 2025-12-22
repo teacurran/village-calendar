@@ -283,7 +283,7 @@ jobs:
           K3S_HOST: ${{ env.USE_WIREGUARD == 'true' && '10.50.0.20' || secrets.K3S_HOST }}
           K3S_USER: ${{ secrets.K3S_USER }}
         run: |
-          ssh -o StrictHostKeyChecking=no ${K3S_USER}@${K3S_HOST} \
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR ${K3S_USER}@${K3S_HOST} \
             "kubectl rollout status deployment/calendar -n ${DEPLOYMENT_NAMESPACE} --timeout=5m"
 
       - name: Run smoke tests
@@ -295,7 +295,7 @@ jobs:
           sleep 5
 
           echo "Running health check..."
-          HEALTH_OUTPUT=$(ssh -o StrictHostKeyChecking=no ${K3S_USER}@${K3S_HOST} \
+          HEALTH_OUTPUT=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR ${K3S_USER}@${K3S_HOST} \
             "kubectl run smoke-test-health --rm -i --restart=Never --image=curlimages/curl:latest -n ${DEPLOYMENT_NAMESPACE} -- \
             curl -s -o /dev/null -w '%{http_code}' http://calendar-service.${DEPLOYMENT_NAMESPACE}.svc.cluster.local/q/health/live" 2>&1)
 
@@ -310,7 +310,7 @@ jobs:
           fi
 
           echo "Running GraphQL smoke test..."
-          GRAPHQL_OUTPUT=$(ssh -o StrictHostKeyChecking=no ${K3S_USER}@${K3S_HOST} \
+          GRAPHQL_OUTPUT=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR ${K3S_USER}@${K3S_HOST} \
             "kubectl run smoke-test-graphql --rm -i --restart=Never --image=curlimages/curl:latest -n ${DEPLOYMENT_NAMESPACE} -- \
             curl -s -X POST http://calendar-service.${DEPLOYMENT_NAMESPACE}.svc.cluster.local/graphql \
             -H 'Content-Type: application/json' \
