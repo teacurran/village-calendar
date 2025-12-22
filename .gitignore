@@ -71,3 +71,4 @@ set-beta-credentials.sh
 # Generated static calendar pages and assets (created at build time by CI)
 src/main/resources/content/p/*.html
 src/main/resources/META-INF/resources/static/calendars/
+# trigger rebuild
