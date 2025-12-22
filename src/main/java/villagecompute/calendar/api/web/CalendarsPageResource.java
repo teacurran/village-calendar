@@ -40,6 +40,17 @@ public class CalendarsPageResource {
     PDFRenderingService pdfRenderingService;
 
     /**
+     * Redirect /calendars to /calendars/ for consistency
+     */
+    @Route(path = "", methods = Route.HttpMethod.GET)
+    public void indexRedirect(RoutingContext rc) {
+        rc.response()
+            .setStatusCode(301)
+            .putHeader("Location", "/calendars/")
+            .end();
+    }
+
+    /**
      * Calendar product index page at /calendars/
      */
     @Route(path = "/", methods = Route.HttpMethod.GET)
