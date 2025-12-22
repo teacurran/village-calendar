@@ -336,9 +336,9 @@ class PaymentWorkflowTest {
         List<DelayedJob> jobs = DelayedJob.find("actorId", order.id.toString()).list();
         assertTrue(jobs.size() >= 1, "At least one email job should be enqueued");
 
-        // Find the cancellation email job (should be EMAIL_GENERAL queue)
+        // Find the cancellation email job
         boolean foundCancellationEmail = jobs.stream()
-            .anyMatch(job -> job.queue == DelayedJobQueue.EMAIL_GENERAL);
+            .anyMatch(job -> "OrderCancellationJobHandler".equals(job.queueName));
         assertTrue(foundCancellationEmail, "Cancellation email job should be enqueued");
     }
 }

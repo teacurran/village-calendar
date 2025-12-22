@@ -8,7 +8,10 @@ import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarUser;
-import villagecompute.calendar.data.models.DelayedJobQueue;
+import villagecompute.calendar.services.jobs.DelayedJobHandler;
+import villagecompute.calendar.services.jobs.OrderCancellationJobHandler;
+import villagecompute.calendar.services.jobs.OrderEmailJobHandler;
+import villagecompute.calendar.services.jobs.ShippingNotificationJobHandler;
 import villagecompute.calendar.data.models.Shipment;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.util.OrderNumberGenerator;
@@ -158,9 +161,9 @@ public class OrderService {
 
         // Enqueue email notifications based on status changes
         if (CalendarOrder.STATUS_PAID.equals(newStatus)) {
-            enqueueEmailJob(order, DelayedJobQueue.EMAIL_ORDER_CONFIRMATION);
+            enqueueEmailJob(order, OrderEmailJobHandler.class);
         } else if (CalendarOrder.STATUS_SHIPPED.equals(newStatus)) {
-            enqueueEmailJob(order, DelayedJobQueue.EMAIL_SHIPPING_NOTIFICATION);
+            enqueueEmailJob(order, ShippingNotificationJobHandler.class);
         }
 
         // Append notes
@@ -269,7 +272,7 @@ public class OrderService {
         order.cancel();
 
         // Enqueue cancellation email notification
-        enqueueEmailJob(order, DelayedJobQueue.EMAIL_GENERAL);
+        enqueueEmailJob(order, OrderCancellationJobHandler.class);
 
         // Add cancellation note
         String timestamp = Instant.now().toString();
@@ -418,7 +421,7 @@ public class OrderService {
         updateOrderShippingStatus(shipment.order);
 
         // Enqueue shipping notification email
-        enqueueEmailJob(shipment.order, DelayedJobQueue.EMAIL_SHIPPING_NOTIFICATION);
+        enqueueEmailJob(shipment.order, ShippingNotificationJobHandler.class);
 
         LOG.infof("Marked shipment %s as shipped", shipmentId);
         return shipment;
@@ -552,12 +555,12 @@ public class OrderService {
      * The job will be processed asynchronously by the DelayedJob worker.
      *
      * @param order Order to send email for
-     * @param queue Email job queue type
+     * @param handlerClass The handler class to execute
      */
-    private void enqueueEmailJob(CalendarOrder order, DelayedJobQueue queue) {
+    private void enqueueEmailJob(CalendarOrder order, Class<? extends DelayedJobHandler> handlerClass) {
         try {
-            delayedJobService.createDelayedJob(order.id.toString(), queue);
-            LOG.infof("Enqueued %s email job for order %s", queue, order.id);
+            delayedJobService.enqueue(handlerClass, order.id.toString());
+            LOG.infof("Enqueued %s email job for order %s", handlerClass.getSimpleName(), order.id);
         } catch (Exception e) {
             // Log but don't fail the operation - the scheduled processor will pick it up
             LOG.error("Failed to enqueue email job for order " + order.id, e);
@@ -680,7 +683,7 @@ public class OrderService {
                 orderNumber, order.items.size(), paymentIntentId);
 
         // Enqueue confirmation email
-        enqueueEmailJob(order, DelayedJobQueue.EMAIL_ORDER_CONFIRMATION);
+        enqueueEmailJob(order, OrderEmailJobHandler.class);
 
         return orderNumber;
     }

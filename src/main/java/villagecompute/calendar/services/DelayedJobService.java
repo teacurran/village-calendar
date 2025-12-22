@@ -11,14 +11,15 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.DelayedJob;
-import villagecompute.calendar.data.models.DelayedJobQueue;
 import villagecompute.calendar.services.exceptions.DelayedJobException;
 import villagecompute.calendar.services.jobs.DelayedJobHandler;
+import villagecompute.calendar.services.jobs.DelayedJobHandlerRegistry;
+import villagecompute.calendar.services.jobs.DelayedJobHandlerRegistry.HandlerMetadata;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -38,38 +39,62 @@ public class DelayedJobService {
     EventBus eventBus;
 
     @Inject
-    Map<DelayedJobQueue, DelayedJobHandler> delayedJobHandlers;
+    DelayedJobHandlerRegistry handlerRegistry;
+
+    // ============ TYPE-SAFE API ============
 
     /**
-     * Create and immediately fire a delayed job.
+     * Create a job to run immediately using the handler class as the queue identifier.
+     * This is the preferred API - type-safe and self-documenting.
      *
+     * @param handlerClass The handler class to execute
      * @param actorId ID of the entity to process
-     * @param queue Job queue type
      * @return Created DelayedJob
      */
     @Transactional
-    public DelayedJob createDelayedJob(String actorId, DelayedJobQueue queue) {
-        return createDelayedJob(actorId, queue, Instant.now());
+    public DelayedJob enqueue(Class<? extends DelayedJobHandler> handlerClass, String actorId) {
+        return enqueue(handlerClass, actorId, Instant.now());
     }
 
     /**
-     * Create a delayed job to run at a specific time.
+     * Create a job to run at a specific time using the handler class.
      *
+     * @param handlerClass The handler class to execute
      * @param actorId ID of the entity to process
-     * @param queue Job queue type
      * @param runAt When to run the job
      * @return Created DelayedJob
      */
     @Transactional
-    public DelayedJob createDelayedJob(String actorId, DelayedJobQueue queue, Instant runAt) {
-        DelayedJob delayedJob = DelayedJob.createDelayedJob(actorId, queue, runAt);
+    public DelayedJob enqueue(Class<? extends DelayedJobHandler> handlerClass, String actorId, Instant runAt) {
+        HandlerMetadata metadata = handlerRegistry.getMetadata(handlerClass)
+            .orElseThrow(() -> new IllegalArgumentException(
+                "No registered handler for class: " + handlerClass.getName() +
+                ". Ensure the handler is annotated with @ApplicationScoped and @DelayedJobConfig"));
 
-        LOG.infof("Created delayed job %s for queue %s, actor %s", delayedJob.id, queue, actorId);
+        DelayedJob delayedJob = DelayedJob.createDelayedJob(actorId, metadata.queueName(), metadata.priority(), runAt);
+
+        LOG.infof("Created delayed job %s for queue %s, actor %s", delayedJob.id, metadata.queueName(), actorId);
 
         // Immediately fire the event to process it
         eventBus.publish(DELAYED_JOB_RUN, delayedJob.id.toString());
 
         return delayedJob;
+    }
+
+    /**
+     * Create a job with a delay duration.
+     *
+     * @param handlerClass The handler class to execute
+     * @param actorId ID of the entity to process
+     * @param delay Duration to wait before execution
+     * @return Created DelayedJob
+     */
+    @Transactional
+    public DelayedJob enqueueWithDelay(
+            Class<? extends DelayedJobHandler> handlerClass,
+            String actorId,
+            Duration delay) {
+        return enqueue(handlerClass, actorId, Instant.now().plus(delay));
     }
 
     /**
@@ -98,16 +123,17 @@ public class DelayedJobService {
             }
 
             // Get the handler for this queue
-            DelayedJobHandler handler = delayedJobHandlers.get(job.queue);
+            DelayedJobHandler handler = handlerRegistry.getHandler(job.queueName)
+                .orElse(null);
             if (handler == null) {
-                LOG.errorf("No handler found for queue: %s", job.queue);
+                LOG.errorf("No handler found for queue: %s", job.queueName);
                 job.unlock();
                 job.persist();
                 return;
             }
 
             // Execute the handler
-            LOG.infof("Processing delayed job %s with queue %s, actor %s", jobId, job.queue, job.actorId);
+            LOG.infof("Processing delayed job %s with queue %s, actor %s", jobId, job.queueName, job.actorId);
             handler.run(job.actorId);
 
             // Mark as complete

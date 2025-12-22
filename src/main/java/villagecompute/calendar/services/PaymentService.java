@@ -18,7 +18,7 @@ import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarOrder;
-import villagecompute.calendar.data.models.DelayedJobQueue;
+import villagecompute.calendar.services.jobs.OrderEmailJobHandler;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -317,7 +317,7 @@ public class PaymentService {
 
         // Enqueue confirmation email (within same transaction for consistency)
         try {
-            delayedJobService.createDelayedJob(order.id.toString(), DelayedJobQueue.EMAIL_ORDER_CONFIRMATION);
+            delayedJobService.enqueue(OrderEmailJobHandler.class, order.id.toString());
             LOG.infof("Enqueued order confirmation email job for order %s", order.id);
         } catch (Exception e) {
             // Log but don't fail - scheduled processor will pick it up
@@ -778,7 +778,7 @@ public class PaymentService {
 
         // Enqueue confirmation email
         try {
-            delayedJobService.createDelayedJob(order.id.toString(), DelayedJobQueue.EMAIL_ORDER_CONFIRMATION);
+            delayedJobService.enqueue(OrderEmailJobHandler.class, order.id.toString());
             LOG.infof("Enqueued order confirmation email job for order %s", order.id);
         } catch (Exception e) {
             // Log but don't fail - scheduled processor will pick it up

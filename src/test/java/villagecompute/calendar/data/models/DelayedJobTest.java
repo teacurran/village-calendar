@@ -16,6 +16,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @QuarkusTest
 class DelayedJobTest {
 
+    private static final String QUEUE_ORDER_EMAIL = "OrderEmailJobHandler";
+    private static final String QUEUE_SHIPPING = "ShippingNotificationJobHandler";
+    private static final String QUEUE_CANCELLATION = "OrderCancellationJobHandler";
+
     @Inject
     TestDataCleaner testDataCleaner;
 
@@ -51,7 +55,7 @@ class DelayedJobTest {
         // Given
         DelayedJob job = new DelayedJob();
         job.actorId = "test-actor-id";
-        job.queue = DelayedJobQueue.EMAIL_ORDER_CONFIRMATION;
+        job.queueName = QUEUE_ORDER_EMAIL;
         job.runAt = Instant.now();
 
         // When
@@ -70,32 +74,33 @@ class DelayedJobTest {
     void testCreateDelayedJob() {
         // Given
         String actorId = "order-123";
-        DelayedJobQueue queue = DelayedJobQueue.EMAIL_ORDER_CONFIRMATION;
+        String queueName = QUEUE_ORDER_EMAIL;
+        int priority = 10;
         Instant runAt = Instant.now().plus(5, ChronoUnit.MINUTES);
 
         // When
-        DelayedJob job = DelayedJob.createDelayedJob(actorId, queue, runAt);
+        DelayedJob job = DelayedJob.createDelayedJob(actorId, queueName, priority, runAt);
 
         // Then
         assertNotNull(job.id);
         assertEquals(actorId, job.actorId);
-        assertEquals(queue, job.queue);
+        assertEquals(queueName, job.queueName);
         assertEquals(runAt, job.runAt);
-        assertEquals(queue.getPriority(), job.priority);
+        assertEquals(priority, job.priority);
         assertFalse(job.locked);
         assertFalse(job.complete);
     }
 
     @Test
     @Transactional
-    void testCreateDelayedJob_PriorityFromQueue() {
+    void testCreateDelayedJob_WithDifferentPriorities() {
         // Given
-        DelayedJobQueue highPriorityQueue = DelayedJobQueue.EMAIL_ORDER_CONFIRMATION;
-        DelayedJobQueue lowPriorityQueue = DelayedJobQueue.EMAIL_GENERAL;
+        int highPriority = 10;
+        int lowPriority = 5;
 
         // When
-        DelayedJob highPriorityJob = DelayedJob.createDelayedJob("actor1", highPriorityQueue, Instant.now());
-        DelayedJob lowPriorityJob = DelayedJob.createDelayedJob("actor2", lowPriorityQueue, Instant.now());
+        DelayedJob highPriorityJob = DelayedJob.createDelayedJob("actor1", QUEUE_ORDER_EMAIL, highPriority, Instant.now());
+        DelayedJob lowPriorityJob = DelayedJob.createDelayedJob("actor2", QUEUE_CANCELLATION, lowPriority, Instant.now());
 
         // Then
         assertEquals(10, highPriorityJob.priority);
@@ -206,29 +211,29 @@ class DelayedJobTest {
 
     @Test
     @Transactional
-    void testQueueEnumValues() {
+    void testQueueNameValues() {
         // Given/When
         DelayedJob emailConfirmationJob = createValidJob();
-        emailConfirmationJob.queue = DelayedJobQueue.EMAIL_ORDER_CONFIRMATION;
+        emailConfirmationJob.queueName = QUEUE_ORDER_EMAIL;
         emailConfirmationJob.persist();
 
         DelayedJob emailShippingJob = createValidJob();
-        emailShippingJob.queue = DelayedJobQueue.EMAIL_SHIPPING_NOTIFICATION;
+        emailShippingJob.queueName = QUEUE_SHIPPING;
         emailShippingJob.persist();
 
-        DelayedJob emailGeneralJob = createValidJob();
-        emailGeneralJob.queue = DelayedJobQueue.EMAIL_GENERAL;
-        emailGeneralJob.persist();
+        DelayedJob emailCancellationJob = createValidJob();
+        emailCancellationJob.queueName = QUEUE_CANCELLATION;
+        emailCancellationJob.persist();
 
         // Then
         DelayedJob found1 = DelayedJob.findById(emailConfirmationJob.id);
-        assertEquals(DelayedJobQueue.EMAIL_ORDER_CONFIRMATION, found1.queue);
+        assertEquals(QUEUE_ORDER_EMAIL, found1.queueName);
 
         DelayedJob found2 = DelayedJob.findById(emailShippingJob.id);
-        assertEquals(DelayedJobQueue.EMAIL_SHIPPING_NOTIFICATION, found2.queue);
+        assertEquals(QUEUE_SHIPPING, found2.queueName);
 
-        DelayedJob found3 = DelayedJob.findById(emailGeneralJob.id);
-        assertEquals(DelayedJobQueue.EMAIL_GENERAL, found3.queue);
+        DelayedJob found3 = DelayedJob.findById(emailCancellationJob.id);
+        assertEquals(QUEUE_CANCELLATION, found3.queueName);
     }
 
     @Test
@@ -299,7 +304,7 @@ class DelayedJobTest {
         DelayedJob job = new DelayedJob();
         job.priority = 100;
         job.attempts = 3;
-        job.queue = DelayedJobQueue.EMAIL_SHIPPING_NOTIFICATION;
+        job.queueName = QUEUE_SHIPPING;
         job.actorId = "comprehensive-test-actor";
         job.lastError = "Previous error message";
         job.runAt = now.minus(1, ChronoUnit.HOURS);
@@ -322,7 +327,7 @@ class DelayedJobTest {
         assertNotNull(found);
         assertEquals(100, found.priority);
         assertEquals(3, found.attempts);
-        assertEquals(DelayedJobQueue.EMAIL_SHIPPING_NOTIFICATION, found.queue);
+        assertEquals(QUEUE_SHIPPING, found.queueName);
         assertEquals("comprehensive-test-actor", found.actorId);
         assertEquals("Previous error message", found.lastError);
         assertEquals(now.minus(1, ChronoUnit.HOURS), found.runAt);
@@ -417,7 +422,7 @@ class DelayedJobTest {
     private DelayedJob createValidJob() {
         DelayedJob job = new DelayedJob();
         job.actorId = "test-actor-" + System.nanoTime();
-        job.queue = DelayedJobQueue.EMAIL_ORDER_CONFIRMATION;
+        job.queueName = QUEUE_ORDER_EMAIL;
         job.runAt = Instant.now();
         job.priority = 0;
         job.attempts = 0;

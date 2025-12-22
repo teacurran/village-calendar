@@ -30,7 +30,6 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.DelayedJob;
-import villagecompute.calendar.data.models.DelayedJobQueue;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PaymentService;
 

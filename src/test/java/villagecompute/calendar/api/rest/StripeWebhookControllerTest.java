@@ -331,7 +331,7 @@ public class StripeWebhookControllerTest {
 
         DelayedJob emailJob = jobs.get(0);
         assertEquals(testOrder.id.toString(), emailJob.actorId);
-        assertNotNull(emailJob.queue);
+        assertNotNull(emailJob.queueName);
         assertFalse(emailJob.complete);
     }
 
