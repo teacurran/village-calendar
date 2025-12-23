@@ -416,7 +416,7 @@ class OrderEmailJobHandlerTemplateTest {
         item.order = order;
         item.productName = "Test Calendar 2025";
         item.productType = CalendarOrderItem.TYPE_PRINT;
-        item.calendarYear = 2025;
+        item.setYear(2025);
         item.quantity = 1;
         item.unitPrice = new BigDecimal("29.99");
         item.lineTotal = new BigDecimal("29.99");

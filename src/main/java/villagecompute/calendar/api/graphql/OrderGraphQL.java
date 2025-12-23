@@ -790,7 +790,7 @@ public class OrderGraphQL {
                         : CalendarOrderItem.TYPE_PRINT;
 
                     orderItem.productName = itemInput.name;
-                    orderItem.calendarYear = itemInput.year != null ? itemInput.year : java.time.Year.now().getValue();
+                    orderItem.setYear(itemInput.year != null ? itemInput.year : java.time.Year.now().getValue());
                     orderItem.quantity = itemInput.quantity != null ? itemInput.quantity : 1;
 
                     // Get unit price

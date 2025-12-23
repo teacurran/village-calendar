@@ -746,7 +746,7 @@ public class OrderService {
         item.calendar = calendar;
         item.productType = productType;
         item.productName = templateName;
-        item.calendarYear = year;
+        item.setYear(year);
         item.quantity = quantity;
         item.unitPrice = BigDecimal.valueOf(unitPrice);
         item.lineTotal = BigDecimal.valueOf(lineTotal);

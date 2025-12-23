@@ -197,4 +197,44 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     public ItemAsset getMainAsset() {
         return getAsset(ItemAsset.KEY_MAIN);
     }
+
+    /**
+     * Get the year from configuration, falling back to deprecated calendarYear field.
+     * @return The year, or current year if not set
+     */
+    @SuppressWarnings("deprecation")
+    public int getYear() {
+        // First try configuration JSON
+        if (configuration != null && configuration.has("year")) {
+            return configuration.get("year").asInt();
+        }
+        // Fall back to deprecated field for backward compatibility
+        if (calendarYear != null) {
+            return calendarYear;
+        }
+        // Default to current year
+        return java.time.Year.now().getValue();
+    }
+
+    /**
+     * Set the year in configuration JSON.
+     * Also sets deprecated calendarYear field for backward compatibility with older code.
+     * @param year The year to set
+     */
+    @SuppressWarnings("deprecation")
+    public void setYear(int year) {
+        // Set in configuration JSON (preferred)
+        if (configuration == null) {
+            try {
+                configuration = new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode();
+            } catch (Exception e) {
+                // Fallback - shouldn't happen
+            }
+        }
+        if (configuration != null && configuration.isObject()) {
+            ((com.fasterxml.jackson.databind.node.ObjectNode) configuration).put("year", year);
+        }
+        // Also set deprecated field for backward compatibility
+        this.calendarYear = year;
+    }
 }
