@@ -3,12 +3,12 @@ package villagecompute.calendar.services;
 import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.calendar.data.models.DelayedJob;
 import villagecompute.calendar.data.repositories.TestDataCleaner;
-import villagecompute.calendar.services.exceptions.DelayedJobException;
+import villagecompute.calendar.services.jobs.DelayedJobHandler;
 import villagecompute.calendar.services.jobs.DelayedJobHandlerRegistry;
 import villagecompute.calendar.services.jobs.OrderEmailJobHandler;
 
@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -104,23 +105,22 @@ class DelayedJobServiceTest {
 
     @Test
     void testEnqueue_ThrowsForUnregisteredHandler() {
-        // Given - A non-existent handler class
-        abstract class FakeHandler implements villagecompute.calendar.services.jobs.DelayedJobHandler {}
-
-        // When/Then
-        assertThrows(IllegalArgumentException.class, () ->
-            QuarkusTransaction.requiringNew().call(() ->
-                delayedJobService.enqueue(FakeHandler.class, "test-actor")
-            )
+        // When/Then - Verify that enqueueing with an unregistered handler class throws
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            delayedJobService.enqueue(UnregisteredTestHandler.class, "test-actor")
         );
+        assertTrue(exception.getMessage().contains("No registered handler"));
     }
+
+    // Test handler class that is not registered with CDI
+    private static abstract class UnregisteredTestHandler implements DelayedJobHandler {}
 
     // ============================================================================
     // JOB PROCESSING TESTS (via async EventBus)
     // ============================================================================
 
     @Test
-    void testEnqueue_PublishesEventForProcessing() throws InterruptedException {
+    void testEnqueue_PublishesEventForProcessing() {
         // Given - Use a fake order ID; the handler will fail to find it
         // but it tests that the job IS processed
         String actorId = UUID.randomUUID().toString();
@@ -131,22 +131,23 @@ class DelayedJobServiceTest {
             return job.id;
         });
 
-        // Wait for async processing (EventBus)
-        Thread.sleep(1500);
-
-        // Then - Job should be processed (and marked as complete with failure,
-        // since the order doesn't exist - which is a non-recoverable error)
-        DelayedJob processedJob = QuarkusTransaction.requiringNew().call(() ->
-            DelayedJob.findById(jobId)
-        );
-        assertTrue(processedJob.complete, "Job should be complete after async processing");
-        assertTrue(processedJob.completedWithFailure, "Job should have failed (order not found)");
-        assertNotNull(processedJob.completedAt);
-        assertEquals(1, processedJob.attempts);
+        // Then - Wait for async processing and verify job completed
+        Awaitility.await()
+            .atMost(5, TimeUnit.SECONDS)
+            .pollInterval(100, TimeUnit.MILLISECONDS)
+            .untilAsserted(() -> {
+                DelayedJob processedJob = QuarkusTransaction.requiringNew().call(() ->
+                    DelayedJob.findById(jobId)
+                );
+                assertTrue(processedJob.complete, "Job should be complete after async processing");
+                assertTrue(processedJob.completedWithFailure, "Job should have failed (order not found)");
+                assertNotNull(processedJob.completedAt);
+                assertEquals(1, processedJob.attempts);
+            });
     }
 
     @Test
-    void testEnqueue_FutureJob_NotProcessedImmediately() throws InterruptedException {
+    void testEnqueue_FutureJob_NotProcessedImmediately() {
         // Given
         String actorId = "order-future-" + System.currentTimeMillis();
         Instant futureTime = Instant.now().plus(1, ChronoUnit.HOURS);
@@ -157,16 +158,19 @@ class DelayedJobServiceTest {
             return job.id;
         });
 
-        // Wait for any async processing attempt
-        Thread.sleep(1000);
-
-        // Then - Job should NOT be processed (it's scheduled for the future)
-        DelayedJob job = QuarkusTransaction.requiringNew().call(() ->
-            DelayedJob.findById(jobId)
-        );
-        assertFalse(job.complete, "Future job should not be complete");
-        assertFalse(job.locked, "Future job should be unlocked");
-        assertEquals(0, job.attempts, "Future job should have 0 attempts");
+        // Then - Wait briefly and verify job is NOT processed (it's scheduled for the future)
+        // Use Awaitility to give async processing a chance, then verify it didn't process
+        Awaitility.await()
+            .pollDelay(500, TimeUnit.MILLISECONDS)
+            .atMost(2, TimeUnit.SECONDS)
+            .untilAsserted(() -> {
+                DelayedJob job = QuarkusTransaction.requiringNew().call(() ->
+                    DelayedJob.findById(jobId)
+                );
+                assertFalse(job.complete, "Future job should not be complete");
+                assertFalse(job.locked, "Future job should be unlocked");
+                assertEquals(0, job.attempts, "Future job should have 0 attempts");
+            });
     }
 
     // ============================================================================
