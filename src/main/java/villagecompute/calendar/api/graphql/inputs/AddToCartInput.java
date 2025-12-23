@@ -36,27 +36,27 @@ public class AddToCartInput {
     // --- Legacy fields (deprecated, kept for backward compatibility) ---
 
     /**
-     * @deprecated Use generatorType and configuration instead
+     * @deprecated since 1.0, use generatorType and configuration instead
      */
-    @Deprecated
+    @Deprecated(since = "1.0", forRemoval = false)
     public String templateId;
 
     /**
-     * @deprecated Use description instead
+     * @deprecated since 1.0, use description instead
      */
-    @Deprecated
+    @Deprecated(since = "1.0", forRemoval = false)
     public String templateName;
 
     /**
-     * @deprecated Include year in configuration JSON instead
+     * @deprecated since 1.0, include year in configuration JSON instead
      */
-    @Deprecated
+    @Deprecated(since = "1.0", forRemoval = false)
     public Integer year;
 
     /**
-     * @deprecated Price is now determined by productCode
+     * @deprecated since 1.0, price is now determined by productCode
      */
-    @Deprecated
+    @Deprecated(since = "1.0", forRemoval = false)
     public Double unitPrice;
 
     public AddToCartInput() {

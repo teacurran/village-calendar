@@ -105,6 +105,9 @@ class OrderWorkflowTest {
         // Delete all delayed jobs first
         DelayedJob.deleteAll();
 
+        // Delete all order items first (before orders due to FK constraint)
+        CalendarOrderItem.deleteAll();
+
         // Delete all orders
         CalendarOrder.deleteAll();
 
@@ -427,5 +430,101 @@ class OrderWorkflowTest {
         // Note: ShippingService calculates based on weight and destination
         assertTrue(order.totalPrice.compareTo(order.unitPrice.multiply(BigDecimal.valueOf(2))) >= 0,
             "Total should be at least subtotal (may include shipping)");
+    }
+
+    // ============================================================================
+    // ORDER ITEM YEAR TESTS
+    // ============================================================================
+
+    @Test
+    @org.junit.jupiter.api.Order(6)
+    void testOrderItem_YearStoredInConfiguration() throws Exception {
+        // Given: Create an order with items using programmatic transaction
+        CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
+            CalendarOrder newOrder = new CalendarOrder();
+            newOrder.user = testUser;
+            newOrder.calendar = testCalendar;
+            newOrder.quantity = 1;
+            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.totalPrice = new BigDecimal("25.00");
+            newOrder.status = CalendarOrder.STATUS_PENDING;
+            newOrder.orderNumber = "VC-TEST-YEAR";
+            try {
+                newOrder.shippingAddress = createTestAddress();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            newOrder.persist();
+
+            // Create an order item with year set via setYear()
+            CalendarOrderItem item = new CalendarOrderItem();
+            item.order = newOrder;
+            item.productType = CalendarOrderItem.TYPE_PRINT;
+            item.productName = "Test Calendar 2026";
+            item.setYear(2026); // Use the new setYear method
+            item.quantity = 1;
+            item.unitPrice = new BigDecimal("25.00");
+            item.calculateLineTotal();
+            item.itemStatus = CalendarOrderItem.STATUS_PENDING;
+            item.persist();
+            newOrder.items.add(item);
+
+            return newOrder;
+        });
+
+        // Then: Verify year was stored correctly
+        CalendarOrderItem savedItem = QuarkusTransaction.requiringNew().call(() -> {
+            CalendarOrder savedOrder = CalendarOrder.findById(order.id);
+            assertNotNull(savedOrder.items, "Order should have items");
+            assertFalse(savedOrder.items.isEmpty(), "Order should have at least one item");
+            return savedOrder.items.get(0);
+        });
+
+        // Verify getYear() returns the correct value
+        assertEquals(2026, savedItem.getYear(), "Year should be 2026");
+
+        // Verify year is stored in configuration JSON
+        assertNotNull(savedItem.configuration, "Configuration should not be null");
+        assertTrue(savedItem.configuration.has("year"), "Configuration should have year field");
+        assertEquals(2026, savedItem.configuration.get("year").asInt(), "Configuration year should be 2026");
+    }
+
+    @Test
+    @org.junit.jupiter.api.Order(7)
+    void testOrderItem_YearDefaultsToCurrentYear() throws Exception {
+        // Given: Create an order item without setting year
+        CalendarOrderItem item = QuarkusTransaction.requiringNew().call(() -> {
+            CalendarOrder newOrder = new CalendarOrder();
+            newOrder.user = testUser;
+            newOrder.calendar = testCalendar;
+            newOrder.quantity = 1;
+            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.totalPrice = new BigDecimal("25.00");
+            newOrder.status = CalendarOrder.STATUS_PENDING;
+            newOrder.orderNumber = "VC-TEST-DFLT";
+            try {
+                newOrder.shippingAddress = createTestAddress();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            newOrder.persist();
+
+            CalendarOrderItem newItem = new CalendarOrderItem();
+            newItem.order = newOrder;
+            newItem.productType = CalendarOrderItem.TYPE_PRINT;
+            newItem.productName = "Test Calendar Default Year";
+            // Don't set year - it should default to current year
+            newItem.quantity = 1;
+            newItem.unitPrice = new BigDecimal("25.00");
+            newItem.calculateLineTotal();
+            newItem.itemStatus = CalendarOrderItem.STATUS_PENDING;
+            newItem.persist();
+
+            return newItem;
+        });
+
+        // Then: Verify getYear() returns current year
+        int currentYear = java.time.Year.now().getValue();
+        assertEquals(currentYear, item.getYear(), "Year should default to current year");
     }
 }

@@ -117,8 +117,7 @@ public class OrderResource {
             }
 
             // Get the calendar year for PDF metadata
-            int year = orderItem.calendarYear != null ? orderItem.calendarYear : 
-                       java.time.LocalDate.now().getYear();
+            int year = orderItem.getYear();
 
             // Generate PDF from the stored SVG content
             byte[] pdf = pdfRenderingService.renderSVGToPDF(svgContent, year);

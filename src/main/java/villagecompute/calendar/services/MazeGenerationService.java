@@ -23,6 +23,8 @@ public class MazeGenerationService {
     // Printable area aspect ratio (33" x 21")
     private static final double ASPECT_RATIO = 33.0 / 21.0; // ~1.57
 
+    private static final String COLOR_BLACK = "#000000";
+
     @Inject
     ObjectMapper objectMapper;
 
@@ -95,8 +97,8 @@ public class MazeGenerationService {
 
         // Get configuration options
         boolean showSolution = getConfigBoolean(maze.configuration, "showSolution", false);
-        String innerWallColor = getConfigString(maze.configuration, "innerWallColor", "#000000");
-        String outerWallColor = getConfigString(maze.configuration, "outerWallColor", "#000000");
+        String innerWallColor = getConfigString(maze.configuration, "innerWallColor", COLOR_BLACK);
+        String outerWallColor = getConfigString(maze.configuration, "outerWallColor", COLOR_BLACK);
         String pathColor = getConfigString(maze.configuration, "pathColor", "#4CAF50");
 
         MazeSvgRenderer renderer = new MazeSvgRenderer(grid, innerWallColor, outerWallColor, pathColor, showSolution);
@@ -121,7 +123,7 @@ public class MazeGenerationService {
      * Uses a fixed seed for consistent preview.
      */
     public String generatePreview(MazeType type, int size, int difficulty, boolean showSolution, boolean showDeadEnds) {
-        return generateMazeSvg(type, size, difficulty, 12345L, showSolution, "#000000", "#000000", "#4CAF50", showDeadEnds, null);
+        return generateMazeSvg(type, size, difficulty, 12345L, showSolution, COLOR_BLACK, COLOR_BLACK, "#4CAF50", showDeadEnds, null);
     }
 
     /**
