@@ -25,11 +25,17 @@ public class CartItem {
     public String configuration;
 
     // --- Legacy fields (deprecated, kept for backward compatibility) ---
-    @Deprecated
+
+    /** @deprecated since 1.0, use generatorType and configuration instead */
+    @Deprecated(since = "1.0", forRemoval = false)
     public String templateId;
-    @Deprecated
+
+    /** @deprecated since 1.0, use description instead */
+    @Deprecated(since = "1.0", forRemoval = false)
     public String templateName;
-    @Deprecated
+
+    /** @deprecated since 1.0, include year in configuration JSON instead */
+    @Deprecated(since = "1.0", forRemoval = false)
     public Integer year;
 
     public CartItem() {

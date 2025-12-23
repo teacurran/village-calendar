@@ -50,10 +50,10 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     public String description;
 
     /**
-     * @deprecated Use generatorType instead. Kept for backward compatibility.
+     * @deprecated since 1.0, use generatorType instead. Kept for backward compatibility.
      * The calendar design for this line item (optional - may be null for non-calendar products)
      */
-    @Deprecated
+    @Deprecated(since = "1.0", forRemoval = false)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "calendar_id", foreignKey = @ForeignKey(name = "fk_order_items_calendar"))
     @Ignore
@@ -68,19 +68,19 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     public String productType = "PRINT";
 
     /**
-     * @deprecated Use description instead. Kept for backward compatibility.
+     * @deprecated since 1.0, use description instead. Kept for backward compatibility.
      * Product name/description for display
      */
-    @Deprecated
+    @Deprecated(since = "1.0", forRemoval = false)
     @Size(max = 255)
     @Column(name = "product_name", length = 255)
     public String productName;
 
     /**
-     * @deprecated Use configuration JSON instead. Kept for backward compatibility.
+     * @deprecated since 1.0, use configuration JSON instead. Kept for backward compatibility.
      * Calendar year (for calendar products)
      */
-    @Deprecated
+    @Deprecated(since = "1.0", forRemoval = false)
     @Column(name = "calendar_year")
     public Integer calendarYear;
 

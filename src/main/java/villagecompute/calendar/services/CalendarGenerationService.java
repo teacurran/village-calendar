@@ -26,6 +26,10 @@ public class CalendarGenerationService {
 
     private static final Logger LOG = Logger.getLogger(CalendarGenerationService.class);
 
+    private static final String HOLIDAY_SETS = "holidaySets";
+    private static final String HOLIDAY_EMOJIS = "holidayEmojis";
+    private static final String HOLIDAY_NAMES = "holidayNames";
+
     @Inject
     CalendarRenderingService calendarRenderingService;
 
@@ -253,18 +257,18 @@ public class CalendarGenerationService {
 
             // Complex types: holidaySets (List<String>)
             // Clear first to allow user config to replace template values (e.g., empty array means no holidays)
-            if (jsonConfig.has("holidaySets") && jsonConfig.get("holidaySets").isArray()) {
+            if (jsonConfig.has(HOLIDAY_SETS) && jsonConfig.get(HOLIDAY_SETS).isArray()) {
                 config.holidaySets.clear();
-                jsonConfig.get("holidaySets").forEach(set -> {
+                jsonConfig.get(HOLIDAY_SETS).forEach(set -> {
                     config.holidaySets.add(set.asText());
                 });
             }
 
             // Complex types: holidayEmojis (Map<String, String>)
             // Clear first to allow user config to replace template values
-            if (jsonConfig.has("holidayEmojis") && jsonConfig.get("holidayEmojis").isObject()) {
+            if (jsonConfig.has(HOLIDAY_EMOJIS) && jsonConfig.get(HOLIDAY_EMOJIS).isObject()) {
                 config.holidayEmojis.clear();
-                JsonNode holidayEmojis = jsonConfig.get("holidayEmojis");
+                JsonNode holidayEmojis = jsonConfig.get(HOLIDAY_EMOJIS);
                 holidayEmojis.fields().forEachRemaining(entry -> {
                     config.holidayEmojis.put(entry.getKey(), entry.getValue().asText());
                 });
@@ -272,9 +276,9 @@ public class CalendarGenerationService {
 
             // Complex types: holidayNames (Map<String, String>)
             // Clear first to allow user config to replace template values
-            if (jsonConfig.has("holidayNames") && jsonConfig.get("holidayNames").isObject()) {
+            if (jsonConfig.has(HOLIDAY_NAMES) && jsonConfig.get(HOLIDAY_NAMES).isObject()) {
                 config.holidayNames.clear();
-                JsonNode holidayNames = jsonConfig.get("holidayNames");
+                JsonNode holidayNames = jsonConfig.get(HOLIDAY_NAMES);
                 holidayNames.fields().forEachRemaining(entry -> {
                     config.holidayNames.put(entry.getKey(), entry.getValue().asText());
                 });

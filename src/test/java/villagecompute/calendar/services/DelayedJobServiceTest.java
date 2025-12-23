@@ -111,7 +111,7 @@ class DelayedJobServiceTest {
     }
 
     // Test handler class that is not registered with CDI
-    private static abstract class UnregisteredTestHandler implements DelayedJobHandler {}
+    private abstract static class UnregisteredTestHandler implements DelayedJobHandler {}
 
     // ============================================================================
     // JOB PROCESSING TESTS (synchronous - bypassing EventBus for determinism)
