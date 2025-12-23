@@ -1028,29 +1028,6 @@ public class CalendarRenderingService {
     return svg.toString();
   }
 
-  private DayOfWeek[] getWeekdayOrder(DayOfWeek firstDay) {
-    DayOfWeek[] days = new DayOfWeek[7];
-    for (int i = 0; i < 7; i++) {
-      days[i] = firstDay.plus(i);
-    }
-    return days;
-  }
-
-  private int getDayOfWeekIndex(DayOfWeek day, DayOfWeek firstDayOfWeek) {
-    int dayValue = day.getValue(); // Monday = 1, Sunday = 7
-    int firstDayValue = firstDayOfWeek.getValue();
-
-    if (dayValue >= firstDayValue) {
-      return dayValue - firstDayValue;
-    } else {
-      return 7 - firstDayValue + dayValue;
-    }
-  }
-
-  private boolean isWeekend(DayOfWeek day) {
-    return day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY;
-  }
-
   // Check if this is a moon phase transition day
   private boolean isMoonPhaseDay(LocalDate date) {
     // Calculate the exact phase for today, yesterday, and tomorrow
@@ -1394,7 +1371,6 @@ public class CalendarRenderingService {
 
     // Calculate the actual size of the scaled content
     float scaledWidth = innerWidth * scale;
-    float scaledHeight = innerHeight * scale;
 
     // Calculate offset - center horizontally, align to top vertically (with margin)
     float offsetX = marginSize + (printableWidth - scaledWidth) / 2;

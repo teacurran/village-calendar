@@ -109,7 +109,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_HappyPath() {
+    void testGenerateCalendar_HappyPath() {
         // Arrange
         String mockSvg = "<svg>test</svg>";
         byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
@@ -135,7 +135,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_NullUserCalendar() {
+    void testGenerateCalendar_NullUserCalendar() {
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () -> {
             calendarGenerationService.generateCalendar(null);
@@ -143,7 +143,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_NullYear() {
+    void testGenerateCalendar_NullYear() {
         // Arrange
         testUserCalendar.year = null;
 
@@ -154,7 +154,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_SVGGenerationFails() {
+    void testGenerateCalendar_SVGGenerationFails() {
         // Arrange
         when(calendarRenderingService.generateCalendarSVG(any()))
                 .thenThrow(new RuntimeException("SVG generation failed"));
@@ -170,7 +170,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_PDFRenderingFails() {
+    void testGenerateCalendar_PDFRenderingFails() {
         // Arrange
         String mockSvg = "<svg>test</svg>";
         when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
@@ -187,7 +187,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_EmptyPDFOutput() {
+    void testGenerateCalendar_EmptyPDFOutput() {
         // Arrange
         String mockSvg = "<svg>test</svg>";
         byte[] emptyPdf = new byte[]{};
@@ -202,7 +202,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_StorageUploadFails() {
+    void testGenerateCalendar_StorageUploadFails() {
         // Arrange
         String mockSvg = "<svg>test</svg>";
         byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
@@ -219,7 +219,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_ConfigurationMerging() {
+    void testGenerateCalendar_ConfigurationMerging() {
         // Arrange
         String mockSvg = "<svg>test</svg>";
         byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
@@ -248,7 +248,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_WithSessionId() {
+    void testGenerateCalendar_WithSessionId() {
         // Arrange
         testUserCalendar.user = null;
         testUserCalendar.sessionId = "test-session-123";
@@ -275,7 +275,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_WithMoonPhases() {
+    void testGenerateCalendar_WithMoonPhases() {
         // Arrange
         String moonConfigJson = """
             {
@@ -323,7 +323,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_MoonDisplayModeIllumination() {
+    void testGenerateCalendar_MoonDisplayModeIllumination() {
         // Arrange: Config has moonDisplayMode="illumination"
         String moonDisplayModeJson = """
             {
@@ -365,7 +365,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_MoonDisplayModePhases() {
+    void testGenerateCalendar_MoonDisplayModePhases() {
         // Arrange: Config has moonDisplayMode="phases"
         String moonDisplayModeJson = """
             {
@@ -403,7 +403,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_MoonDisplayModeFullOnly() {
+    void testGenerateCalendar_MoonDisplayModeFullOnly() {
         // Arrange: Config has moonDisplayMode="full-only"
         String moonDisplayModeJson = """
             {
@@ -440,7 +440,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_MoonDisplayModeIgnoresLegacyBooleans() {
+    void testGenerateCalendar_MoonDisplayModeIgnoresLegacyBooleans() {
         // Arrange: Config has BOTH moonDisplayMode and legacy booleans
         // Only moonDisplayMode is used; legacy booleans are ignored
         String configJson = """
@@ -481,7 +481,7 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    public void testGenerateCalendar_MoonDisplayModeNone() {
+    void testGenerateCalendar_MoonDisplayModeNone() {
         // Arrange: Config has moonDisplayMode="none"
         String moonDisplayModeJson = """
             {
