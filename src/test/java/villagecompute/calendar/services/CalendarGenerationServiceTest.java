@@ -516,4 +516,257 @@ public class CalendarGenerationServiceTest {
         assertEquals("none", capturedConfig.moonDisplayMode,
                 "moonDisplayMode should be 'none'");
     }
+
+    // ============================================================================
+    // Holiday Configuration Tests
+    // ============================================================================
+
+    @Test
+    void testGenerateCalendar_WithHolidaySets() {
+        // Arrange: Config has holidaySets
+        String holidayConfigJson = """
+            {
+              "holidaySets": ["us-federal", "us-christian"]
+            }
+            """;
+
+        try {
+            testUserCalendar.configuration = objectMapper.readTree(holidayConfigJson);
+            testUserCalendar.template = null;
+        } catch (Exception e) {
+            fail("Failed to parse JSON: " + e.getMessage());
+        }
+
+        String mockSvg = "<svg>test</svg>";
+        byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
+        String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
+
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
+        when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
+
+        // Act
+        calendarGenerationService.generateCalendar(testUserCalendar);
+
+        // Assert: holidaySets should be parsed correctly
+        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
+                ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
+        verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
+
+        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        assertEquals(2, capturedConfig.holidaySets.size());
+        assertTrue(capturedConfig.holidaySets.contains("us-federal"));
+        assertTrue(capturedConfig.holidaySets.contains("us-christian"));
+    }
+
+    @Test
+    void testGenerateCalendar_WithEmptyHolidaySets() {
+        // Arrange: Empty holidaySets should clear any defaults
+        String holidayConfigJson = """
+            {
+              "holidaySets": []
+            }
+            """;
+
+        try {
+            testUserCalendar.configuration = objectMapper.readTree(holidayConfigJson);
+            testUserCalendar.template = null;
+        } catch (Exception e) {
+            fail("Failed to parse JSON: " + e.getMessage());
+        }
+
+        String mockSvg = "<svg>test</svg>";
+        byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
+        String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
+
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
+        when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
+
+        // Act
+        calendarGenerationService.generateCalendar(testUserCalendar);
+
+        // Assert: holidaySets should be empty
+        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
+                ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
+        verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
+
+        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        assertTrue(capturedConfig.holidaySets.isEmpty());
+    }
+
+    @Test
+    void testGenerateCalendar_WithHolidayEmojis() {
+        // Arrange: Config has holidayEmojis map
+        String holidayConfigJson = """
+            {
+              "holidayEmojis": {
+                "2025-01-01": "🎉",
+                "2025-12-25": "🎄"
+              }
+            }
+            """;
+
+        try {
+            testUserCalendar.configuration = objectMapper.readTree(holidayConfigJson);
+            testUserCalendar.template = null;
+        } catch (Exception e) {
+            fail("Failed to parse JSON: " + e.getMessage());
+        }
+
+        String mockSvg = "<svg>test</svg>";
+        byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
+        String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
+
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
+        when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
+
+        // Act
+        calendarGenerationService.generateCalendar(testUserCalendar);
+
+        // Assert: holidayEmojis should be parsed correctly
+        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
+                ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
+        verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
+
+        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        assertEquals(2, capturedConfig.holidayEmojis.size());
+        assertEquals("🎉", capturedConfig.holidayEmojis.get("2025-01-01"));
+        assertEquals("🎄", capturedConfig.holidayEmojis.get("2025-12-25"));
+    }
+
+    @Test
+    void testGenerateCalendar_WithHolidayNames() {
+        // Arrange: Config has holidayNames map
+        String holidayConfigJson = """
+            {
+              "holidayNames": {
+                "2025-01-01": "New Year's Day",
+                "2025-07-04": "Independence Day"
+              }
+            }
+            """;
+
+        try {
+            testUserCalendar.configuration = objectMapper.readTree(holidayConfigJson);
+            testUserCalendar.template = null;
+        } catch (Exception e) {
+            fail("Failed to parse JSON: " + e.getMessage());
+        }
+
+        String mockSvg = "<svg>test</svg>";
+        byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
+        String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
+
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
+        when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
+
+        // Act
+        calendarGenerationService.generateCalendar(testUserCalendar);
+
+        // Assert: holidayNames should be parsed correctly
+        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
+                ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
+        verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
+
+        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        assertEquals(2, capturedConfig.holidayNames.size());
+        assertEquals("New Year's Day", capturedConfig.holidayNames.get("2025-01-01"));
+        assertEquals("Independence Day", capturedConfig.holidayNames.get("2025-07-04"));
+    }
+
+    @Test
+    void testGenerateCalendar_WithAllHolidayConfiguration() {
+        // Arrange: Config has all holiday-related fields
+        String holidayConfigJson = """
+            {
+              "holidaySets": ["us-federal"],
+              "holidayEmojis": {
+                "2025-01-01": "🎉"
+              },
+              "holidayNames": {
+                "2025-01-01": "New Year's Day"
+              }
+            }
+            """;
+
+        try {
+            testUserCalendar.configuration = objectMapper.readTree(holidayConfigJson);
+            testUserCalendar.template = null;
+        } catch (Exception e) {
+            fail("Failed to parse JSON: " + e.getMessage());
+        }
+
+        String mockSvg = "<svg>test</svg>";
+        byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
+        String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
+
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
+        when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
+
+        // Act
+        calendarGenerationService.generateCalendar(testUserCalendar);
+
+        // Assert: All holiday config should be parsed correctly
+        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
+                ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
+        verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
+
+        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        assertEquals(1, capturedConfig.holidaySets.size());
+        assertTrue(capturedConfig.holidaySets.contains("us-federal"));
+        assertEquals("🎉", capturedConfig.holidayEmojis.get("2025-01-01"));
+        assertEquals("New Year's Day", capturedConfig.holidayNames.get("2025-01-01"));
+    }
+
+    @Test
+    void testGenerateCalendar_UserHolidayConfigOverridesTemplate() {
+        // Arrange: Template has holidays, user provides empty to override
+        String templateConfigJson = """
+            {
+              "holidaySets": ["us-federal", "us-christian"],
+              "holidayEmojis": {
+                "2025-01-01": "🎆"
+              }
+            }
+            """;
+
+        String userConfigJson = """
+            {
+              "holidaySets": [],
+              "holidayEmojis": {}
+            }
+            """;
+
+        try {
+            testTemplate.configuration = objectMapper.readTree(templateConfigJson);
+            testUserCalendar.configuration = objectMapper.readTree(userConfigJson);
+            testUserCalendar.template = testTemplate;
+        } catch (Exception e) {
+            fail("Failed to parse JSON: " + e.getMessage());
+        }
+
+        String mockSvg = "<svg>test</svg>";
+        byte[] mockPdf = new byte[]{1, 2, 3, 4, 5};
+        String mockPublicUrl = "https://r2.villagecompute.com/calendar-pdfs/test.pdf";
+
+        when(calendarRenderingService.generateCalendarSVG(any())).thenReturn(mockSvg);
+        when(pdfRenderingService.renderSVGToPDF(anyString(), anyInt())).thenReturn(mockPdf);
+        when(storageService.uploadFile(anyString(), any(byte[].class), anyString())).thenReturn(mockPublicUrl);
+
+        // Act
+        calendarGenerationService.generateCalendar(testUserCalendar);
+
+        // Assert: User's empty config should override template
+        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor =
+                ArgumentCaptor.forClass(CalendarRenderingService.CalendarConfig.class);
+        verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
+
+        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        assertTrue(capturedConfig.holidaySets.isEmpty(), "User's empty holidaySets should override template");
+        assertTrue(capturedConfig.holidayEmojis.isEmpty(), "User's empty holidayEmojis should override template");
+    }
 }
