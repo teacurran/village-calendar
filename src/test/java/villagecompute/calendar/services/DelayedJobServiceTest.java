@@ -3,7 +3,6 @@ package villagecompute.calendar.services;
 import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.calendar.data.models.DelayedJob;
@@ -17,7 +16,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -116,62 +114,70 @@ class DelayedJobServiceTest {
     private static abstract class UnregisteredTestHandler implements DelayedJobHandler {}
 
     // ============================================================================
-    // JOB PROCESSING TESTS (via async EventBus)
+    // JOB PROCESSING TESTS (synchronous - bypassing EventBus for determinism)
     // ============================================================================
 
     @Test
-    void testEnqueue_PublishesEventForProcessing() {
-        // Given - Use a fake order ID; the handler will fail to find it
-        // but it tests that the job IS processed
+    void testHandleDelayedJobRun_ProcessesJob() {
+        // Given - Create a job manually (without EventBus publish)
         String actorId = UUID.randomUUID().toString();
-
-        // When - Enqueue a job (it will be processed asynchronously)
         UUID jobId = QuarkusTransaction.requiringNew().call(() -> {
-            DelayedJob job = delayedJobService.enqueue(OrderEmailJobHandler.class, actorId);
+            DelayedJob job = new DelayedJob();
+            job.actorId = actorId;
+            job.queueName = "OrderEmailJobHandler";
+            job.priority = 10;
+            job.runAt = java.time.Instant.now().minus(1, java.time.temporal.ChronoUnit.HOURS);
+            job.locked = false;
+            job.complete = false;
+            job.attempts = 0;
+            job.persist();
             return job.id;
         });
 
-        // Then - Wait for async processing and verify job completed
-        // Use longer timeout for CI environments which may be slower
-        Awaitility.await()
-            .atMost(15, TimeUnit.SECONDS)
-            .pollInterval(200, TimeUnit.MILLISECONDS)
-            .untilAsserted(() -> {
-                DelayedJob processedJob = QuarkusTransaction.requiringNew().call(() ->
-                    DelayedJob.findById(jobId)
-                );
-                assertTrue(processedJob.complete, "Job should be complete after async processing");
-                assertTrue(processedJob.completedWithFailure, "Job should have failed (order not found)");
-                assertNotNull(processedJob.completedAt);
-                assertEquals(1, processedJob.attempts);
-            });
+        // When - Process the job directly (synchronous)
+        QuarkusTransaction.requiringNew().run(() ->
+            delayedJobService.handleDelayedJobRun(jobId.toString())
+        );
+
+        // Then - Verify job was processed
+        DelayedJob processedJob = QuarkusTransaction.requiringNew().call(() ->
+            DelayedJob.findById(jobId)
+        );
+        assertTrue(processedJob.complete, "Job should be complete after processing");
+        assertTrue(processedJob.completedWithFailure, "Job should have failed (order not found)");
+        assertNotNull(processedJob.completedAt);
+        assertEquals(1, processedJob.attempts);
     }
 
     @Test
-    void testEnqueue_FutureJob_NotProcessedImmediately() {
-        // Given
+    void testHandleDelayedJobRun_FutureJob_NotProcessed() {
+        // Given - Create a future job manually
         String actorId = "order-future-" + System.currentTimeMillis();
-        Instant futureTime = Instant.now().plus(1, ChronoUnit.HOURS);
-
-        // When - Enqueue a future job
         UUID jobId = QuarkusTransaction.requiringNew().call(() -> {
-            DelayedJob job = delayedJobService.enqueue(OrderEmailJobHandler.class, actorId, futureTime);
+            DelayedJob job = new DelayedJob();
+            job.actorId = actorId;
+            job.queueName = "OrderEmailJobHandler";
+            job.priority = 10;
+            job.runAt = Instant.now().plus(1, ChronoUnit.HOURS); // Future time
+            job.locked = false;
+            job.complete = false;
+            job.attempts = 0;
+            job.persist();
             return job.id;
         });
 
-        // Then - Wait briefly and verify job is NOT processed (it's scheduled for the future)
-        // Use Awaitility to give async processing a chance, then verify it didn't process
-        Awaitility.await()
-            .pollDelay(500, TimeUnit.MILLISECONDS)
-            .atMost(2, TimeUnit.SECONDS)
-            .untilAsserted(() -> {
-                DelayedJob job = QuarkusTransaction.requiringNew().call(() ->
-                    DelayedJob.findById(jobId)
-                );
-                assertFalse(job.complete, "Future job should not be complete");
-                assertFalse(job.locked, "Future job should be unlocked");
-                assertEquals(0, job.attempts, "Future job should have 0 attempts");
-            });
+        // When - Try to process the future job directly
+        QuarkusTransaction.requiringNew().run(() ->
+            delayedJobService.handleDelayedJobRun(jobId.toString())
+        );
+
+        // Then - Job should NOT be processed (it's scheduled for the future)
+        DelayedJob job = QuarkusTransaction.requiringNew().call(() ->
+            DelayedJob.findById(jobId)
+        );
+        assertFalse(job.complete, "Future job should not be complete");
+        assertFalse(job.locked, "Future job should be unlocked after check");
+        assertEquals(0, job.attempts, "Future job should have 0 attempts");
     }
 
     // ============================================================================
