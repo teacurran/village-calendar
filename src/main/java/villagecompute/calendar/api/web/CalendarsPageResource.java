@@ -27,6 +27,10 @@ public class CalendarsPageResource {
 
     private static final Logger LOG = Logger.getLogger(CalendarsPageResource.class);
 
+    private static final String CONTENT_TYPE = "Content-Type";
+    private static final String TEXT_HTML = "text/html";
+    private static final String ASSET_NOT_FOUND = "Asset not found";
+
     @Inject
     Template calendarsIndex;
 
@@ -38,6 +42,17 @@ public class CalendarsPageResource {
 
     @Inject
     PDFRenderingService pdfRenderingService;
+
+    /**
+     * Redirect /calendars to /calendars/ for consistency
+     */
+    @Route(path = "", methods = Route.HttpMethod.GET)
+    public void indexRedirect(RoutingContext rc) {
+        rc.response()
+            .setStatusCode(301)
+            .putHeader("Location", "/calendars/")
+            .end();
+    }
 
     /**
      * Calendar product index page at /calendars/
@@ -55,7 +70,7 @@ public class CalendarsPageResource {
             .render();
 
         rc.response()
-            .putHeader("Content-Type", "text/html")
+            .putHeader(CONTENT_TYPE, TEXT_HTML)
             .end(html);
     }
 
@@ -78,7 +93,7 @@ public class CalendarsPageResource {
         if (calendar == null) {
             rc.response()
                 .setStatusCode(404)
-                .putHeader("Content-Type", "text/html")
+                .putHeader(CONTENT_TYPE, TEXT_HTML)
                 .end("<html><body><h1>Calendar Not Found</h1><p>The calendar you're looking for doesn't exist.</p><p><a href=\"/calendars/\">Browse all calendars</a></p></body></html>");
             return;
         }
@@ -96,7 +111,7 @@ public class CalendarsPageResource {
             .render();
 
         rc.response()
-            .putHeader("Content-Type", "text/html")
+            .putHeader(CONTENT_TYPE, TEXT_HTML)
             .end(html);
     }
 
@@ -115,7 +130,7 @@ public class CalendarsPageResource {
             if (!filename.equals(expectedFilename)) {
                 rc.response()
                     .setStatusCode(404)
-                    .end("Asset not found");
+                    .end(ASSET_NOT_FOUND);
                 return;
             }
 
@@ -130,7 +145,7 @@ public class CalendarsPageResource {
             String svgContent = generateSvgForTemplate(calendar);
 
             rc.response()
-                .putHeader("Content-Type", "image/svg+xml")
+                .putHeader(CONTENT_TYPE, "image/svg+xml")
                 .putHeader("Cache-Control", "public, max-age=3600")
                 .end(svgContent);
             return;
@@ -142,7 +157,7 @@ public class CalendarsPageResource {
             if (!filename.equals(expectedFilename)) {
                 rc.response()
                     .setStatusCode(404)
-                    .end("Asset not found");
+                    .end(ASSET_NOT_FOUND);
                 return;
             }
 
@@ -164,7 +179,7 @@ public class CalendarsPageResource {
                 byte[] pngBytes = pdfRenderingService.renderSVGToPNG(wrappedSvg, 1200);
 
                 rc.response()
-                    .putHeader("Content-Type", "image/png")
+                    .putHeader(CONTENT_TYPE, "image/png")
                     .putHeader("Cache-Control", "public, max-age=3600")
                     .end(Buffer.buffer(pngBytes));
             } catch (Exception e) {
@@ -179,7 +194,7 @@ public class CalendarsPageResource {
         // Unknown asset type
         rc.response()
             .setStatusCode(404)
-            .end("Asset not found");
+            .end(ASSET_NOT_FOUND);
     }
 
     /**

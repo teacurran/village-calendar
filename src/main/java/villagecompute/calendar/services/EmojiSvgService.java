@@ -450,38 +450,6 @@ public class EmojiSvgService {
     }
 
     /**
-     * Replace black fill colors in SVG content with the target color.
-     * Handles various black color representations: #000, #000000, black, rgb(0,0,0)
-     * Also handles fill in style attributes.
-     */
-    private String replaceBlackFills(String svgContent, String targetColor) {
-        String result = svgContent;
-
-        // Ensure target color has # prefix
-        String color = targetColor.startsWith("#") ? targetColor : "#" + targetColor;
-
-        // Replace fill attribute variations of black
-        result = result.replaceAll("fill=\"#000000\"", "fill=\"" + color + "\"");
-        result = result.replaceAll("fill=\"#000\"", "fill=\"" + color + "\"");
-        result = result.replaceAll("fill=\"black\"", "fill=\"" + color + "\"");
-        result = result.replaceAll("fill='#000000'", "fill='" + color + "'");
-        result = result.replaceAll("fill='#000'", "fill='" + color + "'");
-        result = result.replaceAll("fill='black'", "fill='" + color + "'");
-
-        // Replace fill in style attributes
-        result = result.replaceAll("fill:\\s*#000000", "fill:" + color);
-        result = result.replaceAll("fill:\\s*#000(?![0-9a-fA-F])", "fill:" + color);
-        result = result.replaceAll("fill:\\s*black", "fill:" + color);
-
-        // Replace stroke attribute variations of black (for outlined emojis)
-        result = result.replaceAll("stroke=\"#000000\"", "stroke=\"" + color + "\"");
-        result = result.replaceAll("stroke=\"#000\"", "stroke=\"" + color + "\"");
-        result = result.replaceAll("stroke=\"black\"", "stroke=\"" + color + "\"");
-
-        return result;
-    }
-
-    /**
      * Normalize emoji by removing variation selectors for lookup.
      * Variation selector VS16 (U+FE0F) is often appended for emoji presentation.
      */

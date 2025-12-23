@@ -4,7 +4,6 @@ import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import io.quarkus.panache.common.Parameters;
 import jakarta.enterprise.context.ApplicationScoped;
 import villagecompute.calendar.data.models.DelayedJob;
-import villagecompute.calendar.data.models.DelayedJobQueue;
 
 import java.time.Instant;
 import java.util.List;
@@ -41,13 +40,13 @@ public class DelayedJobRepository implements PanacheRepository<DelayedJob> {
     }
 
     /**
-     * Find jobs by queue.
+     * Find jobs by queue name.
      *
-     * @param queue Job queue
+     * @param queueName Queue name (handler class simple name)
      * @return List of jobs in the queue
      */
-    public List<DelayedJob> findByQueue(DelayedJobQueue queue) {
-        return find("queue = ?1 ORDER BY priority DESC, runAt ASC", queue).list();
+    public List<DelayedJob> findByQueueName(String queueName) {
+        return find("queueName = ?1 ORDER BY priority DESC, runAt ASC", queueName).list();
     }
 
     /**

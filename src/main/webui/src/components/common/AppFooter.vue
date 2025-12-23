@@ -19,7 +19,7 @@
             <router-link to="/" class="footer-link">Home</router-link>
           </li>
           <li>
-            <a href="/pages/p/" class="footer-link">Pre-Designed Calendars</a>
+            <a href="/calendars/" class="footer-link">Pre-Designed Calendars</a>
           </li>
         </ul>
       </div>

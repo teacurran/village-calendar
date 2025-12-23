@@ -21,6 +21,7 @@ import java.util.UUID;
  * Renders HTML email templates using Qute and sends via EmailService.
  */
 @ApplicationScoped
+@DelayedJobConfig(priority = 10, description = "Shipping notification email sender")
 public class ShippingNotificationJobHandler implements DelayedJobHandler {
 
     private static final Logger LOG = Logger.getLogger(ShippingNotificationJobHandler.class);

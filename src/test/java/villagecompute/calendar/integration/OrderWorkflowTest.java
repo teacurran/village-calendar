@@ -314,7 +314,7 @@ class OrderWorkflowTest {
         // Then: Verify email job was enqueued
         List<DelayedJob> jobs = DelayedJob.find("actorId", order.id.toString()).list();
         assertEquals(1, jobs.size(), "Order confirmation email job should be enqueued");
-        assertEquals(DelayedJobQueue.EMAIL_ORDER_CONFIRMATION, jobs.get(0).queue,
+        assertEquals("OrderEmailJobHandler", jobs.get(0).queueName,
             "Email job should be in ORDER_CONFIRMATION queue");
         assertFalse(jobs.get(0).complete, "Job should not be completed yet");
     }

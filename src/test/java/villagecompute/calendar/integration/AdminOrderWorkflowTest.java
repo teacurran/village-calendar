@@ -262,7 +262,7 @@ class AdminOrderWorkflowTest {
         // Then: Verify shipping notification email job was enqueued
         List<DelayedJob> jobs = DelayedJob.find("actorId", order.id.toString()).list();
         boolean foundShippingEmail = jobs.stream()
-            .anyMatch(job -> job.queue == DelayedJobQueue.EMAIL_SHIPPING_NOTIFICATION);
+            .anyMatch(job -> "ShippingNotificationJobHandler".equals(job.queueName));
         assertTrue(foundShippingEmail, "Shipping notification email job should be enqueued");
     }
 

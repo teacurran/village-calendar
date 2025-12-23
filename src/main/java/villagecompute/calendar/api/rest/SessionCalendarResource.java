@@ -25,6 +25,11 @@ import java.util.UUID;
 @Consumes(MediaType.APPLICATION_JSON)
 public class SessionCalendarResource {
 
+    private static final String ERROR_GENERATING_SVG = "Error generating calendar SVG";
+    private static final String CONFIGURATION = "configuration";
+    private static final String COLOR_GRAY = "#c1c1c1";
+    private static final String COLOR_BLACK = "#000000";
+
     @Inject
     SessionService sessionService;
 
@@ -142,7 +147,7 @@ public class SessionCalendarResource {
                 calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
             }
         } catch (Exception e) {
-            Log.error("Error generating calendar SVG", e);
+            Log.error(ERROR_GENERATING_SVG, e);
         }
 
         calendar.persist();
@@ -199,14 +204,14 @@ public class SessionCalendarResource {
             );
             calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
         } catch (Exception e) {
-            Log.error("Error generating calendar SVG", e);
+            Log.error(ERROR_GENERATING_SVG, e);
         }
 
         calendar.persist();
 
         Map<String, Object> response = new HashMap<>();
         response.put("id", calendar.id);
-        response.put("configuration", calendar.configuration);
+        response.put(CONFIGURATION, calendar.configuration);
 
         return Response.ok(response).build();
     }
@@ -299,7 +304,7 @@ public class SessionCalendarResource {
             calendar.generatedSvg = svg;
         } catch (Exception e) {
             // Log but don't fail the save - SVG generation is secondary
-            Log.error("Error generating calendar SVG", e);
+            Log.error(ERROR_GENERATING_SVG, e);
         }
 
         calendar.persist();
@@ -335,7 +340,7 @@ public class SessionCalendarResource {
         if (existingCalendar != null) {
             Map<String, Object> response = new HashMap<>();
             response.put("id", existingCalendar.id);
-            response.put("configuration", existingCalendar.configuration);
+            response.put(CONFIGURATION, existingCalendar.configuration);
             response.put("svg", existingCalendar.generatedSvg);
             response.put("existing", true);
             return Response.ok(response).build();
@@ -384,14 +389,14 @@ public class SessionCalendarResource {
         try {
             calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
         } catch (Exception e) {
-            Log.error("Error generating calendar SVG", e);
+            Log.error(ERROR_GENERATING_SVG, e);
         }
 
         calendar.persist();
 
         Map<String, Object> response = new HashMap<>();
         response.put("id", calendar.id);
-        response.put("configuration", calendar.configuration);
+        response.put(CONFIGURATION, calendar.configuration);
         response.put("svg", calendar.generatedSvg);
         response.put("existing", false);
 
@@ -426,17 +431,17 @@ public class SessionCalendarResource {
         config.moonSize = 20;
         config.moonOffsetX = 25;
         config.moonOffsetY = 45;
-        config.moonBorderColor = "#c1c1c1";
+        config.moonBorderColor = COLOR_GRAY;
         config.moonBorderWidth = 0.5;
-        config.yearColor = "#000000";
-        config.monthColor = "#000000";
-        config.dayTextColor = "#000000";
+        config.yearColor = COLOR_BLACK;
+        config.monthColor = COLOR_BLACK;
+        config.dayTextColor = COLOR_BLACK;
         config.dayNameColor = "#666666";
-        config.gridLineColor = "#c1c1c1";
+        config.gridLineColor = COLOR_GRAY;
         config.weekendBgColor = "";
         config.holidayColor = "#ff5252";
         config.customDateColor = "#4caf50";
-        config.moonDarkColor = "#c1c1c1";
+        config.moonDarkColor = COLOR_GRAY;
         config.moonLightColor = "#FFFFFF";
         config.emojiPosition = "bottom-left";
         config.eventDisplayMode = "large";

@@ -14,7 +14,7 @@ import java.util.List;
 @Table(
     name = "delayed_jobs",
     indexes = {
-        @Index(name = "idx_delayed_jobs_queue_run_at", columnList = "queue, run_at, complete, locked")
+        @Index(name = "idx_delayed_jobs_queue_name_run_at", columnList = "queue_name, run_at, complete, locked")
     }
 )
 @NamedQuery(
@@ -37,9 +37,11 @@ public class DelayedJob extends DefaultPanacheEntityWithTimestamps {
     @Column(nullable = false)
     public Integer attempts = 0;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50)
-    public DelayedJobQueue queue;
+    /**
+     * Queue name - the handler class simple name.
+     */
+    @Column(name = "queue_name", nullable = false, length = 100)
+    public String queueName;
 
     /**
      * UUID of the entity this job operates on (e.g., CalendarOrder ID).
@@ -78,16 +80,17 @@ public class DelayedJob extends DefaultPanacheEntityWithTimestamps {
      * Factory method to create a DelayedJob.
      *
      * @param actorId ID of the entity to process
-     * @param queue Job queue
+     * @param queueName Handler queue name
+     * @param priority Job priority
      * @param runAt When to run the job
      * @return Created DelayedJob
      */
-    public static DelayedJob createDelayedJob(String actorId, DelayedJobQueue queue, Instant runAt) {
+    public static DelayedJob createDelayedJob(String actorId, String queueName, int priority, Instant runAt) {
         DelayedJob delayedJob = new DelayedJob();
         delayedJob.actorId = actorId;
         delayedJob.runAt = runAt;
-        delayedJob.queue = queue;
-        delayedJob.priority = queue.getPriority();
+        delayedJob.queueName = queueName;
+        delayedJob.priority = priority;
         delayedJob.persist();
         return delayedJob;
     }
