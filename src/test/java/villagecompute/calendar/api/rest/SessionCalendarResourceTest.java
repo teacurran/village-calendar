@@ -1,6 +1,5 @@
 package villagecompute.calendar.api.rest;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.quarkus.narayana.jta.QuarkusTransaction;
@@ -11,7 +10,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.UserCalendar;
-import villagecompute.calendar.data.repositories.TestDataCleaner;
 
 import java.util.UUID;
 
@@ -28,9 +26,6 @@ class SessionCalendarResourceTest {
 
     @Inject
     ObjectMapper objectMapper;
-
-    @Inject
-    TestDataCleaner testDataCleaner;
 
     private String testSessionId;
     private CalendarTemplate testTemplate;
