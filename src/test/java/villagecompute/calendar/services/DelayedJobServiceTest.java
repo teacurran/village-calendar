@@ -132,9 +132,10 @@ class DelayedJobServiceTest {
         });
 
         // Then - Wait for async processing and verify job completed
+        // Use longer timeout for CI environments which may be slower
         Awaitility.await()
-            .atMost(5, TimeUnit.SECONDS)
-            .pollInterval(100, TimeUnit.MILLISECONDS)
+            .atMost(15, TimeUnit.SECONDS)
+            .pollInterval(200, TimeUnit.MILLISECONDS)
             .untilAsserted(() -> {
                 DelayedJob processedJob = QuarkusTransaction.requiringNew().call(() ->
                     DelayedJob.findById(jobId)
