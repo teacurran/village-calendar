@@ -26,9 +26,13 @@ public class CalendarGenerationService {
 
     private static final Logger LOG = Logger.getLogger(CalendarGenerationService.class);
 
-    private static final String HOLIDAY_SETS = "holidaySets";
-    private static final String HOLIDAY_EMOJIS = "holidayEmojis";
-    private static final String HOLIDAY_NAMES = "holidayNames";
+    public static final String HOLIDAY_SETS = "holidaySets";
+    public static final String HOLIDAYS = "holidays";
+    public static final String EVENT_TITLES = "eventTitles";
+    public static final String HOLIDAY_EMOJIS = "holidayEmojis";
+    public static final String HOLIDAY_NAMES = "holidayNames";
+    public static final String CUSTOM_DATES = "customDates";
+    public static final String MOON_DISPLAY_MODE = "moonDisplayMode";
 
     @Inject
     CalendarRenderingService calendarRenderingService;
@@ -225,8 +229,8 @@ public class CalendarGenerationService {
             }
 
             // Complex types: customDates (Map<String, Object>)
-            if (jsonConfig.has("customDates") && jsonConfig.get("customDates").isObject()) {
-                JsonNode customDates = jsonConfig.get("customDates");
+            if (jsonConfig.has(CUSTOM_DATES) && jsonConfig.get(CUSTOM_DATES).isObject()) {
+                JsonNode customDates = jsonConfig.get(CUSTOM_DATES);
                 customDates.fields().forEachRemaining(entry -> {
                     String date = entry.getKey();
                     JsonNode value = entry.getValue();
@@ -239,8 +243,8 @@ public class CalendarGenerationService {
             }
 
             // Complex types: eventTitles (Map<String, String>)
-            if (jsonConfig.has("eventTitles") && jsonConfig.get("eventTitles").isObject()) {
-                JsonNode eventTitles = jsonConfig.get("eventTitles");
+            if (jsonConfig.has(EVENT_TITLES) && jsonConfig.get(EVENT_TITLES).isObject()) {
+                JsonNode eventTitles = jsonConfig.get(EVENT_TITLES);
                 eventTitles.fields().forEachRemaining(entry -> {
                     config.eventTitles.put(entry.getKey(), entry.getValue().asText());
                 });
@@ -248,9 +252,9 @@ public class CalendarGenerationService {
 
             // Complex types: holidays (Set<String>)
             // Clear first to allow user config to replace template values
-            if (jsonConfig.has("holidays") && jsonConfig.get("holidays").isArray()) {
+            if (jsonConfig.has(HOLIDAYS) && jsonConfig.get(HOLIDAYS).isArray()) {
                 config.holidays.clear();
-                jsonConfig.get("holidays").forEach(holiday -> {
+                jsonConfig.get(HOLIDAYS).forEach(holiday -> {
                     config.holidays.add(holiday.asText());
                 });
             }

@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static villagecompute.calendar.services.CalendarGenerationService.*;
+
 /**
  * API endpoint for static content generation.
  * CI/CD calls these endpoints to download data and assets for static product pages.
@@ -367,8 +369,8 @@ public class StaticContentResource {
             }
 
             // Complex types: customDates (Map<String, Object>)
-            if (jsonConfig.has("customDates") && jsonConfig.get("customDates").isObject()) {
-                JsonNode customDates = jsonConfig.get("customDates");
+            if (jsonConfig.has(CUSTOM_DATES) && jsonConfig.get(CUSTOM_DATES).isObject()) {
+                JsonNode customDates = jsonConfig.get(CUSTOM_DATES);
                 customDates.properties().forEach(entry -> {
                     String date = entry.getKey();
                     JsonNode value = entry.getValue();
@@ -388,8 +390,8 @@ public class StaticContentResource {
             }
 
             // Complex types: eventTitles (Map<String, String>)
-            if (jsonConfig.has("eventTitles") && jsonConfig.get("eventTitles").isObject()) {
-                JsonNode eventTitles = jsonConfig.get("eventTitles");
+            if (jsonConfig.has(EVENT_TITLES) && jsonConfig.get(EVENT_TITLES).isObject()) {
+                JsonNode eventTitles = jsonConfig.get(EVENT_TITLES);
                 eventTitles.properties().forEach(entry -> {
                     config.eventTitles.put(entry.getKey(), entry.getValue().asText());
                 });
@@ -397,27 +399,27 @@ public class StaticContentResource {
 
             // Complex types: holidays (Set<String>)
             // Clear first to allow user config to replace template values
-            if (jsonConfig.has("holidays") && jsonConfig.get("holidays").isArray()) {
+            if (jsonConfig.has(HOLIDAYS) && jsonConfig.get(HOLIDAYS).isArray()) {
                 config.holidays.clear();
-                jsonConfig.get("holidays").forEach(holiday -> {
+                jsonConfig.get(HOLIDAYS).forEach(holiday -> {
                     config.holidays.add(holiday.asText());
                 });
             }
 
             // Complex types: holidaySets (List<String>)
             // Clear first to allow user config to replace template values (e.g., empty array means no holidays)
-            if (jsonConfig.has("holidaySets") && jsonConfig.get("holidaySets").isArray()) {
+            if (jsonConfig.has(HOLIDAY_SETS) && jsonConfig.get(HOLIDAY_SETS).isArray()) {
                 config.holidaySets.clear();
-                jsonConfig.get("holidaySets").forEach(set -> {
+                jsonConfig.get(HOLIDAY_SETS).forEach(set -> {
                     config.holidaySets.add(set.asText());
                 });
             }
 
             // Complex types: holidayEmojis (Map<String, String>)
             // Clear first to allow user config to replace template values
-            if (jsonConfig.has("holidayEmojis") && jsonConfig.get("holidayEmojis").isObject()) {
+            if (jsonConfig.has(HOLIDAY_EMOJIS) && jsonConfig.get(HOLIDAY_EMOJIS).isObject()) {
                 config.holidayEmojis.clear();
-                JsonNode holidayEmojis = jsonConfig.get("holidayEmojis");
+                JsonNode holidayEmojis = jsonConfig.get(HOLIDAY_EMOJIS);
                 holidayEmojis.properties().forEach(entry -> {
                     config.holidayEmojis.put(entry.getKey(), entry.getValue().asText());
                 });
@@ -425,9 +427,9 @@ public class StaticContentResource {
 
             // Complex types: holidayNames (Map<String, String>)
             // Clear first to allow user config to replace template values
-            if (jsonConfig.has("holidayNames") && jsonConfig.get("holidayNames").isObject()) {
+            if (jsonConfig.has(HOLIDAY_NAMES) && jsonConfig.get(HOLIDAY_NAMES).isObject()) {
                 config.holidayNames.clear();
-                JsonNode holidayNames = jsonConfig.get("holidayNames");
+                JsonNode holidayNames = jsonConfig.get(HOLIDAY_NAMES);
                 holidayNames.properties().forEach(entry -> {
                     config.holidayNames.put(entry.getKey(), entry.getValue().asText());
                 });
