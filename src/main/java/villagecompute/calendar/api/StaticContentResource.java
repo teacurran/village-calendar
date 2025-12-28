@@ -369,7 +369,7 @@ public class StaticContentResource {
             // Complex types: customDates (Map<String, Object>)
             if (jsonConfig.has("customDates") && jsonConfig.get("customDates").isObject()) {
                 JsonNode customDates = jsonConfig.get("customDates");
-                customDates.fields().forEachRemaining(entry -> {
+                customDates.properties().forEach(entry -> {
                     String date = entry.getKey();
                     JsonNode value = entry.getValue();
                     if (value.isTextual()) {
@@ -377,7 +377,7 @@ public class StaticContentResource {
                     } else if (value.isObject()) {
                         // Convert to Map for complex event display objects
                         java.util.Map<String, Object> map = new java.util.HashMap<>();
-                        value.fields().forEachRemaining(f -> {
+                        value.properties().forEach(f -> {
                             if (f.getValue().isTextual()) map.put(f.getKey(), f.getValue().asText());
                             else if (f.getValue().isNumber()) map.put(f.getKey(), f.getValue().asDouble());
                             else if (f.getValue().isBoolean()) map.put(f.getKey(), f.getValue().asBoolean());
@@ -390,7 +390,7 @@ public class StaticContentResource {
             // Complex types: eventTitles (Map<String, String>)
             if (jsonConfig.has("eventTitles") && jsonConfig.get("eventTitles").isObject()) {
                 JsonNode eventTitles = jsonConfig.get("eventTitles");
-                eventTitles.fields().forEachRemaining(entry -> {
+                eventTitles.properties().forEach(entry -> {
                     config.eventTitles.put(entry.getKey(), entry.getValue().asText());
                 });
             }
@@ -418,7 +418,7 @@ public class StaticContentResource {
             if (jsonConfig.has("holidayEmojis") && jsonConfig.get("holidayEmojis").isObject()) {
                 config.holidayEmojis.clear();
                 JsonNode holidayEmojis = jsonConfig.get("holidayEmojis");
-                holidayEmojis.fields().forEachRemaining(entry -> {
+                holidayEmojis.properties().forEach(entry -> {
                     config.holidayEmojis.put(entry.getKey(), entry.getValue().asText());
                 });
             }
@@ -428,7 +428,7 @@ public class StaticContentResource {
             if (jsonConfig.has("holidayNames") && jsonConfig.get("holidayNames").isObject()) {
                 config.holidayNames.clear();
                 JsonNode holidayNames = jsonConfig.get("holidayNames");
-                holidayNames.fields().forEachRemaining(entry -> {
+                holidayNames.properties().forEach(entry -> {
                     config.holidayNames.put(entry.getKey(), entry.getValue().asText());
                 });
             }
