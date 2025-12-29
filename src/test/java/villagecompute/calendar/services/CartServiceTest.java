@@ -89,9 +89,11 @@ class CartServiceTest {
     void testAddToCart_NewItem_AddsToCart() {
         // Given
         AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar 2026";
         input.quantity = 1;
         input.productCode = "print";
-        input.configuration = "{\"theme\":\"modern\"}";
+        input.configuration = "{\"theme\":\"modern\",\"year\":2026}";
 
         // When
         Cart cart = cartService.addToCart(testSessionId, input);
@@ -100,27 +102,29 @@ class CartServiceTest {
         assertNotNull(cart);
         assertEquals(1, cart.itemCount);
         assertEquals(1, cart.items.size());
-        assertEquals("Test Calendar", cart.items.get(0).templateName);
-        assertEquals(2026, cart.items.get(0).year);
+        assertEquals("calendar", cart.items.get(0).generatorType);
+        assertEquals("Test Calendar 2026", cart.items.get(0).description);
     }
 
     @Test
     @Transactional
-    void testAddToCart_SameItem_IncrementsQuantity() {
-        // Given
+    void testAddToCart_SameItem_CreatesSeparateItems() {
+        // Given - With new generator-based API, each add creates a new item
+        // because each generated SVG is unique
         AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar 2026";
         input.quantity = 1;
         input.productCode = "print";
-        input.configuration = "{\"theme\":\"modern\"}";
+        input.configuration = "{\"theme\":\"modern\",\"year\":2026}";
 
-        // When - Add same item twice
+        // When - Add same configuration twice
         cartService.addToCart(testSessionId, input);
         Cart cart = cartService.addToCart(testSessionId, input);
 
-        // Then - Should have quantity 2, not 2 items
+        // Then - Each add creates a separate item (unique SVGs)
         assertEquals(2, cart.itemCount);
-        assertEquals(1, cart.items.size());
-        assertEquals(2, cart.items.get(0).quantity);
+        assertEquals(2, cart.items.size());
     }
 
     @Test
@@ -128,14 +132,18 @@ class CartServiceTest {
     void testAddToCart_DifferentConfiguration_CreatesNewItem() {
         // Given
         AddToCartInput input1 = new AddToCartInput();
+        input1.generatorType = "calendar";
+        input1.description = "Modern Calendar 2026";
         input1.quantity = 1;
         input1.productCode = "print";
-        input1.configuration = "{\"theme\":\"modern\"}";
+        input1.configuration = "{\"theme\":\"modern\",\"year\":2026}";
 
         AddToCartInput input2 = new AddToCartInput();
+        input2.generatorType = "calendar";
+        input2.description = "Classic Calendar 2026";
         input2.quantity = 1;
         input2.productCode = "print";
-        input2.configuration = "{\"theme\":\"classic\"}";
+        input2.configuration = "{\"theme\":\"classic\",\"year\":2026}";
 
         // When
         cartService.addToCart(testSessionId, input1);
@@ -151,14 +159,18 @@ class CartServiceTest {
     void testAddToCart_DifferentYear_CreatesNewItem() {
         // Given
         AddToCartInput input1 = new AddToCartInput();
+        input1.generatorType = "calendar";
+        input1.description = "Calendar 2025";
         input1.quantity = 1;
         input1.productCode = "print";
-        input1.configuration = "{\"theme\":\"modern\"}";
+        input1.configuration = "{\"theme\":\"modern\",\"year\":2025}";
 
         AddToCartInput input2 = new AddToCartInput();
+        input2.generatorType = "calendar";
+        input2.description = "Calendar 2026";
         input2.quantity = 1;
         input2.productCode = "print";
-        input2.configuration = "{\"theme\":\"modern\"}";
+        input2.configuration = "{\"theme\":\"modern\",\"year\":2026}";
 
         // When
         cartService.addToCart(testSessionId, input1);
@@ -171,12 +183,14 @@ class CartServiceTest {
 
     @Test
     @Transactional
-    void testAddToCart_NullTemplateId_WorksForStaticPages() {
-        // Given - Static pages don't have templateId
+    void testAddToCart_StaticPageProduct_WorksCorrectly() {
+        // Given - Static pages use generatorType and description
         AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Vermont Weekends 2026";
         input.quantity = 1;
         input.productCode = "print";
-        input.configuration = "{\"theme\":\"vermont\"}";
+        input.configuration = "{\"theme\":\"vermont\",\"year\":2026}";
 
         // When
         Cart cart = cartService.addToCart(testSessionId, input);
@@ -184,8 +198,8 @@ class CartServiceTest {
         // Then
         assertNotNull(cart);
         assertEquals(1, cart.itemCount);
-        assertNull(cart.items.get(0).templateId);
-        assertEquals("Vermont Weekends 2026", cart.items.get(0).templateName);
+        assertEquals("calendar", cart.items.get(0).generatorType);
+        assertEquals("Vermont Weekends 2026", cart.items.get(0).description);
     }
 
     // ========== SESSION ISOLATION TESTS ==========
@@ -198,6 +212,8 @@ class CartServiceTest {
         String sessionId2 = "session-2-" + UUID.randomUUID();
 
         AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar";
         input.quantity = 1;
         input.productCode = "print";
 
@@ -218,6 +234,8 @@ class CartServiceTest {
     void testUpdateQuantity_IncreasesQuantity() {
         // Given
         AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar";
         input.quantity = 1;
         input.productCode = "print";
 
@@ -237,6 +255,8 @@ class CartServiceTest {
     void testUpdateQuantity_ZeroRemovesItem() {
         // Given
         AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar";
         input.quantity = 1;
         input.productCode = "print";
 
@@ -258,6 +278,8 @@ class CartServiceTest {
     void testRemoveItem_RemovesFromCart() {
         // Given
         AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar";
         input.quantity = 2;
         input.productCode = "print";
 
@@ -279,11 +301,15 @@ class CartServiceTest {
     void testClearCart_RemovesAllItems() {
         // Given
         AddToCartInput input1 = new AddToCartInput();
+        input1.generatorType = "calendar";
+        input1.description = "Calendar 1";
         input1.quantity = 1;
         input1.productCode = "print";
         input1.configuration = "{\"config\":\"1\"}";
 
         AddToCartInput input2 = new AddToCartInput();
+        input2.generatorType = "calendar";
+        input2.description = "Calendar 2";
         input2.quantity = 1;
         input2.productCode = "print";
         input2.configuration = "{\"config\":\"2\"}";

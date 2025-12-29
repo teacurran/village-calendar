@@ -56,8 +56,8 @@ public class CartWorkflowTest {
                     subtotal
                     items {
                         id
-                        templateName
-                        year
+                        generatorType
+                        description
                         quantity
                         unitPrice
                         configuration
@@ -70,11 +70,11 @@ public class CartWorkflowTest {
                 """
             {
                 "input": {
-                    "templateName": "Test Calendar",
-                    "year": 2026,
+                    "generatorType": "calendar",
+                    "description": "Test Calendar 2026",
                     "quantity": 1,
                     "productCode": "print",
-                    "configuration": "{\\"theme\\":\\"modern\\"}"
+                    "configuration": "{\\"theme\\":\\"modern\\",\\"year\\":2026}"
                 }
             }
             """;
@@ -97,8 +97,8 @@ public class CartWorkflowTest {
                 .statusCode(200)
                 .body("data.addToCart.itemCount", equalTo(1))
                 .body("data.addToCart.items", hasSize(1))
-                .body("data.addToCart.items[0].templateName", equalTo("Test Calendar"))
-                .body("data.addToCart.items[0].year", equalTo(2026))
+                .body("data.addToCart.items[0].generatorType", equalTo("calendar"))
+                .body("data.addToCart.items[0].description", equalTo("Test Calendar 2026"))
                 .body("data.addToCart.items[0].quantity", equalTo(1));
     }
 
@@ -115,7 +115,7 @@ public class CartWorkflowTest {
         String addMutation =
                 """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"Persistent Calendar\\", year: 2026, quantity: 1, productCode: \\"print\\" }) { id itemCount } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"Persistent Calendar\\", quantity: 1, productCode: \\"print\\" }) { id itemCount } }"
             }
             """;
 
@@ -135,7 +135,7 @@ public class CartWorkflowTest {
         String getQuery =
                 """
             {
-                "query": "query { cart { id itemCount items { templateName } } }"
+                "query": "query { cart { id itemCount items { description } } }"
             }
             """;
 
@@ -148,7 +148,7 @@ public class CartWorkflowTest {
                 .statusCode(200)
                 .body("data.cart.id", equalTo(cartId))
                 .body("data.cart.itemCount", equalTo(1))
-                .body("data.cart.items[0].templateName", equalTo("Persistent Calendar"));
+                .body("data.cart.items[0].description", equalTo("Persistent Calendar"));
     }
 
     // ============================================================================
@@ -165,7 +165,7 @@ public class CartWorkflowTest {
         String addMutation1 =
                 """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"Session 1 Calendar\\", year: 2026, quantity: 1, productCode: \\"print\\" }) { id itemCount } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"Session 1 Calendar\\", quantity: 1, productCode: \\"print\\" }) { id itemCount } }"
             }
             """;
 
@@ -205,11 +205,11 @@ public class CartWorkflowTest {
     void testStaticPageAddToCart_NoTemplateId_WorksCorrectly() {
         String sessionId = "static-page-session-" + UUID.randomUUID();
 
-        // Simulates static product page behavior - no templateId, just configuration
+        // Simulates static product page behavior - uses generatorType and description
         String addMutation =
                 """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"Vermont Weekends 2026\\", year: 2026, quantity: 1, productCode: \\"print\\", configuration: \\"{\\\\\\"theme\\\\\\":\\\\\\"vermont\\\\\\",\\\\\\"holidaySets\\\\\\":[]}\\" }) { id itemCount items { templateId templateName configuration } } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"Vermont Weekends 2026\\", quantity: 1, productCode: \\"print\\", configuration: \\"{\\\\\\"theme\\\\\\":\\\\\\"vermont\\\\\\",\\\\\\"year\\\\\\":2026,\\\\\\"holidaySets\\\\\\":[]}\\" }) { id itemCount items { generatorType description configuration } } }"
             }
             """;
 
@@ -221,8 +221,8 @@ public class CartWorkflowTest {
                 .then()
                 .statusCode(200)
                 .body("data.addToCart.itemCount", equalTo(1))
-                .body("data.addToCart.items[0].templateId", nullValue())
-                .body("data.addToCart.items[0].templateName", equalTo("Vermont Weekends 2026"))
+                .body("data.addToCart.items[0].generatorType", equalTo("calendar"))
+                .body("data.addToCart.items[0].description", equalTo("Vermont Weekends 2026"))
                 .body("data.addToCart.items[0].configuration", containsString("vermont"));
     }
 
@@ -239,7 +239,7 @@ public class CartWorkflowTest {
         String addMutation =
                 """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"Checkout Test Calendar\\", year: 2026, quantity: 1, productCode: \\"print\\" }) { id itemCount } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"Checkout Test Calendar\\", quantity: 1, productCode: \\"print\\" }) { id itemCount } }"
             }
             """;
 
@@ -259,7 +259,7 @@ public class CartWorkflowTest {
         String getQuery =
                 """
             {
-                "query": "query { cart { id itemCount subtotal items { templateName quantity unitPrice } } }"
+                "query": "query { cart { id itemCount subtotal items { description quantity unitPrice } } }"
             }
             """;
 
@@ -272,7 +272,7 @@ public class CartWorkflowTest {
                 .statusCode(200)
                 .body("data.cart.itemCount", equalTo(1))
                 .body("data.cart.items", hasSize(1))
-                .body("data.cart.items[0].templateName", equalTo("Checkout Test Calendar"))
+                .body("data.cart.items[0].description", equalTo("Checkout Test Calendar"))
                 .body("data.cart.subtotal", greaterThan(0.0f));
     }
 
@@ -289,7 +289,7 @@ public class CartWorkflowTest {
         String addMutation1 =
                 """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"Calendar Config A\\", year: 2026, quantity: 1, productCode: \\"print\\", configuration: \\"{\\\\\\"theme\\\\\\":\\\\\\"A\\\\\\"}\\" }) { itemCount } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"Calendar Config A\\", quantity: 1, productCode: \\"print\\", configuration: \\"{\\\\\\"theme\\\\\\":\\\\\\"A\\\\\\"}\\" }) { itemCount } }"
             }
             """;
 
@@ -306,7 +306,7 @@ public class CartWorkflowTest {
         String addMutation2 =
                 """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"Calendar Config B\\", year: 2026, quantity: 2, productCode: \\"print\\", configuration: \\"{\\\\\\"theme\\\\\\":\\\\\\"B\\\\\\"}\\" }) { itemCount items { templateName quantity } } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"Calendar Config B\\", quantity: 2, productCode: \\"print\\", configuration: \\"{\\\\\\"theme\\\\\\":\\\\\\"B\\\\\\"}\\" }) { itemCount items { description quantity } } }"
             }
             """;
 
@@ -334,7 +334,7 @@ public class CartWorkflowTest {
         String addMutation =
                 """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"To Be Cleared\\", year: 2026, quantity: 3, productCode: \\"print\\" }) { itemCount } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"To Be Cleared\\", quantity: 3, productCode: \\"print\\" }) { itemCount } }"
             }
             """;
 
@@ -380,7 +380,7 @@ public class CartWorkflowTest {
         String addMutation =
                 """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"DB Test Calendar\\", year: 2026, quantity: 2, productCode: \\"print\\" }) { id } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"DB Test Calendar\\", quantity: 2, productCode: \\"print\\" }) { id } }"
             }
             """;
 
@@ -397,7 +397,8 @@ public class CartWorkflowTest {
         assertNotNull(dbCart, "Cart should exist in database");
         assertEquals(sessionId, dbCart.sessionId);
         assertEquals(1, dbCart.items.size());
-        assertEquals("DB Test Calendar", dbCart.items.get(0).templateName);
+        assertEquals("calendar", dbCart.items.get(0).generatorType);
+        assertEquals("DB Test Calendar", dbCart.items.get(0).description);
         assertEquals(2, dbCart.items.get(0).quantity);
     }
 }
