@@ -29,6 +29,7 @@ import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.quarkus.logging.Log;
+import villagecompute.calendar.util.Colors;
 
 @ApplicationScoped
 public class CalendarRenderingService {
@@ -86,12 +87,12 @@ public class CalendarRenderingService {
         public String monthColor = null; // Will use theme default if null
         public String dayTextColor = null; // Will use theme default if null
         public String dayNameColor = null; // Will use theme default if null
-        public String gridLineColor = "#c1c1c1"; // Default grid color
+        public String gridLineColor = Colors.GRAY_400; // Default grid color
         public String weekendBgColor = null; // Will use theme default if null
         public String holidayColor = "#ff5252"; // Default holiday color
-        public String customDateColor = "#4caf50"; // Default custom date color
-        public String moonDarkColor = "#c1c1c1"; // Default moon dark side
-        public String moonLightColor = "#FFFFFF"; // Default moon light side
+        public String customDateColor = Colors.GREEN; // Default custom date color
+        public String moonDarkColor = Colors.GRAY_400; // Default moon dark side
+        public String moonLightColor = Colors.WHITE; // Default moon light side
         public String emojiPosition = "bottom-left"; // Position of emojis in calendar cells
         public Map<String, Object> customDates =
                 new HashMap<>(); // date -> emoji/text or CustomEventDisplay object
@@ -583,7 +584,7 @@ public class CalendarRenderingService {
         String pdfSafeColor = convertColorForPDF(cellBackground);
         if (pdfSafeColor != null
                 && !pdfSafeColor.equals("none")
-                && !pdfSafeColor.equals("#ffffff")) {
+                && !pdfSafeColor.equals(Colors.WHITE)) {
             svg.append(
                     String.format(
                             "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\"/>%n",
@@ -876,67 +877,47 @@ public class CalendarRenderingService {
     // Vermont monthly colors for weekends
     private static final String[][] VERMONT_MONTHLY_COLORS = {
         // January - Snowy and frosty hues
-        {
-            "#E8F1F2", "#E8F1F2", "#E8F1F2", "#E8F1F2", "#E8F1F2", "#E8F1F2", "#E8F1F2", "#E8F1F2",
-            "#E8F1F2", "#E8F1F2"
-        },
+        {Colors.WINTER_FROST},
         // February - Late winter
-        {
-            "#F0F8FF"
-        },
+        {"#F0F8FF"},
         // March - Early spring
         {
-            "#E9F7EF", "#E9F7EF", "#E9F7EF", "#E9F7EF", "#E9F7EF", "#E9F7EF", "#E9F7EF", "#E9F7EF",
-            "#d1a4fd", "#d1a4fd"
+            Colors.SPRING_MINT, Colors.SPRING_MINT, Colors.SPRING_MINT, Colors.SPRING_MINT,
+            Colors.SPRING_MINT, Colors.SPRING_MINT, Colors.SPRING_MINT, Colors.SPRING_MINT,
+            Colors.SPRING_LAVENDER, Colors.SPRING_LAVENDER
         },
         // April - Spring bloom
         {
-            "#7CFC00", "#c8fc9f", "#c8fc9f", "#c8fc9f", "#c8fc9f", "#c8fc9f", "#c8fc9f", "#c8fc9f",
-            "#c8fc9f", "#d1a4fd"
+            "#7CFC00", Colors.SPRING_LIME, Colors.SPRING_LIME, Colors.SPRING_LIME,
+            Colors.SPRING_LIME, Colors.SPRING_LIME, Colors.SPRING_LIME, Colors.SPRING_LIME,
+            Colors.SPRING_LIME, Colors.SPRING_LAVENDER
         },
         // May - Late spring, lush
         {
-            "#82E0AA", "#D0ECE7", "#A2D9CE", "#73C6B6", "#45B39D", "#58D68D", "#82E0AA", "#ABEBC6",
-            "#D5F5E3", "#FEF9E7"
+            Colors.EMERALD, "#D0ECE7", "#A2D9CE", "#73C6B6", "#45B39D", "#58D68D",
+            Colors.EMERALD, "#ABEBC6", "#D5F5E3", "#FEF9E7"
         },
         // June - Early summer
-        {
-            "#66CDAA"
-        },
+        {Colors.SUMMER_AQUAMARINE},
         // July - Mid summer
-        {
-            "#3CB371"
-        },
+        {Colors.SUMMER_GREEN},
         // August - Late summer
-        {
-            "#5bf0ff"
-        },
+        {Colors.SUMMER_CYAN},
         // September - Early fall
         {
-            "#FAD7A0", "#F8C471", "#F5B041", "#F39C12", "#F39C12", "#F39C12", "#F39C12", "#F39C12",
-            "#FFD700", "#FFD700"
+            "#FAD7A0", "#F8C471", "#F5B041", Colors.ORANGE, Colors.ORANGE,
+            Colors.ORANGE, Colors.ORANGE, Colors.ORANGE, Colors.GOLD, Colors.GOLD
         },
         // October - Peak fall foliage
         {
-            "#FF4500",
-            "#FF8C00",
-            "#DAA520",
-            "rgba(180,120,60,0.4)",
-            "rgba(190,130,70,0.4)",
-            "rgba(200,140,80,0.4)",
-            "rgba(210,160,100,0.4)",
-            "rgba(225,190,140,0.4)",
-            "#C0C0C0",
-            "#808080"
+            "#FF4500", "#FF8C00", "#DAA520",
+            "rgba(180,120,60,0.4)", "rgba(190,130,70,0.4)", "rgba(200,140,80,0.4)",
+            "rgba(210,160,100,0.4)", "rgba(225,190,140,0.4)", "#C0C0C0", "#808080"
         },
         // November - Late fall
-        {
-            "rgba(161,161,161,0.30)"
-        },
+        {Colors.OVERLAY_GRAY_LIGHT},
         // December - Winter
-        {
-            "rgba(161,161,161,0.6)"
-        }
+        {Colors.OVERLAY_GRAY_MEDIUM}
     };
 
     // Lakeshore monthly colors - cool blue gradient through the year (single color per month)
@@ -1002,53 +983,53 @@ public class CalendarRenderingService {
         THEMES.put(
                 DEFAULT_THEME,
                 new ThemeColors(
-                        "#000000", // text
-                        "#ffffff", // background
+                        Colors.BLACK, // text
+                        Colors.WHITE, // background
                         "#f0f0f0", // weekend background
-                        "#333333", // month header
-                        "#666666" // weekday header
+                        Colors.GRAY_900, // month header
+                        Colors.GRAY_600 // weekday header
                         ));
 
         // Vermont Weekends theme - colors will be applied per month
         THEMES.put(
                 "vermontWeekends",
                 new ThemeColors(
-                        "#000000", "#ffffff", null, // weekend color will be dynamic
-                        "#1b5e20", "#333333"));
+                        Colors.BLACK, Colors.WHITE, null, // weekend color will be dynamic
+                        "#1b5e20", Colors.GRAY_900));
 
         // Rainbow themes
         THEMES.put(
                 "rainbowWeekends",
                 new ThemeColors(
-                        "#000000", "#ffffff", null, // will be calculated dynamically
+                        Colors.BLACK, Colors.WHITE, null, // will be calculated dynamically
                         "#e91e63", "#9c27b0"));
 
         THEMES.put(
                 "rainbowDays",
                 new ThemeColors(
-                        "#000000", null, // will be calculated dynamically
-                        null, "#333333", "#666666"));
+                        Colors.BLACK, null, // will be calculated dynamically
+                        null, Colors.GRAY_900, Colors.GRAY_600));
 
         // Lakeshore theme - cool blue tones
         THEMES.put(
                 "lakeshoreWeekends",
                 new ThemeColors(
-                        "#000000", "#ffffff", null, // weekend color will be dynamic per month
-                        "#1565c0", "#333333"));
+                        Colors.BLACK, Colors.WHITE, null, // weekend color will be dynamic per month
+                        "#1565c0", Colors.GRAY_900));
 
         // Sunset Glow theme - warm orange/pink tones
         THEMES.put(
                 "sunsetWeekends",
                 new ThemeColors(
-                        "#000000", "#ffffff", null, // weekend color will be dynamic per month
-                        "#e65100", "#333333"));
+                        Colors.BLACK, Colors.WHITE, null, // weekend color will be dynamic per month
+                        "#e65100", Colors.GRAY_900));
 
         // Forest Floor theme - earth/green tones
         THEMES.put(
                 "forestWeekends",
                 new ThemeColors(
-                        "#000000", "#ffffff", null, // weekend color will be dynamic per month
-                        "#2e7d32", "#333333"));
+                        Colors.BLACK, Colors.WHITE, null, // weekend color will be dynamic per month
+                        "#2e7d32", Colors.GRAY_900));
     }
 
     private static class ThemeColors {
