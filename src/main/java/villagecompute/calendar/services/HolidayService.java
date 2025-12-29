@@ -186,7 +186,7 @@ public class HolidayService {
      * Calculate the number of elapsed months before Hebrew year
      */
     private long hebrewMonthsElapsed(int hebrewYear) {
-        long y = hebrewYear - 1;
+        long y = hebrewYear - 1L;
         return (235 * y + 1) / 19;
     }
 
@@ -979,8 +979,7 @@ public class HolidayService {
         LocalDate winterSolstice = calculateWinterSolstice(year - 1);
         LocalDate firstNewMoon = findNewMoonAfter(winterSolstice);
         if (firstNewMoon == null) return null;
-        LocalDate secondNewMoon = findNewMoonAfter(firstNewMoon.plusDays(1));
-        return secondNewMoon;
+        return findNewMoonAfter(firstNewMoon.plusDays(1));
     }
 
     private LocalDate calculateDragonBoatFestival(int year) {

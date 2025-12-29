@@ -7,7 +7,6 @@ import villagecompute.calendar.util.astronomical.HebrewCalendarConverter;
 import villagecompute.calendar.util.astronomical.MoonPhaseCalculator;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;

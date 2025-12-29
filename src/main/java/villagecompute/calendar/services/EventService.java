@@ -447,7 +447,7 @@ public class EventService {
         }
 
         // Admin can modify everything
-        if (currentUser.isAdmin) {
+        if (Boolean.TRUE.equals(currentUser.isAdmin)) {
             return;
         }
 
