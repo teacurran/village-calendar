@@ -22,6 +22,7 @@ import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.CalendarRenderingService;
+import villagecompute.calendar.util.Roles;
 
 import io.quarkus.logging.Log;
 
@@ -74,7 +75,7 @@ public class UserCalendarResource {
     /** Get all calendars for the authenticated user */
     @GET
     @Path("/calendars")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     public Response getCalendars() {
         CalendarUser user =
                 authService
@@ -95,7 +96,7 @@ public class UserCalendarResource {
     /** Save or update a user calendar */
     @POST
     @Path("/save")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public Response saveCalendar(SaveCalendarRequest request) {
         CalendarUser user =
@@ -180,7 +181,7 @@ public class UserCalendarResource {
     /** Get preview SVG for a calendar */
     @GET
     @Path("/calendars/{id}/preview")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     public Response getCalendarPreview(@PathParam("id") UUID id) {
         CalendarUser user =
                 authService
@@ -216,7 +217,7 @@ public class UserCalendarResource {
     /** Delete a user calendar */
     @DELETE
     @Path("/calendars/{id}")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public Response deleteCalendar(@PathParam("id") UUID id) {
         CalendarUser user =

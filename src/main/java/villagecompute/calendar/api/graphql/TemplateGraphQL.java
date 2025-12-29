@@ -17,6 +17,7 @@ import villagecompute.calendar.api.graphql.inputs.TemplateInput;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.repositories.CalendarTemplateRepository;
 import villagecompute.calendar.services.TemplateService;
+import villagecompute.calendar.util.Roles;
 
 import io.quarkus.security.identity.SecurityIdentity;
 
@@ -130,7 +131,7 @@ public class TemplateGraphQL {
      */
     @Mutation("createTemplate")
     @Description("Create a new calendar template (admin only). Requires ADMIN role in JWT claims.")
-    @RolesAllowed("ADMIN")
+    @RolesAllowed(Roles.ADMIN)
     @Transactional
     public CalendarTemplate createTemplate(
             @Name("input") @Description("Template creation data") @NotNull @Valid
@@ -187,7 +188,7 @@ public class TemplateGraphQL {
     @Mutation("updateTemplate")
     @Description(
             "Update an existing calendar template (admin only). Requires ADMIN role in JWT claims.")
-    @RolesAllowed("ADMIN")
+    @RolesAllowed(Roles.ADMIN)
     @Transactional
     public CalendarTemplate updateTemplate(
             @Name("id") @Description("Template ID to update") @NotNull String id,
@@ -224,7 +225,7 @@ public class TemplateGraphQL {
     @Description(
             "Soft-delete a calendar template (admin only). Requires ADMIN role in JWT claims. Sets"
                     + " isActive=false instead of permanently removing the template.")
-    @RolesAllowed("ADMIN")
+    @RolesAllowed(Roles.ADMIN)
     @Transactional
     public Boolean deleteTemplate(
             @Name("id") @Description("Template ID to soft-delete") @NotNull String id) {

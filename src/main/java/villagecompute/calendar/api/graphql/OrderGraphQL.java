@@ -33,6 +33,7 @@ import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PaymentService;
 import villagecompute.calendar.services.ProductService;
 import villagecompute.calendar.util.OrderNumberGenerator;
+import villagecompute.calendar.util.Roles;
 
 /**
  * GraphQL resolver for order queries and mutations. Handles order creation, payment processing, and
@@ -74,7 +75,7 @@ public class OrderGraphQL {
      */
     @Query("myOrders")
     @Description("Get orders for the authenticated user. Requires authentication.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     public List<CalendarOrder> myOrders(
             @Name("status") @Description("Filter by order status (optional)") String status) {
         LOG.debugf("Query: myOrders(status=%s)", status);
@@ -115,7 +116,7 @@ public class OrderGraphQL {
     @Description(
             "Get orders for a specific user (admin only) with optional status filter. If userId is"
                     + " not provided, returns orders for authenticated user.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     public List<CalendarOrder> orders(
             @Name("userId") @Description("User ID to fetch orders for (admin only)") String userId,
             @Name("status") @Description("Filter by order status (optional)") String status) {
@@ -182,7 +183,7 @@ public class OrderGraphQL {
      */
     @Query("order")
     @Description("Get a single order by ID. User must own the order or be an admin.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     public CalendarOrder order(@Name("id") @Description("Order ID") @NonNull String id) {
         LOG.infof("Query: order(id=%s)", id);
 
@@ -369,7 +370,7 @@ public class OrderGraphQL {
      */
     @Query("allOrders")
     @Description("Get all orders across all users (admin only). Requires ADMIN role in JWT claims.")
-    @RolesAllowed("ADMIN")
+    @RolesAllowed(Roles.ADMIN)
     public List<CalendarOrder> allOrders(
             @Name("status") @Description("Filter by order status (optional)") String status,
             @Name("limit") @Description("Maximum number of orders to return (default: 50)")
@@ -411,7 +412,7 @@ public class OrderGraphQL {
     @Description(
             "Create a new order and Stripe PaymentIntent. Returns order with clientSecret for"
                     + " payment.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public CreateOrderResponse createOrder(
             @Name("input") @Description("Order creation data") @NotNull @Valid OrderInput input) {
@@ -510,7 +511,7 @@ public class OrderGraphQL {
     @Description(
             "Place an order for printed calendars. Alternative to createOrder with structured input"
                     + " type. Returns PaymentIntent for checkout.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public CreateOrderResponse placeOrder(
             @Name("input") @Description("Order placement data") @NotNull @Valid
@@ -561,7 +562,7 @@ public class OrderGraphQL {
     @Mutation("updateOrderStatus")
     @Description(
             "Update order status (admin only). Used to move orders through fulfillment stages.")
-    @RolesAllowed("ADMIN")
+    @RolesAllowed(Roles.ADMIN)
     @Transactional
     public CalendarOrder updateOrderStatus(
             @Name("input") @Description("Order status update data") @NotNull @Valid
@@ -597,7 +598,7 @@ public class OrderGraphQL {
     @Description(
             "Cancel an order and initiate refund. Can only cancel orders in PENDING or PAID"
                     + " status.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public CalendarOrder cancelOrder(
             @Name("orderId") @Description("Order ID to cancel") @NonNull String orderId,

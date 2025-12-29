@@ -14,6 +14,7 @@ import villagecompute.calendar.data.models.UserMaze;
 import villagecompute.calendar.data.models.enums.MazeType;
 import villagecompute.calendar.services.MazeGenerationService;
 import villagecompute.calendar.services.MazeService;
+import villagecompute.calendar.util.Roles;
 
 @GraphQLApi
 public class MazeGraphQL {
@@ -32,7 +33,7 @@ public class MazeGraphQL {
     }
 
     @Query("myMazes")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     @Description("Get all mazes for the current user")
     public List<UserMaze> getMyMazes() {
         return mazeService.findMyMazes();

@@ -38,6 +38,7 @@ import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.integration.stripe.StripeService;
 import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.OrderService;
+import villagecompute.calendar.util.Roles;
 
 /**
  * GraphQL resolver for order operations. Handles order queries, order placement, and order
@@ -84,7 +85,7 @@ public class OrderResolver {
      */
     @Query("order")
     @Description("Get a single order by ID. Returns order if user owns it (or user is admin).")
-    @RolesAllowed({"USER", "ADMIN"})
+    @RolesAllowed({Roles.USER, Roles.ADMIN})
     public CalendarOrder order(@Name("id") @Description("Order ID") @NotNull final UUID orderId) {
         LOG.infof("Query: order(id=%s)", orderId);
 
@@ -130,7 +131,7 @@ public class OrderResolver {
      */
     @Query("orders")
     @Description("Get orders for a user. Admin can query any user, non-admin gets own orders.")
-    @RolesAllowed({"USER", "ADMIN"})
+    @RolesAllowed({Roles.USER, Roles.ADMIN})
     public List<CalendarOrder> orders(
             @Name("userId") @Description("User ID to fetch orders for (admin only)")
                     final UUID userId,
@@ -188,7 +189,7 @@ public class OrderResolver {
      */
     @Query("myOrders")
     @Description("Get orders for the authenticated user. Requires authentication.")
-    @RolesAllowed({"USER", "ADMIN"})
+    @RolesAllowed({Roles.USER, Roles.ADMIN})
     public List<CalendarOrder> myOrders(
             @Name("status") @Description("Filter by order status (optional)") final String status) {
         LOG.infof("Query: myOrders(status=%s)", status);
@@ -227,7 +228,7 @@ public class OrderResolver {
      */
     @Query("allOrders")
     @Description("Get all orders across all users (admin only). Requires ADMIN role in JWT claims.")
-    @RolesAllowed("ADMIN")
+    @RolesAllowed(Roles.ADMIN)
     public List<CalendarOrder> allOrders(
             @Name("status") @Description("Filter by order status (optional)") final String status,
             @Name("limit") @Description("Maximum number of orders to return") final Integer limit) {
@@ -269,7 +270,7 @@ public class OrderResolver {
     @Description(
             "Place an order for printed calendars. "
                     + "Requires authentication. Creates Stripe Checkout Session for payment.")
-    @RolesAllowed({"USER", "ADMIN"})
+    @RolesAllowed({Roles.USER, Roles.ADMIN})
     @Transactional
     public PaymentIntentResponse placeOrder(
             @Name("input") @Description("Order details") @NotNull final PlaceOrderInput input) {
@@ -400,7 +401,7 @@ public class OrderResolver {
             "Cancel an order and initiate refund. "
                     + "Requires authentication and order ownership (or admin role). "
                     + "Can only cancel orders in PENDING or PAID status.")
-    @RolesAllowed({"USER", "ADMIN"})
+    @RolesAllowed({Roles.USER, Roles.ADMIN})
     @Transactional
     public CalendarOrder cancelOrder(
             @Name("orderId") @Description("Order ID to cancel") @NotNull final UUID orderId,

@@ -11,6 +11,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
 
 import villagecompute.calendar.services.AuthenticationService;
+import villagecompute.calendar.util.Roles;
 
 /**
  * GraphQL resolver for PDF generation operations. Handles asynchronous PDF job creation and status
@@ -40,7 +41,7 @@ public class PdfGraphQL {
     @Query("pdfJob")
     @Description(
             "Get a PDF generation job by ID. Returns job status and download URL when complete.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     public PdfJobStub pdfJob(@Name("id") @NotNull @Description("PDF job ID") String id) {
         LOG.infof("Query pdfJob called with id=%s (STUB IMPLEMENTATION)", id);
 
@@ -67,7 +68,7 @@ public class PdfGraphQL {
     @Description(
             "Generate PDF for a calendar asynchronously. Creates a background job and returns"
                     + " PdfJob for status polling.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public PdfJobStub generatePdf(
             @Name("calendarId") @NotNull @Description("Calendar ID to generate PDF for")

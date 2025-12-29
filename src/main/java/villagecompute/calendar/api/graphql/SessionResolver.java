@@ -24,6 +24,7 @@ import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.CalendarService;
 import villagecompute.calendar.services.SessionService;
+import villagecompute.calendar.util.Roles;
 
 /**
  * GraphQL resolver for guest session operations. Handles session-based calendar management for
@@ -162,7 +163,7 @@ public class SessionResolver {
             "Convert anonymous guest session to authenticated user account. "
                     + "Links all calendars from the guest session to the authenticated user. "
                     + "Returns the number of calendars converted.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public Integer convertGuestSession(
             @Name("sessionId") @Description("Guest session ID to convert") @NotNull final String sessionId) {

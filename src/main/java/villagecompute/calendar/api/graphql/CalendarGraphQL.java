@@ -34,6 +34,7 @@ import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.CalendarService;
 import villagecompute.calendar.services.EventService;
+import villagecompute.calendar.util.Roles;
 
 /**
  * GraphQL resolver for calendar queries and mutations. Handles user authentication, calendar CRUD
@@ -139,7 +140,7 @@ public class CalendarGraphQL {
      */
     @Query("myCalendars")
     @Description("Get calendars for the authenticated user. " + "Requires authentication.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     public List<UserCalendar> myCalendars(
             @Description("Filter by calendar year (optional)") final Integer year) {
         LOG.infof("Query: myCalendars(year=%s)", year);
@@ -178,7 +179,7 @@ public class CalendarGraphQL {
             "Get calendars for a specific user (admin only) or "
                     + "filter by year. If userId is not provided, returns "
                     + "calendars for authenticated user.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     public List<UserCalendar> calendars(
             @Name("userId") @Description("User ID to fetch calendars for (admin only)")
                     final String userId,
@@ -289,7 +290,7 @@ public class CalendarGraphQL {
      */
     @Query("allUsers")
     @Description("Get all users (admin only). Requires ADMIN role " + "in JWT claims.")
-    @RolesAllowed("ADMIN")
+    @RolesAllowed(Roles.ADMIN)
     public List<CalendarUser> allUsers(
             @Name("limit") @Description("Maximum number of users to return (default: 50)")
                     final Integer limit) {
@@ -320,7 +321,7 @@ public class CalendarGraphQL {
             "Create a new calendar based on a template. "
                     + "Requires authentication. The calendar is created "
                     + "in DRAFT status.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public UserCalendar createCalendar(
             @Name("input") @Description("Calendar creation data") @NotNull @Valid
@@ -377,7 +378,7 @@ public class CalendarGraphQL {
     @Description(
             "Update an existing calendar's customization. "
                     + "Requires authentication and calendar ownership.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public UserCalendar updateCalendar(
             @Name("id") @Description("Calendar ID to update") @NotNull final String id,
@@ -425,7 +426,7 @@ public class CalendarGraphQL {
             "Delete a calendar. Requires authentication and "
                     + "calendar ownership. Cannot delete calendars with "
                     + "paid orders.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public Boolean deleteCalendar(
             @Name("id") @Description("Calendar ID to delete") @NotNull final String id) {
@@ -494,7 +495,7 @@ public class CalendarGraphQL {
     @Description(
             "Update a user's admin status. Requires ADMIN role. "
                     + "Cannot remove admin from self to prevent lockout.")
-    @RolesAllowed("ADMIN")
+    @RolesAllowed(Roles.ADMIN)
     @Transactional
     public CalendarUser updateUserAdmin(
             @Name("userId") @Description("User ID to update") @NotNull final String userId,
@@ -558,7 +559,7 @@ public class CalendarGraphQL {
             "Convert anonymous guest session to authenticated "
                     + "user account. Links all calendars from the guest session "
                     + "to the newly authenticated user.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public CalendarUser convertGuestSession(
             @Name("sessionId") @Description("Guest session ID to convert") @NotNull final String sessionId) {
