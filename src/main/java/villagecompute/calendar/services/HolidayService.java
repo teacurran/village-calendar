@@ -16,6 +16,114 @@ import jakarta.enterprise.context.ApplicationScoped;
 @ApplicationScoped
 public class HolidayService {
 
+    // ========================================
+    // Holiday Set Constants
+    // ========================================
+
+    public static final String SET_US = "US";
+    public static final String SET_JEWISH = "JEWISH";
+    public static final String SET_HEBREW = "HEBREW"; // Alias for JEWISH
+    public static final String SET_CHRISTIAN = "CHRISTIAN";
+    public static final String SET_ISLAMIC = "ISLAMIC";
+    public static final String SET_MUSLIM = "MUSLIM"; // Alias for ISLAMIC
+    public static final String SET_BUDDHIST = "BUDDHIST";
+    public static final String SET_HINDU = "HINDU";
+    public static final String SET_CANADIAN = "CANADIAN";
+    public static final String SET_UK = "UK";
+    public static final String SET_EUROPEAN = "EUROPEAN";
+    public static final String SET_MAJOR_WORLD = "MAJOR_WORLD";
+    public static final String SET_MEXICAN = "MEXICAN";
+    public static final String SET_PAGAN = "PAGAN";
+    public static final String SET_WICCAN = "WICCAN"; // Alias for PAGAN
+    public static final String SET_CHINESE = "CHINESE";
+    public static final String SET_LUNAR = "LUNAR"; // Alias for CHINESE
+    public static final String SET_SECULAR = "SECULAR";
+    public static final String SET_FUN = "FUN"; // Alias for SECULAR
+
+    /**
+     * Map frontend holiday set IDs to canonical backend set names. Handles case-insensitive
+     * matching and various aliases.
+     *
+     * @param setId The frontend set ID (e.g., "us", "jewish", "ca")
+     * @return The canonical backend set name (e.g., "US", "JEWISH", "CANADIAN")
+     */
+    public String mapHolidaySetId(String setId) {
+        if (setId == null) return SET_US;
+        return switch (setId.toLowerCase()) {
+            case "us" -> SET_US;
+            case "jewish" -> SET_JEWISH;
+            case "christian" -> SET_CHRISTIAN;
+            case "muslim", "islamic" -> SET_ISLAMIC;
+            case "buddhist" -> SET_BUDDHIST;
+            case "hindu", "in" -> SET_HINDU;
+            case "canadian", "ca" -> SET_CANADIAN;
+            case "uk" -> SET_UK;
+            case "european" -> SET_EUROPEAN;
+            case "major_world" -> SET_MAJOR_WORLD;
+            case "mexican", "mx" -> SET_MEXICAN;
+            case "pagan", "wiccan" -> SET_PAGAN;
+            case "chinese", "cn", "lunar" -> SET_CHINESE;
+            case "secular", "fun" -> SET_SECULAR;
+            default -> setId.toUpperCase();
+        };
+    }
+
+    /**
+     * Get holidays with emoji mappings for a year and holiday set.
+     *
+     * @param year The calendar year
+     * @param setId The holiday set ID (will be mapped to canonical name)
+     * @return Map of date strings to emoji characters
+     */
+    public Map<String, String> getHolidaysWithEmoji(int year, String setId) {
+        String canonicalSet = mapHolidaySetId(setId);
+        return switch (canonicalSet) {
+            case SET_US -> getUSHolidaysWithEmoji(year);
+            case SET_JEWISH, SET_HEBREW -> getJewishHolidaysWithEmoji(year);
+            case SET_CHRISTIAN -> getChristianHolidaysWithEmoji(year);
+            case SET_CANADIAN -> getCanadianHolidaysWithEmoji(year);
+            case SET_UK -> getUKHolidaysWithEmoji(year);
+            case SET_MAJOR_WORLD -> getMajorWorldHolidaysWithEmoji(year);
+            case SET_MEXICAN -> getMexicanHolidaysWithEmoji(year);
+            case SET_PAGAN, SET_WICCAN -> getPaganHolidaysWithEmoji(year);
+            case SET_HINDU -> getHinduHolidaysWithEmoji(year);
+            case SET_ISLAMIC, SET_MUSLIM -> getIslamicHolidaysWithEmoji(year);
+            case SET_CHINESE, SET_LUNAR -> getChineseHolidaysWithEmoji(year);
+            case SET_SECULAR, SET_FUN -> getSecularHolidaysWithEmoji(year);
+            default -> new HashMap<>();
+        };
+    }
+
+    /**
+     * Get holiday names for a year and holiday set.
+     *
+     * @param year The calendar year
+     * @param setId The holiday set ID (will be mapped to canonical name)
+     * @return Map of date strings to holiday names
+     */
+    public Map<String, String> getHolidayNames(int year, String setId) {
+        String canonicalSet = mapHolidaySetId(setId);
+        return switch (canonicalSet) {
+            case SET_US -> getUSHolidays(year);
+            case SET_JEWISH, SET_HEBREW -> getJewishHolidays(year);
+            case SET_CHRISTIAN -> getChristianHolidays(year);
+            case SET_CANADIAN -> getCanadianHolidays(year);
+            case SET_UK -> getUKHolidays(year);
+            case SET_MAJOR_WORLD -> getMajorWorldHolidays(year);
+            case SET_MEXICAN -> getMexicanHolidays(year);
+            case SET_PAGAN, SET_WICCAN -> getPaganHolidays(year);
+            case SET_HINDU -> getHinduHolidays(year);
+            case SET_ISLAMIC, SET_MUSLIM -> getIslamicHolidays(year);
+            case SET_CHINESE, SET_LUNAR -> getChineseHolidays(year);
+            case SET_SECULAR, SET_FUN -> getSecularHolidays(year);
+            default -> new HashMap<>();
+        };
+    }
+
+    // ========================================
+    // US Federal Holidays
+    // ========================================
+
     /** Get US Federal Holidays for a given year */
     public Map<String, String> getUSHolidays(int year) {
         Map<String, String> holidays = new HashMap<>();

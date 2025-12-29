@@ -1103,14 +1103,14 @@ public class CalendarRenderingService {
         // Populate holidays from holidaySets if provided
         if (config.holidaySets != null && !config.holidaySets.isEmpty()) {
             for (String setId : config.holidaySets) {
-                // Map frontend set IDs to backend set names
-                String backendSetName = mapHolidaySetId(setId);
+                // Get holidays from HolidayService (handles ID mapping internally)
                 Map<String, String> setHolidayEmojis =
-                        getHolidaysWithEmoji(config.year, backendSetName);
+                        holidayService.getHolidaysWithEmoji(config.year, setId);
                 config.holidays.addAll(setHolidayEmojis.keySet());
                 config.holidayEmojis.putAll(setHolidayEmojis);
                 // Also get holiday names for text display modes
-                Map<String, String> setHolidayNames = getHolidayNames(config.year, backendSetName);
+                Map<String, String> setHolidayNames =
+                        holidayService.getHolidayNames(config.year, setId);
                 config.holidayNames.putAll(setHolidayNames);
             }
         }
@@ -1121,51 +1121,6 @@ public class CalendarRenderingService {
         } else {
             // Default to grid layout
             return generateGridCalendarSVG(config);
-        }
-    }
-
-    // Map frontend holiday set IDs to backend set names
-    private String mapHolidaySetId(String setId) {
-        if (setId == null) return "US";
-        switch (setId.toLowerCase()) {
-            case "us":
-                return "US";
-            case "jewish":
-                return "JEWISH";
-            case "christian":
-                return "CHRISTIAN";
-            case "muslim":
-            case "islamic":
-                return "ISLAMIC";
-            case "buddhist":
-                return "BUDDHIST";
-            case "hindu":
-            case "in":
-                return "HINDU";
-            case "canadian":
-            case "ca":
-                return "CANADIAN";
-            case "uk":
-                return "UK";
-            case "european":
-                return "EUROPEAN";
-            case "major_world":
-                return "MAJOR_WORLD";
-            case "mexican":
-            case "mx":
-                return "MEXICAN";
-            case "pagan":
-            case "wiccan":
-                return "PAGAN";
-            case "chinese":
-            case "cn":
-            case "lunar":
-                return "CHINESE";
-            case "secular":
-            case "fun":
-                return "SECULAR";
-            default:
-                return setId.toUpperCase();
         }
     }
 
@@ -1778,44 +1733,6 @@ public class CalendarRenderingService {
         wrapper.append("</svg>");
 
         return wrapper.toString();
-    }
-
-    // Get holidays with emoji mappings for a year - delegates to HolidayService
-    public Map<String, String> getHolidaysWithEmoji(int year, String country) {
-        return switch (country) {
-            case "US" -> holidayService.getUSHolidaysWithEmoji(year);
-            case "JEWISH", "HEBREW" -> holidayService.getJewishHolidaysWithEmoji(year);
-            case "CHRISTIAN" -> holidayService.getChristianHolidaysWithEmoji(year);
-            case "CANADIAN" -> holidayService.getCanadianHolidaysWithEmoji(year);
-            case "UK" -> holidayService.getUKHolidaysWithEmoji(year);
-            case "MAJOR_WORLD" -> holidayService.getMajorWorldHolidaysWithEmoji(year);
-            case "MEXICAN" -> holidayService.getMexicanHolidaysWithEmoji(year);
-            case "PAGAN", "WICCAN" -> holidayService.getPaganHolidaysWithEmoji(year);
-            case "HINDU" -> holidayService.getHinduHolidaysWithEmoji(year);
-            case "ISLAMIC", "MUSLIM" -> holidayService.getIslamicHolidaysWithEmoji(year);
-            case "CHINESE", "LUNAR" -> holidayService.getChineseHolidaysWithEmoji(year);
-            case "SECULAR", "FUN" -> holidayService.getSecularHolidaysWithEmoji(year);
-            default -> new HashMap<>();
-        };
-    }
-
-    // Get holiday names for text display modes - delegates to HolidayService
-    public Map<String, String> getHolidayNames(int year, String country) {
-        return switch (country) {
-            case "US" -> holidayService.getUSHolidays(year);
-            case "JEWISH", "HEBREW" -> holidayService.getJewishHolidays(year);
-            case "CHRISTIAN" -> holidayService.getChristianHolidays(year);
-            case "CANADIAN" -> holidayService.getCanadianHolidays(year);
-            case "UK" -> holidayService.getUKHolidays(year);
-            case "MAJOR_WORLD" -> holidayService.getMajorWorldHolidays(year);
-            case "MEXICAN" -> holidayService.getMexicanHolidays(year);
-            case "PAGAN", "WICCAN" -> holidayService.getPaganHolidays(year);
-            case "HINDU" -> holidayService.getHinduHolidays(year);
-            case "ISLAMIC", "MUSLIM" -> holidayService.getIslamicHolidays(year);
-            case "CHINESE", "LUNAR" -> holidayService.getChineseHolidays(year);
-            case "SECULAR", "FUN" -> holidayService.getSecularHolidays(year);
-            default -> new HashMap<>();
-        };
     }
 
     // Generate SVG for moon illumination visualization
