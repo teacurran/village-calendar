@@ -316,7 +316,7 @@ public class PaymentService {
         String timestamp = Instant.now().toString();
         String noteEntry =
                 String.format(
-                        "[%s] Payment succeeded via PaymentIntent %s\n",
+                        "[%s] Payment succeeded via PaymentIntent %s%n",
                         timestamp, paymentIntentId);
         order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
 
@@ -388,7 +388,7 @@ public class PaymentService {
                 BigDecimal.valueOf(refund.getAmount()).divide(BigDecimal.valueOf(100));
         String noteEntry =
                 String.format(
-                        "[%s] Refund processed: $%.2f (Refund ID: %s, Reason: %s)\n",
+                        "[%s] Refund processed: $%.2f (Refund ID: %s, Reason: %s)%n",
                         timestamp, refundAmount, refund.getId(), refund.getReason());
         order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
         order.persist();
@@ -441,7 +441,7 @@ public class PaymentService {
                 BigDecimal.valueOf(amountRefunded).divide(BigDecimal.valueOf(100));
         String noteEntry =
                 String.format(
-                        "[%s] Refund received via webhook: $%.2f (Refund ID: %s, Charge: %s)\n",
+                        "[%s] Refund received via webhook: $%.2f (Refund ID: %s, Charge: %s)%n",
                         timestamp, refundAmount, refundId, chargeId);
         order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
         order.persist();
@@ -875,7 +875,7 @@ public class PaymentService {
         String timestamp = Instant.now().toString();
         String noteEntry =
                 String.format(
-                        "[%s] Payment succeeded via Checkout Session %s\n", timestamp, sessionId);
+                        "[%s] Payment succeeded via Checkout Session %s%n", timestamp, sessionId);
         order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
 
         order.persist();

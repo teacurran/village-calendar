@@ -173,7 +173,7 @@ public class OrderService {
             String timestamp = Instant.now().toString();
             String noteEntry =
                     String.format(
-                            "[%s] Status changed from %s to %s: %s\n",
+                            "[%s] Status changed from %s to %s: %s%n",
                             timestamp, oldStatus, newStatus, notes);
             order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
         }
@@ -284,7 +284,7 @@ public class OrderService {
         String timestamp = Instant.now().toString();
         String noteEntry =
                 String.format(
-                        "[%s] Order cancelled from status %s. Reason: %s\n",
+                        "[%s] Order cancelled from status %s. Reason: %s%n",
                         timestamp,
                         oldStatus,
                         cancellationReason != null ? cancellationReason : "No reason provided");
@@ -294,7 +294,7 @@ public class OrderService {
         if (CalendarOrder.STATUS_PAID.equals(oldStatus) && order.stripePaymentIntentId != null) {
             String refundNote =
                     String.format(
-                            "[%s] TODO: Process refund via PaymentService for payment intent %s\n",
+                            "[%s] TODO: Process refund via PaymentService for payment intent %s%n",
                             timestamp, order.stripePaymentIntentId);
             order.notes += refundNote;
         }

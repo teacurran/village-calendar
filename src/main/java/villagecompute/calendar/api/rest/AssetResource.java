@@ -103,7 +103,7 @@ public class AssetResource {
                             String svg =
                                     config.substring(start, end)
                                             .replace("\\\"", "\"")
-                                            .replace("\\n", "\n")
+                                            .replace("\%n", "%n")
                                             .replace("\\\\", "\\");
                             return Response.ok(svg)
                                     .header("Content-Type", "image/svg+xml")

@@ -831,7 +831,7 @@ public class OrderGraphQL {
             // Update order with session ID
             order.notes =
                     String.format(
-                            "[%s] Checkout session created: %s\n",
+                            "[%s] Checkout session created: %s%n",
                             java.time.Instant.now(), sessionDetails.get("sessionId"));
             order.persist();
 

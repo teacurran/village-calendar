@@ -208,7 +208,7 @@ public class EmojiSvgService {
             String fullSvg =
                     new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
                             .lines()
-                            .collect(Collectors.joining("\n"));
+                            .collect(Collectors.joining("%n"));
 
             // Extract viewBox from the SVG
             String viewBox = extractViewBox(fullSvg);

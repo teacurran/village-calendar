@@ -346,7 +346,7 @@ public class WebhookResource {
                         : "Unknown error";
 
         String timestamp = Instant.now().toString();
-        String noteEntry = String.format("[%s] Payment failed: %s\n", timestamp, failureMessage);
+        String noteEntry = String.format("[%s] Payment failed: %s%n", timestamp, failureMessage);
         order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
         order.persist();
 

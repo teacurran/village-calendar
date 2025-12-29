@@ -365,7 +365,7 @@ public class OrderResolver {
         // Store Stripe session ID in order for tracking
         // Note: We don't have a field for this in the current schema, but we can add it to notes
         String sessionNote =
-                String.format("Stripe Checkout Session ID: %s\n", checkoutSession.getId());
+                String.format("Stripe Checkout Session ID: %s%n", checkoutSession.getId());
         order.notes = order.notes == null ? sessionNote : sessionNote + order.notes;
         order.persist();
 

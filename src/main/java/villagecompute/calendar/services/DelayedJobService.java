@@ -177,7 +177,7 @@ public class DelayedJobService {
                 Arrays.stream(e.getStackTrace())
                         .limit(20)
                         .map(StackTraceElement::toString)
-                        .reduce((a, b) -> a + "\n" + b)
+                        .reduce((a, b) -> a + "%n" + b)
                         .orElse("");
         job.failedAt = Instant.now();
         job.attempts++;

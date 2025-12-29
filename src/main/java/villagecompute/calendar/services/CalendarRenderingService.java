@@ -515,14 +515,14 @@ public class CalendarRenderingService {
                 emojiY = cellY + cellHeight / 2 + 5;
             }
             result.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, true));
-            result.append("\n");
+            result.append("%n");
         } else if ("small".equals(config.eventDisplayMode) && !holidayEmoji.isEmpty()) {
             // Small mode: bottom-left corner
             int emojiX = cellX + 5;
             int emojiY = cellY + cellHeight - 5;
             int fontSize = Math.max(10, cellHeight / 6);
             result.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, false));
-            result.append("\n");
+            result.append("%n");
         }
 
         // Holiday name text for large-text and text modes
@@ -672,7 +672,7 @@ public class CalendarRenderingService {
                 int emojiSize = Math.max(8, Math.min(24, scaledSize));
 
                 svg.append(renderEmoji(customEmoji, emojiX, emojiY, emojiSize, config, true));
-                svg.append("\n");
+                svg.append("%n");
             } else {
                 int emojiX = cellX;
                 int emojiY = cellY;
@@ -718,7 +718,7 @@ public class CalendarRenderingService {
                 }
 
                 svg.append(renderEmoji(customEmoji, emojiX, emojiY, 12, config, false));
-                svg.append("\n");
+                svg.append("%n");
             }
         }
 
@@ -1336,7 +1336,7 @@ public class CalendarRenderingService {
     }
 
     private void appendGridStyles(StringBuilder svg, CalendarConfig config, ThemeColors theme) {
-        svg.append("<style>\n");
+        svg.append("<style>%n");
         svg.append(
                 String.format(
                         ".year-text { fill: %s; font-family: Helvetica, Arial, sans-serif;"
@@ -1369,7 +1369,7 @@ public class CalendarRenderingService {
         svg.append(
                 String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
         svg.append(String.format(".custom-date { fill: %s; }%n", config.customDateColor));
-        svg.append("</style>\n");
+        svg.append("</style>%n");
     }
 
     private void renderEmptyCell(
@@ -1666,24 +1666,24 @@ public class CalendarRenderingService {
 
         // Build the wrapper SVG
         StringBuilder wrapper = new StringBuilder();
-        wrapper.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        wrapper.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>%n");
         wrapper.append(
                 String.format(
                         "<svg xmlns=\"http://www.w3.org/2000/svg\""
                                 + " xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%.0f\""
-                                + " height=\"%.0f\" viewBox=\"0 0 %.0f %.0f\">\n",
+                                + " height=\"%.0f\" viewBox=\"0 0 %.0f %.0f\">%n",
                         pageWidth, pageHeight, pageWidth, pageHeight));
 
         // Add a white background for the full page
         wrapper.append(
                 String.format(
-                        "  <rect width=\"%.0f\" height=\"%.0f\" fill=\"white\"/>\n",
+                        "  <rect width=\"%.0f\" height=\"%.0f\" fill=\"white\"/>%n",
                         pageWidth, pageHeight));
 
         // Position and scale the inner SVG content within the margins
         wrapper.append(
                 String.format(
-                        "  <g transform=\"translate(%.2f, %.2f) scale(%.6f)\">\n",
+                        "  <g transform=\"translate(%.2f, %.2f) scale(%.6f)\">%n",
                         offsetX, offsetY, scale));
 
         // Insert the inner SVG content (strip the outer <svg> tags)
@@ -1693,7 +1693,7 @@ public class CalendarRenderingService {
                         .replaceFirst("</svg>\\s*$", ""); // Remove closing </svg> tag
 
         wrapper.append(innerContent);
-        wrapper.append("\n  </g>\n");
+        wrapper.append("%n  </g>%n");
         wrapper.append("</svg>");
 
         return wrapper.toString();
@@ -1746,24 +1746,24 @@ public class CalendarRenderingService {
 
         // Build the wrapper SVG
         StringBuilder wrapper = new StringBuilder();
-        wrapper.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        wrapper.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>%n");
         wrapper.append(
                 String.format(
                         "<svg xmlns=\"http://www.w3.org/2000/svg\""
                                 + " xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%.0f\""
-                                + " height=\"%.0f\" viewBox=\"0 0 %.0f %.0f\">\n",
+                                + " height=\"%.0f\" viewBox=\"0 0 %.0f %.0f\">%n",
                         pageWidth, pageHeight, pageWidth, pageHeight));
 
         // Add a white background for the full page
         wrapper.append(
                 String.format(
-                        "  <rect width=\"%.0f\" height=\"%.0f\" fill=\"white\"/>\n",
+                        "  <rect width=\"%.0f\" height=\"%.0f\" fill=\"white\"/>%n",
                         pageWidth, pageHeight));
 
         // Position and scale the inner SVG content within the margins
         wrapper.append(
                 String.format(
-                        "  <g transform=\"translate(%.2f, %.2f) scale(%.6f)\">\n",
+                        "  <g transform=\"translate(%.2f, %.2f) scale(%.6f)\">%n",
                         offsetX, offsetY, scale));
 
         // Insert the inner SVG content (strip the outer <svg> tags)
@@ -1773,7 +1773,7 @@ public class CalendarRenderingService {
                         .replaceFirst("</svg>\\s*$", ""); // Remove closing </svg> tag
 
         wrapper.append(innerContent);
-        wrapper.append("\n  </g>\n");
+        wrapper.append("%n  </g>%n");
         wrapper.append("</svg>");
 
         return wrapper.toString();
@@ -2160,7 +2160,7 @@ public class CalendarRenderingService {
                         "<circle r=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"%.1f\"/>%n",
                         radius, config.moonBorderColor, config.moonBorderWidth));
 
-        svg.append("</g>\n");
+        svg.append("</g>%n");
 
         return svg.toString();
     }
