@@ -882,8 +882,7 @@ public class CalendarRenderingService {
         },
         // February - Late winter
         {
-            "#F0F8FF", "#F0F8FF", "#F0F8FF", "#F0F8FF", "#F0F8FF", "#F0F8FF", "#F0F8FF", "#F0F8FF",
-            "#F0F8FF", "#F0F8FF"
+            "#F0F8FF"
         },
         // March - Early spring
         {
@@ -902,18 +901,15 @@ public class CalendarRenderingService {
         },
         // June - Early summer
         {
-            "#66CDAA", "#66CDAA", "#66CDAA", "#66CDAA", "#66CDAA", "#66CDAA", "#66CDAA", "#66CDAA",
-            "#66CDAA", "#66CDAA"
+            "#66CDAA"
         },
         // July - Mid summer
         {
-            "#3CB371", "#3CB371", "#3CB371", "#3CB371", "#3CB371", "#3CB371", "#3CB371", "#3CB371",
-            "#3CB371", "#3CB371"
+            "#3CB371"
         },
         // August - Late summer
         {
-            "#5bf0ff", "#5bf0ff", "#5bf0ff", "#5bf0ff", "#5bf0ff", "#5bf0ff", "#5bf0ff", "#5bf0ff",
-            "#5bf0ff", "#5bf0ff"
+            "#5bf0ff"
         },
         // September - Early fall
         {
@@ -935,28 +931,10 @@ public class CalendarRenderingService {
         },
         // November - Late fall
         {
-            "rgba(161,161,161,0.30)",
-            "rgba(161,161,161,0.30)",
-            "rgba(161,161,161,0.30)",
-            "rgba(161,161,161,0.30)",
-            "rgba(161,161,161,0.30)",
-            "rgba(161,161,161,0.30)",
-            "rgba(161,161,161,0.30)",
-            "rgba(161,161,161,0.30)",
-            "rgba(161,161,161,0.30)",
             "rgba(161,161,161,0.30)"
         },
         // December - Winter
         {
-            "rgba(161,161,161,0.6)",
-            "rgba(161,161,161,0.6)",
-            "rgba(161,161,161,0.6)",
-            "rgba(161,161,161,0.6)",
-            "rgba(161,161,161,0.6)",
-            "rgba(161,161,161,0.6)",
-            "rgba(161,161,161,0.6)",
-            "rgba(161,161,161,0.6)",
-            "rgba(161,161,161,0.6)",
             "rgba(161,161,161,0.6)"
         }
     };

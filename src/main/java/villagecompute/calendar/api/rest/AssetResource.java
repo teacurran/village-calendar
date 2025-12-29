@@ -20,6 +20,8 @@ public class AssetResource {
 
     private static final Logger LOG = Logger.getLogger(AssetResource.class);
 
+    private static final String SVG_CACHE_CONTROL = "public, max-age=31536000"; // 1 year
+
     /** Get the SVG content of an asset by its ID */
     @GET
     @Path("/assets/{assetId}")
@@ -40,7 +42,7 @@ public class AssetResource {
                             asset.contentType != null ? asset.contentType : MimeTypes.IMAGE_SVG)
                     .header(
                             MimeTypes.HEADER_CACHE_CONTROL,
-                            "public, max-age=31536000") // Cache for 1 year (assets are immutable)
+                        SVG_CACHE_CONTROL) // Cache for 1 year (assets are immutable)
                     .build();
 
         } catch (IllegalArgumentException e) {
@@ -81,7 +83,7 @@ public class AssetResource {
                 if (mainAsset != null && mainAsset.svgContent != null) {
                     return Response.ok(mainAsset.svgContent)
                             .header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.IMAGE_SVG)
-                            .header(MimeTypes.HEADER_CACHE_CONTROL, "public, max-age=31536000")
+                            .header(MimeTypes.HEADER_CACHE_CONTROL, SVG_CACHE_CONTROL)
                             .build();
                 }
             }
@@ -110,7 +112,7 @@ public class AssetResource {
                                     .header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.IMAGE_SVG)
                                     .header(
                                             MimeTypes.HEADER_CACHE_CONTROL,
-                                            "public, max-age=31536000")
+                                        SVG_CACHE_CONTROL)
                                     .build();
                         }
                     }

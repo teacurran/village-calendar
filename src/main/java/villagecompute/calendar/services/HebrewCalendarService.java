@@ -265,7 +265,7 @@ public class HebrewCalendarService {
                         svgWidth, svgHeight, svgWidth, svgHeight));
 
         // Add styles
-        svg.append("<style>%n");
+        svg.append("<style>").append(System.lineSeparator());
         svg.append(
                 ".year-text { fill: #000; font-family: Helvetica, Arial, sans-serif; font-size:"
                         + " 60px; font-weight: bold; }%n");
