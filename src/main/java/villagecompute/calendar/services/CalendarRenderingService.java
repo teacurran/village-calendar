@@ -609,89 +609,63 @@ public class CalendarRenderingService {
       "rgba(161,161,161,0.6)", "rgba(161,161,161,0.6)"}
   };
 
-  // Lakeshore monthly colors - cool blue gradient through the year
-  private static final String[][] LAKESHORE_MONTHLY_COLORS = {
-    // January - Icy blue
-    {"#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd"},
-    // February - Pale azure
-    {"#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe"},
-    // March - Soft sky
-    {"#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc"},
-    // April - Spring mist
-    {"#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa"},
-    // May - Aqua tint
-    {"#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2"},
-    // June - Light cyan
-    {"#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb"},
-    // July - Tropical mist
-    {"#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea"},
-    // August - Seafoam
-    {"#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff"},
-    // September - Pale teal
-    {"#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb"},
-    // October - Cool aqua
-    {"#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb"},
-    // November - Soft cyan
-    {"#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc"},
-    // December - Winter blue
-    {"#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb"}
+  // Lakeshore monthly colors - cool blue gradient through the year (single color per month)
+  private static final String[] LAKESHORE_MONTHLY_COLORS = {
+    "#e3f2fd", // January - Icy blue
+    "#e1f5fe", // February - Pale azure
+    "#b3e5fc", // March - Soft sky
+    "#e0f7fa", // April - Spring mist
+    "#b2ebf2", // May - Aqua tint
+    "#b2dfdb", // June - Light cyan
+    "#80deea", // July - Tropical mist
+    "#84ffff", // August - Seafoam
+    "#a7ffeb", // September - Pale teal
+    "#b2dfdb", // October - Cool aqua
+    "#b3e5fc", // November - Soft cyan
+    "#bbdefb"  // December - Winter blue
   };
 
-  // Sunset Glow monthly colors - warm pastel peach/pink/coral tones
-  private static final String[][] SUNSET_MONTHLY_COLORS = {
-    // January - Blush pink
-    {"#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec"},
-    // February - Rose tint
-    {"#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0"},
-    // March - Soft coral
-    {"#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2"},
-    // April - Pale peach
-    {"#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc"},
-    // May - Light apricot
-    {"#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2"},
-    // June - Cream gold
-    {"#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1"},
-    // July - Warm butter
-    {"#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3"},
-    // August - Soft amber
-    {"#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082"},
-    // September - Mellow peach
-    {"#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180"},
-    // October - Light terracotta
-    {"#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91"},
-    // November - Dusty rose
-    {"#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2"},
-    // December - Winter blush
-    {"#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0"}
+  // Sunset Glow monthly colors - warm pastel peach/pink/coral tones (single color per month)
+  private static final String[] SUNSET_MONTHLY_COLORS = {
+    "#fce4ec", // January - Blush pink
+    "#f8bbd0", // February - Rose tint
+    "#ffcdd2", // March - Soft coral
+    "#ffccbc", // April - Pale peach
+    "#ffe0b2", // May - Light apricot
+    "#fff8e1", // June - Cream gold
+    "#ffecb3", // July - Warm butter
+    "#ffe082", // August - Soft amber
+    "#ffd180", // September - Mellow peach
+    "#ffab91", // October - Light terracotta
+    "#ffcdd2", // November - Dusty rose
+    "#f8bbd0"  // December - Winter blush
   };
 
-  // Forest Floor monthly colors - light sage and mint tones
-  private static final String[][] FOREST_MONTHLY_COLORS = {
-    // January - Frost sage
-    {"#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9"},
-    // February - Pale mint
-    {"#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9"},
-    // March - Spring bud
-    {"#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8"},
-    // April - Fresh leaf
-    {"#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5"},
-    // May - Soft fern
-    {"#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581"},
-    // June - Light moss
-    {"#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9"},
-    // July - Meadow mist
-    {"#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7"},
-    // August - Summer sage
-    {"#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca"},
-    // September - Pale olive
-    {"#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8"},
-    // October - Light cedar
-    {"#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8"},
-    // November - Soft birch
-    {"#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9"},
-    // December - Winter pine
-    {"#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9"}
+  // Forest Floor monthly colors - light sage and mint tones (single color per month)
+  private static final String[] FOREST_MONTHLY_COLORS = {
+    "#e8f5e9", // January - Frost sage
+    "#c8e6c9", // February - Pale mint
+    "#dcedc8", // March - Spring bud
+    "#c5e1a5", // April - Fresh leaf
+    "#aed581", // May - Soft fern
+    "#c8e6c9", // June - Light moss
+    "#a5d6a7", // July - Meadow mist
+    "#b9f6ca", // August - Summer sage
+    "#dcedc8", // September - Pale olive
+    "#d7ccc8", // October - Light cedar
+    "#efebe9", // November - Soft birch
+    "#e8f5e9"  // December - Winter pine
   };
+
+  // Map theme names to their color arrays for DRY weekend color lookup
+  private static final Map<String, Object> WEEKEND_THEME_COLORS = new HashMap<>();
+
+  static {
+    WEEKEND_THEME_COLORS.put("vermontWeekends", VERMONT_MONTHLY_COLORS);
+    WEEKEND_THEME_COLORS.put("lakeshoreWeekends", LAKESHORE_MONTHLY_COLORS);
+    WEEKEND_THEME_COLORS.put("sunsetWeekends", SUNSET_MONTHLY_COLORS);
+    WEEKEND_THEME_COLORS.put("forestWeekends", FOREST_MONTHLY_COLORS);
+  }
 
   static {
     // Default theme
@@ -2163,35 +2137,15 @@ public class CalendarRenderingService {
       if ("rainbowWeekends".equals(theme)) {
         int hue = (int) ((date.getDayOfMonth() / 30.0) * 360);
         return String.format("hsl(%d, 100%%, 90%%)", hue);
-      } else if ("vermontWeekends".equals(theme)) {
-        // Use Vermont monthly colors for weekends
-        String[] monthColors = VERMONT_MONTHLY_COLORS[monthNum - 1];
-        if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
-          return monthColors[weekendIndex];
-        }
-        return monthColors[0]; // Fallback to first color
-      } else if ("lakeshoreWeekends".equals(theme)) {
-        // Use Lakeshore monthly colors for weekends
-        String[] monthColors = LAKESHORE_MONTHLY_COLORS[monthNum - 1];
-        if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
-          return monthColors[weekendIndex];
-        }
-        return monthColors[0];
-      } else if ("sunsetWeekends".equals(theme)) {
-        // Use Sunset Glow monthly colors for weekends
-        String[] monthColors = SUNSET_MONTHLY_COLORS[monthNum - 1];
-        if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
-          return monthColors[weekendIndex];
-        }
-        return monthColors[0];
-      } else if ("forestWeekends".equals(theme)) {
-        // Use Forest Floor monthly colors for weekends
-        String[] monthColors = FOREST_MONTHLY_COLORS[monthNum - 1];
-        if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
-          return monthColors[weekendIndex];
-        }
-        return monthColors[0];
-      } else if (config.highlightWeekends) {
+      }
+
+      // Check for themed weekend colors (vermont, lakeshore, sunset, forest)
+      String weekendColor = getWeekendThemeColor(theme, monthNum, weekendIndex);
+      if (weekendColor != null) {
+        return weekendColor;
+      }
+
+      if (config.highlightWeekends) {
         // First check if user has specified a custom weekend color
         if (config.weekendBgColor != null && !config.weekendBgColor.isEmpty()) {
           return config.weekendBgColor;
@@ -2205,6 +2159,30 @@ public class CalendarRenderingService {
     }
 
     return "rgba(255, 255, 255, 0)"; // Transparent
+  }
+
+  /**
+   * Gets the weekend color for themed weekends (vermont, lakeshore, sunset, forest).
+   * Returns null if the theme is not a weekend theme.
+   */
+  private static String getWeekendThemeColor(String theme, int monthNum, int weekendIndex) {
+    Object colorData = WEEKEND_THEME_COLORS.get(theme);
+    if (colorData == null) {
+      return null;
+    }
+
+    // Vermont uses 2D array (varying colors within month), others use 1D array (single color per month)
+    if (colorData instanceof String[][] monthlyColors) {
+      String[] monthColors = monthlyColors[monthNum - 1];
+      if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
+        return monthColors[weekendIndex];
+      }
+      return monthColors[0];
+    } else if (colorData instanceof String[] monthColors) {
+      return monthColors[monthNum - 1];
+    }
+
+    return null;
   }
 
   /**

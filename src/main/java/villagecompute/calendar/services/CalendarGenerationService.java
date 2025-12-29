@@ -6,12 +6,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
-import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.exceptions.CalendarGenerationException;
 import villagecompute.calendar.services.exceptions.StorageException;
 
-import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -32,7 +30,6 @@ public class CalendarGenerationService {
     public static final String HOLIDAY_EMOJIS = "holidayEmojis";
     public static final String HOLIDAY_NAMES = "holidayNames";
     public static final String CUSTOM_DATES = "customDates";
-    public static final String MOON_DISPLAY_MODE = "moonDisplayMode";
 
     @Inject
     CalendarRenderingService calendarRenderingService;
@@ -231,7 +228,7 @@ public class CalendarGenerationService {
             // Complex types: customDates (Map<String, Object>)
             if (jsonConfig.has(CUSTOM_DATES) && jsonConfig.get(CUSTOM_DATES).isObject()) {
                 JsonNode customDates = jsonConfig.get(CUSTOM_DATES);
-                customDates.fields().forEachRemaining(entry -> {
+                customDates.properties().forEach(entry -> {
                     String date = entry.getKey();
                     JsonNode value = entry.getValue();
                     if (value.isTextual()) {
@@ -245,7 +242,7 @@ public class CalendarGenerationService {
             // Complex types: eventTitles (Map<String, String>)
             if (jsonConfig.has(EVENT_TITLES) && jsonConfig.get(EVENT_TITLES).isObject()) {
                 JsonNode eventTitles = jsonConfig.get(EVENT_TITLES);
-                eventTitles.fields().forEachRemaining(entry -> {
+                eventTitles.properties().forEach(entry -> {
                     config.eventTitles.put(entry.getKey(), entry.getValue().asText());
                 });
             }
@@ -273,7 +270,7 @@ public class CalendarGenerationService {
             if (jsonConfig.has(HOLIDAY_EMOJIS) && jsonConfig.get(HOLIDAY_EMOJIS).isObject()) {
                 config.holidayEmojis.clear();
                 JsonNode holidayEmojis = jsonConfig.get(HOLIDAY_EMOJIS);
-                holidayEmojis.fields().forEachRemaining(entry -> {
+                holidayEmojis.properties().forEach(entry -> {
                     config.holidayEmojis.put(entry.getKey(), entry.getValue().asText());
                 });
             }
@@ -283,7 +280,7 @@ public class CalendarGenerationService {
             if (jsonConfig.has(HOLIDAY_NAMES) && jsonConfig.get(HOLIDAY_NAMES).isObject()) {
                 config.holidayNames.clear();
                 JsonNode holidayNames = jsonConfig.get(HOLIDAY_NAMES);
-                holidayNames.fields().forEachRemaining(entry -> {
+                holidayNames.properties().forEach(entry -> {
                     config.holidayNames.put(entry.getKey(), entry.getValue().asText());
                 });
             }
