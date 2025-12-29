@@ -61,7 +61,7 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     /** Product type: PRINT, PDF, etc. */
     @NotNull @Size(max = 50)
     @Column(name = "product_type", nullable = false, length = 50)
-    public String productType = "PRINT";
+    public String productType = TYPE_PRINT;
 
     /**
      * @deprecated since 1.0, use description instead. Kept for backward compatibility. Product
@@ -120,7 +120,7 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
      */
     @Size(max = 50)
     @Column(name = "item_status", length = 50)
-    public String itemStatus = "PENDING";
+    public String itemStatus = STATUS_PENDING;
 
     // Product type constants
     public static final String TYPE_PRINT = "PRINT";

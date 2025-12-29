@@ -73,7 +73,6 @@ class CalendarOrderItemTest {
     void testGetYear_WithNeitherConfigNorDeprecatedField_ReturnsCurrentYear() {
         // Given
         item.configuration = null;
-        item.calendarYear = null;
 
         // When
         int year = item.getYear();
@@ -88,7 +87,6 @@ class CalendarOrderItemTest {
         ObjectNode config = objectMapper.createObjectNode();
         config.put("year", 2026);
         item.configuration = config;
-        item.calendarYear = 2024; // Should be ignored
 
         // When
         int year = item.getYear();

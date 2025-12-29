@@ -27,51 +27,7 @@ public class AddToCartInput {
     public String productCode; // Product code (e.g., "print", "pdf") - price looked up from backend
     public String configuration; // JSON configuration for the generator
 
-    // --- Legacy fields (deprecated, kept for backward compatibility) ---
-
-    /**
-     * @deprecated since 1.0, use generatorType and configuration instead
-     */
-    @Deprecated(since = "1.0", forRemoval = false)
-    public String templateId;
-
-    /**
-     * @deprecated since 1.0, use description instead
-     */
-    @Deprecated(since = "1.0", forRemoval = false)
-    public String templateName;
-
-    /**
-     * @deprecated since 1.0, include year in configuration JSON instead
-     */
-    @Deprecated(since = "1.0", forRemoval = false)
-    public Integer year;
-
-    /**
-     * @deprecated since 1.0, price is now determined by productCode
-     */
-    @Deprecated(since = "1.0", forRemoval = false)
-    public Double unitPrice;
-
     public AddToCartInput() {}
-
-    // Legacy constructor for backward compatibility
-    public AddToCartInput(
-            String templateId,
-            String templateName,
-            Integer year,
-            Integer quantity,
-            String productCode,
-            Double unitPrice,
-            String configuration) {
-        this.templateId = templateId;
-        this.templateName = templateName;
-        this.year = year;
-        this.quantity = quantity;
-        this.productCode = productCode;
-        this.unitPrice = unitPrice;
-        this.configuration = configuration;
-    }
 
     // New constructor for generator-based items
     public AddToCartInput(

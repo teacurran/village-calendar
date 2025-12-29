@@ -9,6 +9,7 @@ import org.jboss.logging.Logger;
 
 import villagecompute.calendar.data.models.CartItem;
 import villagecompute.calendar.data.models.ItemAsset;
+import villagecompute.calendar.util.MimeTypes;
 
 /**
  * REST resource for accessing asset content (SVGs stored in item_assets table) and cart item
@@ -22,7 +23,7 @@ public class AssetResource {
     /** Get the SVG content of an asset by its ID */
     @GET
     @Path("/assets/{assetId}")
-    @Produces("image/svg+xml")
+    @Produces(MimeTypes.IMAGE_SVG)
     public Response getAssetContent(@PathParam("assetId") String assetId) {
         try {
             UUID id = UUID.fromString(assetId);
@@ -35,10 +36,10 @@ public class AssetResource {
 
             return Response.ok(asset.svgContent)
                     .header(
-                            "Content-Type",
-                            asset.contentType != null ? asset.contentType : "image/svg+xml")
+                            MimeTypes.HEADER_CONTENT_TYPE,
+                            asset.contentType != null ? asset.contentType : MimeTypes.IMAGE_SVG)
                     .header(
-                            "Cache-Control",
+                            MimeTypes.HEADER_CACHE_CONTROL,
                             "public, max-age=31536000") // Cache for 1 year (assets are immutable)
                     .build();
 
@@ -79,8 +80,8 @@ public class AssetResource {
                 ItemAsset mainAsset = cartItem.getMainAsset();
                 if (mainAsset != null && mainAsset.svgContent != null) {
                     return Response.ok(mainAsset.svgContent)
-                            .header("Content-Type", "image/svg+xml")
-                            .header("Cache-Control", "public, max-age=31536000")
+                            .header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.IMAGE_SVG)
+                            .header(MimeTypes.HEADER_CACHE_CONTROL, "public, max-age=31536000")
                             .build();
                 }
             }
@@ -103,11 +104,13 @@ public class AssetResource {
                             String svg =
                                     config.substring(start, end)
                                             .replace("\\\"", "\"")
-                                            .replace("\%n", "%n")
+                                            .replace("\\n", "\n")
                                             .replace("\\\\", "\\");
                             return Response.ok(svg)
-                                    .header("Content-Type", "image/svg+xml")
-                                    .header("Cache-Control", "public, max-age=31536000")
+                                    .header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.IMAGE_SVG)
+                                    .header(
+                                            MimeTypes.HEADER_CACHE_CONTROL,
+                                            "public, max-age=31536000")
                                     .build();
                         }
                     }

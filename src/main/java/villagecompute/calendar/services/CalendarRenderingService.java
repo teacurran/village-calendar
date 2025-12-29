@@ -1199,7 +1199,8 @@ public class CalendarRenderingService {
         int headerHeight = 100;
 
         // Calculate SVG dimensions based on layout mode
-        int svgWidth, svgHeight;
+        int svgWidth;
+        int svgHeight;
         if (weekdayAligned) {
             int totalCols = 37; // 7 days * 5 weeks + 2 extra for months that span 6 weeks
             svgWidth = cellWidth * (totalCols + 1) + 20;

@@ -203,7 +203,6 @@ class AdminOrderWorkflowTest {
         String paymentIntentId = "pi_test_shipped_" + System.currentTimeMillis();
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
         order.quantity = 1;
         order.unitPrice = new BigDecimal("25.00");
         order.totalPrice = new BigDecimal("25.00");
@@ -283,9 +282,9 @@ class AdminOrderWorkflowTest {
         order.persist();
 
         // When: Admin updates order to PROCESSING
-        CalendarOrder updatedOrder =
-                orderService.updateOrderStatus(
-                        order.id, CalendarOrder.STATUS_PROCESSING, "Started printing calendar");
+
+        orderService.updateOrderStatus(
+                order.id, CalendarOrder.STATUS_PROCESSING, "Started printing calendar");
 
         entityManager.flush();
         entityManager.clear();

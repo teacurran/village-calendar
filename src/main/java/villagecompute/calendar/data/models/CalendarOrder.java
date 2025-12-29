@@ -125,7 +125,7 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
 
     @NotNull @Size(max = 50)
     @Column(nullable = false, length = 50)
-    public String status = "PENDING";
+    public String status = STATUS_PENDING;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "shipping_address", columnDefinition = "jsonb")

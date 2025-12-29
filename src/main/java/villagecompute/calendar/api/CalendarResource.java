@@ -20,6 +20,7 @@ import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.services.EmojiSvgService;
 import villagecompute.calendar.services.HebrewCalendarService;
 import villagecompute.calendar.services.PDFRenderingService;
+import villagecompute.calendar.util.MimeTypes;
 
 import io.quarkus.logging.Log;
 
@@ -115,7 +116,7 @@ public class CalendarResource {
         // Generate SVG
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
-        return Response.ok(svg).header("Content-Type", "image/svg+xml").build();
+        return Response.ok(svg).header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.IMAGE_SVG).build();
     }
 
     @POST
@@ -236,7 +237,7 @@ public class CalendarResource {
 
     @POST
     @Path("/generate-pdf")
-    @Produces("application/pdf")
+    @Produces(MimeTypes.APPLICATION_PDF)
     public Response generatePDF(CalendarRequest request) {
         // Build configuration
         CalendarRenderingService.CalendarConfig config = buildConfig(request);
@@ -252,7 +253,7 @@ public class CalendarResource {
         }
 
         return Response.ok(pdf)
-                .header("Content-Type", "application/pdf")
+                .header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.APPLICATION_PDF)
                 .header(
                         "Content-Disposition",
                         "attachment; filename=\"calendar-" + config.year + ".pdf\"")
@@ -266,7 +267,7 @@ public class CalendarResource {
     @POST
     @Path("/svg-to-pdf")
     @Consumes(MediaType.APPLICATION_JSON)
-    @Produces("application/pdf")
+    @Produces(MimeTypes.APPLICATION_PDF)
     public Response svgToPdf(SvgToPdfRequest request) {
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST)

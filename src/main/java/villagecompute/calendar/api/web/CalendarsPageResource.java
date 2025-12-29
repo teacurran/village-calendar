@@ -29,7 +29,6 @@ public class CalendarsPageResource {
 
     private static final Logger LOG = Logger.getLogger(CalendarsPageResource.class);
 
-    private static final String CONTENT_TYPE = "Content-Type";
     private static final String TEXT_HTML = "text/html";
     private static final String ASSET_NOT_FOUND = "Asset not found";
 
