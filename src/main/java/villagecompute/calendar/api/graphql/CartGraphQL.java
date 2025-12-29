@@ -44,23 +44,16 @@ public class CartGraphQL {
     public Cart addToCart(@Name("input") AddToCartInput input) {
         String sessionId = sessionService.getCurrentSessionId();
 
-        if (input.generatorType != null) {
-            int assetCount = input.assets != null ? input.assets.size() : 0;
-            LOG.info(
-                    String.format(
-                            "Adding to cart for session %s: generatorType=%s, description=%s,"
-                                    + " quantity=%d, assets=%d",
-                            sessionId,
-                            input.generatorType,
-                            input.description,
-                            input.quantity,
-                            assetCount));
-        } else {
-            LOG.info(
-                    String.format(
-                            "Adding to cart for session %s: template=%s, year=%s, quantity=%d",
-                            sessionId, input.templateId, input.year, input.quantity));
-        }
+        int assetCount = input.assets != null ? input.assets.size() : 0;
+        LOG.info(
+                String.format(
+                        "Adding to cart for session %s: generatorType=%s, description=%s,"
+                                + " quantity=%d, assets=%d",
+                        sessionId,
+                        input.generatorType,
+                        input.description,
+                        input.quantity,
+                        assetCount));
 
         return cartService.addToCart(sessionId, input);
     }

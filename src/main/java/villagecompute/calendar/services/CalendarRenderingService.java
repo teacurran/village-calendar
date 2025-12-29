@@ -1780,278 +1780,42 @@ public class CalendarRenderingService {
         return wrapper.toString();
     }
 
-    // Get holidays with emoji mappings for a year
+    // Get holidays with emoji mappings for a year - delegates to HolidayService
     public Map<String, String> getHolidaysWithEmoji(int year, String country) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        if ("US".equals(country)) {
-            // US Holidays with emojis
-            holidayEmojis.put(LocalDate.of(year, 1, 1).toString(), "🎉"); // New Year's Day
-
-            LocalDate mlkDay = getNthWeekdayOfMonth(year, Month.JANUARY, DayOfWeek.MONDAY, 3);
-            holidayEmojis.put(mlkDay.toString(), "🕊️"); // MLK Day
-
-            LocalDate presidentsDay =
-                    getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
-            holidayEmojis.put(presidentsDay.toString(), "🏛️"); // Presidents' Day
-
-            LocalDate memorialDay = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
-            holidayEmojis.put(memorialDay.toString(), "🎖️"); // Memorial Day
-
-            holidayEmojis.put(LocalDate.of(year, 7, 4).toString(), "🇺🇸"); // Independence Day
-
-            LocalDate laborDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
-            holidayEmojis.put(laborDay.toString(), "👷"); // Labor Day
-
-            holidayEmojis.put(LocalDate.of(year, 10, 31).toString(), "🎃"); // Halloween
-
-            holidayEmojis.put(LocalDate.of(year, 11, 11).toString(), "🎖️"); // Veterans Day
-
-            LocalDate thanksgiving =
-                    getNthWeekdayOfMonth(year, Month.NOVEMBER, DayOfWeek.THURSDAY, 4);
-            holidayEmojis.put(thanksgiving.toString(), "🦃"); // Thanksgiving
-
-            holidayEmojis.put(LocalDate.of(year, 12, 25).toString(), "🎄"); // Christmas
-
-        } else if ("JEWISH".equals(country) || "HEBREW".equals(country)) {
-            // Jewish holidays with emojis - calculated dynamically
-            holidayEmojis.putAll(holidayService.getJewishHolidaysWithEmoji(year));
-
-        } else if ("CHRISTIAN".equals(country)) {
-            LocalDate easter = calculateEasterSunday(year);
-            holidayEmojis.put(easter.toString(), "🐑"); // Easter Sunday (Lamb of God)
-            holidayEmojis.put(easter.minusDays(2).toString(), "🐟"); // Good Friday (Fish)
-            holidayEmojis.put(easter.minusDays(7).toString(), "🌿"); // Palm Sunday
-            holidayEmojis.put(easter.minusDays(46).toString(), "✝️"); // Ash Wednesday
-            holidayEmojis.put(easter.plusDays(39).toString(), "☁️"); // Ascension Day
-            holidayEmojis.put(easter.plusDays(49).toString(), "🕊️"); // Pentecost
-            holidayEmojis.put(LocalDate.of(year, 12, 25).toString(), "🎄"); // Christmas
-            holidayEmojis.put(
-                    LocalDate.of(year, 12, 24).toString(), "🕯️"); // Christmas Eve (Candle)
-            holidayEmojis.put(LocalDate.of(year, 1, 6).toString(), "⭐"); // Epiphany
-            holidayEmojis.put(LocalDate.of(year, 11, 1).toString(), "👼"); // All Saints Day
-
-        } else if ("CANADIAN".equals(country)) {
-            holidayEmojis.put(LocalDate.of(year, 1, 1).toString(), "🎉"); // New Year's Day
-            LocalDate familyDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
-            holidayEmojis.put(familyDay.toString(), "👨‍👩‍👧‍👦"); // Family Day
-            LocalDate easter = calculateEasterSunday(year);
-            holidayEmojis.put(easter.minusDays(2).toString(), "🐟"); // Good Friday (Fish)
-            LocalDate victoriaDay = LocalDate.of(year, 5, 25);
-            while (victoriaDay.getDayOfWeek() != DayOfWeek.MONDAY) {
-                victoriaDay = victoriaDay.minusDays(1);
-            }
-            holidayEmojis.put(victoriaDay.toString(), "👑"); // Victoria Day
-            holidayEmojis.put(LocalDate.of(year, 7, 1).toString(), "🍁"); // Canada Day
-            LocalDate labourDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
-            holidayEmojis.put(labourDay.toString(), "👷"); // Labour Day
-            LocalDate thanksgiving = getNthWeekdayOfMonth(year, Month.OCTOBER, DayOfWeek.MONDAY, 2);
-            holidayEmojis.put(thanksgiving.toString(), "🦃"); // Thanksgiving
-            holidayEmojis.put(LocalDate.of(year, 11, 11).toString(), "🎖️"); // Remembrance Day
-            holidayEmojis.put(LocalDate.of(year, 12, 25).toString(), "🎄"); // Christmas
-            holidayEmojis.put(LocalDate.of(year, 12, 26).toString(), "🎁"); // Boxing Day
-
-        } else if ("UK".equals(country)) {
-            holidayEmojis.put(LocalDate.of(year, 1, 1).toString(), "🎉"); // New Year's Day
-            LocalDate easter = calculateEasterSunday(year);
-            holidayEmojis.put(easter.minusDays(2).toString(), "🐟"); // Good Friday (Fish)
-            holidayEmojis.put(easter.plusDays(1).toString(), "🐰"); // Easter Monday
-            LocalDate earlyMay = getNthWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY, 1);
-            holidayEmojis.put(earlyMay.toString(), "🌸"); // Early May Bank Holiday
-            LocalDate springBank = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
-            holidayEmojis.put(springBank.toString(), "🌷"); // Spring Bank Holiday
-            LocalDate summerBank = getLastWeekdayOfMonth(year, Month.AUGUST, DayOfWeek.MONDAY);
-            holidayEmojis.put(summerBank.toString(), "☀️"); // Summer Bank Holiday
-            holidayEmojis.put(LocalDate.of(year, 12, 25).toString(), "🎄"); // Christmas
-            holidayEmojis.put(LocalDate.of(year, 12, 26).toString(), "🎁"); // Boxing Day
-
-        } else if ("MAJOR_WORLD".equals(country)) {
-            holidayEmojis.put(LocalDate.of(year, 1, 1).toString(), "🎉"); // New Year's Day
-            holidayEmojis.put(LocalDate.of(year, 2, 14).toString(), "❤️"); // Valentine's Day
-            holidayEmojis.put(LocalDate.of(year, 3, 17).toString(), "☘️"); // St. Patrick's Day
-            holidayEmojis.put(LocalDate.of(year, 4, 22).toString(), "🌍"); // Earth Day
-            holidayEmojis.put(
-                    LocalDate.of(year, 5, 1).toString(), "👷"); // International Workers' Day
-            holidayEmojis.put(LocalDate.of(year, 10, 31).toString(), "🎃"); // Halloween
-            holidayEmojis.put(LocalDate.of(year, 12, 25).toString(), "🎄"); // Christmas
-            holidayEmojis.put(LocalDate.of(year, 12, 31).toString(), "🎉"); // New Year's Eve
-            LocalDate easter = calculateEasterSunday(year);
-            holidayEmojis.put(easter.toString(), "🐰"); // Easter
-
-        } else if ("MEXICAN".equals(country)) {
-            // Mexican holidays with emojis
-            holidayEmojis.putAll(holidayService.getMexicanHolidaysWithEmoji(year));
-
-        } else if ("PAGAN".equals(country) || "WICCAN".equals(country)) {
-            // Pagan/Wiccan holidays with emojis
-            holidayEmojis.putAll(holidayService.getPaganHolidaysWithEmoji(year));
-
-        } else if ("HINDU".equals(country)) {
-            // Hindu holidays with emojis
-            holidayEmojis.putAll(holidayService.getHinduHolidaysWithEmoji(year));
-
-        } else if ("ISLAMIC".equals(country) || "MUSLIM".equals(country)) {
-            // Islamic holidays with emojis
-            holidayEmojis.putAll(holidayService.getIslamicHolidaysWithEmoji(year));
-
-        } else if ("CHINESE".equals(country) || "LUNAR".equals(country)) {
-            // Chinese holidays with emojis
-            holidayEmojis.putAll(holidayService.getChineseHolidaysWithEmoji(year));
-
-        } else if ("SECULAR".equals(country) || "FUN".equals(country)) {
-            // Secular holidays with emojis
-            holidayEmojis.putAll(holidayService.getSecularHolidaysWithEmoji(year));
-        }
-
-        return holidayEmojis;
+        return switch (country) {
+            case "US" -> holidayService.getUSHolidaysWithEmoji(year);
+            case "JEWISH", "HEBREW" -> holidayService.getJewishHolidaysWithEmoji(year);
+            case "CHRISTIAN" -> holidayService.getChristianHolidaysWithEmoji(year);
+            case "CANADIAN" -> holidayService.getCanadianHolidaysWithEmoji(year);
+            case "UK" -> holidayService.getUKHolidaysWithEmoji(year);
+            case "MAJOR_WORLD" -> holidayService.getMajorWorldHolidaysWithEmoji(year);
+            case "MEXICAN" -> holidayService.getMexicanHolidaysWithEmoji(year);
+            case "PAGAN", "WICCAN" -> holidayService.getPaganHolidaysWithEmoji(year);
+            case "HINDU" -> holidayService.getHinduHolidaysWithEmoji(year);
+            case "ISLAMIC", "MUSLIM" -> holidayService.getIslamicHolidaysWithEmoji(year);
+            case "CHINESE", "LUNAR" -> holidayService.getChineseHolidaysWithEmoji(year);
+            case "SECULAR", "FUN" -> holidayService.getSecularHolidaysWithEmoji(year);
+            default -> new HashMap<>();
+        };
     }
 
-    // Get holiday names for text display modes
+    // Get holiday names for text display modes - delegates to HolidayService
     public Map<String, String> getHolidayNames(int year, String country) {
-        Map<String, String> holidayNames = new HashMap<>();
-
-        if ("US".equals(country)) {
-            holidayNames.put(LocalDate.of(year, 1, 1).toString(), "New Year's Day");
-            LocalDate mlkDay = getNthWeekdayOfMonth(year, Month.JANUARY, DayOfWeek.MONDAY, 3);
-            holidayNames.put(mlkDay.toString(), "MLK Day");
-            LocalDate presidentsDay =
-                    getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
-            holidayNames.put(presidentsDay.toString(), "Presidents' Day");
-            LocalDate memorialDay = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
-            holidayNames.put(memorialDay.toString(), "Memorial Day");
-            holidayNames.put(LocalDate.of(year, 7, 4).toString(), "Independence Day");
-            LocalDate laborDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
-            holidayNames.put(laborDay.toString(), "Labor Day");
-            holidayNames.put(LocalDate.of(year, 10, 31).toString(), "Halloween");
-            holidayNames.put(LocalDate.of(year, 11, 11).toString(), "Veterans Day");
-            LocalDate thanksgiving =
-                    getNthWeekdayOfMonth(year, Month.NOVEMBER, DayOfWeek.THURSDAY, 4);
-            holidayNames.put(thanksgiving.toString(), "Thanksgiving");
-            holidayNames.put(LocalDate.of(year, 12, 25).toString(), "Christmas");
-
-        } else if ("JEWISH".equals(country) || "HEBREW".equals(country)) {
-            holidayNames.putAll(holidayService.getJewishHolidays(year));
-
-        } else if ("CHRISTIAN".equals(country)) {
-            LocalDate easter = calculateEasterSunday(year);
-            holidayNames.put(easter.toString(), "Easter");
-            holidayNames.put(easter.minusDays(2).toString(), "Good Friday");
-            holidayNames.put(easter.minusDays(7).toString(), "Palm Sunday");
-            holidayNames.put(easter.minusDays(46).toString(), "Ash Wednesday");
-            holidayNames.put(easter.plusDays(39).toString(), "Ascension");
-            holidayNames.put(easter.plusDays(49).toString(), "Pentecost");
-            holidayNames.put(LocalDate.of(year, 12, 25).toString(), "Christmas");
-            holidayNames.put(LocalDate.of(year, 12, 24).toString(), "Christmas Eve");
-            holidayNames.put(LocalDate.of(year, 1, 6).toString(), "Epiphany");
-            holidayNames.put(LocalDate.of(year, 11, 1).toString(), "All Saints");
-
-        } else if ("CANADIAN".equals(country)) {
-            holidayNames.put(LocalDate.of(year, 1, 1).toString(), "New Year's Day");
-            LocalDate familyDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
-            holidayNames.put(familyDay.toString(), "Family Day");
-            LocalDate easter = calculateEasterSunday(year);
-            holidayNames.put(easter.minusDays(2).toString(), "Good Friday");
-            LocalDate victoriaDay = LocalDate.of(year, 5, 25);
-            while (victoriaDay.getDayOfWeek() != DayOfWeek.MONDAY) {
-                victoriaDay = victoriaDay.minusDays(1);
-            }
-            holidayNames.put(victoriaDay.toString(), "Victoria Day");
-            holidayNames.put(LocalDate.of(year, 7, 1).toString(), "Canada Day");
-            LocalDate labourDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
-            holidayNames.put(labourDay.toString(), "Labour Day");
-            LocalDate thanksgiving = getNthWeekdayOfMonth(year, Month.OCTOBER, DayOfWeek.MONDAY, 2);
-            holidayNames.put(thanksgiving.toString(), "Thanksgiving");
-            holidayNames.put(LocalDate.of(year, 11, 11).toString(), "Remembrance Day");
-            holidayNames.put(LocalDate.of(year, 12, 25).toString(), "Christmas");
-            holidayNames.put(LocalDate.of(year, 12, 26).toString(), "Boxing Day");
-
-        } else if ("UK".equals(country)) {
-            holidayNames.put(LocalDate.of(year, 1, 1).toString(), "New Year's Day");
-            LocalDate easter = calculateEasterSunday(year);
-            holidayNames.put(easter.minusDays(2).toString(), "Good Friday");
-            holidayNames.put(easter.plusDays(1).toString(), "Easter Monday");
-            LocalDate earlyMay = getNthWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY, 1);
-            holidayNames.put(earlyMay.toString(), "Early May");
-            LocalDate springBank = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
-            holidayNames.put(springBank.toString(), "Spring Bank");
-            LocalDate summerBank = getLastWeekdayOfMonth(year, Month.AUGUST, DayOfWeek.MONDAY);
-            holidayNames.put(summerBank.toString(), "Summer Bank");
-            holidayNames.put(LocalDate.of(year, 12, 25).toString(), "Christmas");
-            holidayNames.put(LocalDate.of(year, 12, 26).toString(), "Boxing Day");
-
-        } else if ("MAJOR_WORLD".equals(country)) {
-            holidayNames.put(LocalDate.of(year, 1, 1).toString(), "New Year's Day");
-            holidayNames.put(LocalDate.of(year, 2, 14).toString(), "Valentine's Day");
-            holidayNames.put(LocalDate.of(year, 3, 17).toString(), "St. Patrick's");
-            holidayNames.put(LocalDate.of(year, 4, 22).toString(), "Earth Day");
-            holidayNames.put(LocalDate.of(year, 5, 1).toString(), "Workers' Day");
-            holidayNames.put(LocalDate.of(year, 10, 31).toString(), "Halloween");
-            holidayNames.put(LocalDate.of(year, 12, 25).toString(), "Christmas");
-            holidayNames.put(LocalDate.of(year, 12, 31).toString(), "New Year's Eve");
-            LocalDate easter = calculateEasterSunday(year);
-            holidayNames.put(easter.toString(), "Easter");
-
-        } else if ("MEXICAN".equals(country)) {
-            holidayNames.putAll(holidayService.getMexicanHolidays(year));
-
-        } else if ("PAGAN".equals(country) || "WICCAN".equals(country)) {
-            holidayNames.putAll(holidayService.getPaganHolidays(year));
-
-        } else if ("HINDU".equals(country)) {
-            holidayNames.putAll(holidayService.getHinduHolidays(year));
-
-        } else if ("ISLAMIC".equals(country) || "MUSLIM".equals(country)) {
-            holidayNames.putAll(holidayService.getIslamicHolidays(year));
-
-        } else if ("CHINESE".equals(country) || "LUNAR".equals(country)) {
-            holidayNames.putAll(holidayService.getChineseHolidays(year));
-
-        } else if ("SECULAR".equals(country) || "FUN".equals(country)) {
-            holidayNames.putAll(holidayService.getSecularHolidays(year));
-        }
-
-        return holidayNames;
-    }
-
-    // Calculate Easter Sunday using the Anonymous Gregorian algorithm
-    private LocalDate calculateEasterSunday(int year) {
-        int a = year % 19;
-        int b = year / 100;
-        int c = year % 100;
-        int d = b / 4;
-        int e = b % 4;
-        int f = (b + 8) / 25;
-        int g = (b - f + 1) / 3;
-        int h = (19 * a + b - d - g + 15) % 30;
-        int i = c / 4;
-        int k = c % 4;
-        int l = (32 + 2 * e + 2 * i - h - k) % 7;
-        int m = (a + 11 * h + 22 * l) / 451;
-        int month = (h + l - 7 * m + 114) / 31;
-        int day = ((h + l - 7 * m + 114) % 31) + 1;
-        return LocalDate.of(year, month, day);
-    }
-
-    private LocalDate getNthWeekdayOfMonth(int year, Month month, DayOfWeek dayOfWeek, int n) {
-        LocalDate firstDay = LocalDate.of(year, month, 1);
-        LocalDate firstWeekday = firstDay;
-
-        while (firstWeekday.getDayOfWeek() != dayOfWeek) {
-            firstWeekday = firstWeekday.plusDays(1);
-        }
-
-        return firstWeekday.plusWeeks(n - 1);
-    }
-
-    private LocalDate getLastWeekdayOfMonth(int year, Month month, DayOfWeek dayOfWeek) {
-        YearMonth yearMonth = YearMonth.of(year, month);
-        LocalDate lastDay = yearMonth.atEndOfMonth();
-
-        while (lastDay.getDayOfWeek() != dayOfWeek) {
-            lastDay = lastDay.minusDays(1);
-        }
-
-        return lastDay;
+        return switch (country) {
+            case "US" -> holidayService.getUSHolidays(year);
+            case "JEWISH", "HEBREW" -> holidayService.getJewishHolidays(year);
+            case "CHRISTIAN" -> holidayService.getChristianHolidays(year);
+            case "CANADIAN" -> holidayService.getCanadianHolidays(year);
+            case "UK" -> holidayService.getUKHolidays(year);
+            case "MAJOR_WORLD" -> holidayService.getMajorWorldHolidays(year);
+            case "MEXICAN" -> holidayService.getMexicanHolidays(year);
+            case "PAGAN", "WICCAN" -> holidayService.getPaganHolidays(year);
+            case "HINDU" -> holidayService.getHinduHolidays(year);
+            case "ISLAMIC", "MUSLIM" -> holidayService.getIslamicHolidays(year);
+            case "CHINESE", "LUNAR" -> holidayService.getChineseHolidays(year);
+            case "SECULAR", "FUN" -> holidayService.getSecularHolidays(year);
+            default -> new HashMap<>();
+        };
     }
 
     // Generate SVG for moon illumination visualization

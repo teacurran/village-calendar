@@ -42,18 +42,12 @@ public class CartService {
         villagecompute.calendar.data.models.Cart cartEntity =
                 villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
 
-        // Get price from product catalog (preferred) or fall back to provided price
+        // Get price from product catalog
         BigDecimal unitPrice;
         String productCode = input.productCode;
         if (productCode != null && productService.isValidProductCode(productCode)) {
             unitPrice = productService.getPrice(productCode);
             LOG.infof("Using price from product catalog for '%s': $%.2f", productCode, unitPrice);
-        } else if (input.unitPrice != null) {
-            // Fallback for backwards compatibility - log warning
-            unitPrice = BigDecimal.valueOf(input.unitPrice);
-            LOG.warnf(
-                    "Using client-provided price $%.2f - productCode not provided or invalid",
-                    unitPrice);
         } else {
             // Use default product price
             productCode = productService.getDefaultProductCode();
@@ -64,54 +58,33 @@ public class CartService {
         int quantity = input.quantity != null ? input.quantity : 1;
         villagecompute.calendar.data.models.CartItem cartItem;
 
-        // Check if using new generator-based format
-        if (input.generatorType != null) {
-            LOG.infof(
-                    "Adding generator-based item: type=%s, description=%s, quantity=%d",
-                    input.generatorType, input.description, quantity);
+        LOG.infof(
+                "Adding item: type=%s, description=%s, quantity=%d",
+                input.generatorType, input.description, quantity);
 
-            // Create new cart item (generator items are always new line items since SVGs are
-            // unique)
-            cartItem =
-                    cartEntity.addItem(
-                            input.generatorType,
-                            input.description,
-                            quantity,
-                            unitPrice,
-                            input.configuration,
-                            productCode);
+        // Create new cart item
+        cartItem =
+                cartEntity.addItem(
+                        input.generatorType,
+                        input.description,
+                        quantity,
+                        unitPrice,
+                        input.configuration,
+                        productCode);
 
-            // Create and attach asset records if provided
-            if (input.assets != null && !input.assets.isEmpty()) {
-                for (AssetInput assetInput : input.assets) {
-                    ItemAsset asset =
-                            ItemAsset.create(
-                                    assetInput.assetKey,
-                                    assetInput.svgContent,
-                                    assetInput.widthInches,
-                                    assetInput.heightInches);
-                    asset.persist();
-                    cartItem.addAsset(asset);
-                    LOG.infof("Added asset '%s' to cart item", assetInput.assetKey);
-                }
+        // Create and attach asset records if provided
+        if (input.assets != null && !input.assets.isEmpty()) {
+            for (AssetInput assetInput : input.assets) {
+                ItemAsset asset =
+                        ItemAsset.create(
+                                assetInput.assetKey,
+                                assetInput.svgContent,
+                                assetInput.widthInches,
+                                assetInput.heightInches);
+                asset.persist();
+                cartItem.addAsset(asset);
+                LOG.infof("Added asset '%s' to cart item", assetInput.assetKey);
             }
-        } else {
-            // Legacy calendar format - use addOrUpdateItem for backward compatibility
-            LOG.infof(
-                    "Adding legacy calendar item: template=%s, year=%d, quantity=%d",
-                    input.templateId, input.year, quantity);
-
-            cartItem =
-                    cartEntity.addOrUpdateItem(
-                            input.templateId,
-                            input.templateName != null
-                                    ? input.templateName
-                                    : "Calendar " + input.year,
-                            input.year != null ? input.year : 0,
-                            quantity,
-                            unitPrice,
-                            input.configuration,
-                            productCode);
         }
 
         return toGraphQLCart(cartEntity);

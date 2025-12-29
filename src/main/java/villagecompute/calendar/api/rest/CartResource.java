@@ -59,69 +59,54 @@ public class CartResource {
         String sessionId = sessionService.getCurrentSessionId();
         LOG.infof("REST: Adding to cart for session: %s, body: %s", sessionId, requestBody);
 
-        // Validate required fields
-        if (requestBody.get("productId") == null && requestBody.get("templateId") == null) {
+        // Validate required fields - need generatorType or productId
+        if (requestBody.get("generatorType") == null && requestBody.get("productId") == null) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
-            errorResponse.put("message", "productId or templateId is required");
+            errorResponse.put("message", "generatorType or productId is required");
             return Response.status(Response.Status.BAD_REQUEST).entity(errorResponse).build();
         }
 
         // Parse request body into AddToCartInput
         AddToCartInput input = new AddToCartInput();
 
-        // Support both productId (frontend) and templateId (direct API)
-        input.templateId =
-                requestBody.get("productId") != null
-                        ? (String) requestBody.get("productId")
-                        : (String) requestBody.get("templateId");
+        // Map generatorType (or productId for backwards compatibility)
+        input.generatorType =
+                requestBody.get("generatorType") != null
+                        ? (String) requestBody.get("generatorType")
+                        : (String) requestBody.get("productId");
+
+        // Map description (or templateName for backwards compatibility)
+        input.description =
+                requestBody.get("description") != null
+                        ? (String) requestBody.get("description")
+                        : (String) requestBody.get("templateName");
 
         input.quantity =
                 requestBody.get("quantity") != null
                         ? ((Number) requestBody.get("quantity")).intValue()
                         : 1;
 
-        // Parse configuration to extract year and name if provided as JSON
-        String configStr =
-                requestBody.get("configuration") != null
-                        ? requestBody.get("configuration").toString()
+        input.productCode =
+                requestBody.get("productCode") != null
+                        ? (String) requestBody.get("productCode")
                         : null;
 
-        if (configStr != null && configStr.startsWith("{")) {
-            try {
-                // Parse the configuration JSON to extract year and name
-                com.fasterxml.jackson.databind.ObjectMapper mapper =
-                        new com.fasterxml.jackson.databind.ObjectMapper();
-                Map<String, Object> configData = mapper.readValue(configStr, Map.class);
-
-                if (configData.get("year") != null) {
-                    input.year = ((Number) configData.get("year")).intValue();
+        // Handle configuration - can be string or object
+        if (requestBody.get("configuration") != null) {
+            Object configObj = requestBody.get("configuration");
+            if (configObj instanceof String) {
+                input.configuration = (String) configObj;
+            } else {
+                try {
+                    com.fasterxml.jackson.databind.ObjectMapper mapper =
+                            new com.fasterxml.jackson.databind.ObjectMapper();
+                    input.configuration = mapper.writeValueAsString(configObj);
+                } catch (Exception e) {
+                    LOG.warnf("Could not serialize configuration: %s", e.getMessage());
+                    input.configuration = configObj.toString();
                 }
-                if (configData.get("name") != null) {
-                    input.templateName = (String) configData.get("name");
-                }
-                input.configuration = configStr;
-            } catch (Exception e) {
-                LOG.warnf("Could not parse configuration JSON: %s", e.getMessage());
-                input.configuration = configStr;
             }
-        }
-
-        // Fall back to direct fields if not in configuration
-        if (input.year == null && requestBody.get("year") != null) {
-            input.year = ((Number) requestBody.get("year")).intValue();
-        }
-        if (input.templateName == null && requestBody.get("templateName") != null) {
-            input.templateName = (String) requestBody.get("templateName");
-        }
-        if (input.unitPrice == null && requestBody.get("unitPrice") != null) {
-            input.unitPrice = ((Number) requestBody.get("unitPrice")).doubleValue();
-        }
-
-        // Set default year if still not provided
-        if (input.year == null) {
-            input.year = java.time.Year.now().getValue();
-            LOG.infof("No year provided, using current year: %d", input.year);
         }
 
         Cart cart = cartService.addToCart(sessionId, input);

@@ -1,5 +1,7 @@
 package villagecompute.calendar.api.web;
 
+import static villagecompute.calendar.util.MimeTypes.*;
+
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.List;
@@ -63,7 +65,7 @@ public class CalendarsPageResource {
                         .data("currentYear", java.time.Year.now().getValue())
                         .render();
 
-        rc.response().putHeader(CONTENT_TYPE, TEXT_HTML).end(html);
+        rc.response().putHeader(HEADER_CONTENT_TYPE, TEXT_HTML).end(html);
     }
 
     /** Individual calendar product page at /calendars/{slug} */
@@ -83,7 +85,7 @@ public class CalendarsPageResource {
         if (calendar == null) {
             rc.response()
                     .setStatusCode(404)
-                    .putHeader(CONTENT_TYPE, TEXT_HTML)
+                    .putHeader(HEADER_CONTENT_TYPE, TEXT_HTML)
                     .end(
                             "<html><body><h1>Calendar Not Found</h1><p>The calendar you're looking"
                                     + " for doesn't exist.</p><p><a href=\"/calendars/\">Browse all"
@@ -104,7 +106,7 @@ public class CalendarsPageResource {
                         .data("currentYear", java.time.Year.now().getValue())
                         .render();
 
-        rc.response().putHeader(CONTENT_TYPE, TEXT_HTML).end(html);
+        rc.response().putHeader(HEADER_CONTENT_TYPE, TEXT_HTML).end(html);
     }
 
     /** Serve SVG content for a calendar at /calendars/{slug}/{slug}.svg */
@@ -131,7 +133,7 @@ public class CalendarsPageResource {
             String svgContent = generateSvgForTemplate(calendar);
 
             rc.response()
-                    .putHeader(CONTENT_TYPE, "image/svg+xml")
+                    .putHeader(HEADER_CONTENT_TYPE, "image/svg+xml")
                     .putHeader("Cache-Control", "public, max-age=3600")
                     .end(svgContent);
             return;
@@ -161,7 +163,7 @@ public class CalendarsPageResource {
                 byte[] pngBytes = pdfRenderingService.renderSVGToPNG(wrappedSvg, 1200);
 
                 rc.response()
-                        .putHeader(CONTENT_TYPE, "image/png")
+                        .putHeader(HEADER_CONTENT_TYPE, "image/png")
                         .putHeader("Cache-Control", "public, max-age=3600")
                         .end(Buffer.buffer(pngBytes));
             } catch (Exception e) {
