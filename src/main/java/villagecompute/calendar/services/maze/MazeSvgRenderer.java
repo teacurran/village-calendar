@@ -121,7 +121,7 @@ public class MazeSvgRenderer {
 
         // Draw dead-end depth visualization if enabled (before walls so it appears behind)
         if (showDeadEnds) {
-            svg.append("  <g class=\"dead-end-depth\">%n");
+            svg.append("  <g class=\"dead-end-depth\">").append(System.lineSeparator());
 
             // Find maximum depth for gradient calculation
             int maxDepth = 1;
@@ -151,12 +151,12 @@ public class MazeSvgRenderer {
                     }
                 }
             }
-            svg.append("  </g>%n");
+            svg.append("  </g>").append(System.lineSeparator());
         }
 
         // Draw solution path if enabled
         if (showSolution && grid.getSolutionPath() != null) {
-            svg.append("  <g class=\"solution-path\">%n");
+            svg.append("  <g class=\"solution-path\">").append(System.lineSeparator());
             var path = grid.getSolutionPath();
             int pathWidth = Math.max(cellSize / 4, 6);
             for (int i = 0; i < path.size() - 1; i++) {
@@ -173,11 +173,11 @@ public class MazeSvgRenderer {
                                         + " opacity=\"0.6\"/>%n",
                                 x1, y1, x2, y2, pathColor, pathWidth));
             }
-            svg.append("  </g>%n");
+            svg.append("  </g>").append(System.lineSeparator());
         }
 
         // Draw internal walls first (thin)
-        svg.append("  <g class=\"inner-walls\">%n");
+        svg.append("  <g class=\"inner-walls\">").append(System.lineSeparator());
         for (int x = 0; x < gridWidth; x++) {
             for (int y = 0; y < gridHeight; y++) {
                 MazeCell cell = grid.getCell(x, y);
@@ -215,10 +215,10 @@ public class MazeSvgRenderer {
                 }
             }
         }
-        svg.append("  </g>%n");
+        svg.append("  </g>").append(System.lineSeparator());
 
         // Draw outer border (thick rectangle)
-        svg.append("  <g class=\"outer-border\">%n");
+        svg.append("  <g class=\"outer-border\">").append(System.lineSeparator());
         svg.append(
                 String.format(
                         "    <rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\""
@@ -229,7 +229,7 @@ public class MazeSvgRenderer {
                         mazeHeight,
                         outerWallColor,
                         OUTER_WALL_THICKNESS));
-        svg.append("  </g>%n");
+        svg.append("  </g>").append(System.lineSeparator());
 
         // Calculate marker size based on cell size
         int markerRadius = Math.max(cellSize / 5, 8);
@@ -293,7 +293,7 @@ public class MazeSvgRenderer {
                         PAGE_WIDTH, PAGE_HEIGHT));
 
         // Draw concentric circles and radial walls
-        svg.append("  <g class=\"walls\">%n");
+        svg.append("  <g class=\"walls\">").append(System.lineSeparator());
         for (int ring = 1; ring <= rings; ring++) {
             int radius = ring * ringSpacing;
             svg.append(
@@ -315,7 +315,7 @@ public class MazeSvgRenderer {
                                     + " stroke-width=\"%d\"/>%n",
                             centerX, centerY, x2, y2, innerWallColor, INNER_WALL_THICKNESS));
         }
-        svg.append("  </g>%n");
+        svg.append("  </g>").append(System.lineSeparator());
 
         // Marker size
         int markerRadius = Math.max(ringSpacing / 4, 12);

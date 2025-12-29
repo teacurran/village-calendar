@@ -282,11 +282,11 @@ public class HebrewCalendarService {
                 ".day-header { fill: #666; font-family: Arial, sans-serif; font-size: 10px; }%n");
         svg.append(
                 ".grid-line { stroke: #ccc; stroke-width: 0.5; fill: rgba(255, 255, 255, 0); }%n");
-        svg.append(".shabbat-bg { fill: #f0f0ff; }%n");
+        svg.append(".shabbat-bg { fill: #f0f0ff; }").append(System.lineSeparator());
         svg.append(
                 ".holiday-text { fill: #fff; font-family: Arial, sans-serif; font-size: 7px;"
                         + " text-anchor: middle; }%n");
-        svg.append("</style>%n");
+        svg.append("</style>").append(System.lineSeparator());
 
         // Add year header
         svg.append(

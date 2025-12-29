@@ -514,14 +514,14 @@ public class CalendarRenderingService {
                 emojiY = cellY + cellHeight / 2 + 5;
             }
             result.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, true));
-            result.append("%n");
+            result.append(System.lineSeparator());
         } else if ("small".equals(config.eventDisplayMode) && !holidayEmoji.isEmpty()) {
             // Small mode: bottom-left corner
             int emojiX = cellX + 5;
             int emojiY = cellY + cellHeight - 5;
             int fontSize = Math.max(10, cellHeight / 6);
             result.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, false));
-            result.append("%n");
+            result.append(System.lineSeparator());
         }
 
         // Holiday name text for large-text and text modes
@@ -668,7 +668,7 @@ public class CalendarRenderingService {
                 int emojiSize = Math.max(8, Math.min(24, scaledSize));
 
                 svg.append(renderEmoji(customEmoji, emojiX, emojiY, emojiSize, config, true));
-                svg.append("%n");
+                svg.append(System.lineSeparator());
             } else {
                 int emojiX = cellX;
                 int emojiY = cellY;
@@ -714,7 +714,7 @@ public class CalendarRenderingService {
                 }
 
                 svg.append(renderEmoji(customEmoji, emojiX, emojiY, 12, config, false));
-                svg.append("%n");
+                svg.append(System.lineSeparator());
             }
         }
 
@@ -1246,7 +1246,7 @@ public class CalendarRenderingService {
     }
 
     private void appendGridStyles(StringBuilder svg, CalendarConfig config, ThemeColors theme) {
-        svg.append("<style>%n");
+        svg.append("<style>").append(System.lineSeparator());
         svg.append(
                 String.format(
                         ".year-text { fill: %s; font-family: Helvetica, Arial, sans-serif;"
@@ -1279,7 +1279,7 @@ public class CalendarRenderingService {
         svg.append(
                 String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
         svg.append(String.format(".custom-date { fill: %s; }%n", config.customDateColor));
-        svg.append("</style>%n");
+        svg.append("</style>").append(System.lineSeparator());
     }
 
     private void renderEmptyCell(
@@ -1796,7 +1796,7 @@ public class CalendarRenderingService {
                         "<circle r=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"%.1f\"/>%n",
                         radius, config.moonBorderColor, config.moonBorderWidth));
 
-        svg.append("</g>%n");
+        svg.append("</g>").append(System.lineSeparator());
 
         return svg.toString();
     }

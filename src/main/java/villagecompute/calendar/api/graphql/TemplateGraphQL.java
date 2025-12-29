@@ -170,17 +170,17 @@ public class TemplateGraphQL {
             return "SecurityIdentity is null";
         }
         StringBuilder sb = new StringBuilder();
-        sb.append("Anonymous: ").append(securityIdentity.isAnonymous()).append("%n");
+        sb.append("Anonymous: ").append(securityIdentity.isAnonymous()).append(System.lineSeparator());
         sb.append("Principal: ")
                 .append(
                         securityIdentity.getPrincipal() != null
                                 ? securityIdentity.getPrincipal().getName()
                                 : "null")
-                .append("%n");
-        sb.append("Roles: ").append(securityIdentity.getRoles()).append("%n");
-        sb.append("Has ADMIN: ").append(securityIdentity.hasRole("ADMIN")).append("%n");
-        sb.append("Has USER: ").append(securityIdentity.hasRole("USER")).append("%n");
-        sb.append("Attributes: ").append(securityIdentity.getAttributes()).append("%n");
+                .append(System.lineSeparator());
+        sb.append("Roles: ").append(securityIdentity.getRoles()).append(System.lineSeparator());
+        sb.append("Has ADMIN: ").append(securityIdentity.hasRole("ADMIN")).append(System.lineSeparator());
+        sb.append("Has USER: ").append(securityIdentity.hasRole("USER")).append(System.lineSeparator());
+        sb.append("Attributes: ").append(securityIdentity.getAttributes()).append(System.lineSeparator());
         LOG.info("Debug security identity: " + sb.toString());
         return sb.toString();
     }
