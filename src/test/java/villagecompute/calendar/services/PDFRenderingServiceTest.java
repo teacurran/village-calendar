@@ -1,34 +1,33 @@
 package villagecompute.calendar.services;
 
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import jakarta.inject.Inject;
+
+import org.junit.jupiter.api.Test;
+
+import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * Tests for PDFRenderingService.
- * Verifies SVG-to-PDF conversion works correctly with various SVG features,
- * including xlink:href references which require proper namespace handling.
+ * Tests for PDFRenderingService. Verifies SVG-to-PDF conversion works correctly with various SVG
+ * features, including xlink:href references which require proper namespace handling.
  */
 @QuarkusTest
 public class PDFRenderingServiceTest {
 
-    @Inject
-    PDFRenderingService pdfRenderingService;
+    @Inject PDFRenderingService pdfRenderingService;
 
-    @Inject
-    CalendarRenderingService calendarRenderingService;
+    @Inject CalendarRenderingService calendarRenderingService;
 
-    @Inject
-    EmojiSvgService emojiSvgService;
+    @Inject EmojiSvgService emojiSvgService;
 
     @Test
     public void testBasicSvgToPdf() {
         // Basic SVG without xlink references
-        String basicSvg = """
+        String basicSvg =
+                """
             <?xml version="1.0" encoding="UTF-8"?>
             <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100" viewBox="0 0 100 100">
                 <rect x="10" y="10" width="80" height="80" fill="blue"/>
@@ -47,7 +46,8 @@ public class PDFRenderingServiceTest {
     public void testSvgWithXlinkHref() {
         // SVG with xlink:href references (similar to what some Noto emojis use)
         // Uses a symbol element that can be referenced via <use>
-        String svgWithXlink = """
+        String svgWithXlink =
+                """
             <?xml version="1.0" encoding="UTF-8"?>
             <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="128" height="128" viewBox="0 0 128 128">
                 <defs>
@@ -73,7 +73,8 @@ public class PDFRenderingServiceTest {
     @Test
     public void testCalendarWithSecularHolidays() {
         // Generate a calendar with secular holidays (which may use emojis with xlink:href)
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+        CalendarRenderingService.CalendarConfig config =
+                new CalendarRenderingService.CalendarConfig();
         config.year = 2025;
         config.theme = "default";
         config.layoutStyle = "grid";
@@ -99,7 +100,8 @@ public class PDFRenderingServiceTest {
         // Test specific emojis that use xlink:href (like the dancing woman emoji)
         // emoji_u1f483.svg is known to use xlink:href
         if (emojiSvgService.hasEmojiSvg("💃")) {
-            CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+            CalendarRenderingService.CalendarConfig config =
+                    new CalendarRenderingService.CalendarConfig();
             config.year = 2025;
             config.theme = "default";
             config.layoutStyle = "grid";
@@ -125,7 +127,8 @@ public class PDFRenderingServiceTest {
 
         for (String emoji : emojisWithXlink) {
             if (emojiSvgService.hasEmojiSvg(emoji)) {
-                CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+                CalendarRenderingService.CalendarConfig config =
+                        new CalendarRenderingService.CalendarConfig();
                 config.year = 2025;
                 config.theme = "default";
                 config.layoutStyle = "grid";
@@ -149,7 +152,8 @@ public class PDFRenderingServiceTest {
     @Test
     public void testMonochromeCalendarWithSecularHolidays() {
         // Test monochrome mode with secular holidays
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+        CalendarRenderingService.CalendarConfig config =
+                new CalendarRenderingService.CalendarConfig();
         config.year = 2025;
         config.theme = "default";
         config.layoutStyle = "grid";
@@ -172,7 +176,8 @@ public class PDFRenderingServiceTest {
     @Test
     public void testComplexCalendarWithAllFeatures() {
         // Test a complex calendar with all features that could cause CSS URI reference issues
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+        CalendarRenderingService.CalendarConfig config =
+                new CalendarRenderingService.CalendarConfig();
         config.year = 2025;
         config.theme = "rainbowWeekends";
         config.layoutStyle = "grid";
@@ -185,7 +190,7 @@ public class PDFRenderingServiceTest {
         config.holidaySets = List.of("secular", "us");
         config.eventDisplayMode = "large";
         config.emojiFont = "noto-color";
-        
+
         // Add complex custom dates with various emojis (including known xlink users)
         config.customDates.put("2025-01-01", "🎉"); // New Year
         config.customDates.put("2025-02-14", "❤️"); // Valentine's
@@ -197,7 +202,7 @@ public class PDFRenderingServiceTest {
         String svg = calendarRenderingService.generateCalendarSVG(config);
         assertNotNull(svg, "SVG generation should succeed with complex configuration");
         assertTrue(svg.length() > 1000, "SVG should be substantial in size");
-        
+
         // Verify that our preprocessing is working - the SVG should contain processed references
         if (svg.contains("url(#")) {
             // If we still have url(# references, our preprocessing didn't catch them all
@@ -206,7 +211,9 @@ public class PDFRenderingServiceTest {
             // Extract a sample for analysis
             int urlIndex = svg.indexOf("url(#");
             if (urlIndex != -1) {
-                String sample = svg.substring(Math.max(0, urlIndex - 50), Math.min(svg.length(), urlIndex + 100));
+                String sample =
+                        svg.substring(
+                                Math.max(0, urlIndex - 50), Math.min(svg.length(), urlIndex + 100));
                 System.out.println("Sample: " + sample);
             }
         }
@@ -216,14 +223,16 @@ public class PDFRenderingServiceTest {
         assertNotNull(pdf, "PDF output should not be null for complex calendar");
         assertTrue(pdf.length > 10000, "PDF should be substantial in size (>10KB)");
         assertTrue(new String(pdf, 0, 4).equals("%PDF"), "Output should be a valid PDF");
-        
+
         System.out.println("Complex calendar PDF generated successfully: " + pdf.length + " bytes");
     }
 
     @Test
     public void testEmojiFontConsistency() {
-        // Test that emoji font setting is properly applied in both SVG generation and PDF conversion
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+        // Test that emoji font setting is properly applied in both SVG generation and PDF
+        // conversion
+        CalendarRenderingService.CalendarConfig config =
+                new CalendarRenderingService.CalendarConfig();
         config.year = 2025;
         config.theme = "default";
         config.emojiFont = "noto-mono"; // Explicitly set to monochrome

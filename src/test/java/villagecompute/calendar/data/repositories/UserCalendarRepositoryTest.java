@@ -1,41 +1,39 @@
 package villagecompute.calendar.data.repositories;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import villagecompute.calendar.data.models.CalendarTemplate;
-import villagecompute.calendar.data.models.CalendarUser;
-import villagecompute.calendar.data.models.UserCalendar;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import villagecompute.calendar.data.models.CalendarTemplate;
+import villagecompute.calendar.data.models.CalendarUser;
+import villagecompute.calendar.data.models.UserCalendar;
+
+import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 class UserCalendarRepositoryTest {
 
-    @Inject
-    TestDataCleaner testDataCleaner;
+    @Inject TestDataCleaner testDataCleaner;
 
-    @Inject
-    UserCalendarRepository userCalendarRepository;
+    @Inject UserCalendarRepository userCalendarRepository;
 
-    @Inject
-    CalendarUserRepository calendarUserRepository;
+    @Inject CalendarUserRepository calendarUserRepository;
 
-    @Inject
-    CalendarTemplateRepository templateRepository;
+    @Inject CalendarTemplateRepository templateRepository;
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
-    @Inject
-    jakarta.persistence.EntityManager entityManager;
+    @Inject jakarta.persistence.EntityManager entityManager;
 
     private CalendarUser testUser;
     private CalendarTemplate testTemplate;

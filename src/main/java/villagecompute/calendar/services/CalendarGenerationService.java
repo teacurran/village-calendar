@@ -1,58 +1,52 @@
 package villagecompute.calendar.services;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.UUID;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+
 import org.jboss.logging.Logger;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.exceptions.CalendarGenerationException;
 import villagecompute.calendar.services.exceptions.StorageException;
 
-import java.util.UUID;
-
 /**
- * Main orchestration service for calendar generation.
- * Coordinates SVG generation, PDF rendering, and storage upload.
- * <p>
- * This service extracts and refactors the calendar generation logic from the main VillageCMS application
- * into a standalone microservice architecture.
+ * Main orchestration service for calendar generation. Coordinates SVG generation, PDF rendering,
+ * and storage upload.
+ *
+ * <p>This service extracts and refactors the calendar generation logic from the main VillageCMS
+ * application into a standalone microservice architecture.
  */
 @ApplicationScoped
 public class CalendarGenerationService {
 
     private static final Logger LOG = Logger.getLogger(CalendarGenerationService.class);
 
-    @Inject
-    CalendarRenderingService calendarRenderingService;
+    @Inject CalendarRenderingService calendarRenderingService;
 
-    @Inject
-    AstronomicalCalculationService astronomicalService;
+    @Inject AstronomicalCalculationService astronomicalService;
 
-    @Inject
-    PDFRenderingService pdfRenderingService;
+    @Inject PDFRenderingService pdfRenderingService;
 
-    @Inject
-    StorageService storageService;
+    @Inject StorageService storageService;
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
     /**
      * Generate a calendar PDF for a given UserCalendar entity.
-     * <p>
-     * This method:
-     * 1. Loads the template and merges configurations
-     * 2. Generates SVG using CalendarService
-     * 3. Renders PDF using PDFRenderingService
-     * 4. Uploads to Cloudflare R2 using StorageService
-     * 5. Updates UserCalendar.generatedPdfUrl with the public URL
+     *
+     * <p>This method: 1. Loads the template and merges configurations 2. Generates SVG using
+     * CalendarService 3. Renders PDF using PDFRenderingService 4. Uploads to Cloudflare R2 using
+     * StorageService 5. Updates UserCalendar.generatedPdfUrl with the public URL
      *
      * @param userCalendar The UserCalendar entity to generate a PDF for
      * @return The public URL of the generated PDF
      * @throws CalendarGenerationException if generation fails
-     * @throws StorageException           if upload fails
+     * @throws StorageException if upload fails
      */
     @Transactional
     public String generateCalendar(UserCalendar userCalendar) {
@@ -64,7 +58,9 @@ public class CalendarGenerationService {
             throw new IllegalArgumentException("UserCalendar year cannot be null");
         }
 
-        LOG.infof("Generating calendar for UserCalendar ID: %s, Year: %d", userCalendar.id, userCalendar.year);
+        LOG.infof(
+                "Generating calendar for UserCalendar ID: %s, Year: %d",
+                userCalendar.id, userCalendar.year);
 
         try {
             // Step 1: Build configuration by merging template + user configuration
@@ -108,13 +104,14 @@ public class CalendarGenerationService {
             throw e;
         } catch (Exception e) {
             LOG.errorf(e, "Failed to generate calendar for UserCalendar ID: %s", userCalendar.id);
-            throw new CalendarGenerationException("Calendar generation failed: " + e.getMessage(), e);
+            throw new CalendarGenerationException(
+                    "Calendar generation failed: " + e.getMessage(), e);
         }
     }
 
     /**
-     * Generate calendar SVG only (without PDF rendering or upload).
-     * Uses buildCalendarConfig to properly derive moonDisplayMode -> boolean flags.
+     * Generate calendar SVG only (without PDF rendering or upload). Uses buildCalendarConfig to
+     * properly derive moonDisplayMode -> boolean flags.
      *
      * @param userCalendar The UserCalendar entity
      * @return SVG content string
@@ -125,22 +122,26 @@ public class CalendarGenerationService {
     }
 
     /**
-     * Build a CalendarConfig by merging template configuration with user configuration.
-     * User settings override template defaults.
+     * Build a CalendarConfig by merging template configuration with user configuration. User
+     * settings override template defaults.
      *
      * @param userCalendar The UserCalendar entity
      * @return Merged CalendarConfig
      */
     private CalendarRenderingService.CalendarConfig buildCalendarConfig(UserCalendar userCalendar) {
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+        CalendarRenderingService.CalendarConfig config =
+                new CalendarRenderingService.CalendarConfig();
 
         // Start with default config values
         config.year = userCalendar.year;
 
         // Apply template configuration if present
         if (userCalendar.template != null && userCalendar.template.configuration != null) {
-            LOG.debugf("Applying template configuration from template: %s", userCalendar.template.name);
-            CalendarRenderingService.applyJsonConfiguration(config, userCalendar.template.configuration);
+            LOG.debugf(
+                    "Applying template configuration from template: %s",
+                    userCalendar.template.name);
+            CalendarRenderingService.applyJsonConfiguration(
+                    config, userCalendar.template.configuration);
         }
 
         // Override with user configuration if present
@@ -156,8 +157,8 @@ public class CalendarGenerationService {
     }
 
     /**
-     * Generate a unique filename for the PDF based on the UserCalendar.
-     * Format: calendar-{userId or sessionId}-{year}-{uuid}.pdf
+     * Generate a unique filename for the PDF based on the UserCalendar. Format: calendar-{userId or
+     * sessionId}-{year}-{uuid}.pdf
      *
      * @param userCalendar The UserCalendar entity
      * @return Generated filename
@@ -167,12 +168,18 @@ public class CalendarGenerationService {
         if (userCalendar.user != null && userCalendar.user.id != null) {
             prefix = "user-" + userCalendar.user.id.toString().substring(0, 8);
         } else if (userCalendar.sessionId != null) {
-            prefix = "session-" + userCalendar.sessionId.substring(0, Math.min(8, userCalendar.sessionId.length()));
+            prefix =
+                    "session-"
+                            + userCalendar.sessionId.substring(
+                                    0, Math.min(8, userCalendar.sessionId.length()));
         } else {
             prefix = "anonymous";
         }
 
-        String uuid = userCalendar.id != null ? userCalendar.id.toString().substring(0, 8) : UUID.randomUUID().toString().substring(0, 8);
+        String uuid =
+                userCalendar.id != null
+                        ? userCalendar.id.toString().substring(0, 8)
+                        : UUID.randomUUID().toString().substring(0, 8);
 
         return String.format("calendar-%s-%d-%s.pdf", prefix, userCalendar.year, uuid);
     }

@@ -1,35 +1,33 @@
 package villagecompute.calendar.util.astronomical;
 
-import org.shredzone.commons.suncalc.MoonIllumination;
-import org.shredzone.commons.suncalc.MoonPhase;
-import org.shredzone.commons.suncalc.MoonPosition;
-
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.shredzone.commons.suncalc.MoonIllumination;
+import org.shredzone.commons.suncalc.MoonPhase;
+import org.shredzone.commons.suncalc.MoonPosition;
+
 /**
  * Utility class for calculating moon phases, illumination, and positions using the SunCalc library.
- * <p>
- * This class provides accurate astronomical calculations for:
- * - Moon phase transitions (new moon, full moon, quarters)
- * - Moon illumination percentages
- * - Moon position (azimuth, altitude, parallactic angle) for observer location
+ *
+ * <p>This class provides accurate astronomical calculations for: - Moon phase transitions (new
+ * moon, full moon, quarters) - Moon illumination percentages - Moon position (azimuth, altitude,
+ * parallactic angle) for observer location
  */
 public class MoonPhaseCalculator {
 
-    /**
-     * Data class representing a moon phase transition event.
-     */
+    /** Data class representing a moon phase transition event. */
     public static class MoonPhaseData {
         public LocalDate date;
         public MoonPhaseType phase;
         public double phaseValue;
         public double illumination;
 
-        public MoonPhaseData(LocalDate date, MoonPhaseType phase, double phaseValue, double illumination) {
+        public MoonPhaseData(
+                LocalDate date, MoonPhaseType phase, double phaseValue, double illumination) {
             this.date = date;
             this.phase = phase;
             this.phaseValue = phaseValue;
@@ -37,21 +35,23 @@ public class MoonPhaseCalculator {
         }
     }
 
-    /**
-     * Moon phase types.
-     */
+    /** Moon phase types. */
     public enum MoonPhaseType {
-        NEW_MOON, WAXING_CRESCENT, FIRST_QUARTER, WAXING_GIBBOUS,
-        FULL_MOON, WANING_GIBBOUS, LAST_QUARTER, WANING_CRESCENT
+        NEW_MOON,
+        WAXING_CRESCENT,
+        FIRST_QUARTER,
+        WAXING_GIBBOUS,
+        FULL_MOON,
+        WANING_GIBBOUS,
+        LAST_QUARTER,
+        WANING_CRESCENT
     }
 
-    /**
-     * Data class for moon illumination details.
-     */
+    /** Data class for moon illumination details. */
     public static class MoonIlluminationData {
         public double fraction; // 0 to 1, illuminated fraction
-        public double phase;    // 0 to 1, phase in the lunar cycle
-        public double angle;    // angle in radians
+        public double phase; // 0 to 1, phase in the lunar cycle
+        public double angle; // angle in radians
 
         public MoonIlluminationData(double fraction, double phase, double angle) {
             this.fraction = fraction;
@@ -60,12 +60,10 @@ public class MoonPhaseCalculator {
         }
     }
 
-    /**
-     * Data class for moon position at observer's location.
-     */
+    /** Data class for moon position at observer's location. */
     public static class MoonPositionData {
-        public double azimuth;         // azimuth in radians
-        public double altitude;        // altitude in radians
+        public double azimuth; // azimuth in radians
+        public double altitude; // altitude in radians
         public double parallacticAngle; // parallactic angle in radians
 
         public MoonPositionData(double azimuth, double altitude, double parallacticAngle) {
@@ -76,8 +74,8 @@ public class MoonPhaseCalculator {
     }
 
     /**
-     * Calculate all major moon phase transitions for a given year using SunCalc.
-     * This is optimized to directly calculate the ~13 major phases rather than iterating all 365 days.
+     * Calculate all major moon phase transitions for a given year using SunCalc. This is optimized
+     * to directly calculate the ~13 major phases rather than iterating all 365 days.
      *
      * @param year The year to calculate moon phases for
      * @return List of MoonPhaseData for each major phase transition
@@ -94,11 +92,12 @@ public class MoonPhaseCalculator {
 
         // Find all New Moons in the year
         while (current.isBefore(end)) {
-            ZonedDateTime newMoonTime = MoonPhase.compute()
-                    .phase(MoonPhase.Phase.NEW_MOON)
-                    .on(current)
-                    .execute()
-                    .getTime();
+            ZonedDateTime newMoonTime =
+                    MoonPhase.compute()
+                            .phase(MoonPhase.Phase.NEW_MOON)
+                            .on(current)
+                            .execute()
+                            .getTime();
 
             if (newMoonTime != null && !newMoonTime.toLocalDate().isAfter(endDate)) {
                 LocalDate phaseDate = newMoonTime.toLocalDate();
@@ -115,16 +114,18 @@ public class MoonPhaseCalculator {
         // Calculate Full Moons
         current = startDate.atStartOfDay(ZoneId.of("UTC"));
         while (current.isBefore(end)) {
-            ZonedDateTime fullMoonTime = MoonPhase.compute()
-                    .phase(MoonPhase.Phase.FULL_MOON)
-                    .on(current)
-                    .execute()
-                    .getTime();
+            ZonedDateTime fullMoonTime =
+                    MoonPhase.compute()
+                            .phase(MoonPhase.Phase.FULL_MOON)
+                            .on(current)
+                            .execute()
+                            .getTime();
 
             if (fullMoonTime != null && !fullMoonTime.toLocalDate().isAfter(endDate)) {
                 LocalDate phaseDate = fullMoonTime.toLocalDate();
                 double illumination = calculateIllumination(phaseDate);
-                phases.add(new MoonPhaseData(phaseDate, MoonPhaseType.FULL_MOON, 0.5, illumination));
+                phases.add(
+                        new MoonPhaseData(phaseDate, MoonPhaseType.FULL_MOON, 0.5, illumination));
 
                 current = fullMoonTime.plusDays(29);
             } else {
@@ -135,16 +136,19 @@ public class MoonPhaseCalculator {
         // Calculate First Quarters
         current = startDate.atStartOfDay(ZoneId.of("UTC"));
         while (current.isBefore(end)) {
-            ZonedDateTime quarterTime = MoonPhase.compute()
-                    .phase(MoonPhase.Phase.FIRST_QUARTER)
-                    .on(current)
-                    .execute()
-                    .getTime();
+            ZonedDateTime quarterTime =
+                    MoonPhase.compute()
+                            .phase(MoonPhase.Phase.FIRST_QUARTER)
+                            .on(current)
+                            .execute()
+                            .getTime();
 
             if (quarterTime != null && !quarterTime.toLocalDate().isAfter(endDate)) {
                 LocalDate phaseDate = quarterTime.toLocalDate();
                 double illumination = calculateIllumination(phaseDate);
-                phases.add(new MoonPhaseData(phaseDate, MoonPhaseType.FIRST_QUARTER, 0.25, illumination));
+                phases.add(
+                        new MoonPhaseData(
+                                phaseDate, MoonPhaseType.FIRST_QUARTER, 0.25, illumination));
 
                 current = quarterTime.plusDays(29);
             } else {
@@ -155,16 +159,19 @@ public class MoonPhaseCalculator {
         // Calculate Last Quarters
         current = startDate.atStartOfDay(ZoneId.of("UTC"));
         while (current.isBefore(end)) {
-            ZonedDateTime quarterTime = MoonPhase.compute()
-                    .phase(MoonPhase.Phase.LAST_QUARTER)
-                    .on(current)
-                    .execute()
-                    .getTime();
+            ZonedDateTime quarterTime =
+                    MoonPhase.compute()
+                            .phase(MoonPhase.Phase.LAST_QUARTER)
+                            .on(current)
+                            .execute()
+                            .getTime();
 
             if (quarterTime != null && !quarterTime.toLocalDate().isAfter(endDate)) {
                 LocalDate phaseDate = quarterTime.toLocalDate();
                 double illumination = calculateIllumination(phaseDate);
-                phases.add(new MoonPhaseData(phaseDate, MoonPhaseType.LAST_QUARTER, 0.75, illumination));
+                phases.add(
+                        new MoonPhaseData(
+                                phaseDate, MoonPhaseType.LAST_QUARTER, 0.75, illumination));
 
                 current = quarterTime.plusDays(29);
             } else {
@@ -208,8 +215,8 @@ public class MoonPhaseCalculator {
     }
 
     /**
-     * Calculate moon phase as a fractional value from 0 to 1.
-     * 0 = new moon, 0.25 = first quarter, 0.5 = full moon, 0.75 = last quarter
+     * Calculate moon phase as a fractional value from 0 to 1. 0 = new moon, 0.25 = first quarter,
+     * 0.5 = full moon, 0.75 = last quarter
      *
      * @param date The date to calculate
      * @return Moon phase value (0.0 to 1.0)
@@ -217,9 +224,7 @@ public class MoonPhaseCalculator {
     public static double calculateMoonPhaseValue(LocalDate date) {
         ZonedDateTime zdt = date.atStartOfDay(ZoneId.of("UTC"));
 
-        MoonIllumination moonIllum = MoonIllumination.compute()
-                .on(zdt)
-                .execute();
+        MoonIllumination moonIllum = MoonIllumination.compute().on(zdt).execute();
 
         // Calculate phase from illumination fraction and angle
         // The angle tells us the direction (positive = waxing, negative = waning)
@@ -255,9 +260,7 @@ public class MoonPhaseCalculator {
     public static MoonIlluminationData calculateIlluminationData(LocalDate date) {
         ZonedDateTime zdt = date.atStartOfDay(ZoneId.of("UTC"));
 
-        MoonIllumination moonIllum = MoonIllumination.compute()
-                .on(zdt)
-                .execute();
+        MoonIllumination moonIllum = MoonIllumination.compute().on(zdt).execute();
 
         // Calculate the phase value (0-1) using our method
         double phaseValue = calculateMoonPhaseValue(date);
@@ -265,8 +268,7 @@ public class MoonPhaseCalculator {
         return new MoonIlluminationData(
                 moonIllum.getFraction(),
                 phaseValue, // Use calculated phase value instead of raw getPhase()
-                moonIllum.getAngle()
-        );
+                moonIllum.getAngle());
     }
 
     /**
@@ -278,39 +280,31 @@ public class MoonPhaseCalculator {
     public static double calculateIllumination(LocalDate date) {
         ZonedDateTime zdt = date.atStartOfDay(ZoneId.of("UTC"));
 
-        return MoonIllumination.compute()
-                .on(zdt)
-                .execute()
-                .getFraction();
+        return MoonIllumination.compute().on(zdt).execute().getFraction();
     }
 
     /**
-     * Calculate moon position for an observer's location using SunCalc.
-     * This affects how the moon appears (rotation) based on hemisphere.
+     * Calculate moon position for an observer's location using SunCalc. This affects how the moon
+     * appears (rotation) based on hemisphere.
      *
-     * @param date      The date to calculate
-     * @param latitude  Observer's latitude in degrees
+     * @param date The date to calculate
+     * @param latitude Observer's latitude in degrees
      * @param longitude Observer's longitude in degrees
      * @return MoonPositionData with azimuth, altitude, and parallactic angle
      */
-    public static MoonPositionData calculatePosition(LocalDate date, double latitude, double longitude) {
+    public static MoonPositionData calculatePosition(
+            LocalDate date, double latitude, double longitude) {
         ZonedDateTime zdt = date.atStartOfDay(ZoneId.of("UTC"));
 
-        MoonPosition moonPos = MoonPosition.compute()
-                .on(zdt)
-                .at(latitude, longitude)
-                .execute();
+        MoonPosition moonPos = MoonPosition.compute().on(zdt).at(latitude, longitude).execute();
 
         return new MoonPositionData(
-                moonPos.getAzimuth(),
-                moonPos.getAltitude(),
-                moonPos.getParallacticAngle()
-        );
+                moonPos.getAzimuth(), moonPos.getAltitude(), moonPos.getParallacticAngle());
     }
 
     /**
-     * Check if a date is a moon phase transition day (new/full/quarter).
-     * This is used to determine which days should show moon phase icons.
+     * Check if a date is a moon phase transition day (new/full/quarter). This is used to determine
+     * which days should show moon phase icons.
      *
      * @param date The date to check
      * @return true if the date is closest to a major moon phase

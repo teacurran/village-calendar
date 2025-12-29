@@ -1,16 +1,6 @@
 package villagecompute.calendar.data.repositories;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import villagecompute.calendar.data.models.CalendarOrder;
-import villagecompute.calendar.data.models.CalendarTemplate;
-import villagecompute.calendar.data.models.CalendarUser;
-import villagecompute.calendar.data.models.UserCalendar;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -18,31 +8,38 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import villagecompute.calendar.data.models.CalendarOrder;
+import villagecompute.calendar.data.models.CalendarTemplate;
+import villagecompute.calendar.data.models.CalendarUser;
+import villagecompute.calendar.data.models.UserCalendar;
+
+import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 class CalendarOrderRepositoryTest {
 
-    @Inject
-    TestDataCleaner testDataCleaner;
+    @Inject TestDataCleaner testDataCleaner;
 
-    @Inject
-    CalendarOrderRepository orderRepository;
+    @Inject CalendarOrderRepository orderRepository;
 
-    @Inject
-    CalendarUserRepository userRepository;
+    @Inject CalendarUserRepository userRepository;
 
-    @Inject
-    UserCalendarRepository calendarRepository;
+    @Inject UserCalendarRepository calendarRepository;
 
-    @Inject
-    CalendarTemplateRepository templateRepository;
+    @Inject CalendarTemplateRepository templateRepository;
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
-    @Inject
-    jakarta.persistence.EntityManager entityManager;
+    @Inject jakarta.persistence.EntityManager entityManager;
 
     private CalendarUser testUser;
     private UserCalendar testCalendar;
@@ -90,11 +87,14 @@ class CalendarOrderRepositoryTest {
         entityManager.flush();
 
         // When
-        List<CalendarOrder> pendingOrders = orderRepository.findByStatusOrderByCreatedDesc(CalendarOrder.STATUS_PENDING);
+        List<CalendarOrder> pendingOrders =
+                orderRepository.findByStatusOrderByCreatedDesc(CalendarOrder.STATUS_PENDING);
 
         // Then
         assertEquals(2, pendingOrders.size());
-        assertTrue(pendingOrders.stream().allMatch(o -> CalendarOrder.STATUS_PENDING.equals(o.status)));
+        assertTrue(
+                pendingOrders.stream()
+                        .allMatch(o -> CalendarOrder.STATUS_PENDING.equals(o.status)));
     }
 
     @Test
@@ -187,7 +187,9 @@ class CalendarOrderRepositoryTest {
 
         // Then
         assertEquals(2, pendingOrders.size());
-        assertTrue(pendingOrders.stream().allMatch(o -> CalendarOrder.STATUS_PENDING.equals(o.status)));
+        assertTrue(
+                pendingOrders.stream()
+                        .allMatch(o -> CalendarOrder.STATUS_PENDING.equals(o.status)));
     }
 
     @Test
@@ -219,13 +221,17 @@ class CalendarOrderRepositoryTest {
         entityManager.flush();
 
         // When
-        List<CalendarOrder> pendingOrders = orderRepository.findByUserAndStatus(testUser.id, CalendarOrder.STATUS_PENDING);
+        List<CalendarOrder> pendingOrders =
+                orderRepository.findByUserAndStatus(testUser.id, CalendarOrder.STATUS_PENDING);
 
         // Then
         assertEquals(2, pendingOrders.size());
-        assertTrue(pendingOrders.stream().allMatch(o ->
-            o.user.id.equals(testUser.id) && CalendarOrder.STATUS_PENDING.equals(o.status)
-        ));
+        assertTrue(
+                pendingOrders.stream()
+                        .allMatch(
+                                o ->
+                                        o.user.id.equals(testUser.id)
+                                                && CalendarOrder.STATUS_PENDING.equals(o.status)));
     }
 
     @Test

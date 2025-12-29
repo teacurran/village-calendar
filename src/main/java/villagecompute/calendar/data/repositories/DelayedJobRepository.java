@@ -1,18 +1,20 @@
 package villagecompute.calendar.data.repositories;
 
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
-import io.quarkus.panache.common.Parameters;
-import jakarta.enterprise.context.ApplicationScoped;
-import villagecompute.calendar.data.models.DelayedJob;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
+import villagecompute.calendar.data.models.DelayedJob;
+
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+import io.quarkus.panache.common.Parameters;
+
 /**
- * Repository for DelayedJob entities.
- * Provides custom query methods for job processing and retry logic.
+ * Repository for DelayedJob entities. Provides custom query methods for job processing and retry
+ * logic.
  */
 @ApplicationScoped
 public class DelayedJobRepository implements PanacheRepository<DelayedJob> {
@@ -35,8 +37,8 @@ public class DelayedJobRepository implements PanacheRepository<DelayedJob> {
      */
     public List<DelayedJob> findReadyToRun(int limit) {
         return find("#" + DelayedJob.QUERY_FIND_READY_TO_RUN, Parameters.with("now", Instant.now()))
-            .range(0, limit - 1)
-            .list();
+                .range(0, limit - 1)
+                .list();
     }
 
     /**

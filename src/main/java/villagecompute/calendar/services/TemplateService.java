@@ -1,23 +1,25 @@
 package villagecompute.calendar.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Optional;
+import java.util.UUID;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+
 import org.jboss.logging.Logger;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import villagecompute.calendar.api.graphql.inputs.TemplateInput;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.repositories.CalendarTemplateRepository;
 
-import java.util.Optional;
-import java.util.UUID;
-
 /**
- * Service layer for calendar template management operations.
- * Handles template CRUD operations, validation, and preview image uploads.
- * All operations are admin-only.
+ * Service layer for calendar template management operations. Handles template CRUD operations,
+ * validation, and preview image uploads. All operations are admin-only.
  */
 @ApplicationScoped
 public class TemplateService {
@@ -25,15 +27,12 @@ public class TemplateService {
     private static final Logger LOG = Logger.getLogger(TemplateService.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    @Inject
-    CalendarTemplateRepository templateRepository;
+    @Inject CalendarTemplateRepository templateRepository;
 
-    @Inject
-    StorageService storageService;
+    @Inject StorageService storageService;
 
     /**
-     * Create a new calendar template.
-     * Validates the template configuration JSONB before creation.
+     * Create a new calendar template. Validates the template configuration JSONB before creation.
      *
      * @param input Template creation data
      * @return Created template
@@ -76,8 +75,7 @@ public class TemplateService {
     }
 
     /**
-     * Update an existing calendar template.
-     * Validates configuration if provided.
+     * Update an existing calendar template. Validates configuration if provided.
      *
      * @param id Template ID
      * @param input Template update data
@@ -89,7 +87,8 @@ public class TemplateService {
         LOG.infof("Updating template: ID=%s", id);
 
         // Find existing template
-        CalendarTemplate template = CalendarTemplate.<CalendarTemplate>findByIdOptional(id).orElse(null);
+        CalendarTemplate template =
+                CalendarTemplate.<CalendarTemplate>findByIdOptional(id).orElse(null);
         if (template == null) {
             LOG.errorf("Template not found: %s", id);
             throw new IllegalArgumentException("Template not found");
@@ -146,9 +145,9 @@ public class TemplateService {
     }
 
     /**
-     * Delete a calendar template using soft delete.
-     * Sets isActive=false instead of permanently removing the record.
-     * Templates with existing calendars can be soft-deleted to preserve data integrity.
+     * Delete a calendar template using soft delete. Sets isActive=false instead of permanently
+     * removing the record. Templates with existing calendars can be soft-deleted to preserve data
+     * integrity.
      *
      * @param id Template ID
      * @throws IllegalArgumentException if template not found
@@ -158,7 +157,8 @@ public class TemplateService {
         LOG.infof("Soft-deleting template: ID=%s", id);
 
         // Find existing template
-        CalendarTemplate template = CalendarTemplate.<CalendarTemplate>findByIdOptional(id).orElse(null);
+        CalendarTemplate template =
+                CalendarTemplate.<CalendarTemplate>findByIdOptional(id).orElse(null);
         if (template == null) {
             LOG.errorf("Template not found: %s", id);
             throw new IllegalArgumentException("Template not found");
@@ -172,8 +172,8 @@ public class TemplateService {
     }
 
     /**
-     * Upload a preview image for a template to R2 storage.
-     * Updates the template's thumbnailUrl field with the public URL.
+     * Upload a preview image for a template to R2 storage. Updates the template's thumbnailUrl
+     * field with the public URL.
      *
      * @param templateId Template ID
      * @param imageBytes Image file bytes
@@ -186,14 +186,20 @@ public class TemplateService {
         LOG.infof("Uploading preview image for template: ID=%s", templateId);
 
         // Find existing template
-        CalendarTemplate template = CalendarTemplate.<CalendarTemplate>findByIdOptional(templateId).orElse(null);
+        CalendarTemplate template =
+                CalendarTemplate.<CalendarTemplate>findByIdOptional(templateId).orElse(null);
         if (template == null) {
             LOG.errorf("Template not found: %s", templateId);
             throw new IllegalArgumentException("Template not found");
         }
 
         // Generate unique filename
-        String filename = "template-" + templateId + "-" + System.currentTimeMillis() + getFileExtension(contentType);
+        String filename =
+                "template-"
+                        + templateId
+                        + "-"
+                        + System.currentTimeMillis()
+                        + getFileExtension(contentType);
 
         // Upload to R2
         String publicUrl = storageService.uploadFile(filename, imageBytes, contentType);
@@ -223,13 +229,14 @@ public class TemplateService {
             return OBJECT_MAPPER.readTree(configurationJson);
         } catch (JsonProcessingException e) {
             LOG.errorf("Invalid JSON in configuration: %s", e.getMessage());
-            throw new IllegalArgumentException("Invalid JSON in configuration: " + e.getMessage(), e);
+            throw new IllegalArgumentException(
+                    "Invalid JSON in configuration: " + e.getMessage(), e);
         }
     }
 
     /**
-     * Validate the structure of a template configuration JSONB.
-     * Ensures the configuration is a valid JSON object.
+     * Validate the structure of a template configuration JSONB. Ensures the configuration is a
+     * valid JSON object.
      *
      * @param configuration JsonNode representing the template configuration
      * @throws IllegalArgumentException if configuration is invalid

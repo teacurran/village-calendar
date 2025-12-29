@@ -1,35 +1,38 @@
 package villagecompute.calendar.data.models;
 
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
-import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
+
 /**
- * Event entity representing custom dates/events on a calendar.
- * Events must be within the calendar's year and have valid text, emoji, and color values.
+ * Event entity representing custom dates/events on a calendar. Events must be within the calendar's
+ * year and have valid text, emoji, and color values.
  */
 @Entity
 @Table(
-    name = "events",
-    indexes = {
-        @Index(name = "idx_events_calendar", columnList = "calendar_id, event_date"),
-        @Index(name = "idx_events_calendar_date_range", columnList = "calendar_id, event_date DESC")
-    }
-)
+        name = "events",
+        indexes = {
+            @Index(name = "idx_events_calendar", columnList = "calendar_id, event_date"),
+            @Index(
+                    name = "idx_events_calendar_date_range",
+                    columnList = "calendar_id, event_date DESC")
+        })
 public class Event extends DefaultPanacheEntityWithTimestamps {
 
-    @NotNull
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "calendar_id", nullable = false, foreignKey = @ForeignKey(name = "fk_events_calendar"))
+    @NotNull @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "calendar_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_events_calendar"))
     public UserCalendar calendar;
 
-    @NotNull
-    @Column(name = "event_date", nullable = false)
+    @NotNull @Column(name = "event_date", nullable = false)
     public LocalDate eventDate;
 
     @Size(max = 500)
@@ -64,9 +67,15 @@ public class Event extends DefaultPanacheEntityWithTimestamps {
      * @param endDate End date (inclusive)
      * @return List of events in the date range
      */
-    public static List<Event> findByDateRange(UUID calendarId, LocalDate startDate, LocalDate endDate) {
-        return find("calendar.id = ?1 AND eventDate >= ?2 AND eventDate <= ?3 ORDER BY eventDate ASC",
-                    calendarId, startDate, endDate).list();
+    public static List<Event> findByDateRange(
+            UUID calendarId, LocalDate startDate, LocalDate endDate) {
+        return find(
+                        "calendar.id = ?1 AND eventDate >= ?2 AND eventDate <= ?3 ORDER BY"
+                                + " eventDate ASC",
+                        calendarId,
+                        startDate,
+                        endDate)
+                .list();
     }
 
     /**

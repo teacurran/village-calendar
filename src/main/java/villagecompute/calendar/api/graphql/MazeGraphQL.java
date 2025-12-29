@@ -1,26 +1,26 @@
 package villagecompute.calendar.api.graphql;
 
+import java.util.List;
+import java.util.UUID;
+
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+
 import org.eclipse.microprofile.graphql.*;
+
 import villagecompute.calendar.data.models.UserMaze;
 import villagecompute.calendar.data.models.enums.MazeType;
 import villagecompute.calendar.services.MazeGenerationService;
 import villagecompute.calendar.services.MazeService;
 
-import java.util.List;
-import java.util.UUID;
-
 @GraphQLApi
 public class MazeGraphQL {
 
-    @Inject
-    MazeService mazeService;
+    @Inject MazeService mazeService;
 
-    @Inject
-    MazeGenerationService mazeGenerationService;
+    @Inject MazeGenerationService mazeGenerationService;
 
     // Queries
 
@@ -49,13 +49,13 @@ public class MazeGraphQL {
     @PermitAll
     @Description("Generate a preview SVG for given maze parameters")
     public String getMazePreview(
-        @Name("type") @DefaultValue("ORTHOGONAL") MazeType type,
-        @Name("size") @DefaultValue("10") int size,
-        @Name("difficulty") @DefaultValue("3") int difficulty,
-        @Name("showSolution") @DefaultValue("false") boolean showSolution,
-        @Name("showDeadEnds") @DefaultValue("false") boolean showDeadEnds
-    ) {
-        return mazeGenerationService.generatePreview(type, size, difficulty, showSolution, showDeadEnds);
+            @Name("type") @DefaultValue("ORTHOGONAL") MazeType type,
+            @Name("size") @DefaultValue("10") int size,
+            @Name("difficulty") @DefaultValue("3") int difficulty,
+            @Name("showSolution") @DefaultValue("false") boolean showSolution,
+            @Name("showDeadEnds") @DefaultValue("false") boolean showDeadEnds) {
+        return mazeGenerationService.generatePreview(
+                type, size, difficulty, showSolution, showDeadEnds);
     }
 
     // Mutations
@@ -97,8 +97,8 @@ public class MazeGraphQL {
     public static class MazeInput {
         public String name;
         public MazeType mazeType;
-        public Integer size;        // 1-20: controls cell count
-        public Integer difficulty;  // 1-20: controls path length
+        public Integer size; // 1-20: controls cell count
+        public Integer difficulty; // 1-20: controls path length
         public Long seed;
         public String sessionId;
         public Boolean showSolution;

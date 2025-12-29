@@ -1,25 +1,25 @@
 package villagecompute.calendar.api.rest;
 
+import java.util.UUID;
+
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Response;
+
 import org.jboss.logging.Logger;
+
 import villagecompute.calendar.data.models.CartItem;
 import villagecompute.calendar.data.models.ItemAsset;
 
-import java.util.UUID;
-
 /**
- * REST resource for accessing asset content (SVGs stored in item_assets table)
- * and cart item thumbnails.
+ * REST resource for accessing asset content (SVGs stored in item_assets table) and cart item
+ * thumbnails.
  */
 @Path("/api")
 public class AssetResource {
 
     private static final Logger LOG = Logger.getLogger(AssetResource.class);
 
-    /**
-     * Get the SVG content of an asset by its ID
-     */
+    /** Get the SVG content of an asset by its ID */
     @GET
     @Path("/assets/{assetId}")
     @Produces("image/svg+xml")
@@ -30,32 +30,34 @@ public class AssetResource {
 
             if (asset == null) {
                 LOG.warnf("Asset not found: %s", assetId);
-                return Response.status(Response.Status.NOT_FOUND)
-                    .entity("Asset not found")
-                    .build();
+                return Response.status(Response.Status.NOT_FOUND).entity("Asset not found").build();
             }
 
             return Response.ok(asset.svgContent)
-                .header("Content-Type", asset.contentType != null ? asset.contentType : "image/svg+xml")
-                .header("Cache-Control", "public, max-age=31536000") // Cache for 1 year (assets are immutable)
-                .build();
+                    .header(
+                            "Content-Type",
+                            asset.contentType != null ? asset.contentType : "image/svg+xml")
+                    .header(
+                            "Cache-Control",
+                            "public, max-age=31536000") // Cache for 1 year (assets are immutable)
+                    .build();
 
         } catch (IllegalArgumentException e) {
             LOG.warnf("Invalid asset ID format: %s", assetId);
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity("Invalid asset ID format")
-                .build();
+                    .entity("Invalid asset ID format")
+                    .build();
         } catch (Exception e) {
             LOG.errorf(e, "Error fetching asset %s", assetId);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity("Error fetching asset")
-                .build();
+                    .entity("Error fetching asset")
+                    .build();
         }
     }
 
     /**
-     * Get thumbnail SVG for a cart item.
-     * Works uniformly for both calendars (with stored SVG) and mazes (with assets).
+     * Get thumbnail SVG for a cart item. Works uniformly for both calendars (with stored SVG) and
+     * mazes (with assets).
      */
     @GET
     @Path("/cart-items/{itemId}/thumbnail.svg")
@@ -68,8 +70,8 @@ public class AssetResource {
             if (cartItem == null) {
                 LOG.warnf("Cart item not found: %s", itemId);
                 return Response.status(Response.Status.NOT_FOUND)
-                    .entity("Cart item not found")
-                    .build();
+                        .entity("Cart item not found")
+                        .build();
             }
 
             // Priority 1: Check for assets (mazes and new-style items)
@@ -77,9 +79,9 @@ public class AssetResource {
                 ItemAsset mainAsset = cartItem.getMainAsset();
                 if (mainAsset != null && mainAsset.svgContent != null) {
                     return Response.ok(mainAsset.svgContent)
-                        .header("Content-Type", "image/svg+xml")
-                        .header("Cache-Control", "public, max-age=31536000")
-                        .build();
+                            .header("Content-Type", "image/svg+xml")
+                            .header("Cache-Control", "public, max-age=31536000")
+                            .build();
                 }
             }
 
@@ -98,14 +100,15 @@ public class AssetResource {
                             end = config.indexOf("\"", end + 1);
                         }
                         if (end > start) {
-                            String svg = config.substring(start, end)
-                                .replace("\\\"", "\"")
-                                .replace("\\n", "\n")
-                                .replace("\\\\", "\\");
+                            String svg =
+                                    config.substring(start, end)
+                                            .replace("\\\"", "\"")
+                                            .replace("\\n", "\n")
+                                            .replace("\\\\", "\\");
                             return Response.ok(svg)
-                                .header("Content-Type", "image/svg+xml")
-                                .header("Cache-Control", "public, max-age=31536000")
-                                .build();
+                                    .header("Content-Type", "image/svg+xml")
+                                    .header("Cache-Control", "public, max-age=31536000")
+                                    .build();
                         }
                     }
                 }
@@ -114,19 +117,19 @@ public class AssetResource {
             // No SVG available
             LOG.warnf("No SVG content available for cart item: %s", itemId);
             return Response.status(Response.Status.NOT_FOUND)
-                .entity("No thumbnail available for this cart item")
-                .build();
+                    .entity("No thumbnail available for this cart item")
+                    .build();
 
         } catch (IllegalArgumentException e) {
             LOG.warnf("Invalid cart item ID format: %s", itemId);
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity("Invalid cart item ID format")
-                .build();
+                    .entity("Invalid cart item ID format")
+                    .build();
         } catch (Exception e) {
             LOG.errorf(e, "Error fetching cart item thumbnail %s", itemId);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity("Error fetching thumbnail")
-                .build();
+                    .entity("Error fetching thumbnail")
+                    .build();
         }
     }
 }

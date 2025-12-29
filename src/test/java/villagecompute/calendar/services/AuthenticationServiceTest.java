@@ -1,13 +1,6 @@
 package villagecompute.calendar.services;
 
-import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.security.identity.SecurityIdentity;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import villagecompute.calendar.data.models.CalendarUser;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.security.Principal;
 import java.time.Instant;
@@ -16,17 +9,26 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import villagecompute.calendar.data.models.CalendarUser;
+
+import io.quarkus.security.identity.SecurityIdentity;
+import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * Unit tests for AuthenticationService.
- * Tests OAuth callback handling, JWT issuance, and user creation/update logic.
+ * Unit tests for AuthenticationService. Tests OAuth callback handling, JWT issuance, and user
+ * creation/update logic.
  */
 @QuarkusTest
 class AuthenticationServiceTest {
 
-    @Inject
-    AuthenticationService authenticationService;
+    @Inject AuthenticationService authenticationService;
 
     private static final String TEST_PROVIDER = "GOOGLE";
     private static final String TEST_OAUTH_SUBJECT = "test-oauth-subject-123";
@@ -80,13 +82,13 @@ class AuthenticationServiceTest {
     @Transactional
     void testHandleOAuthCallback_NewUser() {
         // Given: No existing user with this OAuth subject
-        Optional<CalendarUser> existingUser = CalendarUser.findByOAuthSubject(TEST_PROVIDER, TEST_OAUTH_SUBJECT);
+        Optional<CalendarUser> existingUser =
+                CalendarUser.findByOAuthSubject(TEST_PROVIDER, TEST_OAUTH_SUBJECT);
         assertFalse(existingUser.isPresent(), "User should not exist before test");
 
         // When: Handle OAuth callback with mock identity
-        SecurityIdentity identity = createMockIdentity(
-            TEST_OAUTH_SUBJECT, TEST_EMAIL, TEST_NAME, TEST_PICTURE
-        );
+        SecurityIdentity identity =
+                createMockIdentity(TEST_OAUTH_SUBJECT, TEST_EMAIL, TEST_NAME, TEST_PICTURE);
         CalendarUser user = authenticationService.handleOAuthCallback("google", identity, null);
 
         // Then: User is created with correct information
@@ -100,7 +102,8 @@ class AuthenticationServiceTest {
         assertNotNull(user.lastLoginAt, "Last login should be set");
 
         // Verify user is persisted in database
-        Optional<CalendarUser> persistedUser = CalendarUser.findByOAuthSubject(TEST_PROVIDER, TEST_OAUTH_SUBJECT);
+        Optional<CalendarUser> persistedUser =
+                CalendarUser.findByOAuthSubject(TEST_PROVIDER, TEST_OAUTH_SUBJECT);
         assertTrue(persistedUser.isPresent(), "User should be persisted");
         assertEquals(user.id, persistedUser.get().id, "Persisted user ID should match");
     }
@@ -122,9 +125,8 @@ class AuthenticationServiceTest {
         UUID existingUserId = existingUser.id;
 
         // When: Handle OAuth callback with updated information
-        SecurityIdentity identity = createMockIdentity(
-            TEST_OAUTH_SUBJECT, TEST_EMAIL, TEST_NAME, TEST_PICTURE
-        );
+        SecurityIdentity identity =
+                createMockIdentity(TEST_OAUTH_SUBJECT, TEST_EMAIL, TEST_NAME, TEST_PICTURE);
         CalendarUser user = authenticationService.handleOAuthCallback("google", identity, null);
 
         // Then: User is updated with new information
@@ -136,7 +138,11 @@ class AuthenticationServiceTest {
         assertTrue(user.lastLoginAt.isAfter(oldLastLogin), "Last login should be updated");
 
         // Verify only one user exists in database
-        long userCount = CalendarUser.count("oauthProvider = ?1 AND oauthSubject = ?2", TEST_PROVIDER, TEST_OAUTH_SUBJECT);
+        long userCount =
+                CalendarUser.count(
+                        "oauthProvider = ?1 AND oauthSubject = ?2",
+                        TEST_PROVIDER,
+                        TEST_OAUTH_SUBJECT);
         assertEquals(1, userCount, "Should still have only one user record");
     }
 
@@ -144,14 +150,16 @@ class AuthenticationServiceTest {
     @Transactional
     void testHandleOAuthCallback_NoEmail() {
         // Given: OAuth identity without email
-        SecurityIdentity identity = createMockIdentity(
-            TEST_OAUTH_SUBJECT, null, TEST_NAME, TEST_PICTURE
-        );
+        SecurityIdentity identity =
+                createMockIdentity(TEST_OAUTH_SUBJECT, null, TEST_NAME, TEST_PICTURE);
 
         // When/Then: Should throw exception
-        assertThrows(IllegalArgumentException.class, () -> {
-            authenticationService.handleOAuthCallback("google", identity, null);
-        }, "Should throw exception when email is missing");
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    authenticationService.handleOAuthCallback("google", identity, null);
+                },
+                "Should throw exception when email is missing");
     }
 
     @Test
@@ -171,17 +179,17 @@ class AuthenticationServiceTest {
         // Then: JWT is generated
         assertNotNull(jwt, "JWT should be generated");
         assertFalse(jwt.isEmpty(), "JWT should not be empty");
-        assertTrue(jwt.split("\\.").length == 3, "JWT should have three parts (header.payload.signature)");
+        assertTrue(
+                jwt.split("\\.").length == 3,
+                "JWT should have three parts (header.payload.signature)");
 
         // Note: Full JWT validation would require decoding and verifying the token,
         // which is tested in integration tests
     }
 
-    /**
-     * Helper method to create a mock SecurityIdentity for testing.
-     */
+    /** Helper method to create a mock SecurityIdentity for testing. */
     private SecurityIdentity createMockIdentity(
-        String subject, String email, String name, String picture) {
+            String subject, String email, String name, String picture) {
 
         return new SecurityIdentity() {
             @Override
@@ -218,14 +226,14 @@ class AuthenticationServiceTest {
             @Override
             public Map<String, Object> getAttributes() {
                 return Map.of(
-                    "email", email != null ? email : "",
-                    "name", name != null ? name : "",
-                    "picture", picture != null ? picture : ""
-                );
+                        "email", email != null ? email : "",
+                        "name", name != null ? name : "",
+                        "picture", picture != null ? picture : "");
             }
 
             @Override
-            public <T extends io.quarkus.security.credential.Credential> T getCredential(Class<T> aClass) {
+            public <T extends io.quarkus.security.credential.Credential> T getCredential(
+                    Class<T> aClass) {
                 return null;
             }
 
@@ -234,11 +242,13 @@ class AuthenticationServiceTest {
                 return Set.of();
             }
 
-            public <T extends io.quarkus.security.credential.Credential> Set<T> getCredentials(Class<T> aClass) {
+            public <T extends io.quarkus.security.credential.Credential> Set<T> getCredentials(
+                    Class<T> aClass) {
                 return Set.of();
             }
 
-            public io.smallrye.mutiny.Uni<Boolean> checkPermission(java.security.Permission permission) {
+            public io.smallrye.mutiny.Uni<Boolean> checkPermission(
+                    java.security.Permission permission) {
                 return io.smallrye.mutiny.Uni.createFrom().item(true);
             }
         };

@@ -1,28 +1,33 @@
 package villagecompute.calendar.data.models;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import java.util.List;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.util.List;
+import com.fasterxml.jackson.databind.JsonNode;
+
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 
 @Entity
 @Table(
-    name = "calendar_templates",
-    indexes = {
-        @Index(name = "idx_calendar_templates_name", columnList = "name"),
-        @Index(name = "idx_calendar_templates_active", columnList = "is_active, display_order, name"),
-        @Index(name = "idx_calendar_templates_featured", columnList = "is_featured, is_active, display_order")
-    }
-)
+        name = "calendar_templates",
+        indexes = {
+            @Index(name = "idx_calendar_templates_name", columnList = "name"),
+            @Index(
+                    name = "idx_calendar_templates_active",
+                    columnList = "is_active, display_order, name"),
+            @Index(
+                    name = "idx_calendar_templates_featured",
+                    columnList = "is_featured, is_active, display_order")
+        })
 public class CalendarTemplate extends DefaultPanacheEntityWithTimestamps {
 
-    @NotNull
-    @Size(max = 255)
+    @NotNull @Size(max = 255)
     @Column(nullable = false, length = 255)
     public String name;
 
@@ -42,15 +47,12 @@ public class CalendarTemplate extends DefaultPanacheEntityWithTimestamps {
     @Column(name = "display_order", nullable = false)
     public Integer displayOrder = 0;
 
-    @NotNull
-    @JdbcTypeCode(SqlTypes.JSON)
+    @NotNull @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = false)
     @org.eclipse.microprofile.graphql.Ignore
     public JsonNode configuration;
 
-    /**
-     * Get configuration as JSON string for GraphQL.
-     */
+    /** Get configuration as JSON string for GraphQL. */
     @org.eclipse.microprofile.graphql.Name("configuration")
     public String getConfigurationJson() {
         if (configuration == null) {
@@ -98,8 +100,8 @@ public class CalendarTemplate extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Find all active templates ordered by display order.
-     * This is the required custom query method from the task specification.
+     * Find all active templates ordered by display order. This is the required custom query method
+     * from the task specification.
      *
      * @return List of active templates
      */

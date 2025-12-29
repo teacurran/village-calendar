@@ -1,56 +1,52 @@
 package villagecompute.calendar.integration;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.InjectMock;
-import io.restassured.http.ContentType;
-import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.*;
-import villagecompute.calendar.data.models.*;
-import villagecompute.calendar.services.OrderService;
-import villagecompute.calendar.services.PaymentService;
-
-import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+
+import org.junit.jupiter.api.*;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import villagecompute.calendar.data.models.*;
+import villagecompute.calendar.services.OrderService;
+import villagecompute.calendar.services.PaymentService;
+
+import io.quarkus.test.InjectMock;
+import io.quarkus.test.junit.QuarkusTest;
+
 /**
- * Integration tests for admin order management workflows.
- * Tests admin-only operations like updating order status, querying all orders, and managing fulfillment.
+ * Integration tests for admin order management workflows. Tests admin-only operations like updating
+ * order status, querying all orders, and managing fulfillment.
  *
- * This test suite validates:
- * 1. Admin updating order status (PAID → PROCESSING → SHIPPED → DELIVERED)
- * 2. Admin adding tracking numbers when shipping orders
- * 3. Email job enqueueing on order status changes (shipping notifications)
- * 4. Admin querying all orders across users
- * 5. Authorization checks (only admin can update orders, users can cancel own orders)
+ * <p>This test suite validates: 1. Admin updating order status (PAID → PROCESSING → SHIPPED →
+ * DELIVERED) 2. Admin adding tracking numbers when shipping orders 3. Email job enqueueing on order
+ * status changes (shipping notifications) 4. Admin querying all orders across users 5.
+ * Authorization checks (only admin can update orders, users can cancel own orders)
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class AdminOrderWorkflowTest {
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
-    @Inject
-    OrderService orderService;
+    @Inject OrderService orderService;
 
-    @Inject
-    EntityManager entityManager;
+    @Inject EntityManager entityManager;
 
-    @InjectMock
-    PaymentService paymentService;
+    @InjectMock PaymentService paymentService;
 
     private CalendarUser testUser;
     private CalendarUser testUser2;
@@ -69,7 +65,9 @@ class AdminOrderWorkflowTest {
         testTemplate.isActive = true;
         testTemplate.isFeatured = false;
         testTemplate.displayOrder = 1;
-        testTemplate.configuration = objectMapper.readTree("""
+        testTemplate.configuration =
+                objectMapper.readTree(
+                        """
             {
                 "theme": "modern"
             }
@@ -110,7 +108,9 @@ class AdminOrderWorkflowTest {
         testCalendar.year = 2025;
         testCalendar.template = testTemplate;
         testCalendar.isPublic = false;
-        testCalendar.configuration = objectMapper.readTree("""
+        testCalendar.configuration =
+                objectMapper.readTree(
+                        """
             {
                 "theme": "modern"
             }
@@ -124,7 +124,9 @@ class AdminOrderWorkflowTest {
         testCalendar2.year = 2025;
         testCalendar2.template = testTemplate;
         testCalendar2.isPublic = false;
-        testCalendar2.configuration = objectMapper.readTree("""
+        testCalendar2.configuration =
+                objectMapper.readTree(
+                        """
             {
                 "theme": "modern"
             }
@@ -137,7 +139,7 @@ class AdminOrderWorkflowTest {
         mockPaymentIntent.put("paymentIntentId", "pi_test_admin_" + System.currentTimeMillis());
 
         when(paymentService.createPaymentIntent(any(BigDecimal.class), anyString(), anyString()))
-            .thenReturn(mockPaymentIntent);
+                .thenReturn(mockPaymentIntent);
         when(paymentService.getWebhookSecret()).thenReturn("");
     }
 
@@ -177,7 +179,8 @@ class AdminOrderWorkflowTest {
     }
 
     private JsonNode createTestAddress() throws Exception {
-        return objectMapper.readTree("""
+        return objectMapper.readTree(
+                """
             {
                 "street": "123 Admin St",
                 "city": "Nashville",
@@ -211,11 +214,9 @@ class AdminOrderWorkflowTest {
         order.persist();
 
         // When: Admin updates order to SHIPPED with tracking number (via service layer)
-        CalendarOrder updatedOrder = orderService.updateOrderStatus(
-            order.id,
-            CalendarOrder.STATUS_SHIPPED,
-            "Package shipped via USPS"
-        );
+        CalendarOrder updatedOrder =
+                orderService.updateOrderStatus(
+                        order.id, CalendarOrder.STATUS_SHIPPED, "Package shipped via USPS");
         updatedOrder.trackingNumber = "TRACK123456";
         updatedOrder.persist();
 
@@ -251,18 +252,15 @@ class AdminOrderWorkflowTest {
         order.persist();
 
         // When: Admin updates order to SHIPPED
-        orderService.updateOrderStatus(
-            order.id,
-            CalendarOrder.STATUS_SHIPPED,
-            "Order shipped"
-        );
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_SHIPPED, "Order shipped");
 
         entityManager.flush();
 
         // Then: Verify shipping notification email job was enqueued
         List<DelayedJob> jobs = DelayedJob.find("actorId", order.id.toString()).list();
-        boolean foundShippingEmail = jobs.stream()
-            .anyMatch(job -> "ShippingNotificationJobHandler".equals(job.queueName));
+        boolean foundShippingEmail =
+                jobs.stream()
+                        .anyMatch(job -> "ShippingNotificationJobHandler".equals(job.queueName));
         assertTrue(foundShippingEmail, "Shipping notification email job should be enqueued");
     }
 
@@ -285,19 +283,22 @@ class AdminOrderWorkflowTest {
         order.persist();
 
         // When: Admin updates order to PROCESSING
-        CalendarOrder updatedOrder = orderService.updateOrderStatus(
-            order.id,
-            CalendarOrder.STATUS_PROCESSING,
-            "Started printing calendar"
-        );
+        CalendarOrder updatedOrder =
+                orderService.updateOrderStatus(
+                        order.id, CalendarOrder.STATUS_PROCESSING, "Started printing calendar");
 
         entityManager.flush();
         entityManager.clear();
 
         // Then: Verify order status updated
         CalendarOrder processingOrder = CalendarOrder.<CalendarOrder>findById(order.id);
-        assertEquals(CalendarOrder.STATUS_PROCESSING, processingOrder.status, "Order should be PROCESSING");
-        assertTrue(processingOrder.notes.contains("PROCESSING"), "Notes should mention PROCESSING status");
+        assertEquals(
+                CalendarOrder.STATUS_PROCESSING,
+                processingOrder.status,
+                "Order should be PROCESSING");
+        assertTrue(
+                processingOrder.notes.contains("PROCESSING"),
+                "Notes should mention PROCESSING status");
     }
 
     @Test
@@ -321,17 +322,15 @@ class AdminOrderWorkflowTest {
 
         // When: Admin updates order to DELIVERED
         orderService.updateOrderStatus(
-            order.id,
-            CalendarOrder.STATUS_DELIVERED,
-            "Package delivered successfully"
-        );
+                order.id, CalendarOrder.STATUS_DELIVERED, "Package delivered successfully");
 
         entityManager.flush();
         entityManager.clear();
 
         // Then: Verify order is delivered
         CalendarOrder deliveredOrder = CalendarOrder.<CalendarOrder>findById(order.id);
-        assertEquals(CalendarOrder.STATUS_DELIVERED, deliveredOrder.status, "Order should be DELIVERED");
+        assertEquals(
+                CalendarOrder.STATUS_DELIVERED, deliveredOrder.status, "Order should be DELIVERED");
         assertNotNull(deliveredOrder.notes, "Notes should be set");
     }
 
@@ -354,16 +353,19 @@ class AdminOrderWorkflowTest {
         order.persist();
 
         // When/Then: Attempting to update terminal order should fail
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
-            orderService.updateOrderStatus(
-                order.id,
-                CalendarOrder.STATUS_CANCELLED,
-                "Trying to cancel delivered order"
-            );
-        });
+        IllegalStateException exception =
+                assertThrows(
+                        IllegalStateException.class,
+                        () -> {
+                            orderService.updateOrderStatus(
+                                    order.id,
+                                    CalendarOrder.STATUS_CANCELLED,
+                                    "Trying to cancel delivered order");
+                        });
 
-        assertTrue(exception.getMessage().contains("Cannot update"),
-            "Exception should mention order cannot be updated");
+        assertTrue(
+                exception.getMessage().contains("Cannot update"),
+                "Exception should mention order cannot be updated");
     }
 
     // ============================================================================
@@ -452,11 +454,13 @@ class AdminOrderWorkflowTest {
 
         // When: Query by status
         List<CalendarOrder> paidOrders = orderService.getOrdersByStatus(CalendarOrder.STATUS_PAID);
-        List<CalendarOrder> shippedOrders = orderService.getOrdersByStatus(CalendarOrder.STATUS_SHIPPED);
+        List<CalendarOrder> shippedOrders =
+                orderService.getOrdersByStatus(CalendarOrder.STATUS_SHIPPED);
 
         // Then: Should filter by status
         boolean foundPaidOrder = paidOrders.stream().anyMatch(o -> o.id.equals(paidOrder.id));
-        boolean foundShippedOrder = shippedOrders.stream().anyMatch(o -> o.id.equals(shippedOrder.id));
+        boolean foundShippedOrder =
+                shippedOrders.stream().anyMatch(o -> o.id.equals(shippedOrder.id));
 
         assertTrue(foundPaidOrder, "Should find PAID order");
         assertTrue(foundShippedOrder, "Should find SHIPPED order");
@@ -489,15 +493,16 @@ class AdminOrderWorkflowTest {
         order.persist();
 
         // When: User cancels their own order
-        CalendarOrder cancelledOrder = orderService.cancelOrder(
-            order.id,
-            testUser.id,
-            false, // not admin
-            "Changed my mind"
-        );
+        CalendarOrder cancelledOrder =
+                orderService.cancelOrder(
+                        order.id,
+                        testUser.id,
+                        false, // not admin
+                        "Changed my mind");
 
         // Then: Should succeed
-        assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status, "Order should be cancelled");
+        assertEquals(
+                CalendarOrder.STATUS_CANCELLED, cancelledOrder.status, "Order should be cancelled");
         assertTrue(cancelledOrder.notes.contains("Changed my mind"), "Notes should include reason");
     }
 
@@ -520,22 +525,27 @@ class AdminOrderWorkflowTest {
         order.persist();
 
         // When/Then: testUser2 tries to cancel testUser's order (should fail)
-        SecurityException exception = assertThrows(SecurityException.class, () -> {
-            orderService.cancelOrder(
-                order.id,
-                testUser2.id, // different user
-                false, // not admin
-                "Trying to cancel someone else's order"
-            );
-        });
+        SecurityException exception =
+                assertThrows(
+                        SecurityException.class,
+                        () -> {
+                            orderService.cancelOrder(
+                                    order.id,
+                                    testUser2.id, // different user
+                                    false, // not admin
+                                    "Trying to cancel someone else's order");
+                        });
 
-        assertTrue(exception.getMessage().contains("not authorized"),
-            "Exception should mention authorization failure");
+        assertTrue(
+                exception.getMessage().contains("not authorized"),
+                "Exception should mention authorization failure");
 
         // Verify order status unchanged
         CalendarOrder unchangedOrder = CalendarOrder.<CalendarOrder>findById(order.id);
-        assertEquals(CalendarOrder.STATUS_PENDING, unchangedOrder.status,
-            "Order status should remain PENDING");
+        assertEquals(
+                CalendarOrder.STATUS_PENDING,
+                unchangedOrder.status,
+                "Order status should remain PENDING");
     }
 
     @Test
@@ -557,18 +567,21 @@ class AdminOrderWorkflowTest {
         order.persist();
 
         // When: Admin cancels the order (even though they don't own it)
-        CalendarOrder cancelledOrder = orderService.cancelOrder(
-            order.id,
-            adminUser.id,
-            true, // is admin
-            "Admin cancelled order"
-        );
+        CalendarOrder cancelledOrder =
+                orderService.cancelOrder(
+                        order.id,
+                        adminUser.id,
+                        true, // is admin
+                        "Admin cancelled order");
 
         // Then: Should succeed
-        assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status,
-            "Admin should be able to cancel any order");
-        assertTrue(cancelledOrder.notes.contains("Admin cancelled order"),
-            "Notes should include admin reason");
+        assertEquals(
+                CalendarOrder.STATUS_CANCELLED,
+                cancelledOrder.status,
+                "Admin should be able to cancel any order");
+        assertTrue(
+                cancelledOrder.notes.contains("Admin cancelled order"),
+                "Notes should include admin reason");
     }
 
     @Test
@@ -590,24 +603,31 @@ class AdminOrderWorkflowTest {
         order.persist();
 
         // When/Then: Invalid transition (PAID → PENDING) should fail
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
-            orderService.updateOrderStatus(
-                order.id,
-                CalendarOrder.STATUS_PENDING,
-                "Trying invalid transition"
-            );
-        });
+        IllegalStateException exception =
+                assertThrows(
+                        IllegalStateException.class,
+                        () -> {
+                            orderService.updateOrderStatus(
+                                    order.id,
+                                    CalendarOrder.STATUS_PENDING,
+                                    "Trying invalid transition");
+                        });
 
-        assertTrue(exception.getMessage().contains("Invalid status transition"),
-            "Exception should mention invalid transition");
+        assertTrue(
+                exception.getMessage().contains("Invalid status transition"),
+                "Exception should mention invalid transition");
 
         // Verify valid transitions work
         // PAID → PROCESSING (valid)
-        CalendarOrder updatedOrder = orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PROCESSING, "Valid transition");
+        CalendarOrder updatedOrder =
+                orderService.updateOrderStatus(
+                        order.id, CalendarOrder.STATUS_PROCESSING, "Valid transition");
         assertEquals(CalendarOrder.STATUS_PROCESSING, updatedOrder.status);
 
         // PROCESSING → SHIPPED (valid)
-        CalendarOrder shippedOrder = orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_SHIPPED, "Valid transition");
+        CalendarOrder shippedOrder =
+                orderService.updateOrderStatus(
+                        order.id, CalendarOrder.STATUS_SHIPPED, "Valid transition");
         assertEquals(CalendarOrder.STATUS_SHIPPED, shippedOrder.status);
     }
 }

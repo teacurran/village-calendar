@@ -1,21 +1,19 @@
 package villagecompute.calendar.api.rest;
 
-import jakarta.inject.Inject;
-import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Shipping Resource - REST API for shipping rate calculations
- */
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+
+/** Shipping Resource - REST API for shipping rate calculations */
 @Path("/shipping")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -36,13 +34,12 @@ public class ShippingResource {
     @ConfigProperty(name = "calendar.shipping.domestic.express", defaultValue = "14.99")
     BigDecimal domesticExpressRate;
 
-    /**
-     * Calculate shipping options for calendar products
-     */
+    /** Calculate shipping options for calendar products */
     @POST
     @Path("/calculate-calendar")
     public Response calculateCalendarShipping(ShippingRequest request) {
-        LOG.infof("Calculating shipping for country: %s, state: %s", request.country, request.state);
+        LOG.infof(
+                "Calculating shipping for country: %s, state: %s", request.country, request.state);
 
         if (request.country == null || request.country.isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -54,14 +51,15 @@ public class ShippingResource {
 
         // Check if we ship to this country
         if (!US_COUNTRY_CODE.equals(country)) {
-            String message = switch (country) {
-                case CA_COUNTRY_CODE -> "Shipping to Canada is coming soon. Please check back later.";
-                case MX_COUNTRY_CODE -> "Shipping to Mexico is coming soon. Please check back later.";
-                default -> "We currently only ship within the United States.";
-            };
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(message)
-                    .build();
+            String message =
+                    switch (country) {
+                        case CA_COUNTRY_CODE ->
+                                "Shipping to Canada is coming soon. Please check back later.";
+                        case MX_COUNTRY_CODE ->
+                                "Shipping to Mexico is coming soon. Please check back later.";
+                        default -> "We currently only ship within the United States.";
+                    };
+            return Response.status(Response.Status.BAD_REQUEST).entity(message).build();
         }
 
         // Build shipping options for US
@@ -97,9 +95,7 @@ public class ShippingResource {
         return Response.ok(response).build();
     }
 
-    /**
-     * Request object for shipping calculation
-     */
+    /** Request object for shipping calculation */
     public static class ShippingRequest {
         public String country;
         public String state;

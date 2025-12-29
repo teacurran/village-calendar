@@ -1,48 +1,44 @@
 package villagecompute.calendar.integration;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.quarkus.test.junit.QuarkusTest;
-import io.restassured.http.ContentType;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.List;
+import java.util.UUID;
+
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+
 import org.junit.jupiter.api.*;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.CalendarService;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.*;
+import io.quarkus.test.junit.QuarkusTest;
 
 /**
  * End-to-end integration tests for guest session workflows.
  *
- * Tests:
- * 1. Guest creates calendar without authentication (with sessionId)
- * 2. Convert guest session to user account
- * 3. Convert multiple calendars from guest session
- * 4. Session isolation (different sessions don't interfere)
- * 5. Convert empty session (no calendars)
- * 6. Query calendars by session (before conversion)
+ * <p>Tests: 1. Guest creates calendar without authentication (with sessionId) 2. Convert guest
+ * session to user account 3. Convert multiple calendars from guest session 4. Session isolation
+ * (different sessions don't interfere) 5. Convert empty session (no calendars) 6. Query calendars
+ * by session (before conversion)
  *
- * All tests use the service layer to verify guest session management
- * and ownership transfer on authentication.
+ * <p>All tests use the service layer to verify guest session management and ownership transfer on
+ * authentication.
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class GuestSessionWorkflowTest {
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
-    @Inject
-    CalendarService calendarService;
+    @Inject CalendarService calendarService;
 
     private CalendarTemplate testTemplate;
 
@@ -71,7 +67,8 @@ public class GuestSessionWorkflowTest {
 
     private JsonNode createTestConfiguration() {
         try {
-            return objectMapper.readTree("""
+            return objectMapper.readTree(
+                    """
                 {
                     "theme": "modern",
                     "colorScheme": "blue",
@@ -97,15 +94,16 @@ public class GuestSessionWorkflowTest {
 
         // Create calendar via service layer (simulating guest creation)
         // Note: GraphQL API requires authentication, so we test at service layer
-        UserCalendar guestCalendar = calendarService.createCalendar(
-            "Guest Calendar Test",
-            2025,
-            testTemplate.id,
-            null,  // No custom configuration
-            true,  // Public
-            null,  // No user (guest)
-            sessionId  // Session ID for guest
-        );
+        UserCalendar guestCalendar =
+                calendarService.createCalendar(
+                        "Guest Calendar Test",
+                        2025,
+                        testTemplate.id,
+                        null, // No custom configuration
+                        true, // Public
+                        null, // No user (guest)
+                        sessionId // Session ID for guest
+                        );
 
         assertNotNull(guestCalendar, "Calendar should be created");
         assertNotNull(guestCalendar.id, "Calendar should have an ID");
@@ -137,15 +135,15 @@ public class GuestSessionWorkflowTest {
         String sessionId = UUID.randomUUID().toString();
 
         // Create guest calendar
-        UserCalendar guestCalendar = calendarService.createCalendar(
-            "Guest Calendar to Convert",
-            2025,
-            testTemplate.id,
-            null,
-            true,
-            null,  // No user
-            sessionId
-        );
+        UserCalendar guestCalendar =
+                calendarService.createCalendar(
+                        "Guest Calendar to Convert",
+                        2025,
+                        testTemplate.id,
+                        null,
+                        true,
+                        null, // No user
+                        sessionId);
 
         assertNotNull(guestCalendar.id);
         assertEquals(sessionId, guestCalendar.sessionId);
@@ -167,7 +165,8 @@ public class GuestSessionWorkflowTest {
             // Verify calendar ownership transferred
             UserCalendar refreshedCalendar = UserCalendar.findById(guestCalendar.id);
             assertNotNull(refreshedCalendar.user, "Calendar should now have a user");
-            assertEquals(user.id, refreshedCalendar.user.id, "Calendar should be owned by the user");
+            assertEquals(
+                    user.id, refreshedCalendar.user.id, "Calendar should be owned by the user");
             assertNull(refreshedCalendar.sessionId, "SessionId should be cleared");
 
             // Verify subsequent conversion returns 0 (idempotent)
@@ -193,35 +192,17 @@ public class GuestSessionWorkflowTest {
         String sessionId = UUID.randomUUID().toString();
 
         // Create 3 guest calendars with same sessionId
-        UserCalendar calendar1 = calendarService.createCalendar(
-            "Guest Calendar 1",
-            2025,
-            testTemplate.id,
-            null,
-            true,
-            null,
-            sessionId
-        );
+        UserCalendar calendar1 =
+                calendarService.createCalendar(
+                        "Guest Calendar 1", 2025, testTemplate.id, null, true, null, sessionId);
 
-        UserCalendar calendar2 = calendarService.createCalendar(
-            "Guest Calendar 2",
-            2026,
-            testTemplate.id,
-            null,
-            false,
-            null,
-            sessionId
-        );
+        UserCalendar calendar2 =
+                calendarService.createCalendar(
+                        "Guest Calendar 2", 2026, testTemplate.id, null, false, null, sessionId);
 
-        UserCalendar calendar3 = calendarService.createCalendar(
-            "Guest Calendar 3",
-            2027,
-            testTemplate.id,
-            null,
-            true,
-            null,
-            sessionId
-        );
+        UserCalendar calendar3 =
+                calendarService.createCalendar(
+                        "Guest Calendar 3", 2027, testTemplate.id, null, true, null, sessionId);
 
         // Verify all calendars have sessionId and no user
         assertEquals(sessionId, calendar1.sessionId);
@@ -263,12 +244,15 @@ public class GuestSessionWorkflowTest {
             assertNull(refreshed3.sessionId, "Calendar 3 sessionId should be cleared");
 
             // Verify using service layer - list calendars for user
-            List<UserCalendar> userCalendars = calendarService.listCalendars(user.id, null, 0, 10, user);
+            List<UserCalendar> userCalendars =
+                    calendarService.listCalendars(user.id, null, 0, 10, user);
             assertEquals(3, userCalendars.size(), "User should have 3 calendars");
-            assertTrue(userCalendars.stream().allMatch(c -> c.user.id.equals(user.id)),
-                "All calendars should belong to user");
-            assertTrue(userCalendars.stream().allMatch(c -> c.sessionId == null),
-                "All calendars should have null sessionId");
+            assertTrue(
+                    userCalendars.stream().allMatch(c -> c.user.id.equals(user.id)),
+                    "All calendars should belong to user");
+            assertTrue(
+                    userCalendars.stream().allMatch(c -> c.sessionId == null),
+                    "All calendars should have null sessionId");
 
             // Clean up
             UserCalendar.deleteById(calendar1.id);
@@ -292,26 +276,14 @@ public class GuestSessionWorkflowTest {
         String sessionId2 = UUID.randomUUID().toString();
 
         // Create calendar for session 1
-        UserCalendar calendar1 = calendarService.createCalendar(
-            "Session 1 Calendar",
-            2025,
-            testTemplate.id,
-            null,
-            true,
-            null,
-            sessionId1
-        );
+        UserCalendar calendar1 =
+                calendarService.createCalendar(
+                        "Session 1 Calendar", 2025, testTemplate.id, null, true, null, sessionId1);
 
         // Create calendar for session 2
-        UserCalendar calendar2 = calendarService.createCalendar(
-            "Session 2 Calendar",
-            2025,
-            testTemplate.id,
-            null,
-            true,
-            null,
-            sessionId2
-        );
+        UserCalendar calendar2 =
+                calendarService.createCalendar(
+                        "Session 2 Calendar", 2025, testTemplate.id, null, true, null, sessionId2);
 
         // Create user for session 1
         CalendarUser user1 = new CalendarUser();
@@ -335,7 +307,8 @@ public class GuestSessionWorkflowTest {
             // Verify calendar2 still belongs to session 2 (not affected)
             UserCalendar refreshed2 = UserCalendar.findById(calendar2.id);
             assertNull(refreshed2.user, "Calendar 2 should still be a guest calendar");
-            assertEquals(sessionId2, refreshed2.sessionId, "Calendar 2 sessionId should be unchanged");
+            assertEquals(
+                    sessionId2, refreshed2.sessionId, "Calendar 2 sessionId should be unchanged");
 
             // Clean up
             UserCalendar.deleteById(calendar1.id);
@@ -390,25 +363,25 @@ public class GuestSessionWorkflowTest {
         String sessionId = UUID.randomUUID().toString();
 
         // Create 2 calendars for this session
-        UserCalendar calendar1 = calendarService.createCalendar(
-            "Session Query Calendar 1",
-            2025,
-            testTemplate.id,
-            null,
-            true,
-            null,
-            sessionId
-        );
+        UserCalendar calendar1 =
+                calendarService.createCalendar(
+                        "Session Query Calendar 1",
+                        2025,
+                        testTemplate.id,
+                        null,
+                        true,
+                        null,
+                        sessionId);
 
-        UserCalendar calendar2 = calendarService.createCalendar(
-            "Session Query Calendar 2",
-            2026,
-            testTemplate.id,
-            null,
-            false,
-            null,
-            sessionId
-        );
+        UserCalendar calendar2 =
+                calendarService.createCalendar(
+                        "Session Query Calendar 2",
+                        2026,
+                        testTemplate.id,
+                        null,
+                        false,
+                        null,
+                        sessionId);
 
         try {
             // Query calendars by session using repository
@@ -416,19 +389,21 @@ public class GuestSessionWorkflowTest {
 
             assertEquals(2, sessionCalendars.size(), "Should find 2 calendars for session");
             assertTrue(
-                sessionCalendars.stream().anyMatch(c -> c.name.equals("Session Query Calendar 1")),
-                "Should include calendar 1"
-            );
+                    sessionCalendars.stream()
+                            .anyMatch(c -> c.name.equals("Session Query Calendar 1")),
+                    "Should include calendar 1");
             assertTrue(
-                sessionCalendars.stream().anyMatch(c -> c.name.equals("Session Query Calendar 2")),
-                "Should include calendar 2"
-            );
+                    sessionCalendars.stream()
+                            .anyMatch(c -> c.name.equals("Session Query Calendar 2")),
+                    "Should include calendar 2");
 
             // Verify all calendars have correct sessionId
-            sessionCalendars.forEach(cal -> {
-                assertEquals(sessionId, cal.sessionId, "Calendar should have correct sessionId");
-                assertNull(cal.user, "Calendar should not have a user");
-            });
+            sessionCalendars.forEach(
+                    cal -> {
+                        assertEquals(
+                                sessionId, cal.sessionId, "Calendar should have correct sessionId");
+                        assertNull(cal.user, "Calendar should not have a user");
+                    });
         } finally {
             // Clean up
             UserCalendar.deleteById(calendar1.id);

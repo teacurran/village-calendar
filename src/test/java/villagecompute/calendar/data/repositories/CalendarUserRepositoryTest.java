@@ -1,31 +1,30 @@
 package villagecompute.calendar.data.repositories;
 
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import villagecompute.calendar.data.models.CalendarUser;
-import villagecompute.calendar.data.repositories.TestDataCleaner;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import villagecompute.calendar.data.models.CalendarUser;
+
+import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 class CalendarUserRepositoryTest {
 
-    @Inject
-    TestDataCleaner testDataCleaner;
+    @Inject TestDataCleaner testDataCleaner;
 
-    @Inject
-    CalendarUserRepository repository;
+    @Inject CalendarUserRepository repository;
 
-    @Inject
-    jakarta.persistence.EntityManager entityManager;
+    @Inject jakarta.persistence.EntityManager entityManager;
 
     @BeforeEach
     @Transactional
@@ -126,10 +125,12 @@ class CalendarUserRepositoryTest {
 
         // When/Then - attempting to insert duplicate OAuth provider+subject should fail
         CalendarUser duplicate = createUser("GOOGLE", "duplicate", "test2@example.com");
-        assertThrows(Exception.class, () -> {
-            repository.persist(duplicate);
-            repository.flush();
-        });
+        assertThrows(
+                Exception.class,
+                () -> {
+                    repository.persist(duplicate);
+                    repository.flush();
+                });
     }
 
     @Test
@@ -288,7 +289,8 @@ class CalendarUserRepositoryTest {
         entityManager.flush();
 
         // When
-        List<CalendarUser> activeUsers = repository.findActiveUsersSince(now.minus(7, java.time.temporal.ChronoUnit.DAYS));
+        List<CalendarUser> activeUsers =
+                repository.findActiveUsersSince(now.minus(7, java.time.temporal.ChronoUnit.DAYS));
 
         // Then
         assertEquals(0, activeUsers.size());

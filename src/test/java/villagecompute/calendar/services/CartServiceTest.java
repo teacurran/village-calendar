@@ -1,28 +1,27 @@
 package villagecompute.calendar.services;
 
-import io.quarkus.test.junit.QuarkusTest;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.UUID;
+
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import villagecompute.calendar.api.graphql.inputs.AddToCartInput;
 import villagecompute.calendar.api.graphql.types.Cart;
 import villagecompute.calendar.data.models.CartItem;
 
-import java.util.UUID;
+import io.quarkus.test.junit.QuarkusTest;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-/**
- * Unit tests for CartService.
- * Tests cart operations, session isolation, and item management.
- */
+/** Unit tests for CartService. Tests cart operations, session isolation, and item management. */
 @QuarkusTest
 class CartServiceTest {
 
-    @Inject
-    CartService cartService;
+    @Inject CartService cartService;
 
     private String testSessionId;
 

@@ -1,25 +1,5 @@
 package villagecompute.calendar.integration;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.InjectMock;
-import io.restassured.http.ContentType;
-import io.restassured.response.Response;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.*;
-import org.mockito.Mockito;
-import villagecompute.calendar.data.models.CalendarTemplate;
-import villagecompute.calendar.data.models.CalendarUser;
-import villagecompute.calendar.data.models.UserCalendar;
-import villagecompute.calendar.services.CalendarGenerationService;
-import villagecompute.calendar.services.StorageService;
-
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,31 +7,51 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.junit.jupiter.api.*;
+import org.mockito.Mockito;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import villagecompute.calendar.data.models.CalendarTemplate;
+import villagecompute.calendar.data.models.CalendarUser;
+import villagecompute.calendar.data.models.UserCalendar;
+import villagecompute.calendar.services.CalendarGenerationService;
+import villagecompute.calendar.services.StorageService;
+
+import io.quarkus.test.InjectMock;
+import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.http.ContentType;
+import io.restassured.response.Response;
+
 /**
- * Integration tests for calendar service end-to-end workflow.
- * Tests calendar generation, template queries, and service integration.
+ * Integration tests for calendar service end-to-end workflow. Tests calendar generation, template
+ * queries, and service integration.
  *
- * This test suite validates:
- * 1. Public template queries (no authentication required)
- * 2. Calendar generation service (SVG + PDF + R2 upload)
- * 3. Service layer integration (CalendarGenerationService, StorageService)
+ * <p>This test suite validates: 1. Public template queries (no authentication required) 2. Calendar
+ * generation service (SVG + PDF + R2 upload) 3. Service layer integration
+ * (CalendarGenerationService, StorageService)
  *
- * Note: Tests that require authentication are handled separately or require
- * Docker Compose manual testing. This suite focuses on core business logic
- * that can be tested without full JWT authentication flow.
+ * <p>Note: Tests that require authentication are handled separately or require Docker Compose
+ * manual testing. This suite focuses on core business logic that can be tested without full JWT
+ * authentication flow.
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class CalendarServiceIntegrationTest {
 
-    @Inject
-    CalendarGenerationService calendarGenerationService;
+    @Inject CalendarGenerationService calendarGenerationService;
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
-    @InjectMock
-    StorageService storageService;
+    @InjectMock StorageService storageService;
 
     private static final String TEST_PROVIDER = "GOOGLE";
 
@@ -82,7 +82,7 @@ class CalendarServiceIntegrationTest {
         // Mock storage service to avoid requiring real R2 credentials
         String mockPublicUrl = "https://r2.example.com/calendars/test-calendar.pdf";
         when(storageService.uploadFile(anyString(), any(byte[].class), anyString()))
-            .thenReturn(mockPublicUrl);
+                .thenReturn(mockPublicUrl);
     }
 
     @AfterEach
@@ -103,7 +103,8 @@ class CalendarServiceIntegrationTest {
 
     private JsonNode createTestConfiguration() {
         try {
-            return objectMapper.readTree("""
+            return objectMapper.readTree(
+                    """
                 {
                     "theme": "modern",
                     "colorScheme": "blue",
@@ -126,7 +127,8 @@ class CalendarServiceIntegrationTest {
     @Order(1)
     void testTemplateQuery_ReturnsActiveTemplates() {
         // When: Query for active templates
-        String query = """
+        String query =
+                """
             query {
                 templates(isActive: true) {
                     id
@@ -139,18 +141,18 @@ class CalendarServiceIntegrationTest {
             """;
 
         // Then: Should return templates including our test template
-        Response response = given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", query))
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.templates", notNullValue())
-            .body("data.templates", hasSize(greaterThanOrEqualTo(1)))
-            .body("errors", nullValue())
-            .extract()
-            .response();
+        Response response =
+                given().contentType(ContentType.JSON)
+                        .body(Map.of("query", query))
+                        .when()
+                        .post("/graphql")
+                        .then()
+                        .statusCode(200)
+                        .body("data.templates", notNullValue())
+                        .body("data.templates", hasSize(greaterThanOrEqualTo(1)))
+                        .body("errors", nullValue())
+                        .extract()
+                        .response();
 
         String responseBody = response.asString();
         assertTrue(responseBody.contains(testTemplate.name), "Should include test template");
@@ -160,7 +162,9 @@ class CalendarServiceIntegrationTest {
     @Order(2)
     void testTemplateQuery_ById() {
         // When: Query for specific template by ID
-        String query = String.format("""
+        String query =
+                String.format(
+                        """
             query {
                 template(id: "%s") {
                     id
@@ -170,28 +174,29 @@ class CalendarServiceIntegrationTest {
                     configuration
                 }
             }
-            """, testTemplate.id.toString());
+            """,
+                        testTemplate.id.toString());
 
         // Then: Should return the specific template
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", query))
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.template.id", equalTo(testTemplate.id.toString()))
-            .body("data.template.name", equalTo(testTemplate.name))
-            .body("data.template.isActive", equalTo(true))
-            .body("data.template.configuration", notNullValue())
-            .body("errors", nullValue());
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.template.id", equalTo(testTemplate.id.toString()))
+                .body("data.template.name", equalTo(testTemplate.name))
+                .body("data.template.isActive", equalTo(true))
+                .body("data.template.configuration", notNullValue())
+                .body("errors", nullValue());
     }
 
     @Test
     @Order(3)
     void testTemplateQuery_InvalidId() {
         // When: Query with invalid UUID
-        String query = """
+        String query =
+                """
             query {
                 template(id: "invalid-uuid") {
                     id
@@ -200,14 +205,13 @@ class CalendarServiceIntegrationTest {
             """;
 
         // Then: Should return error
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", query))
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("errors", notNullValue());
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("errors", notNullValue());
     }
 
     // ============================================================================
@@ -239,11 +243,12 @@ class CalendarServiceIntegrationTest {
         assertTrue(calendar.generatedSvg.contains("<svg"), "Generated SVG should be valid SVG");
 
         // Verify generatedPdfUrl is set
-        assertEquals(publicUrl, calendar.generatedPdfUrl, "Generated PDF URL should match returned URL");
+        assertEquals(
+                publicUrl, calendar.generatedPdfUrl, "Generated PDF URL should match returned URL");
 
         // Verify storage service was called
         Mockito.verify(storageService, Mockito.times(1))
-            .uploadFile(anyString(), any(byte[].class), anyString());
+                .uploadFile(anyString(), any(byte[].class), anyString());
     }
 
     @Test
@@ -285,7 +290,9 @@ class CalendarServiceIntegrationTest {
 
         // Custom configuration with specific options
         try {
-            calendar.configuration = objectMapper.readTree("""
+            calendar.configuration =
+                    objectMapper.readTree(
+                            """
                 {
                     "theme": "dark",
                     "showMoonPhases": true,
@@ -465,9 +472,12 @@ class CalendarServiceIntegrationTest {
     @Order(30)
     void testCalendarGeneration_NullCalendar() {
         // When/Then: Should throw exception for null calendar
-        assertThrows(IllegalArgumentException.class, () -> {
-            calendarGenerationService.generateCalendar(null);
-        }, "Should throw exception for null calendar");
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    calendarGenerationService.generateCalendar(null);
+                },
+                "Should throw exception for null calendar");
     }
 
     @Test
@@ -482,9 +492,12 @@ class CalendarServiceIntegrationTest {
         calendar.persist();
 
         // When/Then: Should throw exception
-        assertThrows(IllegalArgumentException.class, () -> {
-            calendarGenerationService.generateCalendar(calendar);
-        }, "Should throw exception for null year");
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    calendarGenerationService.generateCalendar(calendar);
+                },
+                "Should throw exception for null year");
     }
 
     // ============================================================================
@@ -495,7 +508,9 @@ class CalendarServiceIntegrationTest {
     @Order(40)
     void testGraphQL_CreateCalendar_WithoutAuthentication() {
         // When: Try to create calendar without authentication
-        String mutation = String.format("""
+        String mutation =
+                String.format(
+                        """
             mutation {
                 createCalendar(input: {
                     name: "Unauthorized Calendar"
@@ -505,28 +520,28 @@ class CalendarServiceIntegrationTest {
                     id
                 }
             }
-            """, testTemplate.id.toString());
+            """,
+                        testTemplate.id.toString());
 
         // Then: Should fail with authorization error
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", mutation))
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("errors", notNullValue())
-            .body("errors[0].message", anyOf(
-                containsString("Unauthorized"),
-                containsString("System error")
-            ));
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", mutation))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("errors", notNullValue())
+                .body(
+                        "errors[0].message",
+                        anyOf(containsString("Unauthorized"), containsString("System error")));
     }
 
     @Test
     @Order(41)
     void testGraphQL_SchemaIntrospection() {
         // When: Query GraphQL schema
-        String query = """
+        String query =
+                """
             query {
                 __schema {
                     queryType {
@@ -540,15 +555,14 @@ class CalendarServiceIntegrationTest {
             """;
 
         // Then: Should return schema information
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", query))
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.__schema.queryType.name", equalTo("Query"))
-            .body("data.__schema.mutationType.name", equalTo("Mutation"))
-            .body("errors", nullValue());
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.__schema.queryType.name", equalTo("Query"))
+                .body("data.__schema.mutationType.name", equalTo("Mutation"))
+                .body("errors", nullValue());
     }
 }

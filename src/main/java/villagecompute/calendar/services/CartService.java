@@ -1,50 +1,46 @@
 package villagecompute.calendar.services;
 
+import java.math.BigDecimal;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+
 import org.jboss.logging.Logger;
+
 import villagecompute.calendar.api.graphql.inputs.AddToCartInput;
 import villagecompute.calendar.api.graphql.inputs.AssetInput;
 import villagecompute.calendar.api.graphql.types.Cart;
 import villagecompute.calendar.api.graphql.types.CartItem;
 import villagecompute.calendar.data.models.ItemAsset;
 
-import java.math.BigDecimal;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-/**
- * Service for cart operations
- * Handles cart persistence and business logic
- */
+/** Service for cart operations Handles cart persistence and business logic */
 @ApplicationScoped
 public class CartService {
 
     private static final Logger LOG = Logger.getLogger(CartService.class);
 
-    @Inject
-    ProductService productService;
+    @Inject ProductService productService;
 
-    /**
-     * Get or create cart for session
-     */
+    /** Get or create cart for session */
     @Transactional
     public Cart getCart(String sessionId) {
         villagecompute.calendar.data.models.Cart cartEntity =
-            villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
+                villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
 
         return toGraphQLCart(cartEntity);
     }
 
     /**
-     * Add item to cart.
-     * Supports both new generator-based items (with generatorType and assets) and legacy calendar items.
+     * Add item to cart. Supports both new generator-based items (with generatorType and assets) and
+     * legacy calendar items.
      */
     @Transactional
     public Cart addToCart(String sessionId, AddToCartInput input) {
         villagecompute.calendar.data.models.Cart cartEntity =
-            villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
+                villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
 
         // Get price from product catalog (preferred) or fall back to provided price
         BigDecimal unitPrice;
@@ -55,7 +51,9 @@ public class CartService {
         } else if (input.unitPrice != null) {
             // Fallback for backwards compatibility - log warning
             unitPrice = BigDecimal.valueOf(input.unitPrice);
-            LOG.warnf("Using client-provided price $%.2f - productCode not provided or invalid", unitPrice);
+            LOG.warnf(
+                    "Using client-provided price $%.2f - productCode not provided or invalid",
+                    unitPrice);
         } else {
             // Use default product price
             productCode = productService.getDefaultProductCode();
@@ -68,28 +66,30 @@ public class CartService {
 
         // Check if using new generator-based format
         if (input.generatorType != null) {
-            LOG.infof("Adding generator-based item: type=%s, description=%s, quantity=%d",
-                input.generatorType, input.description, quantity);
+            LOG.infof(
+                    "Adding generator-based item: type=%s, description=%s, quantity=%d",
+                    input.generatorType, input.description, quantity);
 
-            // Create new cart item (generator items are always new line items since SVGs are unique)
-            cartItem = cartEntity.addItem(
-                input.generatorType,
-                input.description,
-                quantity,
-                unitPrice,
-                input.configuration,
-                productCode
-            );
+            // Create new cart item (generator items are always new line items since SVGs are
+            // unique)
+            cartItem =
+                    cartEntity.addItem(
+                            input.generatorType,
+                            input.description,
+                            quantity,
+                            unitPrice,
+                            input.configuration,
+                            productCode);
 
             // Create and attach asset records if provided
             if (input.assets != null && !input.assets.isEmpty()) {
                 for (AssetInput assetInput : input.assets) {
-                    ItemAsset asset = ItemAsset.create(
-                        assetInput.assetKey,
-                        assetInput.svgContent,
-                        assetInput.widthInches,
-                        assetInput.heightInches
-                    );
+                    ItemAsset asset =
+                            ItemAsset.create(
+                                    assetInput.assetKey,
+                                    assetInput.svgContent,
+                                    assetInput.widthInches,
+                                    assetInput.heightInches);
                     asset.persist();
                     cartItem.addAsset(asset);
                     LOG.infof("Added asset '%s' to cart item", assetInput.assetKey);
@@ -97,33 +97,34 @@ public class CartService {
             }
         } else {
             // Legacy calendar format - use addOrUpdateItem for backward compatibility
-            LOG.infof("Adding legacy calendar item: template=%s, year=%d, quantity=%d",
-                input.templateId, input.year, quantity);
+            LOG.infof(
+                    "Adding legacy calendar item: template=%s, year=%d, quantity=%d",
+                    input.templateId, input.year, quantity);
 
-            cartItem = cartEntity.addOrUpdateItem(
-                input.templateId,
-                input.templateName != null ? input.templateName : "Calendar " + input.year,
-                input.year != null ? input.year : 0,
-                quantity,
-                unitPrice,
-                input.configuration,
-                productCode
-            );
+            cartItem =
+                    cartEntity.addOrUpdateItem(
+                            input.templateId,
+                            input.templateName != null
+                                    ? input.templateName
+                                    : "Calendar " + input.year,
+                            input.year != null ? input.year : 0,
+                            quantity,
+                            unitPrice,
+                            input.configuration,
+                            productCode);
         }
 
         return toGraphQLCart(cartEntity);
     }
 
-    /**
-     * Update item quantity
-     */
+    /** Update item quantity */
     @Transactional
     public Cart updateQuantity(String sessionId, UUID itemId, Integer quantity) {
         villagecompute.calendar.data.models.Cart cartEntity =
-            villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
+                villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
 
         villagecompute.calendar.data.models.CartItem item =
-            villagecompute.calendar.data.models.CartItem.findById(itemId);
+                villagecompute.calendar.data.models.CartItem.findById(itemId);
 
         if (item != null && item.cart.id.equals(cartEntity.id)) {
             if (quantity <= 0) {
@@ -137,16 +138,14 @@ public class CartService {
         return toGraphQLCart(cartEntity);
     }
 
-    /**
-     * Remove item from cart
-     */
+    /** Remove item from cart */
     @Transactional
     public Cart removeItem(String sessionId, UUID itemId) {
         villagecompute.calendar.data.models.Cart cartEntity =
-            villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
+                villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
 
         villagecompute.calendar.data.models.CartItem item =
-            villagecompute.calendar.data.models.CartItem.findById(itemId);
+                villagecompute.calendar.data.models.CartItem.findById(itemId);
 
         if (item != null && item.cart.id.equals(cartEntity.id)) {
             cartEntity.removeItem(item);
@@ -155,22 +154,18 @@ public class CartService {
         return toGraphQLCart(cartEntity);
     }
 
-    /**
-     * Clear cart
-     */
+    /** Clear cart */
     @Transactional
     public Cart clearCart(String sessionId) {
         villagecompute.calendar.data.models.Cart cartEntity =
-            villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
+                villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
 
         cartEntity.clearItems();
 
         return toGraphQLCart(cartEntity);
     }
 
-    /**
-     * Convert database cart entity to GraphQL cart type
-     */
+    /** Convert database cart entity to GraphQL cart type */
     private Cart toGraphQLCart(villagecompute.calendar.data.models.Cart cartEntity) {
         Cart cart = new Cart();
         cart.id = cartEntity.id.toString();
@@ -178,16 +173,13 @@ public class CartService {
         cart.taxAmount = 0.0; // TODO: Calculate tax
         cart.totalAmount = cart.subtotal + cart.taxAmount;
         cart.itemCount = cartEntity.getItemCount();
-        cart.items = cartEntity.items.stream()
-            .map(this::toGraphQLCartItem)
-            .collect(Collectors.toList());
+        cart.items =
+                cartEntity.items.stream().map(this::toGraphQLCartItem).collect(Collectors.toList());
 
         return cart;
     }
 
-    /**
-     * Convert database cart item to GraphQL cart item
-     */
+    /** Convert database cart item to GraphQL cart item */
     private CartItem toGraphQLCartItem(villagecompute.calendar.data.models.CartItem itemEntity) {
         return CartItem.fromEntity(itemEntity);
     }

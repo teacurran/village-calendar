@@ -1,17 +1,19 @@
 package villagecompute.calendar.data.repositories;
 
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
-import jakarta.enterprise.context.ApplicationScoped;
-import villagecompute.calendar.data.models.PageView;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
+import villagecompute.calendar.data.models.PageView;
+
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+
 /**
- * Repository for PageView entities.
- * Provides custom query methods for analytics tracking and user behavior analysis.
+ * Repository for PageView entities. Provides custom query methods for analytics tracking and user
+ * behavior analysis.
  */
 @ApplicationScoped
 public class PageViewRepository implements PanacheRepository<PageView> {
@@ -27,8 +29,8 @@ public class PageViewRepository implements PanacheRepository<PageView> {
     }
 
     /**
-     * Find all page views for a specific session, ordered by creation time.
-     * Used for session reconstruction and funnel analysis.
+     * Find all page views for a specific session, ordered by creation time. Used for session
+     * reconstruction and funnel analysis.
      *
      * @param sessionId Session identifier
      * @return List of page views
@@ -38,8 +40,8 @@ public class PageViewRepository implements PanacheRepository<PageView> {
     }
 
     /**
-     * Find all page views for a specific user, ordered by creation time descending.
-     * Used for user behavior tracking.
+     * Find all page views for a specific user, ordered by creation time descending. Used for user
+     * behavior tracking.
      *
      * @param userId User ID
      * @return List of page views
@@ -49,8 +51,8 @@ public class PageViewRepository implements PanacheRepository<PageView> {
     }
 
     /**
-     * Find all page views for a specific path, ordered by creation time descending.
-     * Used for path analysis and popular pages tracking.
+     * Find all page views for a specific path, ordered by creation time descending. Used for path
+     * analysis and popular pages tracking.
      *
      * @param path URL path (e.g., "/templates", "/calendar/123/edit")
      * @return List of page views
@@ -60,8 +62,8 @@ public class PageViewRepository implements PanacheRepository<PageView> {
     }
 
     /**
-     * Find page views within a time range, ordered by creation time descending.
-     * Used for time-based analytics queries.
+     * Find page views within a time range, ordered by creation time descending. Used for time-based
+     * analytics queries.
      *
      * @param since Start time (inclusive)
      * @param until End time (exclusive)
@@ -72,8 +74,7 @@ public class PageViewRepository implements PanacheRepository<PageView> {
     }
 
     /**
-     * Find page views for a specific referrer source.
-     * Used for traffic source attribution.
+     * Find page views for a specific referrer source. Used for traffic source attribution.
      *
      * @param referrer HTTP Referer header
      * @return List of page views
@@ -83,8 +84,7 @@ public class PageViewRepository implements PanacheRepository<PageView> {
     }
 
     /**
-     * Count page views for a specific path within a time range.
-     * Used for analytics dashboards.
+     * Count page views for a specific path within a time range. Used for analytics dashboards.
      *
      * @param path URL path
      * @param since Start time (inclusive)

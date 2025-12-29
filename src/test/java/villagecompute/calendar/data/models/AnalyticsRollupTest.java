@@ -1,13 +1,6 @@
 package villagecompute.calendar.data.models;
 
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validator;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import villagecompute.calendar.data.repositories.TestDataCleaner;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -15,19 +8,26 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import villagecompute.calendar.data.repositories.TestDataCleaner;
+
+import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 class AnalyticsRollupTest {
 
-    @Inject
-    Validator validator;
+    @Inject Validator validator;
 
-    @Inject
-    TestDataCleaner testDataCleaner;
+    @Inject TestDataCleaner testDataCleaner;
 
-    @Inject
-    jakarta.persistence.EntityManager entityManager;
+    @Inject jakarta.persistence.EntityManager entityManager;
 
     @BeforeEach
     @Transactional
@@ -191,13 +191,17 @@ class AnalyticsRollupTest {
         rollup3.persist();
 
         // When
-        List<AnalyticsRollup> pathRollups = AnalyticsRollup.findByMetricAndDimension("page_views", "path").list();
+        List<AnalyticsRollup> pathRollups =
+                AnalyticsRollup.findByMetricAndDimension("page_views", "path").list();
 
         // Then
         assertEquals(2, pathRollups.size());
-        assertTrue(pathRollups.stream().allMatch(r ->
-            "page_views".equals(r.metricName) && "path".equals(r.dimensionKey)
-        ));
+        assertTrue(
+                pathRollups.stream()
+                        .allMatch(
+                                r ->
+                                        "page_views".equals(r.metricName)
+                                                && "path".equals(r.dimensionKey)));
     }
 
     @Test
@@ -225,17 +229,19 @@ class AnalyticsRollupTest {
         rollup3.persist();
 
         // When
-        List<AnalyticsRollup> templatesRollups = AnalyticsRollup.findByMetricAndDimensionValue(
-            "page_views", "path", "/templates"
-        ).list();
+        List<AnalyticsRollup> templatesRollups =
+                AnalyticsRollup.findByMetricAndDimensionValue("page_views", "path", "/templates")
+                        .list();
 
         // Then
         assertEquals(2, templatesRollups.size());
-        assertTrue(templatesRollups.stream().allMatch(r ->
-            "page_views".equals(r.metricName) &&
-            "path".equals(r.dimensionKey) &&
-            "/templates".equals(r.dimensionValue)
-        ));
+        assertTrue(
+                templatesRollups.stream()
+                        .allMatch(
+                                r ->
+                                        "page_views".equals(r.metricName)
+                                                && "path".equals(r.dimensionKey)
+                                                && "/templates".equals(r.dimensionValue)));
     }
 
     @Test
@@ -268,7 +274,10 @@ class AnalyticsRollupTest {
         entityManager.flush();
 
         // When
-        List<AnalyticsRollup> recentRollups = AnalyticsRollup.findByTimeRange(yesterday.minusSeconds(1), now.plus(1, ChronoUnit.DAYS)).list();
+        List<AnalyticsRollup> recentRollups =
+                AnalyticsRollup.findByTimeRange(
+                                yesterday.minusSeconds(1), now.plus(1, ChronoUnit.DAYS))
+                        .list();
 
         // Then
         assertEquals(1, recentRollups.size());
@@ -303,9 +312,10 @@ class AnalyticsRollupTest {
         pageViewsOld.persist();
 
         // When
-        List<AnalyticsRollup> rollups = AnalyticsRollup.findByMetricAndTimeRange(
-            "page_views", yesterday, now.plus(1, ChronoUnit.DAYS)
-        ).list();
+        List<AnalyticsRollup> rollups =
+                AnalyticsRollup.findByMetricAndTimeRange(
+                                "page_views", yesterday, now.plus(1, ChronoUnit.DAYS))
+                        .list();
 
         // Then
         assertEquals(1, rollups.size());
@@ -360,10 +370,15 @@ class AnalyticsRollupTest {
         entityManager.flush();
 
         // When
-        BigDecimal sum = AnalyticsRollup.sumByMetricAndTimeRange("revenue", yesterday.minusSeconds(1), now.plus(1, ChronoUnit.DAYS));
+        BigDecimal sum =
+                AnalyticsRollup.sumByMetricAndTimeRange(
+                        "revenue", yesterday.minusSeconds(1), now.plus(1, ChronoUnit.DAYS));
 
         // Then
-        assertEquals(0, BigDecimal.valueOf(350.00).compareTo(sum)); // Use compareTo for BigDecimal comparison
+        assertEquals(
+                0,
+                BigDecimal.valueOf(350.00)
+                        .compareTo(sum)); // Use compareTo for BigDecimal comparison
     }
 
     @Test
@@ -413,7 +428,8 @@ class AnalyticsRollupTest {
         rollup1.periodEnd = periodEnd;
         rollup1.persist();
 
-        // When/Then - Creating duplicate should fail (but we can't test constraint violation directly in unit test)
+        // When/Then - Creating duplicate should fail (but we can't test constraint violation
+        // directly in unit test)
         // This test just verifies the first insert succeeds
         assertNotNull(rollup1.id);
     }
@@ -484,7 +500,10 @@ class AnalyticsRollupTest {
         Long originalVersion = rollup.version;
 
         // Wait a tiny bit to ensure timestamp difference
-        try { Thread.sleep(10); } catch (InterruptedException e) {}
+        try {
+            Thread.sleep(10);
+        } catch (InterruptedException e) {
+        }
 
         // When
         rollup.value = new BigDecimal("200.00");
@@ -548,7 +567,8 @@ class AnalyticsRollupTest {
 
     private AnalyticsRollup createValidRollup() {
         // Use nanoTime to ensure unique timestamps for each call
-        // This prevents unique constraint violations on (metricName, dimensionKey, dimensionValue, periodStart, periodEnd)
+        // This prevents unique constraint violations on (metricName, dimensionKey, dimensionValue,
+        // periodStart, periodEnd)
         Instant now = Instant.now().plusNanos(System.nanoTime() % 1000000);
         AnalyticsRollup rollup = new AnalyticsRollup();
         rollup.metricName = "page_views";

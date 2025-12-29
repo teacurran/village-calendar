@@ -1,17 +1,18 @@
 package villagecompute.calendar.data.models;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Year;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
- * Unit tests for CalendarOrderItem.
- * Tests the year getter/setter methods that work with configuration JSON.
+ * Unit tests for CalendarOrderItem. Tests the year getter/setter methods that work with
+ * configuration JSON.
  */
 class CalendarOrderItemTest {
 

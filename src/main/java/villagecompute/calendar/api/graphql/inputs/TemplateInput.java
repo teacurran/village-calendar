@@ -1,24 +1,24 @@
 package villagecompute.calendar.api.graphql.inputs;
 
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Input;
 
 /**
- * GraphQL input type for creating or updating a calendar template.
- * Admin-only operations. Validated using Bean Validation annotations.
+ * GraphQL input type for creating or updating a calendar template. Admin-only operations. Validated
+ * using Bean Validation annotations.
  *
- * Note: configuration is accepted as a JSON string and parsed in the service layer.
+ * <p>Note: configuration is accepted as a JSON string and parsed in the service layer.
  */
 @Input("TemplateInput")
 @Description("Input for creating or updating a calendar template (admin only).")
 public class TemplateInput {
 
-    @NotNull(message = "Template name is required")
-    @NotBlank(message = "Template name cannot be blank")
+    @NotNull(message = "Template name is required") @NotBlank(message = "Template name cannot be blank")
     @Size(max = 255, message = "Template name must not exceed 255 characters")
     @Description("Template name")
     public String name;
@@ -26,8 +26,7 @@ public class TemplateInput {
     @Description("Template description")
     public String description;
 
-    @NotNull(message = "Configuration is required")
-    @NotBlank(message = "Configuration cannot be blank")
+    @NotNull(message = "Configuration is required") @NotBlank(message = "Configuration cannot be blank")
     @Description("JSON string containing template configuration")
     public String configuration;
 
@@ -49,12 +48,18 @@ public class TemplateInput {
     public String previewSvg;
 
     // Default constructor required by SmallRye GraphQL
-    public TemplateInput() {
-    }
+    public TemplateInput() {}
 
     // Constructor for testing
-    public TemplateInput(String name, String description, String configuration, String thumbnailUrl,
-                         Boolean isActive, Boolean isFeatured, Integer displayOrder, String previewSvg) {
+    public TemplateInput(
+            String name,
+            String description,
+            String configuration,
+            String thumbnailUrl,
+            Boolean isActive,
+            Boolean isFeatured,
+            Integer displayOrder,
+            String previewSvg) {
         this.name = name;
         this.description = description;
         this.configuration = configuration;

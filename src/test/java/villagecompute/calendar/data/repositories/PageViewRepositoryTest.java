@@ -1,34 +1,33 @@
 package villagecompute.calendar.data.repositories;
 
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import villagecompute.calendar.data.models.CalendarUser;
-import villagecompute.calendar.data.models.PageView;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import villagecompute.calendar.data.models.CalendarUser;
+import villagecompute.calendar.data.models.PageView;
+
+import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 class PageViewRepositoryTest {
 
-    @Inject
-    TestDataCleaner testDataCleaner;
+    @Inject TestDataCleaner testDataCleaner;
 
-    @Inject
-    PageViewRepository repository;
+    @Inject PageViewRepository repository;
 
-    @Inject
-    CalendarUserRepository userRepository;
+    @Inject CalendarUserRepository userRepository;
 
-    @Inject
-    jakarta.persistence.EntityManager entityManager;
+    @Inject jakarta.persistence.EntityManager entityManager;
 
     private CalendarUser testUser;
 
@@ -191,8 +190,12 @@ class PageViewRepositoryTest {
 
         // Then - should find both page views created during test
         assertEquals(2, rangeViews.size());
-        assertTrue(rangeViews.stream().allMatch(pv ->
-            !pv.created.isBefore(beforeCreation) && pv.created.isBefore(afterCreation)));
+        assertTrue(
+                rangeViews.stream()
+                        .allMatch(
+                                pv ->
+                                        !pv.created.isBefore(beforeCreation)
+                                                && pv.created.isBefore(afterCreation)));
 
         // When - query for future time range (should find none)
         Instant futureStart = afterCreation.plus(1, ChronoUnit.DAYS);
@@ -231,7 +234,8 @@ class PageViewRepositoryTest {
 
         // Then
         assertEquals(2, googleReferrals.size());
-        assertTrue(googleReferrals.stream().allMatch(pv -> "https://google.com".equals(pv.referrer)));
+        assertTrue(
+                googleReferrals.stream().allMatch(pv -> "https://google.com".equals(pv.referrer)));
         // Verify ORDER BY created DESC
         assertEquals("/templates", googleReferrals.get(0).path);
         assertEquals("/home", googleReferrals.get(1).path);
@@ -258,7 +262,8 @@ class PageViewRepositoryTest {
         Instant afterCreation = Instant.now();
 
         // When
-        long count = repository.countByPathAndTimeRange("/templates", beforeCreation, afterCreation);
+        long count =
+                repository.countByPathAndTimeRange("/templates", beforeCreation, afterCreation);
 
         // Then
         assertEquals(5, count);
@@ -268,8 +273,11 @@ class PageViewRepositoryTest {
         assertEquals(1, homeCount);
 
         // Verify count in future time range returns 0
-        long futureCount = repository.countByPathAndTimeRange("/templates",
-            afterCreation.plus(1, ChronoUnit.DAYS), afterCreation.plus(2, ChronoUnit.DAYS));
+        long futureCount =
+                repository.countByPathAndTimeRange(
+                        "/templates",
+                        afterCreation.plus(1, ChronoUnit.DAYS),
+                        afterCreation.plus(2, ChronoUnit.DAYS));
         assertEquals(0, futureCount);
     }
 
@@ -372,8 +380,9 @@ class PageViewRepositoryTest {
     @Transactional
     void testCountByPathAndTimeRange_ZeroResults() {
         // When
-        long count = repository.countByPathAndTimeRange("/nonexistent",
-            Instant.now().minus(1, ChronoUnit.HOURS), Instant.now());
+        long count =
+                repository.countByPathAndTimeRange(
+                        "/nonexistent", Instant.now().minus(1, ChronoUnit.HOURS), Instant.now());
 
         // Then
         assertEquals(0, count);

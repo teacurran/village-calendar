@@ -1,12 +1,10 @@
 package villagecompute.calendar.services.maze;
 
-import villagecompute.calendar.data.models.enums.MazeType;
-
 import java.util.*;
 
-/**
- * Represents a maze grid and provides generation algorithms.
- */
+import villagecompute.calendar.data.models.enums.MazeType;
+
+/** Represents a maze grid and provides generation algorithms. */
 public class MazeGrid {
     private final int width;
     private final int height;
@@ -61,9 +59,7 @@ public class MazeGrid {
         markDeadEnds();
     }
 
-    /**
-     * Generate orthogonal maze using recursive backtracker algorithm.
-     */
+    /** Generate orthogonal maze using recursive backtracker algorithm. */
     private void generateOrthogonal() {
         Stack<MazeCell> stack = new Stack<>();
         MazeCell current = cells[startX][startY];
@@ -89,8 +85,8 @@ public class MazeGrid {
     }
 
     /**
-     * Generate delta (triangular) maze.
-     * For now, using a modified orthogonal approach with different neighbor logic.
+     * Generate delta (triangular) maze. For now, using a modified orthogonal approach with
+     * different neighbor logic.
      */
     private void generateDelta() {
         // Delta mazes use triangular cells - simplified version for now
@@ -98,17 +94,13 @@ public class MazeGrid {
         generateOrthogonal();
     }
 
-    /**
-     * Generate sigma (hexagonal) maze.
-     */
+    /** Generate sigma (hexagonal) maze. */
     private void generateSigma() {
         // Sigma mazes use hexagonal cells - simplified version for now
         generateOrthogonal();
     }
 
-    /**
-     * Generate theta (circular) maze.
-     */
+    /** Generate theta (circular) maze. */
     private void generateTheta() {
         // Theta mazes are circular - simplified version for now
         // Start from center, end at edge
@@ -133,17 +125,15 @@ public class MazeGrid {
     }
 
     /**
-     * Apply difficulty-based modifications to the maze.
-     * Difficulty 1-5:
-     *   1 = Very easy (many shortcuts - about 25% of cells get extra openings)
-     *   2 = Easy (some shortcuts - about 12.5% of cells get extra openings)
-     *   3 = Medium (few shortcuts - about 5% of cells get extra openings)
-     *   4 = Hard (minimal shortcuts - about 2% of cells get extra openings)
-     *   5 = Very hard (pure perfect maze - no shortcuts, single solution path)
+     * Apply difficulty-based modifications to the maze. Difficulty 1-5: 1 = Very easy (many
+     * shortcuts - about 25% of cells get extra openings) 2 = Easy (some shortcuts - about 12.5% of
+     * cells get extra openings) 3 = Medium (few shortcuts - about 5% of cells get extra openings) 4
+     * = Hard (minimal shortcuts - about 2% of cells get extra openings) 5 = Very hard (pure perfect
+     * maze - no shortcuts, single solution path)
      *
-     * The recursive backtracker creates a "perfect" maze with exactly one path
-     * between any two points. Adding shortcuts (removing walls) creates alternative
-     * routes that can make the solution shorter and easier to find.
+     * <p>The recursive backtracker creates a "perfect" maze with exactly one path between any two
+     * points. Adding shortcuts (removing walls) creates alternative routes that can make the
+     * solution shorter and easier to find.
      */
     private void applyDifficultyModifications() {
         int totalCells = width * height;
@@ -173,9 +163,7 @@ public class MazeGrid {
         }
     }
 
-    /**
-     * Remove walls to create shortcuts, making the maze easier.
-     */
+    /** Remove walls to create shortcuts, making the maze easier. */
     private void removeWallsForShortcuts(int count) {
         for (int i = 0; i < count; i++) {
             int x = random.nextInt(width);
@@ -217,9 +205,7 @@ public class MazeGrid {
         return neighbors;
     }
 
-    /**
-     * Find the solution path using BFS.
-     */
+    /** Find the solution path using BFS. */
     private void findSolution() {
         // Reset visited flags
         for (int x = 0; x < width; x++) {
@@ -243,7 +229,7 @@ public class MazeGrid {
                 MazeCell pathCell = current;
                 while (pathCell != null) {
                     pathCell.onSolutionPath = true;
-                    solutionPath.add(0, new int[]{pathCell.x, pathCell.y});
+                    solutionPath.add(0, new int[] {pathCell.x, pathCell.y});
                     pathCell = pathCell.parent;
                 }
                 return;
@@ -260,8 +246,8 @@ public class MazeGrid {
     }
 
     /**
-     * Mark all cells that are not on the solution path as dead ends.
-     * Also calculates the depth of each dead end (how far from the solution path).
+     * Mark all cells that are not on the solution path as dead ends. Also calculates the depth of
+     * each dead end (how far from the solution path).
      */
     private void markDeadEnds() {
         // First pass: mark all non-solution cells as dead ends
@@ -309,14 +295,43 @@ public class MazeGrid {
     }
 
     // Getters
-    public int getWidth() { return width; }
-    public int getHeight() { return height; }
-    public MazeType getType() { return type; }
-    public MazeCell[][] getCells() { return cells; }
-    public MazeCell getCell(int x, int y) { return cells[x][y]; }
-    public int getStartX() { return startX; }
-    public int getStartY() { return startY; }
-    public int getEndX() { return endX; }
-    public int getEndY() { return endY; }
-    public List<int[]> getSolutionPath() { return solutionPath; }
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public MazeType getType() {
+        return type;
+    }
+
+    public MazeCell[][] getCells() {
+        return cells;
+    }
+
+    public MazeCell getCell(int x, int y) {
+        return cells[x][y];
+    }
+
+    public int getStartX() {
+        return startX;
+    }
+
+    public int getStartY() {
+        return startY;
+    }
+
+    public int getEndX() {
+        return endX;
+    }
+
+    public int getEndY() {
+        return endY;
+    }
+
+    public List<int[]> getSolutionPath() {
+        return solutionPath;
+    }
 }

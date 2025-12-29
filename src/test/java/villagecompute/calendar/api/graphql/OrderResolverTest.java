@@ -1,58 +1,56 @@
 package villagecompute.calendar.api.graphql;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.quarkus.test.junit.QuarkusTest;
-import io.restassured.http.ContentType;
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.math.BigDecimal;
+import java.util.Map;
+import java.util.UUID;
+
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+
 import org.junit.jupiter.api.*;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.OrderService;
 
-import java.math.BigDecimal;
-import java.util.Map;
-import java.util.UUID;
-
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.*;
+import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.http.ContentType;
 
 /**
- * Integration tests for OrderResolver GraphQL API.
- * Tests order queries and mutations with various authorization scenarios.
+ * Integration tests for OrderResolver GraphQL API. Tests order queries and mutations with various
+ * authorization scenarios.
  *
- * NOTE: Full authentication testing with JWT tokens requires additional Quarkus
- * test configuration for the OIDC provider (Keycloak/Auth0). The current tests
- * focus on:
- * - Schema validation (GraphQL types and fields are correctly exposed)
- * - Unauthenticated access rejection (security annotations work)
- * - Service layer integration (business logic works correctly)
- * - Input validation (malformed requests are rejected)
+ * <p>NOTE: Full authentication testing with JWT tokens requires additional Quarkus test
+ * configuration for the OIDC provider (Keycloak/Auth0). The current tests focus on: - Schema
+ * validation (GraphQL types and fields are correctly exposed) - Unauthenticated access rejection
+ * (security annotations work) - Service layer integration (business logic works correctly) - Input
+ * validation (malformed requests are rejected)
  *
- * For production deployments, authenticated integration tests should be added
+ * <p>For production deployments, authenticated integration tests should be added
  * using @TestSecurity annotation or by configuring a test OIDC server.
  *
- * Required authenticated test scenarios:
- * - User querying their own order (should succeed)
- * - User querying another user's order (should fail with SecurityException)
- * - Admin querying any user's order (should succeed)
- * - placeOrder mutation with valid JWT token (should create order and return checkout URL)
- * - cancelOrder mutation for PAID order (should cancel and trigger refund)
- * - cancelOrder mutation for SHIPPED order (should fail with IllegalStateException)
+ * <p>Required authenticated test scenarios: - User querying their own order (should succeed) - User
+ * querying another user's order (should fail with SecurityException) - Admin querying any user's
+ * order (should succeed) - placeOrder mutation with valid JWT token (should create order and return
+ * checkout URL) - cancelOrder mutation for PAID order (should cancel and trigger refund) -
+ * cancelOrder mutation for SHIPPED order (should fail with IllegalStateException)
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class OrderResolverTest {
 
-    @Inject
-    OrderService orderService;
+    @Inject OrderService orderService;
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
     private CalendarUser testUser;
     private CalendarTemplate testTemplate;
@@ -97,20 +95,18 @@ class OrderResolverTest {
         testCalendar.persist();
 
         // Create test order
-        JsonNode shippingAddress = objectMapper.createObjectNode()
-            .put("street", "123 Test St")
-            .put("city", "Nashville")
-            .put("state", "TN")
-            .put("postalCode", "37201")
-            .put("country", "US");
+        JsonNode shippingAddress =
+                objectMapper
+                        .createObjectNode()
+                        .put("street", "123 Test St")
+                        .put("city", "Nashville")
+                        .put("state", "TN")
+                        .put("postalCode", "37201")
+                        .put("country", "US");
 
-        testOrder = orderService.createOrder(
-            testUser,
-            testCalendar,
-            2,
-            new BigDecimal("29.99"),
-            shippingAddress
-        );
+        testOrder =
+                orderService.createOrder(
+                        testUser, testCalendar, 2, new BigDecimal("29.99"), shippingAddress);
     }
 
     // ==================================================================
@@ -120,7 +116,8 @@ class OrderResolverTest {
     @Test
     @Order(1)
     void testGraphQL_OrderQueriesExist() {
-        String query = """
+        String query =
+                """
             query {
                 __type(name: "Query") {
                     name
@@ -131,22 +128,24 @@ class OrderResolverTest {
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", query))
-        .when()
-            .post("/graphql")
-        .then()
-            .statusCode(200)
-            .body("data.__type.name", equalTo("Query"))
-            .body("data.__type.fields.name", hasItems("order", "orders", "myOrders", "allOrders"))
-            .body("errors", nullValue());
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.__type.name", equalTo("Query"))
+                .body(
+                        "data.__type.fields.name",
+                        hasItems("order", "orders", "myOrders", "allOrders"))
+                .body("errors", nullValue());
     }
 
     @Test
     @Order(2)
     void testGraphQL_OrderMutationsExist() {
-        String query = """
+        String query =
+                """
             query {
                 __type(name: "Mutation") {
                     name
@@ -157,22 +156,22 @@ class OrderResolverTest {
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", query))
-        .when()
-            .post("/graphql")
-        .then()
-            .statusCode(200)
-            .body("data.__type.name", equalTo("Mutation"))
-            .body("data.__type.fields.name", hasItems("placeOrder", "cancelOrder"))
-            .body("errors", nullValue());
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.__type.name", equalTo("Mutation"))
+                .body("data.__type.fields.name", hasItems("placeOrder", "cancelOrder"))
+                .body("errors", nullValue());
     }
 
     @Test
     @Order(3)
     void testGraphQL_OrderTypeSchema() {
-        String query = """
+        String query =
+                """
             query {
                 __type(name: "CalendarOrder") {
                     name
@@ -187,22 +186,24 @@ class OrderResolverTest {
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", query))
-        .when()
-            .post("/graphql")
-        .then()
-            .statusCode(200)
-            .body("data.__type.name", equalTo("CalendarOrder"))
-            .body("data.__type.fields.name", hasItems("id", "status", "quantity", "totalPrice", "calendar", "user"))
-            .body("errors", nullValue());
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.__type.name", equalTo("CalendarOrder"))
+                .body(
+                        "data.__type.fields.name",
+                        hasItems("id", "status", "quantity", "totalPrice", "calendar", "user"))
+                .body("errors", nullValue());
     }
 
     @Test
     @Order(4)
     void testGraphQL_PaymentIntentTypeSchema() {
-        String query = """
+        String query =
+                """
             query {
                 __type(name: "PaymentIntent") {
                     name
@@ -216,16 +217,18 @@ class OrderResolverTest {
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", query))
-        .when()
-            .post("/graphql")
-        .then()
-            .statusCode(200)
-            .body("data.__type.name", equalTo("PaymentIntent"))
-            .body("data.__type.fields.name", hasItems("id", "clientSecret", "amount", "calendarId", "quantity", "status"))
-            .body("errors", nullValue());
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.__type.name", equalTo("PaymentIntent"))
+                .body(
+                        "data.__type.fields.name",
+                        hasItems(
+                                "id", "clientSecret", "amount", "calendarId", "quantity", "status"))
+                .body("errors", nullValue());
     }
 
     // ==================================================================
@@ -236,30 +239,33 @@ class OrderResolverTest {
     @Order(10)
     void testQueryOrder_Unauthenticated() {
         // Test: Querying order without authentication should fail
-        String query = String.format("""
+        String query =
+                String.format(
+                        """
             {
                 order(id: "%s") {
                     id
                     status
                 }
             }
-            """, testOrder.id);
+            """,
+                        testOrder.id);
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", query))
-        .when()
-            .post("/graphql")
-        .then()
-            .statusCode(200)
-            .body("errors", notNullValue());  // Should return error for unauthenticated access
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("errors", notNullValue()); // Should return error for unauthenticated access
     }
 
     @Test
     @Order(11)
     void testQueryMyOrders_Unauthenticated() {
         // Test: myOrders query without authentication should fail
-        String query = """
+        String query =
+                """
             {
                 myOrders {
                     id
@@ -268,21 +274,21 @@ class OrderResolverTest {
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", query))
-        .when()
-            .post("/graphql")
-        .then()
-            .statusCode(200)
-            .body("errors", notNullValue());  // Should return error for unauthenticated access
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("errors", notNullValue()); // Should return error for unauthenticated access
     }
 
     @Test
     @Order(12)
     void testQueryOrders_Unauthenticated() {
         // Test: orders query without authentication should fail
-        String query = """
+        String query =
+                """
             {
                 orders {
                     id
@@ -291,21 +297,21 @@ class OrderResolverTest {
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", query))
-        .when()
-            .post("/graphql")
-        .then()
-            .statusCode(200)
-            .body("errors", notNullValue());  // Should return error for unauthenticated access
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("errors", notNullValue()); // Should return error for unauthenticated access
     }
 
     @Test
     @Order(13)
     void testQueryAllOrders_Unauthenticated() {
         // Test: allOrders query without authentication should fail (admin only)
-        String query = """
+        String query =
+                """
             {
                 allOrders {
                     id
@@ -314,21 +320,22 @@ class OrderResolverTest {
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", query))
-        .when()
-            .post("/graphql")
-        .then()
-            .statusCode(200)
-            .body("errors", notNullValue());  // Should return error for unauthenticated access
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", query))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("errors", notNullValue()); // Should return error for unauthenticated access
     }
 
     @Test
     @Order(20)
     void testMutationPlaceOrder_Unauthenticated() {
         // Test: placeOrder mutation without authentication should fail
-        String mutation = String.format("""
+        String mutation =
+                String.format(
+                        """
             mutation {
                 placeOrder(input: {
                     calendarId: "%s"
@@ -345,38 +352,40 @@ class OrderResolverTest {
                     id
                 }
             }
-            """, testCalendar.id);
+            """,
+                        testCalendar.id);
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", mutation))
-        .when()
-            .post("/graphql")
-        .then()
-            .statusCode(200)
-            .body("errors", notNullValue());  // Should return error for unauthenticated access
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", mutation))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("errors", notNullValue()); // Should return error for unauthenticated access
     }
 
     @Test
     @Order(21)
     void testMutationCancelOrder_Unauthenticated() {
         // Test: cancelOrder mutation without authentication should fail
-        String mutation = String.format("""
+        String mutation =
+                String.format(
+                        """
             mutation {
                 cancelOrder(orderId: "%s", reason: "Test") {
                     id
                 }
             }
-            """, testOrder.id);
+            """,
+                        testOrder.id);
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", mutation))
-        .when()
-            .post("/graphql")
-        .then()
-            .statusCode(200)
-            .body("errors", notNullValue());  // Should return error for unauthenticated access
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", mutation))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("errors", notNullValue()); // Should return error for unauthenticated access
     }
 
     // ==================================================================
@@ -387,7 +396,8 @@ class OrderResolverTest {
     @Order(30)
     void testPlaceOrder_InvalidCalendarIdFormat() {
         // Test: placeOrder with invalid UUID format should return error
-        String mutation = """
+        String mutation =
+                """
             mutation {
                 placeOrder(input: {
                     calendarId: "not-a-uuid"
@@ -407,21 +417,22 @@ class OrderResolverTest {
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", mutation))
-        .when()
-            .post("/graphql")
-        .then()
-            .statusCode(200)
-            .body("errors", notNullValue());
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", mutation))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("errors", notNullValue());
     }
 
     @Test
     @Order(31)
     void testPlaceOrder_InvalidQuantity() {
         // Test: placeOrder with quantity 0 should fail validation
-        String mutation = String.format("""
+        String mutation =
+                String.format(
+                        """
             mutation {
                 placeOrder(input: {
                     calendarId: "%s"
@@ -438,23 +449,24 @@ class OrderResolverTest {
                     id
                 }
             }
-            """, testCalendar.id);
+            """,
+                        testCalendar.id);
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", mutation))
-        .when()
-            .post("/graphql")
-        .then()
-            .statusCode(200)
-            .body("errors", notNullValue());
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", mutation))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("errors", notNullValue());
     }
 
     @Test
     @Order(32)
     void testCancelOrder_InvalidOrderIdFormat() {
         // Test: cancelOrder with invalid UUID format should return error
-        String mutation = """
+        String mutation =
+                """
             mutation {
                 cancelOrder(orderId: "not-a-uuid") {
                     id
@@ -462,14 +474,13 @@ class OrderResolverTest {
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .body(Map.of("query", mutation))
-        .when()
-            .post("/graphql")
-        .then()
-            .statusCode(200)
-            .body("errors", notNullValue());
+        given().contentType(ContentType.JSON)
+                .body(Map.of("query", mutation))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("errors", notNullValue());
     }
 
     // ==================================================================
@@ -477,27 +488,25 @@ class OrderResolverTest {
     // ==================================================================
 
     /**
-     * Test that the OrderService is properly integrated and can create orders.
-     * This validates the business logic independent of GraphQL authentication.
+     * Test that the OrderService is properly integrated and can create orders. This validates the
+     * business logic independent of GraphQL authentication.
      */
     @Test
     @Order(40)
     @Transactional
     void testOrderService_CreateOrder() throws Exception {
-        JsonNode shippingAddress = objectMapper.createObjectNode()
-            .put("street", "456 Oak Ave")
-            .put("city", "Memphis")
-            .put("state", "TN")
-            .put("postalCode", "38101")
-            .put("country", "US");
+        JsonNode shippingAddress =
+                objectMapper
+                        .createObjectNode()
+                        .put("street", "456 Oak Ave")
+                        .put("city", "Memphis")
+                        .put("state", "TN")
+                        .put("postalCode", "38101")
+                        .put("country", "US");
 
-        CalendarOrder order = orderService.createOrder(
-            testUser,
-            testCalendar,
-            3,
-            new BigDecimal("29.99"),
-            shippingAddress
-        );
+        CalendarOrder order =
+                orderService.createOrder(
+                        testUser, testCalendar, 3, new BigDecimal("29.99"), shippingAddress);
 
         assertNotNull(order);
         assertNotNull(order.id);
@@ -506,48 +515,42 @@ class OrderResolverTest {
         assertNotNull(order.orderNumber);
     }
 
-    /**
-     * Test that OrderService properly validates and cancels orders.
-     */
+    /** Test that OrderService properly validates and cancels orders. */
     @Test
     @Order(41)
     @Transactional
     void testOrderService_CancelOrder() {
         // Test cancelling a PENDING order (should succeed)
-        CalendarOrder cancelledOrder = orderService.cancelOrder(
-            testOrder.id,
-            testUser.id,
-            false,  // not admin
-            "Test cancellation"
-        );
+        CalendarOrder cancelledOrder =
+                orderService.cancelOrder(
+                        testOrder.id,
+                        testUser.id,
+                        false, // not admin
+                        "Test cancellation");
 
         assertNotNull(cancelledOrder);
         assertEquals("CANCELLED", cancelledOrder.status);
         assertTrue(cancelledOrder.notes.contains("Test cancellation"));
     }
 
-    /**
-     * Test that OrderService prevents cancellation of shipped orders.
-     */
+    /** Test that OrderService prevents cancellation of shipped orders. */
     @Test
     @Order(42)
     @Transactional
     void testOrderService_CannotCancelShippedOrder() throws Exception {
         // Create a new order for this test
-        JsonNode shippingAddress = objectMapper.createObjectNode()
-            .put("street", "789 Pine St")
-            .put("city", "Knoxville")
-            .put("state", "TN")
-            .put("postalCode", "37902")
-            .put("country", "US");
+        JsonNode shippingAddress =
+                objectMapper
+                        .createObjectNode()
+                        .put("street", "789 Pine St")
+                        .put("city", "Knoxville")
+                        .put("state", "TN")
+                        .put("postalCode", "37902")
+                        .put("country", "US");
 
-        CalendarOrder shippedOrder = orderService.createOrder(
-            testUser,
-            testCalendar,
-            1,
-            new BigDecimal("29.99"),
-            shippingAddress
-        );
+        CalendarOrder shippedOrder =
+                orderService.createOrder(
+                        testUser, testCalendar, 1, new BigDecimal("29.99"), shippingAddress);
 
         // Update order to SHIPPED status
         shippedOrder.status = CalendarOrder.STATUS_SHIPPED;
@@ -555,13 +558,10 @@ class OrderResolverTest {
 
         // Attempt to cancel should throw exception
         UUID orderId = shippedOrder.id;
-        assertThrows(IllegalStateException.class, () -> {
-            orderService.cancelOrder(
-                orderId,
-                testUser.id,
-                false,
-                "Should fail"
-            );
-        });
+        assertThrows(
+                IllegalStateException.class,
+                () -> {
+                    orderService.cancelOrder(orderId, testUser.id, false, "Should fail");
+                });
     }
 }

@@ -1,23 +1,24 @@
 package villagecompute.calendar.data.repositories;
 
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
-import jakarta.enterprise.context.ApplicationScoped;
-import villagecompute.calendar.data.models.UserCalendar;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
+import villagecompute.calendar.data.models.UserCalendar;
+
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+
 /**
- * Repository for UserCalendar entities.
- * Provides custom query methods for user calendar management.
+ * Repository for UserCalendar entities. Provides custom query methods for user calendar management.
  */
 @ApplicationScoped
 public class UserCalendarRepository implements PanacheRepository<UserCalendar> {
 
     /**
-     * Find calendars by authenticated user and year.
-     * This is the required custom query method from the task specification.
+     * Find calendars by authenticated user and year. This is the required custom query method from
+     * the task specification.
      *
      * @param userId User ID
      * @param year Calendar year

@@ -1,6 +1,10 @@
 package villagecompute.calendar.services;
 
+import java.io.ByteArrayOutputStream;
+import java.io.StringReader;
+
 import jakarta.enterprise.context.ApplicationScoped;
+
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
@@ -9,12 +13,9 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.jboss.logging.Logger;
 
-import java.io.ByteArrayOutputStream;
-import java.io.StringReader;
-
 /**
- * Service for rendering SVG content to PDF using Apache Batik.
- * Also handles PDF metadata cleaning to remove technology fingerprints.
+ * Service for rendering SVG content to PDF using Apache Batik. Also handles PDF metadata cleaning
+ * to remove technology fingerprints.
  */
 @ApplicationScoped
 public class PDFRenderingService {
@@ -23,15 +24,15 @@ public class PDFRenderingService {
 
     // PDF page size: 35w x 23h inches (landscape)
     // PDF units are in points (1 inch = 72 points)
-    private static final float PDF_WIDTH_POINTS = 35 * 72;  // 2520 points
-    private static final float PDF_HEIGHT_POINTS = 23 * 72;  // 1656 points
+    private static final float PDF_WIDTH_POINTS = 35 * 72; // 2520 points
+    private static final float PDF_HEIGHT_POINTS = 23 * 72; // 1656 points
 
     /**
-     * Render SVG content to PDF format.
-     * Uses Apache Batik's PDFTranscoder for SVG to PDF conversion.
+     * Render SVG content to PDF format. Uses Apache Batik's PDFTranscoder for SVG to PDF
+     * conversion.
      *
      * @param svgContent The SVG content as a string
-     * @param year       The calendar year (for PDF metadata)
+     * @param year The calendar year (for PDF metadata)
      * @return PDF bytes
      * @throws RuntimeException if rendering fails
      */
@@ -87,11 +88,11 @@ public class PDFRenderingService {
     }
 
     /**
-     * Render SVG content to PNG format for email preview.
-     * Uses Apache Batik's PNGTranscoder for SVG to PNG conversion.
+     * Render SVG content to PNG format for email preview. Uses Apache Batik's PNGTranscoder for SVG
+     * to PNG conversion.
      *
      * @param svgContent The SVG content as a string
-     * @param width      Target width in pixels (height calculated to maintain aspect ratio)
+     * @param width Target width in pixels (height calculated to maintain aspect ratio)
      * @return PNG bytes
      * @throws RuntimeException if rendering fails
      */
@@ -101,7 +102,9 @@ public class PDFRenderingService {
         }
 
         try {
-            LOG.debugf("Rendering SVG to PNG (SVG length: %d bytes, target width: %d)", svgContent.length(), width);
+            LOG.debugf(
+                    "Rendering SVG to PNG (SVG length: %d bytes, target width: %d)",
+                    svgContent.length(), width);
 
             // Preprocess SVG to fix various issues
             svgContent = preprocessSVG(svgContent);
@@ -139,11 +142,11 @@ public class PDFRenderingService {
     }
 
     /**
-     * Render SVG content to PNG and return as base64-encoded data URI.
-     * Suitable for embedding directly in HTML emails.
+     * Render SVG content to PNG and return as base64-encoded data URI. Suitable for embedding
+     * directly in HTML emails.
      *
      * @param svgContent The SVG content as a string
-     * @param width      Target width in pixels
+     * @param width Target width in pixels
      * @return Base64 data URI string (e.g., "data:image/png;base64,...")
      * @throws RuntimeException if rendering fails
      */
@@ -155,7 +158,7 @@ public class PDFRenderingService {
 
     /**
      * Preprocess SVG content to fix various issues that cause Batik transcoding problems.
-     * 
+     *
      * @param svgContent Original SVG content
      * @return Fixed SVG content
      */
@@ -166,20 +169,20 @@ public class PDFRenderingService {
                 LOG.warn("SVG content is null or empty, skipping preprocessing");
                 return svgContent;
             }
-            
+
             // Ensure content starts with proper XML structure
             String trimmedContent = svgContent.trim();
             if (!trimmedContent.startsWith("<")) {
                 LOG.warn("SVG content doesn't start with XML tag, skipping preprocessing");
                 return svgContent;
             }
-            
+
             // Fix xlink namespace issues
             svgContent = fixXlinkNamespace(svgContent);
-            
+
             // Fix CSS URI references that cause invalid URI errors
             svgContent = fixCSSUriReferences(svgContent);
-            
+
             return svgContent;
         } catch (Exception e) {
             LOG.warnf(e, "Error during SVG preprocessing, returning original content");
@@ -198,17 +201,18 @@ public class PDFRenderingService {
         // Check if SVG contains xlink:href but doesn't declare xmlns:xlink
         if (svgContent.contains("xlink:href") && !svgContent.contains("xmlns:xlink")) {
             LOG.debug("Fixing xlink namespace declaration in SVG");
-            
+
             // Find the opening <svg> tag more carefully to handle XML properly
             String xlinkNamespace = "xmlns:xlink=\"http://www.w3.org/1999/xlink\"";
-            
+
             // Use regex to find the svg tag and handle various formats
-            java.util.regex.Pattern svgPattern = java.util.regex.Pattern.compile(
-                "(<svg[^>]*?)>", 
-                java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL
-            );
+            java.util.regex.Pattern svgPattern =
+                    java.util.regex.Pattern.compile(
+                            "(<svg[^>]*?)>",
+                            java.util.regex.Pattern.CASE_INSENSITIVE
+                                    | java.util.regex.Pattern.DOTALL);
             java.util.regex.Matcher matcher = svgPattern.matcher(svgContent);
-            
+
             if (matcher.find()) {
                 String svgOpenTag = matcher.group(1);
                 String replacement = svgOpenTag + " " + xlinkNamespace + ">";
@@ -228,16 +232,16 @@ public class PDFRenderingService {
                 }
             }
         }
-        
+
         return svgContent;
     }
 
     /**
-     * Fix CSS URI references that cause "invalid URI" errors in Batik.
-     * The main issue is with the base URI resolution causing problems with internal ID references.
+     * Fix CSS URI references that cause "invalid URI" errors in Batik. The main issue is with the
+     * base URI resolution causing problems with internal ID references.
      *
-     * IMPORTANT: Only clip-path can use bare #id syntax. Other properties like filter, fill, stroke
-     * require the url(#id) syntax and should NOT be modified.
+     * <p>IMPORTANT: Only clip-path can use bare #id syntax. Other properties like filter, fill,
+     * stroke require the url(#id) syntax and should NOT be modified.
      *
      * @param svgContent Original SVG content
      * @return Fixed SVG content
@@ -250,20 +254,18 @@ public class PDFRenderingService {
             // Other properties (filter, fill, stroke, mask, markers) MUST keep url(#id) syntax
             // Modifying filter="url(#id)" to filter="#id" breaks the filter completely!
 
-            String[] cssProperties = {
-                "clip-path"
-            };
-            
+            String[] cssProperties = {"clip-path"};
+
             for (String property : cssProperties) {
                 // Handle attribute form: property="url(#id)"
-                java.util.regex.Pattern attributePattern = java.util.regex.Pattern.compile(
-                    property + "\\s*=\\s*[\"']url\\(#([^)]+)\\)[\"']", 
-                    java.util.regex.Pattern.CASE_INSENSITIVE
-                );
-                
+                java.util.regex.Pattern attributePattern =
+                        java.util.regex.Pattern.compile(
+                                property + "\\s*=\\s*[\"']url\\(#([^)]+)\\)[\"']",
+                                java.util.regex.Pattern.CASE_INSENSITIVE);
+
                 java.util.regex.Matcher matcher = attributePattern.matcher(svgContent);
                 StringBuffer result = new StringBuffer();
-                
+
                 while (matcher.find()) {
                     String idRef = matcher.group(1);
                     String replacement = property + "=\"#" + idRef + "\"";
@@ -272,16 +274,18 @@ public class PDFRenderingService {
                 }
                 matcher.appendTail(result);
                 svgContent = result.toString();
-                
+
                 // Handle style form: style="...property:url(#id)..."
-                java.util.regex.Pattern stylePattern = java.util.regex.Pattern.compile(
-                    "(style\\s*=\\s*[\"'][^\"']*?)" + property + "\\s*:\\s*url\\(#([^)]+)\\)([^\"']*[\"'])", 
-                    java.util.regex.Pattern.CASE_INSENSITIVE
-                );
-                
+                java.util.regex.Pattern stylePattern =
+                        java.util.regex.Pattern.compile(
+                                "(style\\s*=\\s*[\"'][^\"']*?)"
+                                        + property
+                                        + "\\s*:\\s*url\\(#([^)]+)\\)([^\"']*[\"'])",
+                                java.util.regex.Pattern.CASE_INSENSITIVE);
+
                 matcher = stylePattern.matcher(svgContent);
                 result = new StringBuffer();
-                
+
                 while (matcher.find()) {
                     String beforeProperty = matcher.group(1);
                     String idRef = matcher.group(2);
@@ -294,16 +298,16 @@ public class PDFRenderingService {
                 svgContent = result.toString();
             }
         }
-        
+
         return svgContent;
     }
 
     /**
-     * Clean PDF metadata to remove backend technology fingerprints.
-     * Replaces Apache FOP producer strings with custom branding.
+     * Clean PDF metadata to remove backend technology fingerprints. Replaces Apache FOP producer
+     * strings with custom branding.
      *
      * @param pdfBytes Original PDF bytes
-     * @param year     Calendar year for metadata
+     * @param year Calendar year for metadata
      * @return Cleaned PDF bytes
      */
     private byte[] cleanPdfMetadata(byte[] pdfBytes, int year) {
@@ -317,7 +321,7 @@ public class PDFRenderingService {
             PDDocumentInformation info = document.getDocumentInformation();
 
             // Clear existing metadata that reveals technology
-            info.setProducer("villagecompute.com");  // Override Apache FOP producer string
+            info.setProducer("villagecompute.com"); // Override Apache FOP producer string
             info.setCreator("Village Compute Calendar Generator");
             info.setTitle("Calendar " + year);
             info.setSubject("Calendar");

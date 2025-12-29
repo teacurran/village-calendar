@@ -1,12 +1,10 @@
 package villagecompute.calendar.api.graphql.types;
 
-import org.eclipse.microprofile.graphql.Type;
-
 import java.math.BigDecimal;
 
-/**
- * GraphQL type representing an asset (SVG) associated with a cart or order item
- */
+import org.eclipse.microprofile.graphql.Type;
+
+/** GraphQL type representing an asset (SVG) associated with a cart or order item */
 @Type("Asset")
 public class Asset {
     public String id;
@@ -14,13 +12,18 @@ public class Asset {
     public String contentType;
     public BigDecimal widthInches;
     public BigDecimal heightInches;
+
     // Note: svgContent is intentionally not exposed in GraphQL responses to avoid large payloads
     // Use a dedicated query/mutation if SVG content is needed
 
-    public Asset() {
-    }
+    public Asset() {}
 
-    public Asset(String id, String assetKey, String contentType, BigDecimal widthInches, BigDecimal heightInches) {
+    public Asset(
+            String id,
+            String assetKey,
+            String contentType,
+            BigDecimal widthInches,
+            BigDecimal heightInches) {
         this.id = id;
         this.assetKey = assetKey;
         this.contentType = contentType;
@@ -31,11 +34,10 @@ public class Asset {
     public static Asset fromEntity(villagecompute.calendar.data.models.ItemAsset entity) {
         if (entity == null) return null;
         return new Asset(
-            entity.id.toString(),
-            entity.assetKey,
-            entity.contentType,
-            entity.widthInches,
-            entity.heightInches
-        );
+                entity.id.toString(),
+                entity.assetKey,
+                entity.contentType,
+                entity.widthInches,
+                entity.heightInches);
     }
 }

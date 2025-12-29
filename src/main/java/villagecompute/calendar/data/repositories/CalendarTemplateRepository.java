@@ -1,28 +1,28 @@
 package villagecompute.calendar.data.repositories;
 
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.persistence.EntityManager;
-import jakarta.inject.Inject;
-import villagecompute.calendar.data.models.CalendarTemplate;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+
+import villagecompute.calendar.data.models.CalendarTemplate;
+
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+
 /**
- * Repository for CalendarTemplate entities.
- * Provides custom query methods for template management.
+ * Repository for CalendarTemplate entities. Provides custom query methods for template management.
  */
 @ApplicationScoped
 public class CalendarTemplateRepository implements PanacheRepository<CalendarTemplate> {
 
-    @Inject
-    EntityManager entityManager;
+    @Inject EntityManager entityManager;
 
     /**
-     * Find all active templates ordered by display order.
-     * This is the required custom query method from the task specification.
+     * Find all active templates ordered by display order. This is the required custom query method
+     * from the task specification.
      *
      * @return List of active templates
      */
@@ -61,24 +61,23 @@ public class CalendarTemplateRepository implements PanacheRepository<CalendarTem
     }
 
     /**
-     * Count the number of user calendars that use a specific template.
-     * Used to prevent deletion of templates that are in use.
+     * Count the number of user calendars that use a specific template. Used to prevent deletion of
+     * templates that are in use.
      *
      * @param templateId Template ID
      * @return Number of calendars using this template
      */
     public long countCalendarsUsingTemplate(UUID templateId) {
-        return entityManager.createQuery(
-            "SELECT COUNT(c) FROM UserCalendar c WHERE c.template.id = :templateId",
-            Long.class
-        )
-        .setParameter("templateId", templateId)
-        .getSingleResult();
+        return entityManager
+                .createQuery(
+                        "SELECT COUNT(c) FROM UserCalendar c WHERE c.template.id = :templateId",
+                        Long.class)
+                .setParameter("templateId", templateId)
+                .getSingleResult();
     }
 
     /**
-     * Batch load templates by their IDs.
-     * Used by DataLoader to prevent N+1 queries.
+     * Batch load templates by their IDs. Used by DataLoader to prevent N+1 queries.
      *
      * @param ids List of template IDs
      * @return List of templates matching the IDs

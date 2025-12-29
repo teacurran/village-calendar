@@ -1,17 +1,20 @@
 package villagecompute.calendar.services;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import jakarta.enterprise.context.ApplicationScoped;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
-import villagecompute.calendar.data.models.CalendarOrder;
-
 import java.math.BigDecimal;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+
+import com.fasterxml.jackson.databind.JsonNode;
+
+import villagecompute.calendar.data.models.CalendarOrder;
+
 /**
- * Service for calculating shipping costs based on destination address.
- * Handles domestic (US) and international shipping rate calculations.
- * For MVP, only domestic US shipping is supported - international orders will be rejected.
+ * Service for calculating shipping costs based on destination address. Handles domestic (US) and
+ * international shipping rate calculations. For MVP, only domestic US shipping is supported -
+ * international orders will be rejected.
  */
 @ApplicationScoped
 public class ShippingService {
@@ -35,16 +38,12 @@ public class ShippingService {
     BigDecimal internationalRate;
 
     /**
-     * Calculate shipping cost for an order based on the shipping address.
-     * For MVP, this uses a simple rate table:
-     * - Domestic US: $5.99 (standard rate)
-     * - International: rejected (not supported in MVP)
+     * Calculate shipping cost for an order based on the shipping address. For MVP, this uses a
+     * simple rate table: - Domestic US: $5.99 (standard rate) - International: rejected (not
+     * supported in MVP)
      *
-     * Future enhancements could include:
-     * - Multiple shipping tiers (standard/priority/express)
-     * - Weight-based calculations
-     * - Regional rate variations
-     * - Real-time carrier API integration
+     * <p>Future enhancements could include: - Multiple shipping tiers (standard/priority/express) -
+     * Weight-based calculations - Regional rate variations - Real-time carrier API integration
      *
      * @param order Order with shipping address
      * @return Calculated shipping cost
@@ -84,24 +83,29 @@ public class ShippingService {
         if (US_COUNTRY_CODE.equals(country)) {
             // Domestic US shipping - use standard rate for MVP
             shippingCost = domesticStandardRate;
-            LOG.infof("Calculated domestic shipping cost $%.2f for order %s (country: %s)",
-                shippingCost, order.id, country);
+            LOG.infof(
+                    "Calculated domestic shipping cost $%.2f for order %s (country: %s)",
+                    shippingCost, order.id, country);
         } else {
             // International shipping not supported in MVP
-            LOG.errorf("International shipping requested for order %s (country: %s) - not supported in MVP",
-                order.id, country);
+            LOG.errorf(
+                    "International shipping requested for order %s (country: %s) - not supported in"
+                            + " MVP",
+                    order.id, country);
             throw new IllegalStateException(
-                String.format("International shipping to %s is not supported. Only US addresses are accepted.", country)
-            );
+                    String.format(
+                            "International shipping to %s is not supported. Only US addresses are"
+                                    + " accepted.",
+                            country));
         }
 
         return shippingCost;
     }
 
     /**
-     * Calculate shipping cost for a specific address.
-     * This is a convenience method that extracts the country from the address.
-     * For production use, prefer calculateShippingCost(CalendarOrder) which has full context.
+     * Calculate shipping cost for a specific address. This is a convenience method that extracts
+     * the country from the address. For production use, prefer calculateShippingCost(CalendarOrder)
+     * which has full context.
      *
      * @param address Shipping address as JsonNode
      * @return Calculated shipping cost
@@ -142,10 +146,14 @@ public class ShippingService {
             LOG.debugf("Domestic rate: $%.2f", rate);
         } else {
             // International shipping not supported in MVP
-            LOG.errorf("International shipping requested (country: %s) - not supported in MVP", country);
+            LOG.errorf(
+                    "International shipping requested (country: %s) - not supported in MVP",
+                    country);
             throw new IllegalStateException(
-                String.format("International shipping to %s is not supported. Only US addresses are accepted.", country)
-            );
+                    String.format(
+                            "International shipping to %s is not supported. Only US addresses are"
+                                    + " accepted.",
+                            country));
         }
 
         return rate;

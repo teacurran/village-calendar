@@ -1,24 +1,27 @@
 package villagecompute.calendar.services.jobs;
 
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.instrumentation.annotations.WithSpan;
-import io.quarkus.qute.CheckedTemplate;
-import io.quarkus.qute.TemplateInstance;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
-import villagecompute.calendar.data.models.CalendarOrder;
-import villagecompute.calendar.services.EmailService;
-import villagecompute.calendar.services.exceptions.DelayedJobException;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+
+import villagecompute.calendar.data.models.CalendarOrder;
+import villagecompute.calendar.services.EmailService;
+import villagecompute.calendar.services.exceptions.DelayedJobException;
+
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
+import io.quarkus.qute.CheckedTemplate;
+import io.quarkus.qute.TemplateInstance;
+
 /**
- * DelayedJob handler for sending order cancellation emails.
- * Renders HTML email templates using Qute and sends via EmailService.
+ * DelayedJob handler for sending order cancellation emails. Renders HTML email templates using Qute
+ * and sends via EmailService.
  */
 @ApplicationScoped
 @DelayedJobConfig(priority = 5, description = "Order cancellation email sender")
@@ -26,18 +29,17 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
 
     private static final Logger LOG = Logger.getLogger(OrderCancellationJobHandler.class);
 
-    @Inject
-    EmailService emailService;
+    @Inject EmailService emailService;
 
-    @ConfigProperty(name = "email.order.from", defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
+    @ConfigProperty(
+            name = "email.order.from",
+            defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
     String orderFromEmail;
 
     @ConfigProperty(name = "app.base-url", defaultValue = "https://calendar.villagecompute.com")
     String baseUrl;
 
-    /**
-     * Type-safe Qute templates for cancellation emails.
-     */
+    /** Type-safe Qute templates for cancellation emails. */
     @CheckedTemplate(basePath = "email-templates/OrderCancellationJobHandler")
     public static class Templates {
         /**
@@ -49,10 +51,7 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
          * @return Template instance
          */
         public static native TemplateInstance orderCancellation(
-            CalendarOrder order,
-            String stylesheet,
-            boolean includeRefundNote
-        );
+                CalendarOrder order, String stylesheet, boolean includeRefundNote);
     }
 
     @Override
@@ -89,7 +88,8 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
 
             // Render the cancellation email template
             String subject = "Order Cancelled - Village Compute Calendar";
-            String htmlContent = Templates.orderCancellation(order, css, includeRefundNote).render();
+            String htmlContent =
+                    Templates.orderCancellation(order, css, includeRefundNote).render();
 
             // Send the email
             emailService.sendHtmlEmail(orderFromEmail, order.user.email, subject, htmlContent);
@@ -114,8 +114,8 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
      * @throws IOException if resource cannot be loaded
      */
     private String loadResourceAsString(String resourcePath) throws IOException {
-        try (var inputStream = Thread.currentThread().getContextClassLoader()
-            .getResourceAsStream(resourcePath)) {
+        try (var inputStream =
+                Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
             if (inputStream == null) {
                 throw new IOException("Resource not found: " + resourcePath);
             }

@@ -1,11 +1,10 @@
 package villagecompute.calendar.api.graphql.types;
 
-import org.eclipse.microprofile.graphql.Type;
 import java.util.List;
 
-/**
- * GraphQL type representing a product in the catalog
- */
+import org.eclipse.microprofile.graphql.Type;
+
+/** GraphQL type representing a product in the catalog */
 @Type("Product")
 public class Product {
     public String code;
@@ -19,8 +18,15 @@ public class Product {
 
     public Product() {}
 
-    public Product(String code, String name, String description, Double price,
-                   List<String> features, String icon, String badge, Integer displayOrder) {
+    public Product(
+            String code,
+            String name,
+            String description,
+            Double price,
+            List<String> features,
+            String icon,
+            String badge,
+            Integer displayOrder) {
         this.code = code;
         this.name = name;
         this.description = description;

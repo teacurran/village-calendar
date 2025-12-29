@@ -1,24 +1,27 @@
 package villagecompute.calendar.api.rest;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.quarkus.logging.Log;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 import jakarta.inject.Inject;
 import jakarta.persistence.LockModeType;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.CalendarGenerationService;
 import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.services.SessionService;
 
-import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import io.quarkus.logging.Log;
 
 @Path("/session-calendar")
 @Produces(MediaType.APPLICATION_JSON)
@@ -30,17 +33,13 @@ public class SessionCalendarResource {
     private static final String COLOR_GRAY = "#c1c1c1";
     private static final String COLOR_BLACK = "#000000";
 
-    @Inject
-    SessionService sessionService;
+    @Inject SessionService sessionService;
 
-    @Inject
-    CalendarRenderingService calendarRenderingService;
+    @Inject CalendarRenderingService calendarRenderingService;
 
-    @Inject
-    CalendarGenerationService calendarGenerationService;
+    @Inject CalendarGenerationService calendarGenerationService;
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
     // DTOs
     public static class SessionCalendarDTO {
@@ -68,48 +67,42 @@ public class SessionCalendarResource {
         public String name;
     }
 
-    /**
-     * Get the current session's active calendar
-     */
+    /** Get the current session's active calendar */
     @GET
     @Path("/current")
     public Response getCurrentCalendar(@HeaderParam("X-Session-ID") String sessionId) {
         if (sessionId == null || sessionId.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(Map.of("error", "No session found"))
-                .build();
+                    .entity(Map.of("error", "No session found"))
+                    .build();
         }
 
-        UserCalendar calendar = UserCalendar.find("sessionId", sessionId)
-            .firstResult();
+        UserCalendar calendar = UserCalendar.find("sessionId", sessionId).firstResult();
 
         if (calendar == null) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(Map.of("error", "No calendar for this session"))
-                .build();
+                    .entity(Map.of("error", "No calendar for this session"))
+                    .build();
         }
 
         return Response.ok(SessionCalendarDTO.from(calendar)).build();
     }
 
-    /**
-     * Create or update a calendar for the current session
-     */
+    /** Create or update a calendar for the current session */
     @POST
     @Path("/save")
     @Transactional
     public Response saveSessionCalendar(
-            @HeaderParam("X-Session-ID") String sessionId,
-            UpdateCalendarRequest request) {
+            @HeaderParam("X-Session-ID") String sessionId, UpdateCalendarRequest request) {
         if (sessionId == null || sessionId.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(Map.of("error", "No session found"))
-                .build();
+                    .entity(Map.of("error", "No session found"))
+                    .build();
         }
 
         // Check if this session already has a working calendar
-        UserCalendar calendar = UserCalendar.<UserCalendar>find("sessionId", sessionId)
-            .firstResult();
+        UserCalendar calendar =
+                UserCalendar.<UserCalendar>find("sessionId", sessionId).firstResult();
 
         if (calendar == null) {
             // Create new calendar for this session
@@ -140,10 +133,10 @@ public class SessionCalendarResource {
         // Generate SVG preview if configuration exists
         try {
             if (calendar.configuration != null) {
-                CalendarRenderingService.CalendarConfig config = objectMapper.treeToValue(
-                    calendar.configuration,
-                    CalendarRenderingService.CalendarConfig.class
-                );
+                CalendarRenderingService.CalendarConfig config =
+                        objectMapper.treeToValue(
+                                calendar.configuration,
+                                CalendarRenderingService.CalendarConfig.class);
                 calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
             }
         } catch (Exception e) {
@@ -159,9 +152,7 @@ public class SessionCalendarResource {
         return Response.ok(response).build();
     }
 
-    /**
-     * Create calendar from template for session
-     */
+    /** Create calendar from template for session */
     @POST
     @Path("/from-template/{templateId}")
     @Transactional
@@ -170,15 +161,15 @@ public class SessionCalendarResource {
             @PathParam("templateId") UUID templateId) {
         if (sessionId == null || sessionId.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(Map.of("error", "No session found"))
-                .build();
+                    .entity(Map.of("error", "No session found"))
+                    .build();
         }
 
         CalendarTemplate template = CalendarTemplate.findById(templateId);
         if (template == null || !template.isActive) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(Map.of("error", "Template not found"))
-                .build();
+                    .entity(Map.of("error", "Template not found"))
+                    .build();
         }
 
         // Create new calendar from template
@@ -198,10 +189,9 @@ public class SessionCalendarResource {
 
         // Generate SVG
         try {
-            CalendarRenderingService.CalendarConfig config = objectMapper.treeToValue(
-                template.configuration,
-                CalendarRenderingService.CalendarConfig.class
-            );
+            CalendarRenderingService.CalendarConfig config =
+                    objectMapper.treeToValue(
+                            template.configuration, CalendarRenderingService.CalendarConfig.class);
             calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
         } catch (Exception e) {
             Log.error(ERROR_GENERATING_SVG, e);
@@ -216,21 +206,17 @@ public class SessionCalendarResource {
         return Response.ok(response).build();
     }
 
-    /**
-     * Get a calendar by ID
-     * Returns the calendar and whether it belongs to the current session
-     */
+    /** Get a calendar by ID Returns the calendar and whether it belongs to the current session */
     @GET
     @Path("/{id}")
     public Response getCalendar(
-            @HeaderParam("X-Session-ID") String sessionId,
-            @PathParam("id") UUID id) {
+            @HeaderParam("X-Session-ID") String sessionId, @PathParam("id") UUID id) {
 
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(Map.of("error", "Calendar not found"))
-                .build();
+                    .entity(Map.of("error", "Calendar not found"))
+                    .build();
         }
 
         // Check if this is the session's own calendar
@@ -239,8 +225,8 @@ public class SessionCalendarResource {
         // Only allow viewing if it's public or belongs to the session
         if (!calendar.isPublic && !isOwnCalendar) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(Map.of("error", "Calendar is not public"))
-                .build();
+                    .entity(Map.of("error", "Calendar is not public"))
+                    .build();
         }
 
         Map<String, Object> response = new HashMap<>();
@@ -251,8 +237,8 @@ public class SessionCalendarResource {
     }
 
     /**
-     * Auto-save calendar configuration.
-     * Uses pessimistic locking to handle concurrent updates gracefully - last write wins.
+     * Auto-save calendar configuration. Uses pessimistic locking to handle concurrent updates
+     * gracefully - last write wins.
      */
     @PUT
     @Path("/{id}/autosave")
@@ -263,24 +249,25 @@ public class SessionCalendarResource {
             UpdateCalendarRequest request) {
         if (sessionId == null || sessionId.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(Map.of("error", "No session found"))
-                .build();
+                    .entity(Map.of("error", "No session found"))
+                    .build();
         }
 
         // Use pessimistic lock to serialize concurrent autosaves for the same calendar
-        UserCalendar calendar = UserCalendar.getEntityManager()
-            .find(UserCalendar.class, id, LockModeType.PESSIMISTIC_WRITE);
+        UserCalendar calendar =
+                UserCalendar.getEntityManager()
+                        .find(UserCalendar.class, id, LockModeType.PESSIMISTIC_WRITE);
         if (calendar == null) {
             return Response.status(Response.Status.NOT_FOUND)
-                .entity(Map.of("error", "Calendar not found"))
-                .build();
+                    .entity(Map.of("error", "Calendar not found"))
+                    .build();
         }
 
         // Verify calendar belongs to current session
         if (calendar.sessionId == null || !calendar.sessionId.equals(sessionId)) {
             return Response.status(Response.Status.FORBIDDEN)
-                .entity(Map.of("error", "Cannot edit this calendar"))
-                .build();
+                    .entity(Map.of("error", "Cannot edit this calendar"))
+                    .build();
         }
 
         // Update configuration
@@ -319,9 +306,9 @@ public class SessionCalendarResource {
     }
 
     /**
-     * Create a new session calendar with default configuration.
-     * Looks for a template with slug='default', otherwise uses hardcoded defaults.
-     * Returns the calendar ID, configuration, and pre-generated SVG.
+     * Create a new session calendar with default configuration. Looks for a template with
+     * slug='default', otherwise uses hardcoded defaults. Returns the calendar ID, configuration,
+     * and pre-generated SVG.
      */
     @POST
     @Path("/new")
@@ -329,13 +316,13 @@ public class SessionCalendarResource {
     public Response createNewCalendar(@HeaderParam("X-Session-ID") String sessionId) {
         if (sessionId == null || sessionId.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(Map.of("error", "No session found"))
-                .build();
+                    .entity(Map.of("error", "No session found"))
+                    .build();
         }
 
         // Check if this session already has a calendar - return existing one
-        UserCalendar existingCalendar = UserCalendar.<UserCalendar>find("sessionId", sessionId)
-            .firstResult();
+        UserCalendar existingCalendar =
+                UserCalendar.<UserCalendar>find("sessionId", sessionId).firstResult();
 
         if (existingCalendar != null) {
             Map<String, Object> response = new HashMap<>();
@@ -347,8 +334,8 @@ public class SessionCalendarResource {
         }
 
         // Look for default template
-        CalendarTemplate defaultTemplate = CalendarTemplate.<CalendarTemplate>find("slug", "default")
-            .firstResult();
+        CalendarTemplate defaultTemplate =
+                CalendarTemplate.<CalendarTemplate>find("slug", "default").firstResult();
 
         CalendarRenderingService.CalendarConfig config;
         String calendarName;
@@ -356,10 +343,10 @@ public class SessionCalendarResource {
         if (defaultTemplate != null && defaultTemplate.isActive) {
             // Use template configuration
             try {
-                config = objectMapper.treeToValue(
-                    defaultTemplate.configuration,
-                    CalendarRenderingService.CalendarConfig.class
-                );
+                config =
+                        objectMapper.treeToValue(
+                                defaultTemplate.configuration,
+                                CalendarRenderingService.CalendarConfig.class);
                 calendarName = defaultTemplate.name;
             } catch (Exception e) {
                 config = getDefaultCalendarConfig();
@@ -404,11 +391,12 @@ public class SessionCalendarResource {
     }
 
     /**
-     * Get default calendar configuration (hardcoded fallback).
-     * Used when no template with slug='default' exists.
+     * Get default calendar configuration (hardcoded fallback). Used when no template with
+     * slug='default' exists.
      */
     private CalendarRenderingService.CalendarConfig getDefaultCalendarConfig() {
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+        CalendarRenderingService.CalendarConfig config =
+                new CalendarRenderingService.CalendarConfig();
 
         // Calculate default year: current year if Jan-Mar, next year if Apr-Dec
         LocalDate now = LocalDate.now();

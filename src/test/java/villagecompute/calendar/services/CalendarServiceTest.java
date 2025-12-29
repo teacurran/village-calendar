@@ -1,44 +1,43 @@
 package villagecompute.calendar.services;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.quarkus.test.junit.QuarkusTest;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
 import jakarta.inject.Inject;
-import jakarta.persistence.OptimisticLockException;
 import jakarta.transaction.Transactional;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.data.repositories.CalendarTemplateRepository;
 import villagecompute.calendar.data.repositories.UserCalendarRepository;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
+import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * Comprehensive unit tests for CalendarService.
- * Tests all CRUD operations, authorization logic, optimistic locking, and session conversion.
+ * Comprehensive unit tests for CalendarService. Tests all CRUD operations, authorization logic,
+ * optimistic locking, and session conversion.
  */
 @QuarkusTest
 class CalendarServiceTest {
 
-    @Inject
-    CalendarService calendarService;
+    @Inject CalendarService calendarService;
 
-    @Inject
-    UserCalendarRepository calendarRepository;
+    @Inject UserCalendarRepository calendarRepository;
 
-    @Inject
-    CalendarTemplateRepository templateRepository;
+    @Inject CalendarTemplateRepository templateRepository;
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
     private CalendarUser testUser;
     private CalendarUser adminUser;
@@ -80,9 +79,8 @@ class CalendarServiceTest {
         testTemplate.isActive = true;
         testTemplate.isFeatured = false;
         testTemplate.displayOrder = 1;
-        testTemplate.configuration = objectMapper.createObjectNode()
-                .put("theme", "default")
-                .put("showMoonPhases", true);
+        testTemplate.configuration =
+                objectMapper.createObjectNode().put("theme", "default").put("showMoonPhases", true);
         testTemplate.persist();
     }
 
@@ -104,8 +102,9 @@ class CalendarServiceTest {
         Integer year = 2025;
 
         // When
-        UserCalendar calendar = calendarService.createCalendar(
-                name, year, testTemplate.id, null, true, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar(
+                        name, year, testTemplate.id, null, true, testUser, null);
 
         // Then
         assertNotNull(calendar);
@@ -128,8 +127,9 @@ class CalendarServiceTest {
         JsonNode customConfig = objectMapper.createObjectNode().put("theme", "custom");
 
         // When
-        UserCalendar calendar = calendarService.createCalendar(
-                name, year, null, customConfig, false, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar(
+                        name, year, null, customConfig, false, testUser, null);
 
         // Then
         assertNotNull(calendar);
@@ -148,8 +148,8 @@ class CalendarServiceTest {
         Integer year = LocalDate.now().getYear();
 
         // When
-        UserCalendar calendar = calendarService.createCalendar(
-                name, year, null, null, true, null, sessionId);
+        UserCalendar calendar =
+                calendarService.createCalendar(name, year, null, null, true, null, sessionId);
 
         // Then
         assertNotNull(calendar);
@@ -161,38 +161,53 @@ class CalendarServiceTest {
     @Test
     void testCreateCalendar_InvalidName_ThrowsException() {
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.createCalendar(null, 2025, null, null, true, testUser, null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> calendarService.createCalendar(null, 2025, null, null, true, testUser, null));
 
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.createCalendar("", 2025, null, null, true, testUser, null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> calendarService.createCalendar("", 2025, null, null, true, testUser, null));
 
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.createCalendar("   ", 2025, null, null, true, testUser, null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        calendarService.createCalendar(
+                                "   ", 2025, null, null, true, testUser, null));
     }
 
     @Test
     void testCreateCalendar_InvalidYear_ThrowsException() {
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.createCalendar("Test", 999, null, null, true, testUser, null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        calendarService.createCalendar(
+                                "Test", 999, null, null, true, testUser, null));
 
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.createCalendar("Test", 10000, null, null, true, testUser, null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        calendarService.createCalendar(
+                                "Test", 10000, null, null, true, testUser, null));
     }
 
     @Test
     void testCreateCalendar_NoUserOrSession_ThrowsException() {
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.createCalendar("Test", 2025, null, null, true, null, null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> calendarService.createCalendar("Test", 2025, null, null, true, null, null));
     }
 
     @Test
     void testCreateCalendar_BothUserAndSession_ThrowsException() {
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.createCalendar("Test", 2025, null, null, true, testUser, "session-123"));
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        calendarService.createCalendar(
+                                "Test", 2025, null, null, true, testUser, "session-123"));
     }
 
     @Test
@@ -201,8 +216,11 @@ class CalendarServiceTest {
         UUID nonExistentTemplateId = UUID.randomUUID();
 
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.createCalendar("Test", 2025, nonExistentTemplateId, null, true, testUser, null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        calendarService.createCalendar(
+                                "Test", 2025, nonExistentTemplateId, null, true, testUser, null));
     }
 
     @Test
@@ -214,8 +232,11 @@ class CalendarServiceTest {
         template.persist();
 
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.createCalendar("Test", 2025, template.id, null, true, testUser, null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        calendarService.createCalendar(
+                                "Test", 2025, template.id, null, true, testUser, null));
     }
 
     // ========== UPDATE CALENDAR TESTS ==========
@@ -224,15 +245,17 @@ class CalendarServiceTest {
     @Transactional
     void testUpdateCalendar_Success() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Original Name", 2025, null, null, true, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar(
+                        "Original Name", 2025, null, null, true, testUser, null);
         UUID calendarId = calendar.id;
         Long originalVersion = calendar.version;
 
         // When
         JsonNode newConfig = objectMapper.createObjectNode().put("updated", true);
-        UserCalendar updated = calendarService.updateCalendar(
-                calendarId, "Updated Name", newConfig, false, testUser);
+        UserCalendar updated =
+                calendarService.updateCalendar(
+                        calendarId, "Updated Name", newConfig, false, testUser);
 
         // Then
         assertEquals("Updated Name", updated.name);
@@ -240,20 +263,25 @@ class CalendarServiceTest {
         assertFalse(updated.isPublic);
         // Fetch fresh instance to check version was incremented
         UserCalendar refreshed = UserCalendar.findById(calendarId);
-        assertTrue(refreshed.version > originalVersion,
-            "Version should increment after update (original: " + originalVersion + ", new: " + refreshed.version + ")");
+        assertTrue(
+                refreshed.version > originalVersion,
+                "Version should increment after update (original: "
+                        + originalVersion
+                        + ", new: "
+                        + refreshed.version
+                        + ")");
     }
 
     @Test
     @Transactional
     void testUpdateCalendar_PartialUpdate_Success() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Original", 2025, null, null, true, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("Original", 2025, null, null, true, testUser, null);
 
         // When - Update only name
-        UserCalendar updated = calendarService.updateCalendar(
-                calendar.id, "New Name", null, null, testUser);
+        UserCalendar updated =
+                calendarService.updateCalendar(calendar.id, "New Name", null, null, testUser);
 
         // Then
         assertEquals("New Name", updated.name);
@@ -267,32 +295,36 @@ class CalendarServiceTest {
         UUID nonExistentId = UUID.randomUUID();
 
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.updateCalendar(nonExistentId, "New Name", null, null, testUser));
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        calendarService.updateCalendar(
+                                nonExistentId, "New Name", null, null, testUser));
     }
 
     @Test
     @Transactional
     void testUpdateCalendar_UnauthorizedUser_ThrowsException() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Test", 2025, null, null, true, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("Test", 2025, null, null, true, testUser, null);
 
         // When & Then
-        assertThrows(SecurityException.class, () ->
-                calendarService.updateCalendar(calendar.id, "Hacked", null, null, otherUser));
+        assertThrows(
+                SecurityException.class,
+                () -> calendarService.updateCalendar(calendar.id, "Hacked", null, null, otherUser));
     }
 
     @Test
     @Transactional
     void testUpdateCalendar_AdminCanUpdateAnyCalendar_Success() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Test", 2025, null, null, true, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("Test", 2025, null, null, true, testUser, null);
 
         // When
-        UserCalendar updated = calendarService.updateCalendar(
-                calendar.id, "Admin Updated", null, null, adminUser);
+        UserCalendar updated =
+                calendarService.updateCalendar(calendar.id, "Admin Updated", null, null, adminUser);
 
         // Then
         assertEquals("Admin Updated", updated.name);
@@ -302,12 +334,13 @@ class CalendarServiceTest {
     @Transactional
     void testUpdateCalendar_NoAuth_ThrowsException() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Test", 2025, null, null, true, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("Test", 2025, null, null, true, testUser, null);
 
         // When & Then
-        assertThrows(SecurityException.class, () ->
-                calendarService.updateCalendar(calendar.id, "Hacked", null, null, null));
+        assertThrows(
+                SecurityException.class,
+                () -> calendarService.updateCalendar(calendar.id, "Hacked", null, null, null));
     }
 
     // ========== DELETE CALENDAR TESTS ==========
@@ -316,8 +349,8 @@ class CalendarServiceTest {
     @Transactional
     void testDeleteCalendar_Success() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "To Delete", 2025, null, null, true, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("To Delete", 2025, null, null, true, testUser, null);
         UUID calendarId = calendar.id;
 
         // When
@@ -335,28 +368,30 @@ class CalendarServiceTest {
         UUID nonExistentId = UUID.randomUUID();
 
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.deleteCalendar(nonExistentId, testUser));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> calendarService.deleteCalendar(nonExistentId, testUser));
     }
 
     @Test
     @Transactional
     void testDeleteCalendar_UnauthorizedUser_ThrowsException() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Test", 2025, null, null, true, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("Test", 2025, null, null, true, testUser, null);
 
         // When & Then
-        assertThrows(SecurityException.class, () ->
-                calendarService.deleteCalendar(calendar.id, otherUser));
+        assertThrows(
+                SecurityException.class,
+                () -> calendarService.deleteCalendar(calendar.id, otherUser));
     }
 
     @Test
     @Transactional
     void testDeleteCalendar_AdminCanDelete_Success() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Test", 2025, null, null, true, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("Test", 2025, null, null, true, testUser, null);
 
         // When
         boolean deleted = calendarService.deleteCalendar(calendar.id, adminUser);
@@ -371,8 +406,8 @@ class CalendarServiceTest {
     @Transactional
     void testGetCalendar_OwnerAccess_Success() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Test", 2025, null, null, true, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("Test", 2025, null, null, true, testUser, null);
 
         // When
         UserCalendar fetched = calendarService.getCalendar(calendar.id, testUser);
@@ -386,8 +421,8 @@ class CalendarServiceTest {
     @Transactional
     void testGetCalendar_PublicCalendar_AnyoneCanRead() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Public", 2025, null, null, true, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("Public", 2025, null, null, true, testUser, null);
 
         // When
         UserCalendar fetched = calendarService.getCalendar(calendar.id, otherUser);
@@ -401,32 +436,31 @@ class CalendarServiceTest {
     @Transactional
     void testGetCalendar_PrivateCalendar_UnauthorizedThrowsException() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Private", 2025, null, null, false, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("Private", 2025, null, null, false, testUser, null);
 
         // When & Then
-        assertThrows(SecurityException.class, () ->
-                calendarService.getCalendar(calendar.id, otherUser));
+        assertThrows(
+                SecurityException.class, () -> calendarService.getCalendar(calendar.id, otherUser));
     }
 
     @Test
     @Transactional
     void testGetCalendar_PrivateCalendar_AnonymousThrowsException() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Private", 2025, null, null, false, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("Private", 2025, null, null, false, testUser, null);
 
         // When & Then
-        assertThrows(SecurityException.class, () ->
-                calendarService.getCalendar(calendar.id, null));
+        assertThrows(SecurityException.class, () -> calendarService.getCalendar(calendar.id, null));
     }
 
     @Test
     @Transactional
     void testGetCalendar_AdminCanAccessPrivate_Success() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Private", 2025, null, null, false, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("Private", 2025, null, null, false, testUser, null);
 
         // When
         UserCalendar fetched = calendarService.getCalendar(calendar.id, adminUser);
@@ -441,8 +475,9 @@ class CalendarServiceTest {
         UUID nonExistentId = UUID.randomUUID();
 
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.getCalendar(nonExistentId, testUser));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> calendarService.getCalendar(nonExistentId, testUser));
     }
 
     // ========== LIST CALENDARS TESTS ==========
@@ -456,8 +491,8 @@ class CalendarServiceTest {
         calendarService.createCalendar("Cal 3", 2025, null, null, true, testUser, null);
 
         // When
-        List<UserCalendar> calendars = calendarService.listCalendars(
-                testUser.id, null, 0, 10, testUser);
+        List<UserCalendar> calendars =
+                calendarService.listCalendars(testUser.id, null, 0, 10, testUser);
 
         // Then
         assertEquals(3, calendars.size());
@@ -472,8 +507,8 @@ class CalendarServiceTest {
         calendarService.createCalendar("Cal 2025-2", 2025, null, null, true, testUser, null);
 
         // When
-        List<UserCalendar> calendars = calendarService.listCalendars(
-                testUser.id, 2025, 0, 10, testUser);
+        List<UserCalendar> calendars =
+                calendarService.listCalendars(testUser.id, 2025, 0, 10, testUser);
 
         // Then
         assertEquals(2, calendars.size());
@@ -489,11 +524,9 @@ class CalendarServiceTest {
         }
 
         // When - First page
-        List<UserCalendar> page1 = calendarService.listCalendars(
-                testUser.id, null, 0, 2, testUser);
+        List<UserCalendar> page1 = calendarService.listCalendars(testUser.id, null, 0, 2, testUser);
         // When - Second page
-        List<UserCalendar> page2 = calendarService.listCalendars(
-                testUser.id, null, 1, 2, testUser);
+        List<UserCalendar> page2 = calendarService.listCalendars(testUser.id, null, 1, 2, testUser);
 
         // Then
         assertEquals(2, page1.size());
@@ -507,8 +540,9 @@ class CalendarServiceTest {
         calendarService.createCalendar("Test", 2025, null, null, true, testUser, null);
 
         // When & Then
-        assertThrows(SecurityException.class, () ->
-                calendarService.listCalendars(testUser.id, null, 0, 10, otherUser));
+        assertThrows(
+                SecurityException.class,
+                () -> calendarService.listCalendars(testUser.id, null, 0, 10, otherUser));
     }
 
     @Test
@@ -518,8 +552,8 @@ class CalendarServiceTest {
         calendarService.createCalendar("Test", 2025, null, null, true, testUser, null);
 
         // When
-        List<UserCalendar> calendars = calendarService.listCalendars(
-                testUser.id, null, 0, 10, adminUser);
+        List<UserCalendar> calendars =
+                calendarService.listCalendars(testUser.id, null, 0, 10, adminUser);
 
         // Then
         assertEquals(1, calendars.size());
@@ -528,8 +562,9 @@ class CalendarServiceTest {
     @Test
     void testListCalendars_NoAuth_ThrowsException() {
         // When & Then
-        assertThrows(SecurityException.class, () ->
-                calendarService.listCalendars(testUser.id, null, 0, 10, null));
+        assertThrows(
+                SecurityException.class,
+                () -> calendarService.listCalendars(testUser.id, null, 0, 10, null));
     }
 
     // ========== SESSION CONVERSION TESTS ==========
@@ -575,15 +610,17 @@ class CalendarServiceTest {
     @Test
     void testConvertSessionToUser_NullSessionId_ThrowsException() {
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.convertSessionToUser(null, testUser));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> calendarService.convertSessionToUser(null, testUser));
     }
 
     @Test
     void testConvertSessionToUser_NullUser_ThrowsException() {
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                calendarService.convertSessionToUser("session-123", null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> calendarService.convertSessionToUser("session-123", null));
     }
 
     // ========== PUBLIC CALENDAR TESTS ==========
@@ -592,8 +629,8 @@ class CalendarServiceTest {
     @Transactional
     void testFindPublicCalendar_PublicExists_ReturnsCalendar() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Public", 2025, null, null, true, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("Public", 2025, null, null, true, testUser, null);
 
         // When
         UserCalendar found = calendarService.findPublicCalendar(calendar.id);
@@ -607,8 +644,8 @@ class CalendarServiceTest {
     @Transactional
     void testFindPublicCalendar_PrivateCalendar_ReturnsNull() {
         // Given
-        UserCalendar calendar = calendarService.createCalendar(
-                "Private", 2025, null, null, false, testUser, null);
+        UserCalendar calendar =
+                calendarService.createCalendar("Private", 2025, null, null, false, testUser, null);
 
         // When
         UserCalendar found = calendarService.findPublicCalendar(calendar.id);

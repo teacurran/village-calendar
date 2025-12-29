@@ -1,23 +1,25 @@
 package villagecompute.calendar.api.rest;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
 import org.jboss.logging.Logger;
+
 import villagecompute.calendar.api.graphql.inputs.AddToCartInput;
 import villagecompute.calendar.api.graphql.types.Cart;
 import villagecompute.calendar.services.CartService;
 import villagecompute.calendar.services.SessionService;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 /**
- * Cart Resource - REST API for shopping cart operations
- * Supports both authenticated users and guest sessions via X-Session-ID header
+ * Cart Resource - REST API for shopping cart operations Supports both authenticated users and guest
+ * sessions via X-Session-ID header
  */
 @Path("/cart")
 @Produces(MediaType.APPLICATION_JSON)
@@ -26,15 +28,11 @@ public class CartResource {
 
     private static final Logger LOG = Logger.getLogger(CartResource.class);
 
-    @Inject
-    CartService cartService;
+    @Inject CartService cartService;
 
-    @Inject
-    SessionService sessionService;
+    @Inject SessionService sessionService;
 
-    /**
-     * Get cart items for current session
-     */
+    /** Get cart items for current session */
     @GET
     @Path("/items")
     public Response getCartItems() {
@@ -53,9 +51,7 @@ public class CartResource {
         return Response.ok(response).build();
     }
 
-    /**
-     * Add item to cart
-     */
+    /** Add item to cart */
     @POST
     @Path("/items")
     @Transactional
@@ -75,21 +71,27 @@ public class CartResource {
         AddToCartInput input = new AddToCartInput();
 
         // Support both productId (frontend) and templateId (direct API)
-        input.templateId = requestBody.get("productId") != null ?
-            (String) requestBody.get("productId") :
-            (String) requestBody.get("templateId");
+        input.templateId =
+                requestBody.get("productId") != null
+                        ? (String) requestBody.get("productId")
+                        : (String) requestBody.get("templateId");
 
-        input.quantity = requestBody.get("quantity") != null ?
-            ((Number) requestBody.get("quantity")).intValue() : 1;
+        input.quantity =
+                requestBody.get("quantity") != null
+                        ? ((Number) requestBody.get("quantity")).intValue()
+                        : 1;
 
         // Parse configuration to extract year and name if provided as JSON
-        String configStr = requestBody.get("configuration") != null ?
-            requestBody.get("configuration").toString() : null;
+        String configStr =
+                requestBody.get("configuration") != null
+                        ? requestBody.get("configuration").toString()
+                        : null;
 
         if (configStr != null && configStr.startsWith("{")) {
             try {
                 // Parse the configuration JSON to extract year and name
-                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.ObjectMapper mapper =
+                        new com.fasterxml.jackson.databind.ObjectMapper();
                 Map<String, Object> configData = mapper.readValue(configStr, Map.class);
 
                 if (configData.get("year") != null) {
@@ -133,9 +135,7 @@ public class CartResource {
         return Response.ok(response).build();
     }
 
-    /**
-     * Remove item from cart
-     */
+    /** Remove item from cart */
     @DELETE
     @Path("/items/{itemId}")
     @Transactional
@@ -153,18 +153,21 @@ public class CartResource {
         return Response.ok(response).build();
     }
 
-    /**
-     * Update item quantity
-     */
+    /** Update item quantity */
     @PATCH
     @Path("/items/{itemId}")
     @Transactional
-    public Response updateQuantity(@PathParam("itemId") String itemId, Map<String, Object> requestBody) {
+    public Response updateQuantity(
+            @PathParam("itemId") String itemId, Map<String, Object> requestBody) {
         String sessionId = sessionService.getCurrentSessionId();
-        Integer quantity = requestBody.get("quantity") != null ?
-            ((Number) requestBody.get("quantity")).intValue() : null;
+        Integer quantity =
+                requestBody.get("quantity") != null
+                        ? ((Number) requestBody.get("quantity")).intValue()
+                        : null;
 
-        LOG.infof("REST: Updating item %s quantity to %d for session: %s", itemId, quantity, sessionId);
+        LOG.infof(
+                "REST: Updating item %s quantity to %d for session: %s",
+                itemId, quantity, sessionId);
 
         Cart cart = cartService.updateQuantity(sessionId, UUID.fromString(itemId), quantity);
 
@@ -176,9 +179,7 @@ public class CartResource {
         return Response.ok(response).build();
     }
 
-    /**
-     * Clear cart
-     */
+    /** Clear cart */
     @DELETE
     @Path("/clear")
     @Transactional

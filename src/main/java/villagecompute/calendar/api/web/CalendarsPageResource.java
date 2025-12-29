@@ -1,26 +1,28 @@
 package villagecompute.calendar.api.web;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Locale;
+
+import jakarta.inject.Inject;
+
+import org.jboss.logging.Logger;
+
+import villagecompute.calendar.data.models.CalendarTemplate;
+import villagecompute.calendar.services.CalendarRenderingService;
+import villagecompute.calendar.services.PDFRenderingService;
+
 import io.quarkus.qute.Template;
 import io.quarkus.vertx.web.Route;
 import io.quarkus.vertx.web.RouteBase;
 import io.smallrye.common.annotation.Blocking;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
-import jakarta.inject.Inject;
-import org.jboss.logging.Logger;
-import villagecompute.calendar.data.models.CalendarTemplate;
-import villagecompute.calendar.services.CalendarRenderingService;
-import villagecompute.calendar.services.PDFRenderingService;
-
-import java.text.NumberFormat;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Locale;
 
 /**
- * Serves dynamically rendered calendar product pages using Qute templates.
- * These pages are rendered at runtime from the database, making development easier.
+ * Serves dynamically rendered calendar product pages using Qute templates. These pages are rendered
+ * at runtime from the database, making development easier.
  */
 @RouteBase(path = "/calendars", produces = "text/html")
 public class CalendarsPageResource {
@@ -31,52 +33,41 @@ public class CalendarsPageResource {
     private static final String TEXT_HTML = "text/html";
     private static final String ASSET_NOT_FOUND = "Asset not found";
 
-    @Inject
-    Template calendarsIndex;
+    @Inject Template calendarsIndex;
 
-    @Inject
-    Template calendarsProduct;
+    @Inject Template calendarsProduct;
 
-    @Inject
-    CalendarRenderingService calendarRenderingService;
+    @Inject CalendarRenderingService calendarRenderingService;
 
-    @Inject
-    PDFRenderingService pdfRenderingService;
+    @Inject PDFRenderingService pdfRenderingService;
 
-    /**
-     * Redirect /calendars to /calendars/ for consistency
-     */
+    /** Redirect /calendars to /calendars/ for consistency */
     @Route(path = "", methods = Route.HttpMethod.GET)
     public void indexRedirect(RoutingContext rc) {
-        rc.response()
-            .setStatusCode(301)
-            .putHeader("Location", "/calendars/")
-            .end();
+        rc.response().setStatusCode(301).putHeader("Location", "/calendars/").end();
     }
 
-    /**
-     * Calendar product index page at /calendars/
-     */
+    /** Calendar product index page at /calendars/ */
     @Route(path = "/", methods = Route.HttpMethod.GET)
     @Blocking
     public void index(RoutingContext rc) {
         List<CalendarTemplate> calendars = CalendarTemplate.findActiveWithSlug();
 
-        String html = calendarsIndex
-            .data("title", "Pre-Designed Calendars")
-            .data("description", "Browse our collection of beautiful, customizable calendars. Premium prints shipped to your door.")
-            .data("calendars", calendars.stream().map(this::toProductView).toList())
-            .data("currentYear", java.time.Year.now().getValue())
-            .render();
+        String html =
+                calendarsIndex
+                        .data("title", "Pre-Designed Calendars")
+                        .data(
+                                "description",
+                                "Browse our collection of beautiful, customizable calendars."
+                                        + " Premium prints shipped to your door.")
+                        .data("calendars", calendars.stream().map(this::toProductView).toList())
+                        .data("currentYear", java.time.Year.now().getValue())
+                        .render();
 
-        rc.response()
-            .putHeader(CONTENT_TYPE, TEXT_HTML)
-            .end(html);
+        rc.response().putHeader(CONTENT_TYPE, TEXT_HTML).end(html);
     }
 
-    /**
-     * Individual calendar product page at /calendars/{slug}
-     */
+    /** Individual calendar product page at /calendars/{slug} */
     @Route(path = "/:slug", methods = Route.HttpMethod.GET)
     @Blocking
     public void product(RoutingContext rc) {
@@ -92,9 +83,12 @@ public class CalendarsPageResource {
 
         if (calendar == null) {
             rc.response()
-                .setStatusCode(404)
-                .putHeader(CONTENT_TYPE, TEXT_HTML)
-                .end("<html><body><h1>Calendar Not Found</h1><p>The calendar you're looking for doesn't exist.</p><p><a href=\"/calendars/\">Browse all calendars</a></p></body></html>");
+                    .setStatusCode(404)
+                    .putHeader(CONTENT_TYPE, TEXT_HTML)
+                    .end(
+                            "<html><body><h1>Calendar Not Found</h1><p>The calendar you're looking"
+                                    + " for doesn't exist.</p><p><a href=\"/calendars/\">Browse all"
+                                    + " calendars</a></p></body></html>");
             return;
         }
 
@@ -103,21 +97,18 @@ public class CalendarsPageResource {
 
         CalendarProductView view = toProductView(calendar);
 
-        String html = calendarsProduct
-            .data("calendar", view)
-            .data("svgContent", svgContent)
-            .data("configuration", calendar.getConfigurationJson())
-            .data("currentYear", java.time.Year.now().getValue())
-            .render();
+        String html =
+                calendarsProduct
+                        .data("calendar", view)
+                        .data("svgContent", svgContent)
+                        .data("configuration", calendar.getConfigurationJson())
+                        .data("currentYear", java.time.Year.now().getValue())
+                        .render();
 
-        rc.response()
-            .putHeader(CONTENT_TYPE, TEXT_HTML)
-            .end(html);
+        rc.response().putHeader(CONTENT_TYPE, TEXT_HTML).end(html);
     }
 
-    /**
-     * Serve SVG content for a calendar at /calendars/{slug}/{slug}.svg
-     */
+    /** Serve SVG content for a calendar at /calendars/{slug}/{slug}.svg */
     @Route(path = "/:slug/:filename", methods = Route.HttpMethod.GET)
     @Blocking
     public void asset(RoutingContext rc) {
@@ -128,26 +119,22 @@ public class CalendarsPageResource {
         if (filename.endsWith(".svg")) {
             String expectedFilename = slug + ".svg";
             if (!filename.equals(expectedFilename)) {
-                rc.response()
-                    .setStatusCode(404)
-                    .end(ASSET_NOT_FOUND);
+                rc.response().setStatusCode(404).end(ASSET_NOT_FOUND);
                 return;
             }
 
             CalendarTemplate calendar = CalendarTemplate.findBySlug(slug);
             if (calendar == null) {
-                rc.response()
-                    .setStatusCode(404)
-                    .end("Calendar not found");
+                rc.response().setStatusCode(404).end("Calendar not found");
                 return;
             }
 
             String svgContent = generateSvgForTemplate(calendar);
 
             rc.response()
-                .putHeader(CONTENT_TYPE, "image/svg+xml")
-                .putHeader("Cache-Control", "public, max-age=3600")
-                .end(svgContent);
+                    .putHeader(CONTENT_TYPE, "image/svg+xml")
+                    .putHeader("Cache-Control", "public, max-age=3600")
+                    .end(svgContent);
             return;
         }
 
@@ -155,17 +142,13 @@ public class CalendarsPageResource {
         if (filename.endsWith(".png")) {
             String expectedFilename = slug + ".png";
             if (!filename.equals(expectedFilename)) {
-                rc.response()
-                    .setStatusCode(404)
-                    .end(ASSET_NOT_FOUND);
+                rc.response().setStatusCode(404).end(ASSET_NOT_FOUND);
                 return;
             }
 
             CalendarTemplate calendar = CalendarTemplate.findBySlug(slug);
             if (calendar == null) {
-                rc.response()
-                    .setStatusCode(404)
-                    .end("Calendar not found");
+                rc.response().setStatusCode(404).end("Calendar not found");
                 return;
             }
 
@@ -179,38 +162,32 @@ public class CalendarsPageResource {
                 byte[] pngBytes = pdfRenderingService.renderSVGToPNG(wrappedSvg, 1200);
 
                 rc.response()
-                    .putHeader(CONTENT_TYPE, "image/png")
-                    .putHeader("Cache-Control", "public, max-age=3600")
-                    .end(Buffer.buffer(pngBytes));
+                        .putHeader(CONTENT_TYPE, "image/png")
+                        .putHeader("Cache-Control", "public, max-age=3600")
+                        .end(Buffer.buffer(pngBytes));
             } catch (Exception e) {
                 LOG.errorf(e, "Failed to generate PNG for calendar: %s", slug);
-                rc.response()
-                    .setStatusCode(500)
-                    .end("Failed to generate PNG");
+                rc.response().setStatusCode(500).end("Failed to generate PNG");
             }
             return;
         }
 
         // Unknown asset type
-        rc.response()
-            .setStatusCode(404)
-            .end(ASSET_NOT_FOUND);
+        rc.response().setStatusCode(404).end(ASSET_NOT_FOUND);
     }
 
-    /**
-     * Generate SVG from a calendar template using CalendarRenderingService.
-     */
+    /** Generate SVG from a calendar template using CalendarRenderingService. */
     private String generateSvgForTemplate(CalendarTemplate template) {
         int year = LocalDate.now().getYear() + 1;
         CalendarRenderingService.CalendarConfig config = buildConfigFromTemplate(template, year);
         return calendarRenderingService.generateCalendarSVG(config);
     }
 
-    /**
-     * Build CalendarConfig from a template's JSON configuration.
-     */
-    private CalendarRenderingService.CalendarConfig buildConfigFromTemplate(CalendarTemplate template, int year) {
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+    /** Build CalendarConfig from a template's JSON configuration. */
+    private CalendarRenderingService.CalendarConfig buildConfigFromTemplate(
+            CalendarTemplate template, int year) {
+        CalendarRenderingService.CalendarConfig config =
+                new CalendarRenderingService.CalendarConfig();
         config.year = year;
 
         if (template.configuration != null) {
@@ -224,7 +201,9 @@ public class CalendarsPageResource {
 
     private CalendarProductView toProductView(CalendarTemplate template) {
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(Locale.US);
-        String priceFormatted = currencyFormat.format((template.priceCents != null ? template.priceCents : 2999) / 100.0);
+        String priceFormatted =
+                currencyFormat.format(
+                        (template.priceCents != null ? template.priceCents : 2999) / 100.0);
 
         // Extract year from configuration if available, otherwise use next year
         int year = LocalDate.now().getYear() + 1;
@@ -233,30 +212,26 @@ public class CalendarsPageResource {
         }
 
         return new CalendarProductView(
-            template.id.toString(),
-            template.slug,
-            template.name,
-            template.name + " " + year + " Calendar",
-            template.description,
-            template.ogDescription,
-            template.metaKeywords,
-            priceFormatted,
-            year
-        );
+                template.id.toString(),
+                template.slug,
+                template.name,
+                template.name + " " + year + " Calendar",
+                template.description,
+                template.ogDescription,
+                template.metaKeywords,
+                priceFormatted,
+                year);
     }
 
-    /**
-     * View model for calendar product data in templates.
-     */
+    /** View model for calendar product data in templates. */
     public record CalendarProductView(
-        String templateId,
-        String slug,
-        String name,
-        String title,
-        String description,
-        String ogDescription,
-        String keywords,
-        String priceFormatted,
-        int year
-    ) {}
+            String templateId,
+            String slug,
+            String name,
+            String title,
+            String description,
+            String ogDescription,
+            String keywords,
+            String priceFormatted,
+            int year) {}
 }

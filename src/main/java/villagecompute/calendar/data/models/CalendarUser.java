@@ -1,45 +1,45 @@
 package villagecompute.calendar.data.models;
 
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
-import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
-import org.hibernate.annotations.BatchSize;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+import org.hibernate.annotations.BatchSize;
+
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
+
 /**
- * Entity representing an OAuth authenticated user in the calendar service.
- * Users can create and manage calendars, and place orders for printed calendars.
+ * Entity representing an OAuth authenticated user in the calendar service. Users can create and
+ * manage calendars, and place orders for printed calendars.
  */
 @Entity
 @Table(
-    name = "calendar_users",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_calendar_users_oauth", columnNames = {"oauth_provider", "oauth_subject"})
-    },
-    indexes = {
-        @Index(name = "idx_calendar_users_email", columnList = "email"),
-        @Index(name = "idx_calendar_users_last_login", columnList = "last_login_at DESC")
-    }
-)
+        name = "calendar_users",
+        uniqueConstraints = {
+            @UniqueConstraint(
+                    name = "uk_calendar_users_oauth",
+                    columnNames = {"oauth_provider", "oauth_subject"})
+        },
+        indexes = {
+            @Index(name = "idx_calendar_users_email", columnList = "email"),
+            @Index(name = "idx_calendar_users_last_login", columnList = "last_login_at DESC")
+        })
 public class CalendarUser extends DefaultPanacheEntityWithTimestamps {
 
-    @NotNull
-    @Size(max = 50)
+    @NotNull @Size(max = 50)
     @Column(name = "oauth_provider", nullable = false, length = 50)
     public String oauthProvider;
 
-    @NotNull
-    @Size(max = 255)
+    @NotNull @Size(max = 255)
     @Column(name = "oauth_subject", nullable = false, length = 255)
     public String oauthSubject;
 
-    @NotNull
-    @Email
+    @NotNull @Email
     @Size(max = 255)
     @Column(nullable = false, length = 255)
     public String email;
@@ -55,8 +55,7 @@ public class CalendarUser extends DefaultPanacheEntityWithTimestamps {
     @Column(name = "last_login_at")
     public Instant lastLoginAt;
 
-    @NotNull
-    @Column(name = "is_admin", nullable = false)
+    @NotNull @Column(name = "is_admin", nullable = false)
     public Boolean isAdmin = false;
 
     // Relationships
@@ -78,7 +77,8 @@ public class CalendarUser extends DefaultPanacheEntityWithTimestamps {
      * @return Optional containing the user if found
      */
     public static Optional<CalendarUser> findByOAuthSubject(String provider, String subject) {
-        return find("oauthProvider = ?1 AND oauthSubject = ?2", provider, subject).firstResultOptional();
+        return find("oauthProvider = ?1 AND oauthSubject = ?2", provider, subject)
+                .firstResultOptional();
     }
 
     /**
@@ -101,9 +101,7 @@ public class CalendarUser extends DefaultPanacheEntityWithTimestamps {
         return find("lastLoginAt >= ?1 ORDER BY lastLoginAt DESC", since);
     }
 
-    /**
-     * Update the last login timestamp for this user.
-     */
+    /** Update the last login timestamp for this user. */
     public void updateLastLogin() {
         this.lastLoginAt = Instant.now();
         persist();

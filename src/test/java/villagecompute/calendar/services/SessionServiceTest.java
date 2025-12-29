@@ -1,33 +1,34 @@
 package villagecompute.calendar.services;
 
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import villagecompute.calendar.data.models.CalendarUser;
-import villagecompute.calendar.data.models.UserCalendar;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import villagecompute.calendar.data.models.CalendarUser;
+import villagecompute.calendar.data.models.UserCalendar;
+
+import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * Unit tests for SessionService.
- * Tests session management, calendar operations, conversion, and expiration.
+ * Unit tests for SessionService. Tests session management, calendar operations, conversion, and
+ * expiration.
  */
 @QuarkusTest
 class SessionServiceTest {
 
-    @Inject
-    SessionService sessionService;
+    @Inject SessionService sessionService;
 
-    @Inject
-    CalendarService calendarService;
+    @Inject CalendarService calendarService;
 
     private CalendarUser testUser;
     private String testSessionId;
@@ -267,22 +268,25 @@ class SessionServiceTest {
     @Test
     void testConvertSessionToUser_NullSessionId_ThrowsException() {
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                sessionService.convertSessionToUser(null, testUser));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> sessionService.convertSessionToUser(null, testUser));
     }
 
     @Test
     void testConvertSessionToUser_BlankSessionId_ThrowsException() {
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                sessionService.convertSessionToUser("   ", testUser));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> sessionService.convertSessionToUser("   ", testUser));
     }
 
     @Test
     void testConvertSessionToUser_NullUser_ThrowsException() {
         // When & Then
-        assertThrows(IllegalArgumentException.class, () ->
-                sessionService.convertSessionToUser(testSessionId, null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> sessionService.convertSessionToUser(testSessionId, null));
     }
 
     // ========== DELETE EXPIRED SESSIONS TESTS ==========
@@ -302,10 +306,10 @@ class SessionServiceTest {
         // to bypass @UpdateTimestamp annotation
         Instant oldTimestamp = Instant.now().minus(31, ChronoUnit.DAYS);
         UserCalendar.getEntityManager()
-            .createNativeQuery("UPDATE user_calendars SET updated = :timestamp WHERE id = :id")
-            .setParameter("timestamp", oldTimestamp)
-            .setParameter("id", oldCalendar.id)
-            .executeUpdate();
+                .createNativeQuery("UPDATE user_calendars SET updated = :timestamp WHERE id = :id")
+                .setParameter("timestamp", oldTimestamp)
+                .setParameter("id", oldCalendar.id)
+                .executeUpdate();
 
         // When
         int deletedCount = sessionService.deleteExpiredSessions();
@@ -319,7 +323,8 @@ class SessionServiceTest {
     @Transactional
     void testDeleteExpiredSessions_KeepsRecentCalendars() {
         // Given - Create recent guest calendar
-        calendarService.createCalendar("Recent Guest Cal", 2025, null, null, true, null, testSessionId);
+        calendarService.createCalendar(
+                "Recent Guest Cal", 2025, null, null, true, null, testSessionId);
 
         // When
         int deletedCount = sessionService.deleteExpiredSessions();
@@ -346,10 +351,10 @@ class SessionServiceTest {
         // Manually set old update timestamp using native SQL
         Instant oldTimestamp = Instant.now().minus(31, ChronoUnit.DAYS);
         UserCalendar.getEntityManager()
-            .createNativeQuery("UPDATE user_calendars SET updated = :timestamp WHERE id = :id")
-            .setParameter("timestamp", oldTimestamp)
-            .setParameter("id", oldGuestCal.id)
-            .executeUpdate();
+                .createNativeQuery("UPDATE user_calendars SET updated = :timestamp WHERE id = :id")
+                .setParameter("timestamp", oldTimestamp)
+                .setParameter("id", oldGuestCal.id)
+                .executeUpdate();
 
         // When
         sessionService.deleteExpiredSessions();
@@ -387,10 +392,11 @@ class SessionServiceTest {
 
             // Manually set old update timestamp using native SQL
             UserCalendar.getEntityManager()
-                .createNativeQuery("UPDATE user_calendars SET updated = :timestamp WHERE id = :id")
-                .setParameter("timestamp", oldTimestamp)
-                .setParameter("id", oldCal.id)
-                .executeUpdate();
+                    .createNativeQuery(
+                            "UPDATE user_calendars SET updated = :timestamp WHERE id = :id")
+                    .setParameter("timestamp", oldTimestamp)
+                    .setParameter("id", oldCal.id)
+                    .executeUpdate();
         }
 
         // When

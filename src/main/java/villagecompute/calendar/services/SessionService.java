@@ -1,21 +1,24 @@
 package villagecompute.calendar.services;
 
-import io.vertx.core.http.HttpServerRequest;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.jboss.logging.Logger;
-import villagecompute.calendar.data.models.CalendarUser;
-import villagecompute.calendar.data.models.UserCalendar;
-
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.jboss.logging.Logger;
+
+import villagecompute.calendar.data.models.CalendarUser;
+import villagecompute.calendar.data.models.UserCalendar;
+
+import io.vertx.core.http.HttpServerRequest;
+
 /**
- * Service for managing guest user sessions and session-to-user conversions.
- * Handles session calendar operations, session expiration, and conversion to authenticated user accounts.
+ * Service for managing guest user sessions and session-to-user conversions. Handles session
+ * calendar operations, session expiration, and conversion to authenticated user accounts.
  */
 @ApplicationScoped
 public class SessionService {
@@ -23,15 +26,13 @@ public class SessionService {
     private static final Logger LOG = Logger.getLogger(SessionService.class);
     private static final int SESSION_EXPIRATION_DAYS = 30;
 
-    @Inject
-    CalendarService calendarService;
+    @Inject CalendarService calendarService;
 
-    @Inject
-    HttpServerRequest request;
+    @Inject HttpServerRequest request;
 
     /**
-     * Get the current session ID from request headers or generate a new one.
-     * This method is used by GraphQL and other services that need session tracking.
+     * Get the current session ID from request headers or generate a new one. This method is used by
+     * GraphQL and other services that need session tracking.
      *
      * @return Session ID from X-Session-ID header or newly generated UUID
      */
@@ -53,8 +54,7 @@ public class SessionService {
     }
 
     /**
-     * Generate a new session ID for guest users.
-     * Uses UUID format for uniqueness and compatibility.
+     * Generate a new session ID for guest users. Uses UUID format for uniqueness and compatibility.
      *
      * @return New session ID string
      */
@@ -65,8 +65,8 @@ public class SessionService {
     }
 
     /**
-     * Convert guest session calendars to authenticated user calendars.
-     * Delegates to CalendarService.convertSessionToUser() for the actual conversion.
+     * Convert guest session calendars to authenticated user calendars. Delegates to
+     * CalendarService.convertSessionToUser() for the actual conversion.
      *
      * @param sessionId Session ID to convert
      * @param user User to assign calendars to
@@ -75,8 +75,9 @@ public class SessionService {
      */
     @Transactional
     public int convertSessionToUser(String sessionId, CalendarUser user) {
-        LOG.infof("SessionService: Converting session to user: sessionId=%s, userId=%s",
-                  sessionId, user != null ? user.id : null);
+        LOG.infof(
+                "SessionService: Converting session to user: sessionId=%s, userId=%s",
+                sessionId, user != null ? user.id : null);
 
         // Delegate to CalendarService which already has the conversion logic
         return calendarService.convertSessionToUser(sessionId, user);
@@ -99,11 +100,10 @@ public class SessionService {
     }
 
     /**
-     * Delete expired guest session calendars.
-     * Removes all calendars that have a sessionId (not converted to user) and
-     * were last updated more than SESSION_EXPIRATION_DAYS ago.
+     * Delete expired guest session calendars. Removes all calendars that have a sessionId (not
+     * converted to user) and were last updated more than SESSION_EXPIRATION_DAYS ago.
      *
-     * This method is called by the scheduled cleanup job.
+     * <p>This method is called by the scheduled cleanup job.
      *
      * @return Number of expired calendars deleted
      */
@@ -114,21 +114,21 @@ public class SessionService {
         Instant expirationDate = Instant.now().minus(SESSION_EXPIRATION_DAYS, ChronoUnit.DAYS);
 
         // Find all calendars with sessionId that are expired
-        List<UserCalendar> expiredCalendars = UserCalendar.find(
-            "sessionId IS NOT NULL AND updated < ?1",
-            expirationDate
-        ).list();
+        List<UserCalendar> expiredCalendars =
+                UserCalendar.find("sessionId IS NOT NULL AND updated < ?1", expirationDate).list();
 
         int count = 0;
         for (UserCalendar calendar : expiredCalendars) {
-            LOG.debugf("Deleting expired session calendar: id=%s, sessionId=%s, updated=%s",
-                      calendar.id, calendar.sessionId, calendar.updated);
+            LOG.debugf(
+                    "Deleting expired session calendar: id=%s, sessionId=%s, updated=%s",
+                    calendar.id, calendar.sessionId, calendar.updated);
             calendar.delete();
             count++;
         }
 
-        LOG.infof("Deleted %d expired guest session calendars (older than %d days)",
-                 count, SESSION_EXPIRATION_DAYS);
+        LOG.infof(
+                "Deleted %d expired guest session calendars (older than %d days)",
+                count, SESSION_EXPIRATION_DAYS);
 
         return count;
     }

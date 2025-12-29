@@ -1,12 +1,12 @@
 package villagecompute.calendar.api.graphql.types;
 
-import org.eclipse.microprofile.graphql.Type;
-
 import java.util.List;
 
+import org.eclipse.microprofile.graphql.Type;
+
 /**
- * GraphQL type representing a cart item.
- * Supports both legacy calendar-specific fields and new generic generator fields.
+ * GraphQL type representing a cart item. Supports both legacy calendar-specific fields and new
+ * generic generator fields.
  */
 @Type("CartItem")
 public class CartItem {
@@ -26,23 +26,37 @@ public class CartItem {
 
     // --- Legacy fields (deprecated, kept for backward compatibility) ---
 
-    /** @deprecated since 1.0, use generatorType and configuration instead */
+    /**
+     * @deprecated since 1.0, use generatorType and configuration instead
+     */
     @Deprecated(since = "1.0", forRemoval = false)
     public String templateId;
 
-    /** @deprecated since 1.0, use description instead */
+    /**
+     * @deprecated since 1.0, use description instead
+     */
     @Deprecated(since = "1.0", forRemoval = false)
     public String templateName;
 
-    /** @deprecated since 1.0, include year in configuration JSON instead */
+    /**
+     * @deprecated since 1.0, include year in configuration JSON instead
+     */
     @Deprecated(since = "1.0", forRemoval = false)
     public Integer year;
 
-    public CartItem() {
-    }
+    public CartItem() {}
 
     // Legacy constructor for backward compatibility
-    public CartItem(String id, String templateId, String templateName, Integer year, Integer quantity, Double unitPrice, Double lineTotal, String productCode, String configuration) {
+    public CartItem(
+            String id,
+            String templateId,
+            String templateName,
+            Integer year,
+            Integer quantity,
+            Double unitPrice,
+            Double lineTotal,
+            String productCode,
+            String configuration) {
         this.id = id;
         this.templateId = templateId;
         this.templateName = templateName;
@@ -55,7 +69,16 @@ public class CartItem {
     }
 
     // New constructor for generator-based items
-    public CartItem(String id, String generatorType, String description, Integer quantity, Double unitPrice, Double lineTotal, String productCode, String configuration, List<Asset> assets) {
+    public CartItem(
+            String id,
+            String generatorType,
+            String description,
+            Integer quantity,
+            Double unitPrice,
+            Double lineTotal,
+            String productCode,
+            String configuration,
+            List<Asset> assets) {
         this.id = id;
         this.generatorType = generatorType;
         this.description = description;
@@ -67,9 +90,7 @@ public class CartItem {
         this.assets = assets;
     }
 
-    /**
-     * Create a CartItem from the entity, supporting both legacy and new formats.
-     */
+    /** Create a CartItem from the entity, supporting both legacy and new formats. */
     public static CartItem fromEntity(villagecompute.calendar.data.models.CartItem entity) {
         if (entity == null) return null;
 
@@ -87,9 +108,7 @@ public class CartItem {
 
         // Convert assets
         if (entity.assets != null && !entity.assets.isEmpty()) {
-            item.assets = entity.assets.stream()
-                .map(Asset::fromEntity)
-                .toList();
+            item.assets = entity.assets.stream().map(Asset::fromEntity).toList();
         }
 
         // Legacy fields for backward compatibility
