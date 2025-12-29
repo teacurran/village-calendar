@@ -496,12 +496,10 @@ public class CalendarRenderingService {
         }
 
         StringBuilder result = new StringBuilder();
-        boolean isLargeMode =
-                "large".equals(config.eventDisplayMode)
-                        || "large-text".equals(config.eventDisplayMode);
+        boolean largeEmoji = "large".equals(config.eventDisplayMode) || "large-text".equals(config.eventDisplayMode);
 
         // Render emoji based on display mode
-        if (isLargeMode && !holidayEmoji.isEmpty()) {
+        if (largeEmoji && !holidayEmoji.isEmpty()) {
             // Large/large-text mode: centered emoji
             int emojiX = cellX + cellWidth / 2;
             int fontSize = Math.max(16, cellHeight / 3);
@@ -526,10 +524,7 @@ public class CalendarRenderingService {
         }
 
         // Holiday name text for large-text and text modes
-        boolean showHolidayText =
-                ("large-text".equals(config.eventDisplayMode)
-                                || "text".equals(config.eventDisplayMode))
-                        && !holidayName.isEmpty();
+        boolean showHolidayText = (largeEmoji) && !holidayName.isEmpty();
         if (showHolidayText) {
             int textX = cellX + cellWidth / 2;
             int textY = cellY + cellHeight - 3;

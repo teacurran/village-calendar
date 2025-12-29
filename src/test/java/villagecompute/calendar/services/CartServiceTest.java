@@ -89,8 +89,6 @@ class CartServiceTest {
     void testAddToCart_NewItem_AddsToCart() {
         // Given
         AddToCartInput input = new AddToCartInput();
-        input.templateName = "Test Calendar";
-        input.year = 2026;
         input.quantity = 1;
         input.productCode = "print";
         input.configuration = "{\"theme\":\"modern\"}";
@@ -111,8 +109,6 @@ class CartServiceTest {
     void testAddToCart_SameItem_IncrementsQuantity() {
         // Given
         AddToCartInput input = new AddToCartInput();
-        input.templateName = "Test Calendar";
-        input.year = 2026;
         input.quantity = 1;
         input.productCode = "print";
         input.configuration = "{\"theme\":\"modern\"}";
@@ -132,15 +128,11 @@ class CartServiceTest {
     void testAddToCart_DifferentConfiguration_CreatesNewItem() {
         // Given
         AddToCartInput input1 = new AddToCartInput();
-        input1.templateName = "Test Calendar";
-        input1.year = 2026;
         input1.quantity = 1;
         input1.productCode = "print";
         input1.configuration = "{\"theme\":\"modern\"}";
 
         AddToCartInput input2 = new AddToCartInput();
-        input2.templateName = "Test Calendar";
-        input2.year = 2026;
         input2.quantity = 1;
         input2.productCode = "print";
         input2.configuration = "{\"theme\":\"classic\"}";
@@ -159,15 +151,11 @@ class CartServiceTest {
     void testAddToCart_DifferentYear_CreatesNewItem() {
         // Given
         AddToCartInput input1 = new AddToCartInput();
-        input1.templateName = "Test Calendar";
-        input1.year = 2026;
         input1.quantity = 1;
         input1.productCode = "print";
         input1.configuration = "{\"theme\":\"modern\"}";
 
         AddToCartInput input2 = new AddToCartInput();
-        input2.templateName = "Test Calendar";
-        input2.year = 2027;
         input2.quantity = 1;
         input2.productCode = "print";
         input2.configuration = "{\"theme\":\"modern\"}";
@@ -186,9 +174,6 @@ class CartServiceTest {
     void testAddToCart_NullTemplateId_WorksForStaticPages() {
         // Given - Static pages don't have templateId
         AddToCartInput input = new AddToCartInput();
-        input.templateId = null;
-        input.templateName = "Vermont Weekends 2026";
-        input.year = 2026;
         input.quantity = 1;
         input.productCode = "print";
         input.configuration = "{\"theme\":\"vermont\"}";
@@ -213,8 +198,6 @@ class CartServiceTest {
         String sessionId2 = "session-2-" + UUID.randomUUID();
 
         AddToCartInput input = new AddToCartInput();
-        input.templateName = "Test Calendar";
-        input.year = 2026;
         input.quantity = 1;
         input.productCode = "print";
 
@@ -235,8 +218,6 @@ class CartServiceTest {
     void testUpdateQuantity_IncreasesQuantity() {
         // Given
         AddToCartInput input = new AddToCartInput();
-        input.templateName = "Test Calendar";
-        input.year = 2026;
         input.quantity = 1;
         input.productCode = "print";
 
@@ -256,8 +237,6 @@ class CartServiceTest {
     void testUpdateQuantity_ZeroRemovesItem() {
         // Given
         AddToCartInput input = new AddToCartInput();
-        input.templateName = "Test Calendar";
-        input.year = 2026;
         input.quantity = 1;
         input.productCode = "print";
 
@@ -279,8 +258,6 @@ class CartServiceTest {
     void testRemoveItem_RemovesFromCart() {
         // Given
         AddToCartInput input = new AddToCartInput();
-        input.templateName = "Test Calendar";
-        input.year = 2026;
         input.quantity = 2;
         input.productCode = "print";
 
@@ -302,15 +279,11 @@ class CartServiceTest {
     void testClearCart_RemovesAllItems() {
         // Given
         AddToCartInput input1 = new AddToCartInput();
-        input1.templateName = "Calendar 1";
-        input1.year = 2026;
         input1.quantity = 1;
         input1.productCode = "print";
         input1.configuration = "{\"config\":\"1\"}";
 
         AddToCartInput input2 = new AddToCartInput();
-        input2.templateName = "Calendar 2";
-        input2.year = 2027;
         input2.quantity = 1;
         input2.productCode = "print";
         input2.configuration = "{\"config\":\"2\"}";
@@ -333,8 +306,6 @@ class CartServiceTest {
     void testSubtotal_CalculatedCorrectly() {
         // Given
         AddToCartInput input = new AddToCartInput();
-        input.templateName = "Test Calendar";
-        input.year = 2026;
         input.quantity = 3;
         input.productCode = "print";
 

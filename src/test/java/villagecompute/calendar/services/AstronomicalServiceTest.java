@@ -28,7 +28,7 @@ public class AstronomicalServiceTest {
      * October 7, November 5, December 4
      */
     @Test
-    public void testCalculateMoonPhases2025_MatchesNASAData() {
+    void testCalculateMoonPhases2025_MatchesNASAData() {
         int year = 2025;
         List<MoonPhaseData> phases = astronomicalCalculationService.getMoonPhases(year);
 
@@ -75,7 +75,7 @@ public class AstronomicalServiceTest {
 
     /** Test that moon phases include all four major types (new, full, quarters). */
     @Test
-    public void testCalculateMoonPhases_IncludesAllMajorPhases() {
+    void testCalculateMoonPhases_IncludesAllMajorPhases() {
         int year = 2025;
         List<MoonPhaseData> phases = astronomicalCalculationService.getMoonPhases(year);
 
@@ -99,7 +99,7 @@ public class AstronomicalServiceTest {
 
     /** Test moon phase calculation performance (<100ms for full year). */
     @Test
-    public void testCalculateMoonPhases_PerformanceUnder100ms() {
+    void testCalculateMoonPhases_PerformanceUnder100ms() {
         int year = 2025;
 
         long startTime = System.currentTimeMillis();
@@ -117,7 +117,7 @@ public class AstronomicalServiceTest {
 
     /** Test moon phase value calculation (0.0 to 1.0 range). */
     @Test
-    public void testCalculateMoonPhaseValue_ValidRange() {
+    void testCalculateMoonPhaseValue_ValidRange() {
         LocalDate[] testDates = {
             LocalDate.of(2025, 1, 1),
             LocalDate.of(2025, 1, 13), // Full moon
@@ -138,7 +138,7 @@ public class AstronomicalServiceTest {
 
     /** Test moon illumination calculation. */
     @Test
-    public void testCalculateMoonIllumination_ValidData() {
+    void testCalculateMoonIllumination_ValidData() {
         LocalDate fullMoon = LocalDate.of(2025, 1, 13);
         MoonIllumination illumination =
                 astronomicalCalculationService.calculateMoonIllumination(fullMoon);
@@ -161,7 +161,7 @@ public class AstronomicalServiceTest {
 
     /** Test moon position calculation for different hemispheres. */
     @Test
-    public void testCalculateMoonPosition_DifferentHemispheres() {
+    void testCalculateMoonPosition_DifferentHemispheres() {
         LocalDate date = LocalDate.of(2025, 6, 15);
 
         // Northern hemisphere (New York)
@@ -183,7 +183,7 @@ public class AstronomicalServiceTest {
 
     /** Test isMoonPhaseDay detection. */
     @Test
-    public void testIsMoonPhaseDay_DetectsFullMoon() {
+    void testIsMoonPhaseDay_DetectsFullMoon() {
         // Test dates around January 13, 2025 full moon
         LocalDate beforeFullMoon = LocalDate.of(2025, 1, 12);
         LocalDate fullMoonDate = LocalDate.of(2025, 1, 13);
@@ -210,7 +210,7 @@ public class AstronomicalServiceTest {
 
     /** Test Hebrew calendar date conversion. */
     @Test
-    public void testGetHebrewDates_ReturnsValidMappings() {
+    void testGetHebrewDates_ReturnsValidMappings() {
         int year = 2025;
         List<HebrewDateMapping> hebrewDates = astronomicalCalculationService.getHebrewDates(year);
 
@@ -228,7 +228,7 @@ public class AstronomicalServiceTest {
 
     /** Test Hebrew leap year calculation. */
     @Test
-    public void testHebrewLeapYear_CorrectCalculation() {
+    void testHebrewLeapYear_CorrectCalculation() {
         // Hebrew year 5784 (2023-2024) is a leap year (year 3 in the 19-year cycle)
         // Hebrew year 5785 (2024-2025) is not a leap year (year 4 in the 19-year cycle)
 
@@ -242,7 +242,7 @@ public class AstronomicalServiceTest {
 
     /** Test sunrise/sunset calculation for a known location. */
     @Test
-    public void testGetSunriseSunset_ValidData() {
+    void testGetSunriseSunset_ValidData() {
         LocalDate date = LocalDate.of(2025, 6, 21); // Summer solstice
         double latitude = 40.7128; // New York
         double longitude = -74.0060;
@@ -284,7 +284,7 @@ public class AstronomicalServiceTest {
 
     /** Test seasonal events calculation for 2025. */
     @Test
-    public void testCalculateSeasonalEvents_Returns4Events() {
+    void testCalculateSeasonalEvents_Returns4Events() {
         int year = 2025;
         List<SeasonalEvent> events = astronomicalCalculationService.calculateSeasonalEvents(year);
 
@@ -346,7 +346,7 @@ public class AstronomicalServiceTest {
 
     /** Test edge case: leap year handling. */
     @Test
-    public void testLeapYearHandling() {
+    void testLeapYearHandling() {
         // 2024 is a leap year
         int leapYear = 2024;
         List<HebrewDateMapping> hebrewDates =
@@ -364,7 +364,7 @@ public class AstronomicalServiceTest {
 
     /** Test edge case: timezone handling at year boundaries. */
     @Test
-    public void testYearBoundaryDates() {
+    void testYearBoundaryDates() {
         LocalDate dec31 = LocalDate.of(2025, 12, 31);
         LocalDate jan1 = LocalDate.of(2025, 1, 1);
 
@@ -380,7 +380,7 @@ public class AstronomicalServiceTest {
 
     /** Test edge case: extreme latitudes (polar regions). */
     @Test
-    public void testExtremeLatitudes() {
+    void testExtremeLatitudes() {
         LocalDate date = LocalDate.of(2025, 6, 21); // Summer solstice
 
         // Arctic (midnight sun)
@@ -397,7 +397,7 @@ public class AstronomicalServiceTest {
 
     /** Test that phases are properly ordered chronologically. */
     @Test
-    public void testMoonPhases_ChronologicalOrder() {
+    void testMoonPhases_ChronologicalOrder() {
         int year = 2025;
         List<MoonPhaseData> phases = astronomicalCalculationService.getMoonPhases(year);
 
@@ -410,7 +410,7 @@ public class AstronomicalServiceTest {
 
     /** Test that phase values are consistent with phase types. */
     @Test
-    public void testMoonPhase_ValueConsistency() {
+    void testMoonPhase_ValueConsistency() {
         int year = 2025;
         List<MoonPhaseData> phases = astronomicalCalculationService.getMoonPhases(year);
 
@@ -436,6 +436,8 @@ public class AstronomicalServiceTest {
                             Math.abs(phase.phaseValue - 0.75) < 0.1,
                             "Last quarter phase value should be near 0.75");
                     break;
+              default:
+                break;
             }
         }
     }

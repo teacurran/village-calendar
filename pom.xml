@@ -306,7 +306,8 @@
             <googleJavaFormat>
               <version>1.19.2</version>
               <style>AOSP</style>
-              <reflowLongStrings>true</reflowLongStrings>
+              <reflowLongStrings>false</reflowLongStrings>
+              <maxLineLength>120</maxLineLength>
             </googleJavaFormat>
             <!-- Import ordering and cleanup -->
             <removeUnusedImports/>
