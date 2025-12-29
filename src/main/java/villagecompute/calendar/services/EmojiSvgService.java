@@ -160,7 +160,7 @@ public class EmojiSvgService {
 
             // Load color SVG
             String[] colorResult = loadSvgFromResources("emoji-svg/" + colorFilename + ".svg");
-            if (colorResult != null) {
+            if (colorResult.length > 0) {
                 String normalizedEmoji = normalizeEmoji(emoji);
                 colorSvgCache.put(normalizedEmoji, colorResult[0]);
                 colorViewBoxCache.put(normalizedEmoji, colorResult[1]);
@@ -172,7 +172,7 @@ public class EmojiSvgService {
 
             // Load monochrome SVG
             String[] monoResult = loadSvgFromResources("emoji-svg-mono/" + monoFilename + ".svg");
-            if (monoResult != null) {
+            if (monoResult.length > 0) {
                 String normalizedEmoji = normalizeEmoji(emoji);
                 monoSvgCache.put(normalizedEmoji, monoResult[0]);
                 monoViewBoxCache.put(normalizedEmoji, monoResult[1]);
@@ -197,7 +197,7 @@ public class EmojiSvgService {
     private String[] loadSvgFromResources(String resourcePath) {
         try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
             if (is == null) {
-                return null;
+                return new String[0];
             }
             String fullSvg = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
                 .lines()
@@ -212,7 +212,7 @@ public class EmojiSvgService {
             return new String[] { innerContent, viewBox };
         } catch (Exception e) {
             LOG.warnf("Error loading emoji SVG %s: %s", resourcePath, e.getMessage());
-            return null;
+            return new String[0];
         }
     }
 
@@ -279,8 +279,8 @@ public class EmojiSvgService {
     public String getStandaloneSvg(String emoji, boolean monochrome, String colorHex) {
         String normalized = normalizeEmoji(emoji);
 
-        String innerContent = null;
-        String viewBox = DEFAULT_VIEWBOX;
+        String innerContent;
+        String viewBox;
 
         if (monochrome) {
             innerContent = monoSvgCache.get(normalized);
@@ -357,8 +357,8 @@ public class EmojiSvgService {
         String normalized = normalizeEmoji(emoji);
 
         // Choose the appropriate cache
-        String innerContent = null;
-        String viewBox = DEFAULT_VIEWBOX;
+        String innerContent;
+        String viewBox;
         boolean usingMonoSvg = false;
 
         if (monochrome) {

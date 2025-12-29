@@ -8,7 +8,6 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import villagecompute.calendar.api.graphql.MazeGraphQL;
-import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserMaze;
 import villagecompute.calendar.data.models.enums.MazeType;
 import villagecompute.calendar.data.repositories.CalendarUserRepository;

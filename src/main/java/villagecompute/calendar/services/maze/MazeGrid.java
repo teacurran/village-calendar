@@ -166,6 +166,7 @@ public class MazeGrid {
                 removeWallsForShortcuts(totalCells / 50);
                 break;
             case 5:
+            default:
                 // Very hard: Pure perfect maze, no modifications
                 // The recursive backtracker already creates the hardest possible maze
                 break;

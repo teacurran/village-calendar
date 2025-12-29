@@ -39,8 +39,6 @@ public class OrderResourceTest {
     private CalendarUser testUser;
     private CalendarTemplate testTemplate;
     private UserCalendar testCalendar;
-    private CalendarOrder testOrder;
-    private CalendarOrderItem testOrderItem;
 
     @BeforeEach
     @Transactional

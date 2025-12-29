@@ -1,7 +1,6 @@
 package villagecompute.calendar.services;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.quarkus.panache.common.Page;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.OptimisticLockException;

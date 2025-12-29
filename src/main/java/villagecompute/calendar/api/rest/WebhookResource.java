@@ -132,7 +132,8 @@ public class WebhookResource {
 
         Event event;
         try {
-            String webhookSecret = paymentService.getWebhookSecret();
+            String webhookSecret = paymentService.getWebhookSecret() != null ? paymentService.getWebhookSecret() : "";
+
 
             // Debug logging for webhook secret configuration
             if (webhookSecret == null || webhookSecret.isEmpty()) {
@@ -155,7 +156,7 @@ public class WebhookResource {
         } catch (SignatureVerificationException e) {
             LOG.errorf("Invalid webhook signature: %s", e.getMessage());
             LOG.errorf("SignatureVerificationException details - sigHeader length: %d, payload length: %d",
-                signatureHeader != null ? signatureHeader.length() : 0,
+                signatureHeader.length(),
                 payload != null ? payload.length() : 0);
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(Map.of("error", "Invalid signature"))

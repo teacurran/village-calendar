@@ -1,5 +1,6 @@
 package villagecompute.calendar.services;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.logging.Log;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -56,10 +57,12 @@ public class CalendarRenderingService {
   private static final float POINTS_PER_INCH = 72f;
   // ===========================================
 
+  public static final String DEFAULT_THEME = "default";
+
   // Calendar configuration options
   public static class CalendarConfig {
     public int year = LocalDate.now().getYear();
-    public String theme = "default";
+    public String theme = DEFAULT_THEME;
     public String moonDisplayMode = "none"; // "none", "illumination", "phases", "full-only"
     public boolean showWeekNumbers = false;
     public boolean compactMode = false;
@@ -100,6 +103,145 @@ public class CalendarRenderingService {
     public String locale = "en-US";
     public DayOfWeek firstDayOfWeek = DayOfWeek.SUNDAY;
     public String layoutStyle = "grid"; // "grid" for 12x31 layout, "weekday-grid" for weekday-aligned layout
+  }
+
+  // JSON configuration field names
+  public static final String HOLIDAY_SETS = "holidaySets";
+  public static final String HOLIDAYS = "holidays";
+  public static final String EVENT_TITLES = "eventTitles";
+  public static final String HOLIDAY_EMOJIS = "holidayEmojis";
+  public static final String HOLIDAY_NAMES = "holidayNames";
+  public static final String CUSTOM_DATES = "customDates";
+
+  /**
+   * Apply JSON configuration to a CalendarConfig object.
+   * This is the single source of truth for JSON -> CalendarConfig mapping.
+   *
+   * @param config The CalendarConfig to modify
+   * @param jsonConfig The JSON configuration node
+   */
+  public static void applyJsonConfiguration(CalendarConfig config, JsonNode jsonConfig) {
+    if (jsonConfig == null) {
+      return;
+    }
+    try {
+      // String fields
+      if (jsonConfig.has("theme")) config.theme = jsonConfig.get("theme").asText();
+      if (jsonConfig.has("moonDisplayMode")) config.moonDisplayMode = jsonConfig.get("moonDisplayMode").asText();
+
+      // Boolean fields
+      if (jsonConfig.has("showWeekNumbers")) config.showWeekNumbers = jsonConfig.get("showWeekNumbers").asBoolean();
+      if (jsonConfig.has("compactMode")) config.compactMode = jsonConfig.get("compactMode").asBoolean();
+      if (jsonConfig.has("showDayNames")) config.showDayNames = jsonConfig.get("showDayNames").asBoolean();
+      if (jsonConfig.has("showDayNumbers")) config.showDayNumbers = jsonConfig.get("showDayNumbers").asBoolean();
+      if (jsonConfig.has("showGrid")) config.showGrid = jsonConfig.get("showGrid").asBoolean();
+      if (jsonConfig.has("highlightWeekends")) config.highlightWeekends = jsonConfig.get("highlightWeekends").asBoolean();
+      if (jsonConfig.has("rotateMonthNames")) config.rotateMonthNames = jsonConfig.get("rotateMonthNames").asBoolean();
+
+      // Numeric fields
+      if (jsonConfig.has("latitude")) config.latitude = jsonConfig.get("latitude").asDouble();
+      if (jsonConfig.has("longitude")) config.longitude = jsonConfig.get("longitude").asDouble();
+      if (jsonConfig.has("moonSize")) config.moonSize = jsonConfig.get("moonSize").asInt();
+      if (jsonConfig.has("moonOffsetX")) config.moonOffsetX = jsonConfig.get("moonOffsetX").asInt();
+      if (jsonConfig.has("moonOffsetY")) config.moonOffsetY = jsonConfig.get("moonOffsetY").asInt();
+      if (jsonConfig.has("moonBorderWidth")) config.moonBorderWidth = jsonConfig.get("moonBorderWidth").asDouble();
+
+      // Color fields
+      if (jsonConfig.has("yearColor")) config.yearColor = jsonConfig.get("yearColor").asText();
+      if (jsonConfig.has("monthColor")) config.monthColor = jsonConfig.get("monthColor").asText();
+      if (jsonConfig.has("dayTextColor")) config.dayTextColor = jsonConfig.get("dayTextColor").asText();
+      if (jsonConfig.has("dayNameColor")) config.dayNameColor = jsonConfig.get("dayNameColor").asText();
+      if (jsonConfig.has("gridLineColor")) config.gridLineColor = jsonConfig.get("gridLineColor").asText();
+      if (jsonConfig.has("weekendBgColor")) config.weekendBgColor = jsonConfig.get("weekendBgColor").asText();
+      if (jsonConfig.has("holidayColor")) config.holidayColor = jsonConfig.get("holidayColor").asText();
+      if (jsonConfig.has("customDateColor")) config.customDateColor = jsonConfig.get("customDateColor").asText();
+      if (jsonConfig.has("moonDarkColor")) config.moonDarkColor = jsonConfig.get("moonDarkColor").asText();
+      if (jsonConfig.has("moonLightColor")) config.moonLightColor = jsonConfig.get("moonLightColor").asText();
+      if (jsonConfig.has("moonBorderColor")) config.moonBorderColor = jsonConfig.get("moonBorderColor").asText();
+
+      // Additional string fields
+      if (jsonConfig.has("emojiPosition")) config.emojiPosition = jsonConfig.get("emojiPosition").asText();
+      if (jsonConfig.has("emojiFont")) config.emojiFont = jsonConfig.get("emojiFont").asText();
+      if (jsonConfig.has("eventDisplayMode")) config.eventDisplayMode = jsonConfig.get("eventDisplayMode").asText();
+      if (jsonConfig.has("locale")) config.locale = jsonConfig.get("locale").asText();
+      if (jsonConfig.has("layoutStyle")) config.layoutStyle = jsonConfig.get("layoutStyle").asText();
+      if (jsonConfig.has("timeZone")) config.timeZone = jsonConfig.get("timeZone").asText();
+
+      // Enum fields
+      if (jsonConfig.has("firstDayOfWeek")) {
+        String dow = jsonConfig.get("firstDayOfWeek").asText();
+        try {
+          config.firstDayOfWeek = DayOfWeek.valueOf(dow);
+        } catch (IllegalArgumentException e) {
+          Log.warnf("Invalid firstDayOfWeek value: %s", dow);
+        }
+      }
+
+      // Complex types: customDates (Map<String, Object>)
+      if (jsonConfig.has(CUSTOM_DATES) && jsonConfig.get(CUSTOM_DATES).isObject()) {
+        JsonNode customDates = jsonConfig.get(CUSTOM_DATES);
+        customDates.properties().forEach(entry -> {
+          String date = entry.getKey();
+          JsonNode value = entry.getValue();
+          if (value.isTextual()) {
+            config.customDates.put(date, value.asText());
+          } else if (value.isObject()) {
+            Map<String, Object> map = new HashMap<>();
+            value.properties().forEach(f -> {
+              if (f.getValue().isTextual()) map.put(f.getKey(), f.getValue().asText());
+              else if (f.getValue().isNumber()) map.put(f.getKey(), f.getValue().asDouble());
+              else if (f.getValue().isBoolean()) map.put(f.getKey(), f.getValue().asBoolean());
+            });
+            config.customDates.put(date, map);
+          }
+        });
+      }
+
+      // Complex types: eventTitles (Map<String, String>)
+      if (jsonConfig.has(EVENT_TITLES) && jsonConfig.get(EVENT_TITLES).isObject()) {
+        JsonNode eventTitles = jsonConfig.get(EVENT_TITLES);
+        eventTitles.properties().forEach(entry -> {
+          config.eventTitles.put(entry.getKey(), entry.getValue().asText());
+        });
+      }
+
+      // Complex types: holidays (Set<String>)
+      if (jsonConfig.has(HOLIDAYS) && jsonConfig.get(HOLIDAYS).isArray()) {
+        config.holidays.clear();
+        jsonConfig.get(HOLIDAYS).forEach(holiday -> {
+          config.holidays.add(holiday.asText());
+        });
+      }
+
+      // Complex types: holidaySets (List<String>)
+      if (jsonConfig.has(HOLIDAY_SETS) && jsonConfig.get(HOLIDAY_SETS).isArray()) {
+        config.holidaySets.clear();
+        jsonConfig.get(HOLIDAY_SETS).forEach(set -> {
+          config.holidaySets.add(set.asText());
+        });
+      }
+
+      // Complex types: holidayEmojis (Map<String, String>)
+      if (jsonConfig.has(HOLIDAY_EMOJIS) && jsonConfig.get(HOLIDAY_EMOJIS).isObject()) {
+        config.holidayEmojis.clear();
+        JsonNode holidayEmojis = jsonConfig.get(HOLIDAY_EMOJIS);
+        holidayEmojis.properties().forEach(entry -> {
+          config.holidayEmojis.put(entry.getKey(), entry.getValue().asText());
+        });
+      }
+
+      // Complex types: holidayNames (Map<String, String>)
+      if (jsonConfig.has(HOLIDAY_NAMES) && jsonConfig.get(HOLIDAY_NAMES).isObject()) {
+        config.holidayNames.clear();
+        JsonNode holidayNames = jsonConfig.get(HOLIDAY_NAMES);
+        holidayNames.properties().forEach(entry -> {
+          config.holidayNames.put(entry.getKey(), entry.getValue().asText());
+        });
+      }
+
+    } catch (Exception e) {
+      Log.warnf(e, "Error applying JSON configuration");
+    }
   }
 
   /**
@@ -609,93 +751,67 @@ public class CalendarRenderingService {
       "rgba(161,161,161,0.6)", "rgba(161,161,161,0.6)"}
   };
 
-  // Lakeshore monthly colors - cool blue gradient through the year
-  private static final String[][] LAKESHORE_MONTHLY_COLORS = {
-    // January - Icy blue
-    {"#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd", "#e3f2fd"},
-    // February - Pale azure
-    {"#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe", "#e1f5fe"},
-    // March - Soft sky
-    {"#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc"},
-    // April - Spring mist
-    {"#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa", "#e0f7fa"},
-    // May - Aqua tint
-    {"#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2", "#b2ebf2"},
-    // June - Light cyan
-    {"#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb"},
-    // July - Tropical mist
-    {"#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea", "#80deea"},
-    // August - Seafoam
-    {"#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff", "#84ffff"},
-    // September - Pale teal
-    {"#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb", "#a7ffeb"},
-    // October - Cool aqua
-    {"#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb", "#b2dfdb"},
-    // November - Soft cyan
-    {"#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc", "#b3e5fc"},
-    // December - Winter blue
-    {"#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb", "#bbdefb"}
+  // Lakeshore monthly colors - cool blue gradient through the year (single color per month)
+  private static final String[] LAKESHORE_MONTHLY_COLORS = {
+    "#e3f2fd", // January - Icy blue
+    "#e1f5fe", // February - Pale azure
+    "#b3e5fc", // March - Soft sky
+    "#e0f7fa", // April - Spring mist
+    "#b2ebf2", // May - Aqua tint
+    "#b2dfdb", // June - Light cyan
+    "#80deea", // July - Tropical mist
+    "#84ffff", // August - Seafoam
+    "#a7ffeb", // September - Pale teal
+    "#b2dfdb", // October - Cool aqua
+    "#b3e5fc", // November - Soft cyan
+    "#bbdefb"  // December - Winter blue
   };
 
-  // Sunset Glow monthly colors - warm pastel peach/pink/coral tones
-  private static final String[][] SUNSET_MONTHLY_COLORS = {
-    // January - Blush pink
-    {"#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec", "#fce4ec"},
-    // February - Rose tint
-    {"#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0"},
-    // March - Soft coral
-    {"#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2"},
-    // April - Pale peach
-    {"#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc", "#ffccbc"},
-    // May - Light apricot
-    {"#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2", "#ffe0b2"},
-    // June - Cream gold
-    {"#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1", "#fff8e1"},
-    // July - Warm butter
-    {"#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3", "#ffecb3"},
-    // August - Soft amber
-    {"#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082", "#ffe082"},
-    // September - Mellow peach
-    {"#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180", "#ffd180"},
-    // October - Light terracotta
-    {"#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91", "#ffab91"},
-    // November - Dusty rose
-    {"#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2", "#ffcdd2"},
-    // December - Winter blush
-    {"#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0", "#f8bbd0"}
+  // Sunset Glow monthly colors - warm pastel peach/pink/coral tones (single color per month)
+  private static final String[] SUNSET_MONTHLY_COLORS = {
+    "#fce4ec", // January - Blush pink
+    "#f8bbd0", // February - Rose tint
+    "#ffcdd2", // March - Soft coral
+    "#ffccbc", // April - Pale peach
+    "#ffe0b2", // May - Light apricot
+    "#fff8e1", // June - Cream gold
+    "#ffecb3", // July - Warm butter
+    "#ffe082", // August - Soft amber
+    "#ffd180", // September - Mellow peach
+    "#ffab91", // October - Light terracotta
+    "#ffcdd2", // November - Dusty rose
+    "#f8bbd0"  // December - Winter blush
   };
 
-  // Forest Floor monthly colors - light sage and mint tones
-  private static final String[][] FOREST_MONTHLY_COLORS = {
-    // January - Frost sage
-    {"#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9"},
-    // February - Pale mint
-    {"#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9"},
-    // March - Spring bud
-    {"#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8"},
-    // April - Fresh leaf
-    {"#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5", "#c5e1a5"},
-    // May - Soft fern
-    {"#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581", "#aed581"},
-    // June - Light moss
-    {"#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9", "#c8e6c9"},
-    // July - Meadow mist
-    {"#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7", "#a5d6a7"},
-    // August - Summer sage
-    {"#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca", "#b9f6ca"},
-    // September - Pale olive
-    {"#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8", "#dcedc8"},
-    // October - Light cedar
-    {"#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8", "#d7ccc8"},
-    // November - Soft birch
-    {"#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9", "#efebe9"},
-    // December - Winter pine
-    {"#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9", "#e8f5e9"}
+  // Forest Floor monthly colors - light sage and mint tones (single color per month)
+  private static final String[] FOREST_MONTHLY_COLORS = {
+    "#e8f5e9", // January - Frost sage
+    "#c8e6c9", // February - Pale mint
+    "#dcedc8", // March - Spring bud
+    "#c5e1a5", // April - Fresh leaf
+    "#aed581", // May - Soft fern
+    "#c8e6c9", // June - Light moss
+    "#a5d6a7", // July - Meadow mist
+    "#b9f6ca", // August - Summer sage
+    "#dcedc8", // September - Pale olive
+    "#d7ccc8", // October - Light cedar
+    "#efebe9", // November - Soft birch
+    "#e8f5e9"  // December - Winter pine
   };
+
+  // Map theme names to their color arrays for DRY weekend color lookup
+  private static final Map<String, Object> WEEKEND_THEME_COLORS = new HashMap<>();
+
+  static {
+    WEEKEND_THEME_COLORS.put("vermontWeekends", VERMONT_MONTHLY_COLORS);
+    WEEKEND_THEME_COLORS.put("lakeshoreWeekends", LAKESHORE_MONTHLY_COLORS);
+    WEEKEND_THEME_COLORS.put("sunsetWeekends", SUNSET_MONTHLY_COLORS);
+    WEEKEND_THEME_COLORS.put("forestWeekends", FOREST_MONTHLY_COLORS);
+  }
 
   static {
     // Default theme
-    THEMES.put("default", new ThemeColors(
+    THEMES.put(DEFAULT_THEME, new ThemeColors(
       "#000000", // text
       "#ffffff", // background
       "#f0f0f0", // weekend background
@@ -828,153 +944,54 @@ public class CalendarRenderingService {
     }
   }
 
-  // New grid layout (12 rows x 31 columns)
+  // Grid layout modes
+  private static final boolean LAYOUT_FIXED_GRID = false;  // 12 rows x 31 columns
+  private static final boolean LAYOUT_WEEKDAY_GRID = true; // 12 rows x 37 columns, weekday-aligned
+
+  // Fixed grid layout (12 rows x 31 columns)
   private String generateGridCalendarSVG(CalendarConfig config) {
-    ThemeColors theme = THEMES.getOrDefault(config.theme, THEMES.get("default"));
-
-    int year = config.year;
-    int cellWidth = config.compactMode ? 40 : 50;
-    int cellHeight = config.compactMode ? 60 : 75;
-    int headerHeight = 100;
-    int monthLabelWidth = cellWidth; // First column for month names
-
-    // Grid dimensions: 32 columns (1 for month name + 31 for days) x 12 rows
-    int gridWidth = 32 * cellWidth;
-    int gridHeight = 12 * cellHeight;
-    int svgWidth = gridWidth;
-    int svgHeight = gridHeight + headerHeight;
-
-    StringBuilder svg = new StringBuilder();
-    svg.append(String.format(
-      "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid meet\">%n",
-      svgWidth, svgHeight, svgWidth, svgHeight
-    ));
-
-    // Add styles
-    svg.append("<style>\n");
-    svg.append(String.format(".year-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 80px; font-weight: bold; }%n", config.yearColor != null ? config.yearColor : theme.monthHeader));
-    svg.append(String.format(".month-name { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 20px; font-weight: bold; }%n", config.monthColor != null ? config.monthColor : theme.monthHeader));
-    svg.append(String.format(".day-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 12px; }%n", config.dayTextColor != null ? config.dayTextColor : theme.text));
-    svg.append(String.format(".day-name { fill: %s; font-family: Arial, sans-serif; font-size: 8px; }%n", config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader));
-    svg.append(String.format(".grid-line { stroke: %s; stroke-width: 1; fill: none; }%n", config.gridLineColor));
-    // Use "none" as fallback if weekendBgColor is null to avoid invalid CSS
-    String weekendBg = config.weekendBgColor != null && !config.weekendBgColor.isEmpty()
-        ? config.weekendBgColor
-        : (theme.weekendBackground != null ? theme.weekendBackground : "none");
-    svg.append(String.format(".weekend-bg { fill: %s; }%n", weekendBg));
-    svg.append(String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
-    svg.append(String.format(".custom-date { fill: %s; }%n", config.customDateColor));
-//        svg.append(".today { stroke: #2196f3; stroke-width: 2; fill: none; }%n");
-    svg.append("</style>\n");
-
-    // Add year header - use inline styles for immediate visual update
-    String yearFill = config.yearColor != null ? config.yearColor : theme.monthHeader;
-    svg.append(String.format(
-      "<text x=\"50\" y=\"80\" fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n",
-      yearFill, year
-    ));
-
-    // Generate grid for each month (row)
-    Locale locale = Locale.forLanguageTag(config.locale);
-    for (int monthNum = 1; monthNum <= 12; monthNum++) {
-      YearMonth yearMonth = YearMonth.of(year, monthNum);
-      Month month = Month.of(monthNum);
-      String monthName = month.getDisplayName(TextStyle.SHORT, locale);
-      int daysInMonth = yearMonth.lengthOfMonth();
-
-      int rowY = (monthNum - 1) * cellHeight + headerHeight;
-
-      // Month name in first column
-      int monthX = 5;
-      int monthY = rowY + cellHeight / 2 + 5;
-      String monthFill = config.monthColor != null ? config.monthColor : theme.monthHeader;
-      svg.append(renderMonthName(monthName, monthX, monthY, cellWidth, config.rotateMonthNames, "start", monthFill));
-
-      // Generate cells for each day
-      int weekendIndex = 0; // Track weekend index for Vermont colors
-      for (int day = 1; day <= 31; day++) {
-        int cellX = day * cellWidth;
-        int cellY = rowY;
-
-        // Skip if day doesn't exist in this month
-        if (day > daysInMonth) {
-          // Draw empty cell with grid - use inline styles for immediate visual update
-          if (config.showGrid) {
-            String pdfSafeColor = convertColorForPDF("rgba(255, 255, 255, 0)");
-            svg.append(String.format(
-              "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\" stroke=\"%s\" stroke-width=\"1\"/>%n",
-              cellX, cellY, cellWidth, cellHeight, pdfSafeColor, config.gridLineColor
-            ));
-          }
-          continue;
-        }
-
-        LocalDate date = yearMonth.atDay(day);
-        DayOfWeek dayOfWeek = date.getDayOfWeek();
-        boolean isWeekend = dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY;
-
-        // Increment weekend index for Vermont colors
-        if (isWeekend) {
-          weekendIndex++;
-        }
-
-        // Render day cell content using shared method
-        renderDayCell(svg, cellX, cellY, cellWidth, cellHeight, date, dayOfWeek, isWeekend,
-            monthNum, weekendIndex - 1, locale, config, theme);
-      }
-    }
-
-    // Outer border for the entire grid - use inline styles for immediate visual update
-    if (config.showGrid) {
-      svg.append(String.format(
-        "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"2\"/>%n",
-        cellWidth, headerHeight - 1, cellWidth * 31, cellHeight * 12 + 2, config.gridLineColor
-      ));
-    }
-
-    svg.append("</svg>");
-    return svg.toString();
+    return generateCalendarGridSVG(config, LAYOUT_FIXED_GRID);
   }
 
-  // Weekday aligned grid layout (12 rows x 37 columns - 7 days * 5 weeks + 2 padding)
+  // Weekday aligned grid layout (12 rows x 37 columns)
   private String generateWeekdayGridCalendarSVG(CalendarConfig config) {
-    ThemeColors theme = THEMES.getOrDefault(config.theme, THEMES.get("default"));
+    return generateCalendarGridSVG(config, LAYOUT_WEEKDAY_GRID);
+  }
+
+  /**
+   * Unified calendar grid generator for both fixed and weekday-aligned layouts.
+   *
+   * @param config Calendar configuration
+   * @param weekdayAligned If true, use weekday-aligned layout; if false, use fixed 31-column grid
+   */
+  private String generateCalendarGridSVG(CalendarConfig config, boolean weekdayAligned) {
+    ThemeColors theme = THEMES.getOrDefault(config.theme, THEMES.get(DEFAULT_THEME));
 
     int year = config.year;
     int cellWidth = config.compactMode ? 40 : 50;
     int cellHeight = config.compactMode ? 60 : 75;
     int headerHeight = 100;
-    int totalCols = 37; // 7 days * 5 weeks + 2 extra for months that span 6 weeks
-    int svgWidth = cellWidth * (totalCols + 1) + 20; // Extra column for month labels
-    int svgHeight = cellHeight * 12 + headerHeight + 20;
+
+    // Calculate SVG dimensions based on layout mode
+    int svgWidth, svgHeight;
+    if (weekdayAligned) {
+      int totalCols = 37; // 7 days * 5 weeks + 2 extra for months that span 6 weeks
+      svgWidth = cellWidth * (totalCols + 1) + 20;
+      svgHeight = cellHeight * 12 + headerHeight + 20;
+    } else {
+      svgWidth = 32 * cellWidth;  // 1 for month name + 31 for days
+      svgHeight = 12 * cellHeight + headerHeight;
+    }
 
     StringBuilder svg = new StringBuilder();
-    svg.append(String.format(
-      "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid meet\">%n",
-      svgWidth, svgHeight, svgWidth, svgHeight
-    ));
 
-    // Add styles
-    svg.append("<style>\n");
-    svg.append(String.format(".year-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 80px; font-weight: bold; }%n", config.yearColor != null ? config.yearColor : theme.monthHeader));
-    svg.append(String.format(".month-name { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 20px; font-weight: bold; }%n", config.monthColor != null ? config.monthColor : theme.monthHeader));
-    svg.append(String.format(".day-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 12px; }%n", config.dayTextColor != null ? config.dayTextColor : theme.text));
-    svg.append(String.format(".day-name { fill: %s; font-family: Arial, sans-serif; font-size: 8px; }%n", config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader));
-    svg.append(String.format(".grid-line { stroke: %s; stroke-width: 1; fill: none; }%n", config.gridLineColor));
-    // Use "none" as fallback if weekendBgColor is null to avoid invalid CSS
-    String weekendBg = config.weekendBgColor != null && !config.weekendBgColor.isEmpty()
-        ? config.weekendBgColor
-        : (theme.weekendBackground != null ? theme.weekendBackground : "none");
-    svg.append(String.format(".weekend-bg { fill: %s; }%n", weekendBg));
-    svg.append(String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
-    svg.append(String.format(".custom-date { fill: %s; }%n", config.customDateColor));
-//        svg.append(".today { stroke: #2196f3; stroke-width: 2; fill: none; }%n");
-    svg.append("</style>\n");
+    // SVG header
+    appendSvgHeader(svg, svgWidth, svgHeight);
 
-    // Background
-    // svg.append(String.format("<rect width=\"%d\" height=\"%d\" class=\"grid-bg\"/>%n", svgWidth, svgHeight));
+    // Styles
+    appendGridStyles(svg, config, theme);
 
-    // Year title - use inline styles for immediate visual update
+    // Year title
     String yearFill = config.yearColor != null ? config.yearColor : theme.monthHeader;
     svg.append(String.format(
       "<text x=\"50\" y=\"80\" fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n",
@@ -985,47 +1002,109 @@ public class CalendarRenderingService {
     Locale locale = Locale.forLanguageTag(config.locale);
     for (int monthNum = 1; monthNum <= 12; monthNum++) {
       YearMonth yearMonth = YearMonth.of(year, monthNum);
-      LocalDate firstDay = yearMonth.atDay(1);
       int daysInMonth = yearMonth.lengthOfMonth();
+      int rowY = (monthNum - 1) * cellHeight + headerHeight;
 
-      // Calculate starting column based on first day of week (0 = Sunday, 6 = Saturday)
-      int startCol = firstDay.getDayOfWeek().getValue() % 7; // Convert to Sunday=0
-
-      int row = monthNum - 1;
-      int cellY = headerHeight + row * cellHeight;
-
-      // Month label
+      // Month label - position differs by layout
       String monthName = Month.of(monthNum).getDisplayName(TextStyle.SHORT, locale);
-      int monthX = cellWidth - 5;
-      int monthY = cellY + cellHeight / 2 + 4;
       String monthFill = config.monthColor != null ? config.monthColor : theme.monthHeader;
-      svg.append(renderMonthName(monthName, monthX, monthY, cellWidth, config.rotateMonthNames, "end", monthFill));
+      if (weekdayAligned) {
+        svg.append(renderMonthName(monthName, cellWidth - 5, rowY + cellHeight / 2 + 4,
+            cellWidth, config.rotateMonthNames, "end", monthFill));
+      } else {
+        svg.append(renderMonthName(monthName, 5, rowY + cellHeight / 2 + 5,
+            cellWidth, config.rotateMonthNames, "start", monthFill));
+      }
+
+      // Calculate starting column for weekday-aligned layout
+      int startCol = weekdayAligned
+          ? yearMonth.atDay(1).getDayOfWeek().getValue() % 7
+          : 0;
 
       // Generate day cells
-      int weekendIndex = 0; // Track weekend index for Vermont colors
-      for (int day = 1; day <= daysInMonth; day++) {
+      int weekendIndex = 0;
+      int maxDay = weekdayAligned ? daysInMonth : 31;
+
+      for (int day = 1; day <= maxDay; day++) {
+        // Calculate cell position based on layout
+        int cellX, cellY;
+        if (weekdayAligned) {
+          int col = startCol + day - 1;
+          cellX = cellWidth + col * cellWidth;
+          cellY = rowY;
+        } else {
+          cellX = day * cellWidth;
+          cellY = rowY;
+        }
+
+        // Handle days that don't exist in this month (only for fixed grid)
+        if (!weekdayAligned && day > daysInMonth) {
+          renderEmptyCell(svg, cellX, cellY, cellWidth, cellHeight, config);
+          continue;
+        }
+
         LocalDate date = yearMonth.atDay(day);
         DayOfWeek dayOfWeek = date.getDayOfWeek();
         boolean isWeekend = dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY;
 
-        // Increment weekend index for Vermont colors
         if (isWeekend) {
           weekendIndex++;
         }
 
-        int col = startCol + day - 1;
-        int cellX = cellWidth + col * cellWidth;
-
-        // Render day cell content using shared method
         renderDayCell(svg, cellX, cellY, cellWidth, cellHeight, date, dayOfWeek, isWeekend,
             monthNum, weekendIndex - 1, locale, config, theme);
       }
     }
 
-    // No outer border for weekday-grid layout - only cell borders
+    // Outer border (fixed grid only)
+    if (!weekdayAligned && config.showGrid) {
+      svg.append(String.format(
+        "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"2\"/>%n",
+        cellWidth, headerHeight - 1, cellWidth * 31, cellHeight * 12 + 2, config.gridLineColor
+      ));
+    }
 
     svg.append("</svg>");
     return svg.toString();
+  }
+
+  private void appendSvgHeader(StringBuilder svg, int width, int height) {
+    svg.append(String.format(
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" " +
+      "width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid meet\">%n",
+      width, height, width, height
+    ));
+  }
+
+  private void appendGridStyles(StringBuilder svg, CalendarConfig config, ThemeColors theme) {
+    svg.append("<style>\n");
+    svg.append(String.format(".year-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 80px; font-weight: bold; }%n",
+        config.yearColor != null ? config.yearColor : theme.monthHeader));
+    svg.append(String.format(".month-name { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 20px; font-weight: bold; }%n",
+        config.monthColor != null ? config.monthColor : theme.monthHeader));
+    svg.append(String.format(".day-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 12px; }%n",
+        config.dayTextColor != null ? config.dayTextColor : theme.text));
+    svg.append(String.format(".day-name { fill: %s; font-family: Arial, sans-serif; font-size: 8px; }%n",
+        config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader));
+    svg.append(String.format(".grid-line { stroke: %s; stroke-width: 1; fill: none; }%n", config.gridLineColor));
+
+    String weekendBg = config.weekendBgColor != null && !config.weekendBgColor.isEmpty()
+        ? config.weekendBgColor
+        : (theme.weekendBackground != null ? theme.weekendBackground : "none");
+    svg.append(String.format(".weekend-bg { fill: %s; }%n", weekendBg));
+    svg.append(String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
+    svg.append(String.format(".custom-date { fill: %s; }%n", config.customDateColor));
+    svg.append("</style>\n");
+  }
+
+  private void renderEmptyCell(StringBuilder svg, int x, int y, int width, int height, CalendarConfig config) {
+    if (config.showGrid) {
+      String pdfSafeColor = convertColorForPDF("rgba(255, 255, 255, 0)");
+      svg.append(String.format(
+        "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\" stroke=\"%s\" stroke-width=\"1\"/>%n",
+        x, y, width, height, pdfSafeColor, config.gridLineColor
+      ));
+    }
   }
 
   // Check if this is a moon phase transition day
@@ -1409,181 +1488,6 @@ public class CalendarRenderingService {
     wrapper.append("</svg>");
 
     return wrapper.toString();
-  }
-
-  // Get common holidays for a year
-  public Set<String> getHolidays(int year, String country) {
-    Set<String> holidays = new HashSet<>();
-
-    if ("US".equals(country)) {
-      // New Year's Day
-      holidays.add(LocalDate.of(year, 1, 1).toString());
-
-      // Martin Luther King Jr. Day (3rd Monday in January)
-      LocalDate mlkDay = getNthWeekdayOfMonth(year, Month.JANUARY, DayOfWeek.MONDAY, 3);
-      holidays.add(mlkDay.toString());
-
-      // Presidents' Day (3rd Monday in February)
-      LocalDate presidentsDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
-      holidays.add(presidentsDay.toString());
-
-      // Memorial Day (last Monday in May)
-      LocalDate memorialDay = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
-      holidays.add(memorialDay.toString());
-
-      // Independence Day
-      holidays.add(LocalDate.of(year, 7, 4).toString());
-
-      // Labor Day (1st Monday in September)
-      LocalDate laborDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
-      holidays.add(laborDay.toString());
-
-      // Halloween
-      holidays.add(LocalDate.of(year, 10, 31).toString());
-
-      // Veterans Day
-      holidays.add(LocalDate.of(year, 11, 11).toString());
-
-      // Thanksgiving (4th Thursday in November)
-      LocalDate thanksgiving = getNthWeekdayOfMonth(year, Month.NOVEMBER, DayOfWeek.THURSDAY, 4);
-      holidays.add(thanksgiving.toString());
-
-      // Christmas Day
-      holidays.add(LocalDate.of(year, 12, 25).toString());
-    } else if ("JEWISH".equals(country) || "HEBREW".equals(country)) {
-      // Jewish holidays - calculated dynamically from Hebrew calendar
-      holidays.addAll(holidayService.getJewishHolidays(year).keySet());
-    } else if ("CHRISTIAN".equals(country)) {
-      // Christian holidays
-      // Easter Sunday (varies by year - using common dates)
-      LocalDate easter = calculateEasterSunday(year);
-      holidays.add(easter.toString()); // Easter Sunday
-
-      // Good Friday (2 days before Easter)
-      holidays.add(easter.minusDays(2).toString()); // Good Friday
-
-      // Palm Sunday (7 days before Easter)
-      holidays.add(easter.minusDays(7).toString()); // Palm Sunday
-
-      // Ash Wednesday (46 days before Easter)
-      holidays.add(easter.minusDays(46).toString()); // Ash Wednesday
-
-      // Ascension Day (39 days after Easter)
-      holidays.add(easter.plusDays(39).toString()); // Ascension Day
-
-      // Pentecost (49 days after Easter)
-      holidays.add(easter.plusDays(49).toString()); // Pentecost
-
-      // Christmas Day
-      holidays.add(LocalDate.of(year, 12, 25).toString());
-
-      // Christmas Eve
-      holidays.add(LocalDate.of(year, 12, 24).toString());
-
-      // Epiphany
-      holidays.add(LocalDate.of(year, 1, 6).toString());
-
-      // All Saints Day
-      holidays.add(LocalDate.of(year, 11, 1).toString());
-    } else if ("CANADIAN".equals(country)) {
-      // Canadian holidays
-      holidays.add(LocalDate.of(year, 1, 1).toString()); // New Year's Day
-
-      // Family Day - 3rd Monday in February (varies by province)
-      LocalDate familyDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
-      holidays.add(familyDay.toString());
-
-      // Good Friday
-      LocalDate easter = calculateEasterSunday(year);
-      holidays.add(easter.minusDays(2).toString());
-
-      // Victoria Day - Monday before May 25
-      LocalDate victoriaDay = LocalDate.of(year, 5, 25);
-      while (victoriaDay.getDayOfWeek() != DayOfWeek.MONDAY) {
-        victoriaDay = victoriaDay.minusDays(1);
-      }
-      holidays.add(victoriaDay.toString());
-
-      // Canada Day - July 1
-      holidays.add(LocalDate.of(year, 7, 1).toString());
-
-      // Labour Day - 1st Monday in September
-      LocalDate labourDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
-      holidays.add(labourDay.toString());
-
-      // Thanksgiving - 2nd Monday in October
-      LocalDate thanksgiving = getNthWeekdayOfMonth(year, Month.OCTOBER, DayOfWeek.MONDAY, 2);
-      holidays.add(thanksgiving.toString());
-
-      // Remembrance Day - November 11
-      holidays.add(LocalDate.of(year, 11, 11).toString());
-
-      // Christmas Day
-      holidays.add(LocalDate.of(year, 12, 25).toString());
-
-      // Boxing Day
-      holidays.add(LocalDate.of(year, 12, 26).toString());
-    } else if ("UK".equals(country)) {
-      // UK Bank Holidays
-      holidays.add(LocalDate.of(year, 1, 1).toString()); // New Year's Day
-
-      // Good Friday and Easter Monday
-      LocalDate easter = calculateEasterSunday(year);
-      holidays.add(easter.minusDays(2).toString()); // Good Friday
-      holidays.add(easter.plusDays(1).toString()); // Easter Monday
-
-      // Early May Bank Holiday - 1st Monday in May
-      LocalDate earlyMay = getNthWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY, 1);
-      holidays.add(earlyMay.toString());
-
-      // Spring Bank Holiday - Last Monday in May
-      LocalDate springBank = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
-      holidays.add(springBank.toString());
-
-      // Summer Bank Holiday - Last Monday in August
-      LocalDate summerBank = getLastWeekdayOfMonth(year, Month.AUGUST, DayOfWeek.MONDAY);
-      holidays.add(summerBank.toString());
-
-      // Christmas Day
-      holidays.add(LocalDate.of(year, 12, 25).toString());
-
-      // Boxing Day
-      holidays.add(LocalDate.of(year, 12, 26).toString());
-    } else if ("MAJOR_WORLD".equals(country)) {
-      // Major world holidays (combination of various cultures)
-      holidays.add(LocalDate.of(year, 1, 1).toString()); // New Year's Day
-      holidays.add(LocalDate.of(year, 2, 14).toString()); // Valentine's Day
-      holidays.add(LocalDate.of(year, 3, 17).toString()); // St. Patrick's Day
-      holidays.add(LocalDate.of(year, 4, 22).toString()); // Earth Day
-      holidays.add(LocalDate.of(year, 5, 1).toString()); // International Workers' Day
-      holidays.add(LocalDate.of(year, 10, 31).toString()); // Halloween
-      holidays.add(LocalDate.of(year, 12, 25).toString()); // Christmas
-      holidays.add(LocalDate.of(year, 12, 31).toString()); // New Year's Eve
-
-      // Easter
-      LocalDate easter = calculateEasterSunday(year);
-      holidays.add(easter.toString());
-    } else if ("MEXICAN".equals(country)) {
-      // Mexican holidays - calculated dynamically
-      holidays.addAll(holidayService.getMexicanHolidays(year).keySet());
-    } else if ("PAGAN".equals(country) || "WICCAN".equals(country)) {
-      // Pagan/Wiccan holidays (Wheel of the Year)
-      holidays.addAll(holidayService.getPaganHolidays(year).keySet());
-    } else if ("HINDU".equals(country)) {
-      // Hindu holidays
-      holidays.addAll(holidayService.getHinduHolidays(year).keySet());
-    } else if ("ISLAMIC".equals(country) || "MUSLIM".equals(country)) {
-      // Islamic holidays
-      holidays.addAll(holidayService.getIslamicHolidays(year).keySet());
-    } else if ("CHINESE".equals(country) || "LUNAR".equals(country)) {
-      // Chinese/Lunar New Year holidays
-      holidays.addAll(holidayService.getChineseHolidays(year).keySet());
-    } else if ("SECULAR".equals(country) || "FUN".equals(country)) {
-      // Fun/Secular American holidays
-      holidays.addAll(holidayService.getSecularHolidays(year).keySet());
-    }
-
-    return holidays;
   }
 
   // Get holidays with emoji mappings for a year
@@ -2163,35 +2067,15 @@ public class CalendarRenderingService {
       if ("rainbowWeekends".equals(theme)) {
         int hue = (int) ((date.getDayOfMonth() / 30.0) * 360);
         return String.format("hsl(%d, 100%%, 90%%)", hue);
-      } else if ("vermontWeekends".equals(theme)) {
-        // Use Vermont monthly colors for weekends
-        String[] monthColors = VERMONT_MONTHLY_COLORS[monthNum - 1];
-        if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
-          return monthColors[weekendIndex];
-        }
-        return monthColors[0]; // Fallback to first color
-      } else if ("lakeshoreWeekends".equals(theme)) {
-        // Use Lakeshore monthly colors for weekends
-        String[] monthColors = LAKESHORE_MONTHLY_COLORS[monthNum - 1];
-        if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
-          return monthColors[weekendIndex];
-        }
-        return monthColors[0];
-      } else if ("sunsetWeekends".equals(theme)) {
-        // Use Sunset Glow monthly colors for weekends
-        String[] monthColors = SUNSET_MONTHLY_COLORS[monthNum - 1];
-        if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
-          return monthColors[weekendIndex];
-        }
-        return monthColors[0];
-      } else if ("forestWeekends".equals(theme)) {
-        // Use Forest Floor monthly colors for weekends
-        String[] monthColors = FOREST_MONTHLY_COLORS[monthNum - 1];
-        if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
-          return monthColors[weekendIndex];
-        }
-        return monthColors[0];
-      } else if (config.highlightWeekends) {
+      }
+
+      // Check for themed weekend colors (vermont, lakeshore, sunset, forest)
+      String weekendColor = getWeekendThemeColor(theme, monthNum, weekendIndex);
+      if (weekendColor != null) {
+        return weekendColor;
+      }
+
+      if (config.highlightWeekends) {
         // First check if user has specified a custom weekend color
         if (config.weekendBgColor != null && !config.weekendBgColor.isEmpty()) {
           return config.weekendBgColor;
@@ -2205,6 +2089,30 @@ public class CalendarRenderingService {
     }
 
     return "rgba(255, 255, 255, 0)"; // Transparent
+  }
+
+  /**
+   * Gets the weekend color for themed weekends (vermont, lakeshore, sunset, forest).
+   * Returns null if the theme is not a weekend theme.
+   */
+  private static String getWeekendThemeColor(String theme, int monthNum, int weekendIndex) {
+    Object colorData = WEEKEND_THEME_COLORS.get(theme);
+    if (colorData == null) {
+      return null;
+    }
+
+    // Vermont uses 2D array (varying colors within month), others use 1D array (single color per month)
+    if (colorData instanceof String[][] monthlyColors) {
+      String[] monthColors = monthlyColors[monthNum - 1];
+      if (weekendIndex >= 0 && weekendIndex < monthColors.length) {
+        return monthColors[weekendIndex];
+      }
+      return monthColors[0];
+    } else if (colorData instanceof String[] monthColors) {
+      return monthColors[monthNum - 1];
+    }
+
+    return null;
   }
 
   /**
