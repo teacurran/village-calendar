@@ -57,10 +57,12 @@ public class CalendarRenderingService {
   private static final float POINTS_PER_INCH = 72f;
   // ===========================================
 
+  public static final String DEFAULT_THEME = "default";
+
   // Calendar configuration options
   public static class CalendarConfig {
     public int year = LocalDate.now().getYear();
-    public String theme = "default";
+    public String theme = DEFAULT_THEME;
     public String moonDisplayMode = "none"; // "none", "illumination", "phases", "full-only"
     public boolean showWeekNumbers = false;
     public boolean compactMode = false;
@@ -809,7 +811,7 @@ public class CalendarRenderingService {
 
   static {
     // Default theme
-    THEMES.put("default", new ThemeColors(
+    THEMES.put(DEFAULT_THEME, new ThemeColors(
       "#000000", // text
       "#ffffff", // background
       "#f0f0f0", // weekend background
@@ -942,153 +944,54 @@ public class CalendarRenderingService {
     }
   }
 
-  // New grid layout (12 rows x 31 columns)
+  // Grid layout modes
+  private static final boolean LAYOUT_FIXED_GRID = false;  // 12 rows x 31 columns
+  private static final boolean LAYOUT_WEEKDAY_GRID = true; // 12 rows x 37 columns, weekday-aligned
+
+  // Fixed grid layout (12 rows x 31 columns)
   private String generateGridCalendarSVG(CalendarConfig config) {
-    ThemeColors theme = THEMES.getOrDefault(config.theme, THEMES.get("default"));
-
-    int year = config.year;
-    int cellWidth = config.compactMode ? 40 : 50;
-    int cellHeight = config.compactMode ? 60 : 75;
-    int headerHeight = 100;
-    int monthLabelWidth = cellWidth; // First column for month names
-
-    // Grid dimensions: 32 columns (1 for month name + 31 for days) x 12 rows
-    int gridWidth = 32 * cellWidth;
-    int gridHeight = 12 * cellHeight;
-    int svgWidth = gridWidth;
-    int svgHeight = gridHeight + headerHeight;
-
-    StringBuilder svg = new StringBuilder();
-    svg.append(String.format(
-      "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid meet\">%n",
-      svgWidth, svgHeight, svgWidth, svgHeight
-    ));
-
-    // Add styles
-    svg.append("<style>\n");
-    svg.append(String.format(".year-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 80px; font-weight: bold; }%n", config.yearColor != null ? config.yearColor : theme.monthHeader));
-    svg.append(String.format(".month-name { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 20px; font-weight: bold; }%n", config.monthColor != null ? config.monthColor : theme.monthHeader));
-    svg.append(String.format(".day-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 12px; }%n", config.dayTextColor != null ? config.dayTextColor : theme.text));
-    svg.append(String.format(".day-name { fill: %s; font-family: Arial, sans-serif; font-size: 8px; }%n", config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader));
-    svg.append(String.format(".grid-line { stroke: %s; stroke-width: 1; fill: none; }%n", config.gridLineColor));
-    // Use "none" as fallback if weekendBgColor is null to avoid invalid CSS
-    String weekendBg = config.weekendBgColor != null && !config.weekendBgColor.isEmpty()
-        ? config.weekendBgColor
-        : (theme.weekendBackground != null ? theme.weekendBackground : "none");
-    svg.append(String.format(".weekend-bg { fill: %s; }%n", weekendBg));
-    svg.append(String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
-    svg.append(String.format(".custom-date { fill: %s; }%n", config.customDateColor));
-//        svg.append(".today { stroke: #2196f3; stroke-width: 2; fill: none; }%n");
-    svg.append("</style>\n");
-
-    // Add year header - use inline styles for immediate visual update
-    String yearFill = config.yearColor != null ? config.yearColor : theme.monthHeader;
-    svg.append(String.format(
-      "<text x=\"50\" y=\"80\" fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n",
-      yearFill, year
-    ));
-
-    // Generate grid for each month (row)
-    Locale locale = Locale.forLanguageTag(config.locale);
-    for (int monthNum = 1; monthNum <= 12; monthNum++) {
-      YearMonth yearMonth = YearMonth.of(year, monthNum);
-      Month month = Month.of(monthNum);
-      String monthName = month.getDisplayName(TextStyle.SHORT, locale);
-      int daysInMonth = yearMonth.lengthOfMonth();
-
-      int rowY = (monthNum - 1) * cellHeight + headerHeight;
-
-      // Month name in first column
-      int monthX = 5;
-      int monthY = rowY + cellHeight / 2 + 5;
-      String monthFill = config.monthColor != null ? config.monthColor : theme.monthHeader;
-      svg.append(renderMonthName(monthName, monthX, monthY, cellWidth, config.rotateMonthNames, "start", monthFill));
-
-      // Generate cells for each day
-      int weekendIndex = 0; // Track weekend index for Vermont colors
-      for (int day = 1; day <= 31; day++) {
-        int cellX = day * cellWidth;
-        int cellY = rowY;
-
-        // Skip if day doesn't exist in this month
-        if (day > daysInMonth) {
-          // Draw empty cell with grid - use inline styles for immediate visual update
-          if (config.showGrid) {
-            String pdfSafeColor = convertColorForPDF("rgba(255, 255, 255, 0)");
-            svg.append(String.format(
-              "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\" stroke=\"%s\" stroke-width=\"1\"/>%n",
-              cellX, cellY, cellWidth, cellHeight, pdfSafeColor, config.gridLineColor
-            ));
-          }
-          continue;
-        }
-
-        LocalDate date = yearMonth.atDay(day);
-        DayOfWeek dayOfWeek = date.getDayOfWeek();
-        boolean isWeekend = dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY;
-
-        // Increment weekend index for Vermont colors
-        if (isWeekend) {
-          weekendIndex++;
-        }
-
-        // Render day cell content using shared method
-        renderDayCell(svg, cellX, cellY, cellWidth, cellHeight, date, dayOfWeek, isWeekend,
-            monthNum, weekendIndex - 1, locale, config, theme);
-      }
-    }
-
-    // Outer border for the entire grid - use inline styles for immediate visual update
-    if (config.showGrid) {
-      svg.append(String.format(
-        "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"2\"/>%n",
-        cellWidth, headerHeight - 1, cellWidth * 31, cellHeight * 12 + 2, config.gridLineColor
-      ));
-    }
-
-    svg.append("</svg>");
-    return svg.toString();
+    return generateCalendarGridSVG(config, LAYOUT_FIXED_GRID);
   }
 
-  // Weekday aligned grid layout (12 rows x 37 columns - 7 days * 5 weeks + 2 padding)
+  // Weekday aligned grid layout (12 rows x 37 columns)
   private String generateWeekdayGridCalendarSVG(CalendarConfig config) {
-    ThemeColors theme = THEMES.getOrDefault(config.theme, THEMES.get("default"));
+    return generateCalendarGridSVG(config, LAYOUT_WEEKDAY_GRID);
+  }
+
+  /**
+   * Unified calendar grid generator for both fixed and weekday-aligned layouts.
+   *
+   * @param config Calendar configuration
+   * @param weekdayAligned If true, use weekday-aligned layout; if false, use fixed 31-column grid
+   */
+  private String generateCalendarGridSVG(CalendarConfig config, boolean weekdayAligned) {
+    ThemeColors theme = THEMES.getOrDefault(config.theme, THEMES.get(DEFAULT_THEME));
 
     int year = config.year;
     int cellWidth = config.compactMode ? 40 : 50;
     int cellHeight = config.compactMode ? 60 : 75;
     int headerHeight = 100;
-    int totalCols = 37; // 7 days * 5 weeks + 2 extra for months that span 6 weeks
-    int svgWidth = cellWidth * (totalCols + 1) + 20; // Extra column for month labels
-    int svgHeight = cellHeight * 12 + headerHeight + 20;
+
+    // Calculate SVG dimensions based on layout mode
+    int svgWidth, svgHeight;
+    if (weekdayAligned) {
+      int totalCols = 37; // 7 days * 5 weeks + 2 extra for months that span 6 weeks
+      svgWidth = cellWidth * (totalCols + 1) + 20;
+      svgHeight = cellHeight * 12 + headerHeight + 20;
+    } else {
+      svgWidth = 32 * cellWidth;  // 1 for month name + 31 for days
+      svgHeight = 12 * cellHeight + headerHeight;
+    }
 
     StringBuilder svg = new StringBuilder();
-    svg.append(String.format(
-      "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid meet\">%n",
-      svgWidth, svgHeight, svgWidth, svgHeight
-    ));
 
-    // Add styles
-    svg.append("<style>\n");
-    svg.append(String.format(".year-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 80px; font-weight: bold; }%n", config.yearColor != null ? config.yearColor : theme.monthHeader));
-    svg.append(String.format(".month-name { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 20px; font-weight: bold; }%n", config.monthColor != null ? config.monthColor : theme.monthHeader));
-    svg.append(String.format(".day-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 12px; }%n", config.dayTextColor != null ? config.dayTextColor : theme.text));
-    svg.append(String.format(".day-name { fill: %s; font-family: Arial, sans-serif; font-size: 8px; }%n", config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader));
-    svg.append(String.format(".grid-line { stroke: %s; stroke-width: 1; fill: none; }%n", config.gridLineColor));
-    // Use "none" as fallback if weekendBgColor is null to avoid invalid CSS
-    String weekendBg = config.weekendBgColor != null && !config.weekendBgColor.isEmpty()
-        ? config.weekendBgColor
-        : (theme.weekendBackground != null ? theme.weekendBackground : "none");
-    svg.append(String.format(".weekend-bg { fill: %s; }%n", weekendBg));
-    svg.append(String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
-    svg.append(String.format(".custom-date { fill: %s; }%n", config.customDateColor));
-//        svg.append(".today { stroke: #2196f3; stroke-width: 2; fill: none; }%n");
-    svg.append("</style>\n");
+    // SVG header
+    appendSvgHeader(svg, svgWidth, svgHeight);
 
-    // Background
-    // svg.append(String.format("<rect width=\"%d\" height=\"%d\" class=\"grid-bg\"/>%n", svgWidth, svgHeight));
+    // Styles
+    appendGridStyles(svg, config, theme);
 
-    // Year title - use inline styles for immediate visual update
+    // Year title
     String yearFill = config.yearColor != null ? config.yearColor : theme.monthHeader;
     svg.append(String.format(
       "<text x=\"50\" y=\"80\" fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n",
@@ -1099,47 +1002,109 @@ public class CalendarRenderingService {
     Locale locale = Locale.forLanguageTag(config.locale);
     for (int monthNum = 1; monthNum <= 12; monthNum++) {
       YearMonth yearMonth = YearMonth.of(year, monthNum);
-      LocalDate firstDay = yearMonth.atDay(1);
       int daysInMonth = yearMonth.lengthOfMonth();
+      int rowY = (monthNum - 1) * cellHeight + headerHeight;
 
-      // Calculate starting column based on first day of week (0 = Sunday, 6 = Saturday)
-      int startCol = firstDay.getDayOfWeek().getValue() % 7; // Convert to Sunday=0
-
-      int row = monthNum - 1;
-      int cellY = headerHeight + row * cellHeight;
-
-      // Month label
+      // Month label - position differs by layout
       String monthName = Month.of(monthNum).getDisplayName(TextStyle.SHORT, locale);
-      int monthX = cellWidth - 5;
-      int monthY = cellY + cellHeight / 2 + 4;
       String monthFill = config.monthColor != null ? config.monthColor : theme.monthHeader;
-      svg.append(renderMonthName(monthName, monthX, monthY, cellWidth, config.rotateMonthNames, "end", monthFill));
+      if (weekdayAligned) {
+        svg.append(renderMonthName(monthName, cellWidth - 5, rowY + cellHeight / 2 + 4,
+            cellWidth, config.rotateMonthNames, "end", monthFill));
+      } else {
+        svg.append(renderMonthName(monthName, 5, rowY + cellHeight / 2 + 5,
+            cellWidth, config.rotateMonthNames, "start", monthFill));
+      }
+
+      // Calculate starting column for weekday-aligned layout
+      int startCol = weekdayAligned
+          ? yearMonth.atDay(1).getDayOfWeek().getValue() % 7
+          : 0;
 
       // Generate day cells
-      int weekendIndex = 0; // Track weekend index for Vermont colors
-      for (int day = 1; day <= daysInMonth; day++) {
+      int weekendIndex = 0;
+      int maxDay = weekdayAligned ? daysInMonth : 31;
+
+      for (int day = 1; day <= maxDay; day++) {
+        // Calculate cell position based on layout
+        int cellX, cellY;
+        if (weekdayAligned) {
+          int col = startCol + day - 1;
+          cellX = cellWidth + col * cellWidth;
+          cellY = rowY;
+        } else {
+          cellX = day * cellWidth;
+          cellY = rowY;
+        }
+
+        // Handle days that don't exist in this month (only for fixed grid)
+        if (!weekdayAligned && day > daysInMonth) {
+          renderEmptyCell(svg, cellX, cellY, cellWidth, cellHeight, config);
+          continue;
+        }
+
         LocalDate date = yearMonth.atDay(day);
         DayOfWeek dayOfWeek = date.getDayOfWeek();
         boolean isWeekend = dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY;
 
-        // Increment weekend index for Vermont colors
         if (isWeekend) {
           weekendIndex++;
         }
 
-        int col = startCol + day - 1;
-        int cellX = cellWidth + col * cellWidth;
-
-        // Render day cell content using shared method
         renderDayCell(svg, cellX, cellY, cellWidth, cellHeight, date, dayOfWeek, isWeekend,
             monthNum, weekendIndex - 1, locale, config, theme);
       }
     }
 
-    // No outer border for weekday-grid layout - only cell borders
+    // Outer border (fixed grid only)
+    if (!weekdayAligned && config.showGrid) {
+      svg.append(String.format(
+        "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"2\"/>%n",
+        cellWidth, headerHeight - 1, cellWidth * 31, cellHeight * 12 + 2, config.gridLineColor
+      ));
+    }
 
     svg.append("</svg>");
     return svg.toString();
+  }
+
+  private void appendSvgHeader(StringBuilder svg, int width, int height) {
+    svg.append(String.format(
+      "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" " +
+      "width=\"%d\" height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid meet\">%n",
+      width, height, width, height
+    ));
+  }
+
+  private void appendGridStyles(StringBuilder svg, CalendarConfig config, ThemeColors theme) {
+    svg.append("<style>\n");
+    svg.append(String.format(".year-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 80px; font-weight: bold; }%n",
+        config.yearColor != null ? config.yearColor : theme.monthHeader));
+    svg.append(String.format(".month-name { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 20px; font-weight: bold; }%n",
+        config.monthColor != null ? config.monthColor : theme.monthHeader));
+    svg.append(String.format(".day-text { fill: %s; font-family: Helvetica, Arial, sans-serif; font-size: 12px; }%n",
+        config.dayTextColor != null ? config.dayTextColor : theme.text));
+    svg.append(String.format(".day-name { fill: %s; font-family: Arial, sans-serif; font-size: 8px; }%n",
+        config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader));
+    svg.append(String.format(".grid-line { stroke: %s; stroke-width: 1; fill: none; }%n", config.gridLineColor));
+
+    String weekendBg = config.weekendBgColor != null && !config.weekendBgColor.isEmpty()
+        ? config.weekendBgColor
+        : (theme.weekendBackground != null ? theme.weekendBackground : "none");
+    svg.append(String.format(".weekend-bg { fill: %s; }%n", weekendBg));
+    svg.append(String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
+    svg.append(String.format(".custom-date { fill: %s; }%n", config.customDateColor));
+    svg.append("</style>\n");
+  }
+
+  private void renderEmptyCell(StringBuilder svg, int x, int y, int width, int height, CalendarConfig config) {
+    if (config.showGrid) {
+      String pdfSafeColor = convertColorForPDF("rgba(255, 255, 255, 0)");
+      svg.append(String.format(
+        "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\" stroke=\"%s\" stroke-width=\"1\"/>%n",
+        x, y, width, height, pdfSafeColor, config.gridLineColor
+      ));
+    }
   }
 
   // Check if this is a moon phase transition day
