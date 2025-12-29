@@ -1617,7 +1617,7 @@ public class CalendarRenderingService {
 
         // Build the wrapper SVG
         StringBuilder wrapper = new StringBuilder();
-        wrapper.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>%n");
+        wrapper.append(String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?>%n"));
         wrapper.append(
                 String.format(
                         "<svg xmlns=\"http://www.w3.org/2000/svg\""
@@ -1644,7 +1644,7 @@ public class CalendarRenderingService {
                         .replaceFirst("</svg>\\s*$", ""); // Remove closing </svg> tag
 
         wrapper.append(innerContent);
-        wrapper.append("%n  </g>%n");
+        wrapper.append(String.format("%n  </g>%n"));
         wrapper.append("</svg>");
 
         return wrapper.toString();
@@ -1697,7 +1697,7 @@ public class CalendarRenderingService {
 
         // Build the wrapper SVG
         StringBuilder wrapper = new StringBuilder();
-        wrapper.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>%n");
+        wrapper.append(String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?>%n"));
         wrapper.append(
                 String.format(
                         "<svg xmlns=\"http://www.w3.org/2000/svg\""
@@ -1724,7 +1724,7 @@ public class CalendarRenderingService {
                         .replaceFirst("</svg>\\s*$", ""); // Remove closing </svg> tag
 
         wrapper.append(innerContent);
-        wrapper.append("%n  </g>%n");
+        wrapper.append(String.format("%n  </g>%n"));
         wrapper.append("</svg>");
 
         return wrapper.toString();
