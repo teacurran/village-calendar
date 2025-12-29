@@ -61,7 +61,7 @@ const isCalendarItem = (item: any) => {
         typeof item.configuration === "string"
           ? JSON.parse(item.configuration)
           : item.configuration;
-      return config.svgContent || config.year || config.productCode;
+      return config.generatedSvg || config.year || config.productCode;
     } catch {
       // Ignore JSON parse errors
     }
@@ -219,9 +219,7 @@ const loadCalendarSvgs = async () => {
       if (calendarSvgs.value[calendarKey]) continue;
 
       // Check for embedded SVG content (homepage or static product page)
-      if (config.svgContent) {
-        calendarSvgs.value[calendarKey] = config.svgContent;
-      } else if (config.generatedSvg) {
+      if (config.generatedSvg) {
         calendarSvgs.value[calendarKey] = config.generatedSvg;
       }
       // Fallback: Has calendarId - fetch from user calendars endpoint

@@ -288,6 +288,36 @@
         </configuration>
       </plugin>
 
+      <!-- Code formatting and import organization -->
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>2.43.0</version>
+        <configuration>
+          <java>
+            <!-- Google Java Format for consistent style -->
+            <googleJavaFormat>
+              <version>1.19.2</version>
+              <style>AOSP</style>
+              <reflowLongStrings>true</reflowLongStrings>
+            </googleJavaFormat>
+            <!-- Import ordering and cleanup -->
+            <removeUnusedImports/>
+            <importOrder>
+              <order>java,javax,jakarta,org,com,villagecompute</order>
+            </importOrder>
+            <formatAnnotations/>
+          </java>
+          <pom>
+            <sortPom>
+              <expandEmptyElements>false</expandEmptyElements>
+              <sortDependencies>scope,groupId,artifactId</sortDependencies>
+              <sortPlugins>groupId,artifactId</sortPlugins>
+            </sortPom>
+          </pom>
+        </configuration>
+      </plugin>
+
       <plugin>
         <groupId>${quarkus.platform.group-id}</groupId>
         <artifactId>quarkus-maven-plugin</artifactId>

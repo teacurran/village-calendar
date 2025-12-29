@@ -56,7 +56,7 @@ const hasCalendarItems = computed(() => {
           typeof item.configuration === "string"
             ? JSON.parse(item.configuration)
             : item.configuration;
-        return !!(config.svgContent || config.year);
+        return !!(config.generatedSvg || config.year);
       } catch {
         return false;
       }
@@ -89,9 +89,7 @@ const loadCalendarSvgs = async () => {
     const config = getCalendarConfig(item);
     if (config) {
       const calendarKey = item.id;
-      if (config.svgContent) {
-        calendarSvgs.value[calendarKey] = config.svgContent;
-      } else if (config.generatedSvg) {
+      if (config.generatedSvg) {
         calendarSvgs.value[calendarKey] = config.generatedSvg;
       }
     }

@@ -2637,7 +2637,7 @@ const addToCart = async (productCode: string = "print") => {
       name: productInfo.name,
       productCode: productCode,
       configuration: buildFullConfiguration(),
-      svgContent: generatedSVG.value,
+      generatedSvg: generatedSVG.value,
     };
 
     // If user is logged in, try to save the calendar first
@@ -2651,7 +2651,7 @@ const addToCart = async (productCode: string = "print") => {
           body: JSON.stringify({
             name: calendarData.name,
             configuration: calendarData.configuration,
-            generatedSvg: calendarData.svgContent,
+            generatedSvg: calendarData.generatedSvg,
             templateId: route.query.templateId || null,
           }),
         });
@@ -2676,7 +2676,7 @@ const addToCart = async (productCode: string = "print") => {
       calendarData.year,
       1, // quantity
       productCode, // Backend looks up price from product catalog
-      { ...calendarData, calendarId: calendarData.calendarId }, // Full configuration including svgContent and calendarId
+      { ...calendarData, calendarId: calendarData.calendarId }, // Full configuration including generatedSvg and calendarId
     );
 
     toast.add({

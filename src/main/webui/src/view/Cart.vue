@@ -60,10 +60,7 @@ const isCalendarItem = (item: CartItem) => {
   }
   // Has calendar configuration (from static product page or custom calendar)
   const config = getCalendarConfig(item);
-  if (
-    config &&
-    (config.year || config.theme || config.svgContent || config.generatedSvg)
-  ) {
+  if (config && (config.year || config.theme || config.generatedSvg)) {
     return true;
   }
   return false;
@@ -181,9 +178,7 @@ const loadCalendarSvgs = async () => {
 
     if (config) {
       // Priority 1: SVG already stored in configuration (homepage or static product page)
-      if (config.svgContent) {
-        calendarSvgs.value[calendarKey] = config.svgContent;
-      } else if (config.generatedSvg) {
+      if (config.generatedSvg) {
         calendarSvgs.value[calendarKey] = config.generatedSvg;
       }
       // Priority 2: Has rendering config - generate SVG on demand (fallback)

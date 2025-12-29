@@ -1,5 +1,11 @@
 package villagecompute.calendar.api;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.GET;
@@ -9,39 +15,30 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
+
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.services.PDFRenderingService;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 /**
- * API endpoint for static content generation.
- * CI/CD calls these endpoints to download data and assets for static product pages.
+ * API endpoint for static content generation. CI/CD calls these endpoints to download data and
+ * assets for static product pages.
  *
- * Endpoints:
- * - GET /api/static-content/calendars.json - JSON array of all calendar products
- * - GET /api/static-content/calendars/{slug}.svg - SVG for a specific calendar
- * - GET /api/static-content/calendars/{slug}.png - PNG thumbnail for OpenGraph
+ * <p>Endpoints: - GET /api/static-content/calendars.json - JSON array of all calendar products -
+ * GET /api/static-content/calendars/{slug}.svg - SVG for a specific calendar - GET
+ * /api/static-content/calendars/{slug}.png - PNG thumbnail for OpenGraph
  */
 @Path("/static-content")
 public class StaticContentResource {
 
     private static final Logger LOG = Logger.getLogger(StaticContentResource.class);
 
-    @Inject
-    CalendarRenderingService calendarRenderingService;
+    @Inject CalendarRenderingService calendarRenderingService;
 
-    @Inject
-    PDFRenderingService pdfRenderingService;
+    @Inject PDFRenderingService pdfRenderingService;
 
     @ConfigProperty(name = "site.url", defaultValue = "http://localhost:8080")
     String siteUrl;
@@ -51,10 +48,9 @@ public class StaticContentResource {
     private final Map<String, CalendarTemplate> templateCache = new ConcurrentHashMap<>();
 
     /**
-     * Get JSON data for all calendars with slugs.
-     * This is saved to data/calendars.json by CI.
+     * Get JSON data for all calendars with slugs. This is saved to data/calendars.json by CI.
      *
-     * GET /api/static-content/calendars.json
+     * <p>GET /api/static-content/calendars.json
      */
     @GET
     @Path("/calendars.json")
@@ -75,10 +71,20 @@ public class StaticContentResource {
             data.templateId = template.id.toString();
             data.name = template.name;
             data.title = template.name + " " + year + " Calendar";
-            data.description = template.description != null ? template.description : "Custom printable calendar from Village Compute";
-            data.ogDescription = template.ogDescription != null ? template.ogDescription : data.description;
-            data.keywords = template.metaKeywords != null ? template.metaKeywords : "calendar, custom calendar, printable calendar, " + year;
-            data.priceFormatted = String.format("%.2f", (template.priceCents != null ? template.priceCents : 2999) / 100.0);
+            data.description =
+                    template.description != null
+                            ? template.description
+                            : "Custom printable calendar from Village Compute";
+            data.ogDescription =
+                    template.ogDescription != null ? template.ogDescription : data.description;
+            data.keywords =
+                    template.metaKeywords != null
+                            ? template.metaKeywords
+                            : "calendar, custom calendar, printable calendar, " + year;
+            data.priceFormatted =
+                    String.format(
+                            "%.2f",
+                            (template.priceCents != null ? template.priceCents : 2999) / 100.0);
             data.year = year;
             // Include full configuration JSON for cart/customization - frozen at build time
             if (template.configuration != null) {
@@ -94,10 +100,9 @@ public class StaticContentResource {
     }
 
     /**
-     * Get SVG for a specific calendar.
-     * This is saved to static/calendars/{slug}.svg by CI.
+     * Get SVG for a specific calendar. This is saved to static/calendars/{slug}.svg by CI.
      *
-     * GET /api/static-content/calendars/{slug}.svg
+     * <p>GET /api/static-content/calendars/{slug}.svg
      */
     @GET
     @Path("/calendars/{slug}.svg")
@@ -115,11 +120,10 @@ public class StaticContentResource {
     }
 
     /**
-     * Get PNG thumbnail for a specific calendar.
-     * This is saved to static/calendars/{slug}.png by CI.
-     * Used for OpenGraph og:image tags.
+     * Get PNG thumbnail for a specific calendar. This is saved to static/calendars/{slug}.png by
+     * CI. Used for OpenGraph og:image tags.
      *
-     * GET /api/static-content/calendars/{slug}.png
+     * <p>GET /api/static-content/calendars/{slug}.png
      */
     @GET
     @Path("/calendars/{slug}.png")
@@ -143,15 +147,15 @@ public class StaticContentResource {
                     .build();
         } catch (Exception e) {
             LOG.errorf(e, "Failed to generate PNG for calendar: %s", slug);
-            throw new WebApplicationException("Failed to generate PNG", Response.Status.INTERNAL_SERVER_ERROR);
+            throw new WebApplicationException(
+                    "Failed to generate PNG", Response.Status.INTERNAL_SERVER_ERROR);
         }
     }
 
     /**
-     * Get SVG for a specific calendar by template ID.
-     * Used by the cart page to show thumbnails.
+     * Get SVG for a specific calendar by template ID. Used by the cart page to show thumbnails.
      *
-     * GET /api/static-content/template/{templateId}.svg
+     * <p>GET /api/static-content/template/{templateId}.svg
      */
     @GET
     @Path("/template/{templateId}.svg")
@@ -169,10 +173,10 @@ public class StaticContentResource {
     }
 
     /**
-     * Get PNG thumbnail for a specific calendar by template ID.
-     * Used by the cart page to show thumbnails.
+     * Get PNG thumbnail for a specific calendar by template ID. Used by the cart page to show
+     * thumbnails.
      *
-     * GET /api/static-content/template/{templateId}.png
+     * <p>GET /api/static-content/template/{templateId}.png
      */
     @GET
     @Path("/template/{templateId}.png")
@@ -197,13 +201,14 @@ public class StaticContentResource {
                     .build();
         } catch (Exception e) {
             LOG.errorf(e, "Failed to generate PNG for template ID: %s", templateId);
-            throw new WebApplicationException("Failed to generate PNG", Response.Status.INTERNAL_SERVER_ERROR);
+            throw new WebApplicationException(
+                    "Failed to generate PNG", Response.Status.INTERNAL_SERVER_ERROR);
         }
     }
 
     /**
-     * Legacy endpoint - kept for backwards compatibility.
-     * Returns all template data including SVG content.
+     * Legacy endpoint - kept for backwards compatibility. Returns all template data including SVG
+     * content.
      *
      * @deprecated Use /calendars.json, /calendars/{slug}.svg, /calendars/{slug}.png instead
      */
@@ -241,7 +246,8 @@ public class StaticContentResource {
         // Query database
         CalendarTemplate template = CalendarTemplate.findBySlug(slug);
         if (template == null) {
-            throw new WebApplicationException("Calendar not found: " + slug, Response.Status.NOT_FOUND);
+            throw new WebApplicationException(
+                    "Calendar not found: " + slug, Response.Status.NOT_FOUND);
         }
 
         templateCache.put(slug, template);
@@ -257,14 +263,17 @@ public class StaticContentResource {
 
         // Query database
         try {
-            CalendarTemplate template = CalendarTemplate.findById(java.util.UUID.fromString(templateId));
+            CalendarTemplate template =
+                    CalendarTemplate.findById(java.util.UUID.fromString(templateId));
             if (template == null) {
-                throw new WebApplicationException("Template not found: " + templateId, Response.Status.NOT_FOUND);
+                throw new WebApplicationException(
+                        "Template not found: " + templateId, Response.Status.NOT_FOUND);
             }
             templateCache.put(templateId, template);
             return template;
         } catch (IllegalArgumentException e) {
-            throw new WebApplicationException("Invalid template ID: " + templateId, Response.Status.BAD_REQUEST);
+            throw new WebApplicationException(
+                    "Invalid template ID: " + templateId, Response.Status.BAD_REQUEST);
         }
     }
 
@@ -300,8 +309,10 @@ public class StaticContentResource {
         return svgContent;
     }
 
-    private CalendarRenderingService.CalendarConfig buildConfigFromTemplate(CalendarTemplate template, int year) {
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+    private CalendarRenderingService.CalendarConfig buildConfigFromTemplate(
+            CalendarTemplate template, int year) {
+        CalendarRenderingService.CalendarConfig config =
+                new CalendarRenderingService.CalendarConfig();
         config.year = year;
 
         if (template.configuration != null) {
@@ -320,11 +331,20 @@ public class StaticContentResource {
         data.templateId = template.id.toString();
         data.name = template.name;
         data.title = template.name + " " + year + " Calendar";
-        data.description = template.description != null ? template.description : "Custom printable calendar from Village Compute";
-        data.ogDescription = template.ogDescription != null ? template.ogDescription : data.description;
-        data.keywords = template.metaKeywords != null ? template.metaKeywords : "calendar, custom calendar, printable calendar, " + year;
+        data.description =
+                template.description != null
+                        ? template.description
+                        : "Custom printable calendar from Village Compute";
+        data.ogDescription =
+                template.ogDescription != null ? template.ogDescription : data.description;
+        data.keywords =
+                template.metaKeywords != null
+                        ? template.metaKeywords
+                        : "calendar, custom calendar, printable calendar, " + year;
         data.thumbnailUrl = null; // No longer uploading to R2 during API call
-        data.priceFormatted = String.format("%.2f", (template.priceCents != null ? template.priceCents : 2999) / 100.0);
+        data.priceFormatted =
+                String.format(
+                        "%.2f", (template.priceCents != null ? template.priceCents : 2999) / 100.0);
         data.svgContent = svgContent;
         data.year = year;
         data.siteUrl = siteUrl;
@@ -333,8 +353,8 @@ public class StaticContentResource {
     }
 
     /**
-     * JSON data for calendar products (no SVG content - that's separate).
-     * This matches the structure expected by ROQ @DataMapping.
+     * JSON data for calendar products (no SVG content - that's separate). This matches the
+     * structure expected by ROQ @DataMapping.
      */
     public static class CalendarJsonData {
         public String slug;
@@ -351,6 +371,7 @@ public class StaticContentResource {
 
     /**
      * Legacy data transfer object (includes SVG content).
+     *
      * @deprecated Use CalendarJsonData instead
      */
     @Deprecated

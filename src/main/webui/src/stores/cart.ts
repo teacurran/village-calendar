@@ -5,7 +5,6 @@ import { getSessionId } from "@/services/sessionService";
 export interface CalendarConfiguration {
   coverImage?: string;
   customization?: Record<string, unknown>;
-  svgContent?: string;
   generatedSvg?: string;
   calendarId?: string;
   year?: number;

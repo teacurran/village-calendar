@@ -1,52 +1,51 @@
 package villagecompute.calendar.services;
 
-import io.opentelemetry.api.trace.Span;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.jboss.logging.Logger;
-import villagecompute.calendar.data.models.CalendarOrder;
-import villagecompute.calendar.data.models.CalendarOrderItem;
-import villagecompute.calendar.data.models.CalendarUser;
-import villagecompute.calendar.services.jobs.DelayedJobHandler;
-import villagecompute.calendar.services.jobs.OrderCancellationJobHandler;
-import villagecompute.calendar.services.jobs.OrderEmailJobHandler;
-import villagecompute.calendar.services.jobs.ShippingNotificationJobHandler;
-import villagecompute.calendar.data.models.Shipment;
-import villagecompute.calendar.data.models.UserCalendar;
-import villagecompute.calendar.util.OrderNumberGenerator;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.Year;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.jboss.logging.Logger;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import villagecompute.calendar.data.models.CalendarOrder;
+import villagecompute.calendar.data.models.CalendarOrderItem;
+import villagecompute.calendar.data.models.CalendarUser;
+import villagecompute.calendar.data.models.Shipment;
+import villagecompute.calendar.data.models.UserCalendar;
+import villagecompute.calendar.services.jobs.DelayedJobHandler;
+import villagecompute.calendar.services.jobs.OrderCancellationJobHandler;
+import villagecompute.calendar.services.jobs.OrderEmailJobHandler;
+import villagecompute.calendar.services.jobs.ShippingNotificationJobHandler;
+import villagecompute.calendar.util.OrderNumberGenerator;
+
+import io.opentelemetry.api.trace.Span;
+
 /**
- * Service for managing calendar orders.
- * Handles order creation, status updates, and order queries.
+ * Service for managing calendar orders. Handles order creation, status updates, and order queries.
  */
 @ApplicationScoped
 public class OrderService {
 
     private static final Logger LOG = Logger.getLogger(OrderService.class);
 
-    @Inject
-    ShippingService shippingService;
+    @Inject ShippingService shippingService;
 
-    @Inject
-    DelayedJobService delayedJobService;
+    @Inject DelayedJobService delayedJobService;
 
     /**
-     * Create a new order for a calendar.
-     * The order is created in PENDING status and needs payment confirmation.
+     * Create a new order for a calendar. The order is created in PENDING status and needs payment
+     * confirmation.
      *
      * @param user User placing the order
      * @param calendar Calendar being ordered
@@ -57,14 +56,14 @@ public class OrderService {
      */
     @Transactional
     public CalendarOrder createOrder(
-        CalendarUser user,
-        UserCalendar calendar,
-        Integer quantity,
-        BigDecimal unitPrice,
-        com.fasterxml.jackson.databind.JsonNode shippingAddress
-    ) {
-        LOG.infof("Creating order for user %s, calendar %s, quantity %d",
-            user.email, calendar.id, quantity);
+            CalendarUser user,
+            UserCalendar calendar,
+            Integer quantity,
+            BigDecimal unitPrice,
+            com.fasterxml.jackson.databind.JsonNode shippingAddress) {
+        LOG.infof(
+                "Creating order for user %s, calendar %s, quantity %d",
+                user.email, calendar.id, quantity);
 
         // Validate inputs
         if (quantity < 1) {
@@ -105,21 +104,24 @@ public class OrderService {
         // Generate unique order number
         int currentYear = Year.now().getValue();
         long orderCountThisYear = CalendarOrder.countOrdersByYear(currentYear);
-        String orderNumber = OrderNumberGenerator.generateOrderNumber(currentYear, orderCountThisYear);
+        String orderNumber =
+                OrderNumberGenerator.generateOrderNumber(currentYear, orderCountThisYear);
         order.orderNumber = orderNumber;
 
         // Persist the order
         order.persist();
 
-        LOG.infof("Created order %s (number: %s) with total price $%.2f (subtotal: $%.2f, tax: $%.2f, shipping: $%.2f)",
-            order.id, orderNumber, totalPrice, subtotal, tax, shipping);
+        LOG.infof(
+                "Created order %s (number: %s) with total price $%.2f (subtotal: $%.2f, tax: $%.2f,"
+                        + " shipping: $%.2f)",
+                order.id, orderNumber, totalPrice, subtotal, tax, shipping);
 
         return order;
     }
 
     /**
-     * Update order status (admin only).
-     * This method should only be called by authorized admin users.
+     * Update order status (admin only). This method should only be called by authorized admin
+     * users.
      *
      * @param orderId Order ID
      * @param newStatus New status
@@ -169,8 +171,10 @@ public class OrderService {
         // Append notes
         if (notes != null && !notes.isBlank()) {
             String timestamp = Instant.now().toString();
-            String noteEntry = String.format("[%s] Status changed from %s to %s: %s\n",
-                timestamp, oldStatus, newStatus, notes);
+            String noteEntry =
+                    String.format(
+                            "[%s] Status changed from %s to %s: %s\n",
+                            timestamp, oldStatus, newStatus, notes);
             order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
         }
 
@@ -224,9 +228,8 @@ public class OrderService {
     }
 
     /**
-     * Cancel an order.
-     * Only allows cancellation of orders that are not yet in terminal states.
-     * For paid orders, a refund may need to be processed separately via PaymentService (I3.T3).
+     * Cancel an order. Only allows cancellation of orders that are not yet in terminal states. For
+     * paid orders, a refund may need to be processed separately via PaymentService (I3.T3).
      *
      * @param orderId Order ID to cancel
      * @param userId User requesting cancellation (for authorization)
@@ -238,8 +241,10 @@ public class OrderService {
      * @throws IllegalStateException if order cannot be cancelled (already terminal)
      */
     @Transactional
-    public CalendarOrder cancelOrder(UUID orderId, UUID userId, boolean isAdmin, String cancellationReason) {
-        LOG.infof("Cancelling order %s, requested by user %s (admin: %b)", orderId, userId, isAdmin);
+    public CalendarOrder cancelOrder(
+            UUID orderId, UUID userId, boolean isAdmin, String cancellationReason) {
+        LOG.infof(
+                "Cancelling order %s, requested by user %s (admin: %b)", orderId, userId, isAdmin);
 
         // Find the order
         Optional<CalendarOrder> orderOpt = CalendarOrder.<CalendarOrder>findByIdOptional(orderId);
@@ -252,7 +257,9 @@ public class OrderService {
 
         // Authorization check: user must own the order or be an admin
         if (!isAdmin && !order.user.id.equals(userId)) {
-            LOG.errorf("User %s attempted to cancel order %s owned by user %s", userId, orderId, order.user.id);
+            LOG.errorf(
+                    "User %s attempted to cancel order %s owned by user %s",
+                    userId, orderId, order.user.id);
             throw new SecurityException("You are not authorized to cancel this order");
         }
 
@@ -260,8 +267,7 @@ public class OrderService {
         if (order.isTerminal()) {
             LOG.errorf("Cannot cancel terminal order %s (status: %s)", orderId, order.status);
             throw new IllegalStateException(
-                String.format("Cannot cancel order in %s status", order.status)
-            );
+                    String.format("Cannot cancel order in %s status", order.status));
         }
 
         // Validate status transition to CANCELLED
@@ -276,14 +282,20 @@ public class OrderService {
 
         // Add cancellation note
         String timestamp = Instant.now().toString();
-        String noteEntry = String.format("[%s] Order cancelled from status %s. Reason: %s\n",
-            timestamp, oldStatus, cancellationReason != null ? cancellationReason : "No reason provided");
+        String noteEntry =
+                String.format(
+                        "[%s] Order cancelled from status %s. Reason: %s\n",
+                        timestamp,
+                        oldStatus,
+                        cancellationReason != null ? cancellationReason : "No reason provided");
         order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
 
         // Note: Actual Stripe refund processing will be handled by PaymentService in I3.T3
         if (CalendarOrder.STATUS_PAID.equals(oldStatus) && order.stripePaymentIntentId != null) {
-            String refundNote = String.format("[%s] TODO: Process refund via PaymentService for payment intent %s\n",
-                timestamp, order.stripePaymentIntentId);
+            String refundNote =
+                    String.format(
+                            "[%s] TODO: Process refund via PaymentService for payment intent %s\n",
+                            timestamp, order.stripePaymentIntentId);
             order.notes += refundNote;
         }
 
@@ -297,9 +309,8 @@ public class OrderService {
     // ==================== Item Shipping Methods ====================
 
     /**
-     * Mark a single order item as shipped.
-     * For PDF items, this can be done immediately without a physical shipment.
-     * For print items, this typically happens as part of a shipment.
+     * Mark a single order item as shipped. For PDF items, this can be done immediately without a
+     * physical shipment. For print items, this typically happens as part of a shipment.
      *
      * @param itemId Order item ID
      * @return Updated order item
@@ -308,7 +319,8 @@ public class OrderService {
     public CalendarOrderItem markItemAsShipped(UUID itemId) {
         LOG.infof("Marking order item %s as shipped", itemId);
 
-        Optional<CalendarOrderItem> itemOpt = CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
+        Optional<CalendarOrderItem> itemOpt =
+                CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
         if (itemOpt.isEmpty()) {
             throw new IllegalArgumentException("Order item not found: " + itemId);
         }
@@ -334,7 +346,8 @@ public class OrderService {
     public CalendarOrderItem markItemAsDelivered(UUID itemId) {
         LOG.infof("Marking order item %s as delivered", itemId);
 
-        Optional<CalendarOrderItem> itemOpt = CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
+        Optional<CalendarOrderItem> itemOpt =
+                CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
         if (itemOpt.isEmpty()) {
             throw new IllegalArgumentException("Order item not found: " + itemId);
         }
@@ -360,7 +373,8 @@ public class OrderService {
      * @return Created shipment
      */
     @Transactional
-    public Shipment createShipment(UUID orderId, List<UUID> itemIds, String carrier, String trackingNumber) {
+    public Shipment createShipment(
+            UUID orderId, List<UUID> itemIds, String carrier, String trackingNumber) {
         LOG.infof("Creating shipment for order %s with %d items", orderId, itemIds.size());
 
         Optional<CalendarOrder> orderOpt = CalendarOrder.<CalendarOrder>findByIdOptional(orderId);
@@ -382,7 +396,8 @@ public class OrderService {
 
         // Add items to the shipment
         for (UUID itemId : itemIds) {
-            Optional<CalendarOrderItem> itemOpt = CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
+            Optional<CalendarOrderItem> itemOpt =
+                    CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
             if (itemOpt.isPresent()) {
                 CalendarOrderItem item = itemOpt.get();
                 if (item.order.id.equals(orderId)) {
@@ -393,7 +408,8 @@ public class OrderService {
             }
         }
 
-        LOG.infof("Created shipment %s with %d items for order %s",
+        LOG.infof(
+                "Created shipment %s with %d items for order %s",
                 shipment.id, shipment.items.size(), orderId);
 
         return shipment;
@@ -428,8 +444,8 @@ public class OrderService {
     }
 
     /**
-     * Auto-ship all digital (PDF) items in an order.
-     * Call this when an order is paid to immediately mark PDF items as shipped.
+     * Auto-ship all digital (PDF) items in an order. Call this when an order is paid to immediately
+     * mark PDF items as shipped.
      *
      * @param orderId Order ID
      * @return Number of items auto-shipped
@@ -465,8 +481,8 @@ public class OrderService {
     }
 
     /**
-     * Update order status based on item shipping status.
-     * If all items are shipped, mark order as shipped.
+     * Update order status based on item shipping status. If all items are shipped, mark order as
+     * shipped.
      */
     private void updateOrderShippingStatus(CalendarOrder order) {
         // Refresh order to get current items
@@ -476,8 +492,8 @@ public class OrderService {
         boolean anyShipped = false;
 
         for (CalendarOrderItem item : order.items) {
-            if (CalendarOrderItem.STATUS_SHIPPED.equals(item.itemStatus) ||
-                CalendarOrderItem.STATUS_DELIVERED.equals(item.itemStatus)) {
+            if (CalendarOrderItem.STATUS_SHIPPED.equals(item.itemStatus)
+                    || CalendarOrderItem.STATUS_DELIVERED.equals(item.itemStatus)) {
                 anyShipped = true;
             } else if (!CalendarOrderItem.STATUS_CANCELLED.equals(item.itemStatus)) {
                 allShipped = false;
@@ -497,8 +513,8 @@ public class OrderService {
     }
 
     /**
-     * Update order status based on item delivery status.
-     * If all items are delivered, mark order as delivered.
+     * Update order status based on item delivery status. If all items are delivered, mark order as
+     * delivered.
      */
     private void updateOrderDeliveryStatus(CalendarOrder order) {
         // Refresh order to get current items
@@ -507,8 +523,8 @@ public class OrderService {
         boolean allDelivered = true;
 
         for (CalendarOrderItem item : order.items) {
-            if (!CalendarOrderItem.STATUS_DELIVERED.equals(item.itemStatus) &&
-                !CalendarOrderItem.STATUS_CANCELLED.equals(item.itemStatus)) {
+            if (!CalendarOrderItem.STATUS_DELIVERED.equals(item.itemStatus)
+                    && !CalendarOrderItem.STATUS_CANCELLED.equals(item.itemStatus)) {
                 allDelivered = false;
                 break;
             }
@@ -522,9 +538,8 @@ public class OrderService {
     }
 
     /**
-     * Calculate tax for an order.
-     * TODO: Integrate with Stripe Tax API for automated tax calculation.
-     * For MVP, returns zero as a placeholder.
+     * Calculate tax for an order. TODO: Integrate with Stripe Tax API for automated tax
+     * calculation. For MVP, returns zero as a placeholder.
      *
      * @param order Order to calculate tax for
      * @return Tax amount (currently always zero)
@@ -540,8 +555,8 @@ public class OrderService {
     }
 
     /**
-     * Calculate shipping cost for an order.
-     * Delegates to ShippingService for actual rate calculation.
+     * Calculate shipping cost for an order. Delegates to ShippingService for actual rate
+     * calculation.
      *
      * @param order Order to calculate shipping for
      * @return Shipping cost
@@ -551,13 +566,14 @@ public class OrderService {
     }
 
     /**
-     * Enqueue an email job for the specified order.
-     * The job will be processed asynchronously by the DelayedJob worker.
+     * Enqueue an email job for the specified order. The job will be processed asynchronously by the
+     * DelayedJob worker.
      *
      * @param order Order to send email for
      * @param handlerClass The handler class to execute
      */
-    private void enqueueEmailJob(CalendarOrder order, Class<? extends DelayedJobHandler> handlerClass) {
+    private void enqueueEmailJob(
+            CalendarOrder order, Class<? extends DelayedJobHandler> handlerClass) {
         try {
             delayedJobService.enqueue(handlerClass, order.id.toString());
             LOG.infof("Enqueued %s email job for order %s", handlerClass.getSimpleName(), order.id);
@@ -578,33 +594,34 @@ public class OrderService {
     private void validateStatusTransition(String currentStatus, String newStatus) {
         // Define allowed transitions
         // Flow: PENDING -> PAID -> PROCESSING -> PRINTED -> SHIPPED -> DELIVERED
-        boolean isValid = switch (currentStatus) {
-            case CalendarOrder.STATUS_PENDING ->
-                newStatus.equals(CalendarOrder.STATUS_PAID) ||
-                newStatus.equals(CalendarOrder.STATUS_CANCELLED);
-            case CalendarOrder.STATUS_PAID ->
-                newStatus.equals(CalendarOrder.STATUS_PROCESSING) ||
-                newStatus.equals(CalendarOrder.STATUS_PRINTED) ||
-                newStatus.equals(CalendarOrder.STATUS_SHIPPED) ||
-                newStatus.equals(CalendarOrder.STATUS_CANCELLED);
-            case CalendarOrder.STATUS_PROCESSING ->
-                newStatus.equals(CalendarOrder.STATUS_PRINTED) ||
-                newStatus.equals(CalendarOrder.STATUS_SHIPPED) ||
-                newStatus.equals(CalendarOrder.STATUS_CANCELLED);
-            case CalendarOrder.STATUS_PRINTED ->
-                newStatus.equals(CalendarOrder.STATUS_SHIPPED) ||
-                newStatus.equals(CalendarOrder.STATUS_CANCELLED);
-            case CalendarOrder.STATUS_SHIPPED ->
-                newStatus.equals(CalendarOrder.STATUS_DELIVERED);
-            case CalendarOrder.STATUS_DELIVERED, CalendarOrder.STATUS_CANCELLED ->
-                false; // Terminal states - no transitions allowed
-            default -> false;
-        };
+        boolean isValid =
+                switch (currentStatus) {
+                    case CalendarOrder.STATUS_PENDING ->
+                            newStatus.equals(CalendarOrder.STATUS_PAID)
+                                    || newStatus.equals(CalendarOrder.STATUS_CANCELLED);
+                    case CalendarOrder.STATUS_PAID ->
+                            newStatus.equals(CalendarOrder.STATUS_PROCESSING)
+                                    || newStatus.equals(CalendarOrder.STATUS_PRINTED)
+                                    || newStatus.equals(CalendarOrder.STATUS_SHIPPED)
+                                    || newStatus.equals(CalendarOrder.STATUS_CANCELLED);
+                    case CalendarOrder.STATUS_PROCESSING ->
+                            newStatus.equals(CalendarOrder.STATUS_PRINTED)
+                                    || newStatus.equals(CalendarOrder.STATUS_SHIPPED)
+                                    || newStatus.equals(CalendarOrder.STATUS_CANCELLED);
+                    case CalendarOrder.STATUS_PRINTED ->
+                            newStatus.equals(CalendarOrder.STATUS_SHIPPED)
+                                    || newStatus.equals(CalendarOrder.STATUS_CANCELLED);
+                    case CalendarOrder.STATUS_SHIPPED ->
+                            newStatus.equals(CalendarOrder.STATUS_DELIVERED);
+                    case CalendarOrder.STATUS_DELIVERED, CalendarOrder.STATUS_CANCELLED ->
+                            false; // Terminal states - no transitions allowed
+                    default -> false;
+                };
 
         if (!isValid) {
             throw new IllegalStateException(
-                String.format("Invalid status transition from %s to %s", currentStatus, newStatus)
-            );
+                    String.format(
+                            "Invalid status transition from %s to %s", currentStatus, newStatus));
         }
     }
 
@@ -613,8 +630,8 @@ public class OrderService {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Process a completed checkout and create a single order with multiple items.
-     * This is called after Stripe payment is confirmed.
+     * Process a completed checkout and create a single order with multiple items. This is called
+     * after Stripe payment is confirmed.
      *
      * @param paymentIntentId Stripe PaymentIntent ID
      * @param email Customer email
@@ -637,9 +654,9 @@ public class OrderService {
             Double subtotal,
             Double shippingCost,
             Double taxAmount,
-            Double totalAmount
-    ) {
-        LOG.infof("Processing checkout for email %s with %d items, PaymentIntent: %s",
+            Double totalAmount) {
+        LOG.infof(
+                "Processing checkout for email %s with %d items, PaymentIntent: %s",
                 email, items != null ? items.size() : 0, paymentIntentId);
 
         // Find or create user (guest user if not found)
@@ -648,11 +665,13 @@ public class OrderService {
         // Generate order number
         int currentYear = Year.now().getValue();
         long orderCountThisYear = CalendarOrder.countOrdersByYear(currentYear);
-        String orderNumber = OrderNumberGenerator.generateOrderNumber(currentYear, orderCountThisYear);
+        String orderNumber =
+                OrderNumberGenerator.generateOrderNumber(currentYear, orderCountThisYear);
 
         // Convert addresses to JsonNode
         JsonNode shippingAddressJson = objectMapper.valueToTree(shippingAddress);
-        JsonNode billingAddressJson = billingAddress != null ? objectMapper.valueToTree(billingAddress) : null;
+        JsonNode billingAddressJson =
+                billingAddress != null ? objectMapper.valueToTree(billingAddress) : null;
 
         // Create the order
         CalendarOrder order = new CalendarOrder();
@@ -663,7 +682,8 @@ public class OrderService {
         order.billingAddress = billingAddressJson;
         order.stripePaymentIntentId = paymentIntentId;
         order.subtotal = subtotal != null ? BigDecimal.valueOf(subtotal) : BigDecimal.ZERO;
-        order.shippingCost = shippingCost != null ? BigDecimal.valueOf(shippingCost) : BigDecimal.ZERO;
+        order.shippingCost =
+                shippingCost != null ? BigDecimal.valueOf(shippingCost) : BigDecimal.ZERO;
         order.taxAmount = taxAmount != null ? BigDecimal.valueOf(taxAmount) : BigDecimal.ZERO;
         order.totalPrice = totalAmount != null ? BigDecimal.valueOf(totalAmount) : BigDecimal.ZERO;
         order.status = CalendarOrder.STATUS_PAID;
@@ -679,7 +699,8 @@ public class OrderService {
             }
         }
 
-        LOG.infof("Created order %s with %d items for PaymentIntent %s",
+        LOG.infof(
+                "Created order %s with %d items for PaymentIntent %s",
                 orderNumber, order.items.size(), paymentIntentId);
 
         // Enqueue confirmation email
@@ -688,9 +709,7 @@ public class OrderService {
         return orderNumber;
     }
 
-    /**
-     * Overload for backwards compatibility (without billingAddress)
-     */
+    /** Overload for backwards compatibility (without billingAddress) */
     @Transactional
     public String processCheckout(
             String paymentIntentId,
@@ -700,22 +719,39 @@ public class OrderService {
             Double subtotal,
             Double shippingCost,
             Double taxAmount,
-            Double totalAmount
-    ) {
-        return processCheckout(paymentIntentId, email, shippingAddress, null, items,
-                subtotal, shippingCost, taxAmount, totalAmount);
+            Double totalAmount) {
+        return processCheckout(
+                paymentIntentId,
+                email,
+                shippingAddress,
+                null,
+                items,
+                subtotal,
+                shippingCost,
+                taxAmount,
+                totalAmount);
     }
 
-    /**
-     * Create an order item from cart item data
-     */
+    /** Create an order item from cart item data */
     private CalendarOrderItem createOrderItem(CalendarOrder order, Map<String, Object> cartItem) {
         // Extract cart item details
         String templateName = (String) cartItem.get("templateName");
-        Integer year = cartItem.get("year") != null ? ((Number) cartItem.get("year")).intValue() : Year.now().getValue();
-        Integer quantity = cartItem.get("quantity") != null ? ((Number) cartItem.get("quantity")).intValue() : 1;
-        Double unitPrice = cartItem.get("unitPrice") != null ? ((Number) cartItem.get("unitPrice")).doubleValue() : 29.99;
-        Double lineTotal = cartItem.get("lineTotal") != null ? ((Number) cartItem.get("lineTotal")).doubleValue() : unitPrice * quantity;
+        Integer year =
+                cartItem.get("year") != null
+                        ? ((Number) cartItem.get("year")).intValue()
+                        : Year.now().getValue();
+        Integer quantity =
+                cartItem.get("quantity") != null
+                        ? ((Number) cartItem.get("quantity")).intValue()
+                        : 1;
+        Double unitPrice =
+                cartItem.get("unitPrice") != null
+                        ? ((Number) cartItem.get("unitPrice")).doubleValue()
+                        : 29.99;
+        Double lineTotal =
+                cartItem.get("lineTotal") != null
+                        ? ((Number) cartItem.get("lineTotal")).doubleValue()
+                        : unitPrice * quantity;
         String configurationStr = (String) cartItem.get("configuration");
 
         // Determine product type from configuration or template name
@@ -738,7 +774,8 @@ public class OrderService {
         }
 
         // Create a UserCalendar to store the calendar configuration
-        UserCalendar calendar = createCalendarFromConfig(order.user, templateName, year, configurationStr);
+        UserCalendar calendar =
+                createCalendarFromConfig(order.user, templateName, year, configurationStr);
 
         // Create the order item
         CalendarOrderItem item = new CalendarOrderItem();
@@ -763,15 +800,14 @@ public class OrderService {
 
         item.persist();
 
-        LOG.infof("Created order item: %s (%s) x%d @ $%.2f = $%.2f",
+        LOG.infof(
+                "Created order item: %s (%s) x%d @ $%.2f = $%.2f",
                 templateName, productType, quantity, unitPrice, lineTotal);
 
         return item;
     }
 
-    /**
-     * Find existing user by email or create a guest user.
-     */
+    /** Find existing user by email or create a guest user. */
     @Transactional
     public CalendarUser findOrCreateGuestUser(String email, Map<String, Object> addressInfo) {
         // First try to find by email
@@ -793,8 +829,11 @@ public class OrderService {
             String firstName = (String) addressInfo.get("firstName");
             String lastName = (String) addressInfo.get("lastName");
             if (firstName != null || lastName != null) {
-                guestUser.displayName = ((firstName != null ? firstName : "") + " " +
-                        (lastName != null ? lastName : "")).trim();
+                guestUser.displayName =
+                        ((firstName != null ? firstName : "")
+                                        + " "
+                                        + (lastName != null ? lastName : ""))
+                                .trim();
             }
         }
 
@@ -804,15 +843,9 @@ public class OrderService {
         return guestUser;
     }
 
-    /**
-     * Create a UserCalendar from cart item configuration.
-     */
+    /** Create a UserCalendar from cart item configuration. */
     private UserCalendar createCalendarFromConfig(
-            CalendarUser user,
-            String name,
-            Integer year,
-            String configurationStr
-    ) {
+            CalendarUser user, String name, Integer year, String configurationStr) {
         UserCalendar calendar = new UserCalendar();
         calendar.user = user;
         calendar.name = name != null ? name : "Calendar " + year;
@@ -826,9 +859,7 @@ public class OrderService {
                 calendar.configuration = configJson;
 
                 // Extract SVG if embedded in configuration
-                if (configJson.has("svgContent")) {
-                    calendar.generatedSvg = configJson.get("svgContent").asText();
-                } else if (configJson.has("generatedSvg")) {
+                if (configJson.has("generatedSvg")) {
                     calendar.generatedSvg = configJson.get("generatedSvg").asText();
                 }
             } catch (Exception e) {
@@ -847,9 +878,8 @@ public class OrderService {
     }
 
     /**
-     * Find order by order number with items loaded.
-     * Used for secure PDF downloads and order lookup.
-     * 
+     * Find order by order number with items loaded. Used for secure PDF downloads and order lookup.
+     *
      * @param orderNumber The order number to search for
      * @return CalendarOrder if found with items loaded, null otherwise
      */
@@ -858,31 +888,33 @@ public class OrderService {
         if (orderNumber == null || orderNumber.trim().isEmpty()) {
             return null;
         }
-        
+
         try {
             LOG.infof("Looking for order with orderNumber: %s", orderNumber.trim());
-            
+
             // Find order with items eagerly loaded
-            CalendarOrder order = CalendarOrder.find("orderNumber", orderNumber.trim()).firstResult();
-            
+            CalendarOrder order =
+                    CalendarOrder.find("orderNumber", orderNumber.trim()).firstResult();
+
             if (order != null) {
                 // Force load the items to avoid lazy loading issues
                 order.items.size(); // This triggers the lazy loading
                 LOG.infof("Found order %s with %d items", orderNumber, order.items.size());
-                
+
                 // Also load calendar relationships for items
                 for (CalendarOrderItem item : order.items) {
                     if (item.calendar != null) {
                         // Force load calendar.generatedSvg
                         String svg = item.calendar.generatedSvg;
-                        LOG.debugf("Item %s has calendar with SVG: %s", item.id, 
-                                   svg != null ? "yes (" + svg.length() + " chars)" : "no");
+                        LOG.debugf(
+                                "Item %s has calendar with SVG: %s",
+                                item.id, svg != null ? "yes (" + svg.length() + " chars)" : "no");
                     }
                 }
             } else {
                 LOG.warnf("No order found with orderNumber: %s", orderNumber);
             }
-            
+
             return order;
         } catch (Exception e) {
             LOG.errorf(e, "Error finding order by number %s: %s", orderNumber, e.getMessage());
