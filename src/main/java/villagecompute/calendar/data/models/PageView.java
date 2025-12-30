@@ -1,39 +1,39 @@
 package villagecompute.calendar.data.models;
 
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import java.time.Instant;
+import java.util.UUID;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import java.time.Instant;
-import java.util.UUID;
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 
 /**
- * Entity representing analytics tracking for user navigation and behavior analysis.
- * Captures user navigation patterns and behavior for product insights.
+ * Entity representing analytics tracking for user navigation and behavior analysis. Captures user
+ * navigation patterns and behavior for product insights.
  *
  * <p>Supports:
+ *
  * <ul>
- *   <li>User behavior tracking (anonymous and authenticated)</li>
- *   <li>Funnel analysis (template browsing -> customization -> checkout)</li>
- *   <li>Session reconstruction via session_id</li>
- *   <li>Referral source tracking</li>
+ *   <li>User behavior tracking (anonymous and authenticated)
+ *   <li>Funnel analysis (template browsing -> customization -> checkout)
+ *   <li>Session reconstruction via session_id
+ *   <li>Referral source tracking
  * </ul>
  */
 @Entity
 @Table(
-    name = "page_views",
-    indexes = {
-        @Index(name = "idx_page_views_session", columnList = "session_id, created DESC"),
-        @Index(name = "idx_page_views_user", columnList = "user_id, created DESC"),
-        @Index(name = "idx_page_views_path", columnList = "path, created DESC"),
-        @Index(name = "idx_page_views_created", columnList = "created DESC")
-    }
-)
+        name = "page_views",
+        indexes = {
+            @Index(name = "idx_page_views_session", columnList = "session_id, created DESC"),
+            @Index(name = "idx_page_views_user", columnList = "user_id, created DESC"),
+            @Index(name = "idx_page_views_path", columnList = "path, created DESC"),
+            @Index(name = "idx_page_views_created", columnList = "created DESC")
+        })
 public class PageView extends DefaultPanacheEntityWithTimestamps {
 
-    @NotNull
-    @Size(max = 255)
+    @NotNull @Size(max = 255)
     @Column(name = "session_id", nullable = false, length = 255)
     public String sessionId;
 
@@ -41,8 +41,7 @@ public class PageView extends DefaultPanacheEntityWithTimestamps {
     @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_page_views_user"))
     public CalendarUser user;
 
-    @NotNull
-    @Size(max = 500)
+    @NotNull @Size(max = 500)
     @Column(nullable = false, length = 500)
     public String path;
 
@@ -57,8 +56,8 @@ public class PageView extends DefaultPanacheEntityWithTimestamps {
     // Static finder methods (ActiveRecord pattern)
 
     /**
-     * Find all page views for a specific session, ordered by creation time.
-     * Used for session reconstruction and funnel analysis.
+     * Find all page views for a specific session, ordered by creation time. Used for session
+     * reconstruction and funnel analysis.
      *
      * @param sessionId Session identifier
      * @return Query of page views
@@ -68,8 +67,8 @@ public class PageView extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Find all page views for a specific user, ordered by creation time descending.
-     * Used for user behavior tracking.
+     * Find all page views for a specific user, ordered by creation time descending. Used for user
+     * behavior tracking.
      *
      * @param userId User ID
      * @return Query of page views
@@ -79,8 +78,8 @@ public class PageView extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Find all page views for a specific path, ordered by creation time descending.
-     * Used for path analysis and popular pages tracking.
+     * Find all page views for a specific path, ordered by creation time descending. Used for path
+     * analysis and popular pages tracking.
      *
      * @param path URL path (e.g., "/templates", "/calendar/123/edit")
      * @return Query of page views
@@ -90,8 +89,8 @@ public class PageView extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Find page views within a time range, ordered by creation time descending.
-     * Used for time-based analytics queries.
+     * Find page views within a time range, ordered by creation time descending. Used for time-based
+     * analytics queries.
      *
      * @param since Start time (inclusive)
      * @param until End time (exclusive)
@@ -102,8 +101,7 @@ public class PageView extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Find page views for a specific referrer source.
-     * Used for traffic source attribution.
+     * Find page views for a specific referrer source. Used for traffic source attribution.
      *
      * @param referrer HTTP Referer header
      * @return Query of page views
@@ -113,8 +111,7 @@ public class PageView extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Count page views for a specific path within a time range.
-     * Used for analytics dashboards.
+     * Count page views for a specific path within a time range. Used for analytics dashboards.
      *
      * @param path URL path
      * @param since Start time (inclusive)

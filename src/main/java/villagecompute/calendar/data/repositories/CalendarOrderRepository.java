@@ -1,17 +1,19 @@
 package villagecompute.calendar.data.repositories;
 
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
-import jakarta.enterprise.context.ApplicationScoped;
-import villagecompute.calendar.data.models.CalendarOrder;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
+import villagecompute.calendar.data.models.CalendarOrder;
+
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+
 /**
- * Repository for CalendarOrder entities.
- * Provides custom query methods for order management and e-commerce operations.
+ * Repository for CalendarOrder entities. Provides custom query methods for order management and
+ * e-commerce operations.
  */
 @ApplicationScoped
 public class CalendarOrderRepository implements PanacheRepository<CalendarOrder> {
@@ -27,8 +29,8 @@ public class CalendarOrderRepository implements PanacheRepository<CalendarOrder>
     }
 
     /**
-     * Find orders by status, ordered by creation date descending.
-     * This is the required custom query method from the task specification.
+     * Find orders by status, ordered by creation date descending. This is the required custom query
+     * method from the task specification.
      *
      * @param status Order status
      * @return List of orders with the specified status

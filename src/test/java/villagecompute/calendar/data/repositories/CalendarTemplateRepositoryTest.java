@@ -1,34 +1,33 @@
 package villagecompute.calendar.data.repositories;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import villagecompute.calendar.data.models.CalendarTemplate;
-import villagecompute.calendar.data.repositories.TestDataCleaner;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import villagecompute.calendar.data.models.CalendarTemplate;
+
+import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 class CalendarTemplateRepositoryTest {
 
-    @Inject
-    TestDataCleaner testDataCleaner;
+    @Inject TestDataCleaner testDataCleaner;
 
-    @Inject
-    CalendarTemplateRepository repository;
+    @Inject CalendarTemplateRepository repository;
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
-    @Inject
-    jakarta.persistence.EntityManager entityManager;
+    @Inject jakarta.persistence.EntityManager entityManager;
 
     @BeforeEach
     @Transactional
@@ -124,7 +123,8 @@ class CalendarTemplateRepositoryTest {
         assertEquals("Third", activeTemplates.get(2).name);
     }
 
-    private CalendarTemplate createTemplate(String name, boolean isActive, boolean isFeatured, int displayOrder) {
+    private CalendarTemplate createTemplate(
+            String name, boolean isActive, boolean isFeatured, int displayOrder) {
         CalendarTemplate template = new CalendarTemplate();
         template.name = name;
         template.description = "Test description for " + name;

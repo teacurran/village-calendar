@@ -1,18 +1,6 @@
 package villagecompute.calendar.data.models;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validator;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import villagecompute.calendar.data.repositories.CalendarOrderRepository;
-import villagecompute.calendar.data.repositories.CalendarTemplateRepository;
-import villagecompute.calendar.data.repositories.CalendarUserRepository;
-import villagecompute.calendar.data.repositories.TestDataCleaner;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -20,31 +8,40 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import villagecompute.calendar.data.repositories.CalendarOrderRepository;
+import villagecompute.calendar.data.repositories.CalendarTemplateRepository;
+import villagecompute.calendar.data.repositories.CalendarUserRepository;
+import villagecompute.calendar.data.repositories.TestDataCleaner;
+
+import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 class CalendarOrderTest {
 
-    @Inject
-    Validator validator;
+    @Inject Validator validator;
 
-    @Inject
-    TestDataCleaner testDataCleaner;
+    @Inject TestDataCleaner testDataCleaner;
 
-    @Inject
-    CalendarUserRepository calendarUserRepository;
+    @Inject CalendarUserRepository calendarUserRepository;
 
-    @Inject
-    CalendarTemplateRepository templateRepository;
+    @Inject CalendarTemplateRepository templateRepository;
 
-    @Inject
-    CalendarOrderRepository orderRepository;
+    @Inject CalendarOrderRepository orderRepository;
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
-    @Inject
-    jakarta.persistence.EntityManager entityManager;
+    @Inject jakarta.persistence.EntityManager entityManager;
 
     private CalendarUser testUser;
     private UserCalendar testCalendar;
@@ -277,7 +274,8 @@ class CalendarOrderTest {
         entityManager.flush();
 
         // When
-        List<CalendarOrder> pendingOrders = orderRepository.findByStatusOrderByCreatedDesc("PENDING");
+        List<CalendarOrder> pendingOrders =
+                orderRepository.findByStatusOrderByCreatedDesc("PENDING");
 
         // Then
         assertEquals(2, pendingOrders.size());
@@ -334,11 +332,12 @@ class CalendarOrderTest {
         entityManager.flush(); // Flush to persist first
 
         // Manually set old created date using native SQL
-        entityManager.createNativeQuery(
-            "UPDATE calendar_orders SET created = :newCreated WHERE id = :id"
-        ).setParameter("newCreated", yesterday.minus(1, ChronoUnit.DAYS))
-         .setParameter("id", oldOrder.id)
-         .executeUpdate();
+        entityManager
+                .createNativeQuery(
+                        "UPDATE calendar_orders SET created = :newCreated WHERE id = :id")
+                .setParameter("newCreated", yesterday.minus(1, ChronoUnit.DAYS))
+                .setParameter("id", oldOrder.id)
+                .executeUpdate();
         entityManager.flush();
         entityManager.clear(); // Clear persistence context to force reload
 
@@ -547,7 +546,10 @@ class CalendarOrderTest {
         Instant originalUpdated = order.updated;
 
         // Wait to ensure timestamp changes
-        try { Thread.sleep(10); } catch (InterruptedException e) {}
+        try {
+            Thread.sleep(10);
+        } catch (InterruptedException e) {
+        }
 
         // When
         order.quantity = 3;
@@ -724,8 +726,8 @@ class CalendarOrderTest {
 
         // Then
         assertTrue(violations.size() >= 1);
-        boolean hasViolation = violations.stream()
-                .anyMatch(v -> "status".equals(v.getPropertyPath().toString()));
+        boolean hasViolation =
+                violations.stream().anyMatch(v -> "status".equals(v.getPropertyPath().toString()));
         assertTrue(hasViolation);
     }
 
@@ -740,8 +742,12 @@ class CalendarOrderTest {
 
         // Then
         assertTrue(violations.size() >= 1);
-        boolean hasViolation = violations.stream()
-                .anyMatch(v -> "stripePaymentIntentId".equals(v.getPropertyPath().toString()));
+        boolean hasViolation =
+                violations.stream()
+                        .anyMatch(
+                                v ->
+                                        "stripePaymentIntentId"
+                                                .equals(v.getPropertyPath().toString()));
         assertTrue(hasViolation);
     }
 
@@ -756,8 +762,9 @@ class CalendarOrderTest {
 
         // Then
         assertTrue(violations.size() >= 1);
-        boolean hasViolation = violations.stream()
-                .anyMatch(v -> "stripeChargeId".equals(v.getPropertyPath().toString()));
+        boolean hasViolation =
+                violations.stream()
+                        .anyMatch(v -> "stripeChargeId".equals(v.getPropertyPath().toString()));
         assertTrue(hasViolation);
     }
 
@@ -766,7 +773,8 @@ class CalendarOrderTest {
     void testNotes_LongText() {
         // Given - TEXT column should support long text
         CalendarOrder order = createValidOrder();
-        String longNotes = "Customer notes: " + "This is important delivery information. ".repeat(100);
+        String longNotes =
+                "Customer notes: " + "This is important delivery information. ".repeat(100);
         order.notes = longNotes;
         orderRepository.persist(order);
         entityManager.flush();

@@ -1,17 +1,18 @@
 package villagecompute.calendar.data.repositories;
 
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
-import jakarta.enterprise.context.ApplicationScoped;
-import villagecompute.calendar.data.models.CalendarUser;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
+import villagecompute.calendar.data.models.CalendarUser;
+
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+
 /**
- * Repository for CalendarUser entities.
- * Provides custom query methods for OAuth user management.
+ * Repository for CalendarUser entities. Provides custom query methods for OAuth user management.
  */
 @ApplicationScoped
 public class CalendarUserRepository implements PanacheRepository<CalendarUser> {
@@ -27,8 +28,8 @@ public class CalendarUserRepository implements PanacheRepository<CalendarUser> {
     }
 
     /**
-     * Find a user by their OAuth provider and subject (unique identifier).
-     * This is the required custom query method from the task specification.
+     * Find a user by their OAuth provider and subject (unique identifier). This is the required
+     * custom query method from the task specification.
      *
      * @param provider OAuth provider (e.g., "GOOGLE", "FACEBOOK")
      * @param subject OAuth subject (sub claim from JWT)
@@ -70,8 +71,7 @@ public class CalendarUserRepository implements PanacheRepository<CalendarUser> {
     }
 
     /**
-     * Batch load users by their IDs.
-     * Used by DataLoader to prevent N+1 queries.
+     * Batch load users by their IDs. Used by DataLoader to prevent N+1 queries.
      *
      * @param ids List of user IDs
      * @return List of users matching the IDs

@@ -1,14 +1,12 @@
 package villagecompute.calendar.api.graphql.types;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import org.eclipse.microprofile.graphql.Type;
-
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.microprofile.graphql.Type;
+
 /**
- * GraphQL type representing a shopping cart
- * Stub implementation for future e-commerce functionality
+ * GraphQL type representing a shopping cart Stub implementation for future e-commerce functionality
  */
 @Type("Cart")
 public class Cart {
@@ -28,7 +26,13 @@ public class Cart {
         this.items = new ArrayList<>();
     }
 
-    public Cart(String id, Double subtotal, Double taxAmount, Double totalAmount, Integer itemCount, List<CartItem> items) {
+    public Cart(
+            String id,
+            Double subtotal,
+            Double taxAmount,
+            Double totalAmount,
+            Integer itemCount,
+            List<CartItem> items) {
         this.id = id;
         this.subtotal = subtotal;
         this.taxAmount = taxAmount;

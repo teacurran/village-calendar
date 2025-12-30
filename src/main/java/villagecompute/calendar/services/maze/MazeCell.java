@@ -1,8 +1,6 @@
 package villagecompute.calendar.services.maze;
 
-/**
- * Represents a single cell in a maze grid.
- */
+/** Represents a single cell in a maze grid. */
 public class MazeCell {
     public final int x;
     public final int y;

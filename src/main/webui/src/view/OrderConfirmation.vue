@@ -263,7 +263,7 @@ function getItemYear(item: any) {
 // Get SVG content from item for preview
 function getItemSvgContent(item: any) {
   const config = parseItemConfig(item);
-  return config?.svgContent || null;
+  return config?.generatedSvg || null;
 }
 
 // Show calendar preview

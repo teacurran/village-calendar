@@ -1,25 +1,28 @@
 package villagecompute.calendar.services;
 
-import io.quarkus.oidc.UserInfo;
-import io.quarkus.security.identity.SecurityIdentity;
-import io.smallrye.jwt.build.Jwt;
-import io.smallrye.jwt.build.JwtClaimsBuilder;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.eclipse.microprofile.jwt.JsonWebToken;
-import org.jboss.logging.Logger;
-import villagecompute.calendar.data.models.CalendarUser;
-
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.eclipse.microprofile.jwt.JsonWebToken;
+import org.jboss.logging.Logger;
+
+import villagecompute.calendar.data.models.CalendarUser;
+
+import io.quarkus.oidc.UserInfo;
+import io.quarkus.security.identity.SecurityIdentity;
+import io.smallrye.jwt.build.Jwt;
+import io.smallrye.jwt.build.JwtClaimsBuilder;
+
 /**
- * Service for handling OAuth2 authentication and JWT token generation.
- * Manages user creation, login tracking, and JWT issuance for API access.
+ * Service for handling OAuth2 authentication and JWT token generation. Manages user creation, login
+ * tracking, and JWT issuance for API access.
  */
 @ApplicationScoped
 public class AuthenticationService {
@@ -27,17 +30,14 @@ public class AuthenticationService {
     private static final Logger LOG = Logger.getLogger(AuthenticationService.class);
     private static final Duration JWT_LIFESPAN = Duration.ofDays(1); // 24 hours
 
-    @Inject
-    SecurityIdentity securityIdentity;
+    @Inject SecurityIdentity securityIdentity;
 
-    @Inject
-    CalendarService calendarService;
+    @Inject CalendarService calendarService;
 
     /**
-     * Handle OAuth callback after successful authentication with an OAuth provider.
-     * Creates a new user if this is their first login, or updates the last login timestamp
-     * for existing users. If a sessionId is provided, converts guest session calendars to
-     * the authenticated user.
+     * Handle OAuth callback after successful authentication with an OAuth provider. Creates a new
+     * user if this is their first login, or updates the last login timestamp for existing users. If
+     * a sessionId is provided, converts guest session calendars to the authenticated user.
      *
      * @param provider OAuth provider name (e.g., "google", "facebook")
      * @param identity The authenticated security identity from OIDC
@@ -45,7 +45,8 @@ public class AuthenticationService {
      * @return The CalendarUser entity (created or updated)
      */
     @Transactional
-    public CalendarUser handleOAuthCallback(String provider, SecurityIdentity identity, String sessionId) {
+    public CalendarUser handleOAuthCallback(
+            String provider, SecurityIdentity identity, String sessionId) {
         LOG.infof("Handling OAuth callback for provider: %s, sessionId: %s", provider, sessionId);
 
         // Extract user information from the OIDC UserInfo
@@ -70,17 +71,19 @@ public class AuthenticationService {
         }
 
         if (email == null || email.isBlank()) {
-            LOG.errorf("Email not found in UserInfo or SecurityIdentity. UserInfo available: %s", userInfo != null);
+            LOG.errorf(
+                    "Email not found in UserInfo or SecurityIdentity. UserInfo available: %s",
+                    userInfo != null);
             throw new IllegalArgumentException("Email is required from OAuth provider");
         }
 
-        LOG.infof("OAuth user info - subject: %s, email: %s, name: %s", oauthSubject, email, displayName);
+        LOG.infof(
+                "OAuth user info - subject: %s, email: %s, name: %s",
+                oauthSubject, email, displayName);
 
         // Look up existing user by OAuth provider and subject
-        Optional<CalendarUser> existingUser = CalendarUser.findByOAuthSubject(
-            provider.toUpperCase(),
-            oauthSubject
-        );
+        Optional<CalendarUser> existingUser =
+                CalendarUser.findByOAuthSubject(provider.toUpperCase(), oauthSubject);
 
         CalendarUser user;
         if (existingUser.isPresent()) {
@@ -113,12 +116,17 @@ public class AuthenticationService {
         if (sessionId != null && !sessionId.isBlank()) {
             try {
                 int convertedCount = calendarService.convertSessionToUser(sessionId, user);
-                LOG.infof("Converted %d calendars from session %s to user %s",
-                         convertedCount, sessionId, user.email);
+                LOG.infof(
+                        "Converted %d calendars from session %s to user %s",
+                        convertedCount, sessionId, user.email);
             } catch (Exception e) {
                 // Log error but don't fail authentication
-                LOG.errorf(e, "Error converting session %s to user %s. Session calendars will remain unconverted.",
-                          sessionId, user.email);
+                LOG.errorf(
+                        e,
+                        "Error converting session %s to user %s. Session calendars will remain"
+                                + " unconverted.",
+                        sessionId,
+                        user.email);
             }
         }
 
@@ -126,8 +134,8 @@ public class AuthenticationService {
     }
 
     /**
-     * Issue a JWT token for a calendar user.
-     * The JWT contains user claims (sub, email, roles) and is valid for 24 hours.
+     * Issue a JWT token for a calendar user. The JWT contains user claims (sub, email, roles) and
+     * is valid for 24 hours.
      *
      * @param user The calendar user to issue a token for
      * @return JWT token string
@@ -145,13 +153,14 @@ public class AuthenticationService {
         }
 
         // Build JWT with required claims
-        JwtClaimsBuilder claimsBuilder = Jwt.claims()
-            .subject(user.id.toString())  // User ID as subject
-            .issuer("village-calendar")
-            .claim("email", user.email)
-            .claim("name", user.displayName != null ? user.displayName : user.email)
-            .groups(roles)  // Roles for authorization
-            .expiresIn(JWT_LIFESPAN.getSeconds());
+        JwtClaimsBuilder claimsBuilder =
+                Jwt.claims()
+                        .subject(user.id.toString()) // User ID as subject
+                        .issuer("village-calendar")
+                        .claim("email", user.email)
+                        .claim("name", user.displayName != null ? user.displayName : user.email)
+                        .groups(roles) // Roles for authorization
+                        .expiresIn(JWT_LIFESPAN.getSeconds());
 
         String token = claimsBuilder.sign();
 
@@ -160,8 +169,8 @@ public class AuthenticationService {
     }
 
     /**
-     * Get the current authenticated user from the JWT token.
-     * This method is used by GraphQL resolvers to identify the current user.
+     * Get the current authenticated user from the JWT token. This method is used by GraphQL
+     * resolvers to identify the current user.
      *
      * @param jwt The JWT token from the Authorization header
      * @return Optional containing the CalendarUser if found
@@ -182,8 +191,8 @@ public class AuthenticationService {
     }
 
     /**
-     * Validate that the current request has a valid JWT token.
-     * This is mainly used for checking authentication status.
+     * Validate that the current request has a valid JWT token. This is mainly used for checking
+     * authentication status.
      *
      * @return true if the user is authenticated with a valid JWT
      */

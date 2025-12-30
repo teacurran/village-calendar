@@ -1,17 +1,26 @@
 package villagecompute.calendar.api.graphql;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.stripe.exception.StripeException;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+
 import org.eclipse.microprofile.graphql.*;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.stripe.exception.StripeException;
+
 import villagecompute.calendar.api.graphql.inputs.OrderInput;
 import villagecompute.calendar.api.graphql.inputs.OrderStatusUpdateInput;
 import villagecompute.calendar.api.graphql.inputs.PlaceOrderInput;
@@ -24,16 +33,11 @@ import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PaymentService;
 import villagecompute.calendar.services.ProductService;
 import villagecompute.calendar.util.OrderNumberGenerator;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import villagecompute.calendar.util.Roles;
 
 /**
- * GraphQL resolver for order queries and mutations.
- * Handles order creation, payment processing, and order management.
+ * GraphQL resolver for order queries and mutations. Handles order creation, payment processing, and
+ * order management.
  */
 @GraphQLApi
 @ApplicationScoped
@@ -47,43 +51,33 @@ public class OrderGraphQL {
     // Product code constants
     private static final String PRODUCT_CODE_PRINT = "print";
 
-    @Inject
-    JsonWebToken jwt;
+    @Inject JsonWebToken jwt;
 
-    @Inject
-    AuthenticationService authService;
+    @Inject AuthenticationService authService;
 
-    @Inject
-    OrderService orderService;
+    @Inject OrderService orderService;
 
-    @Inject
-    PaymentService paymentService;
+    @Inject PaymentService paymentService;
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
-    @Inject
-    ProductService productService;
+    @Inject ProductService productService;
 
     // ============================================================================
     // QUERIES
     // ============================================================================
 
     /**
-     * Get orders for the authenticated user.
-     * Optionally filter by order status.
+     * Get orders for the authenticated user. Optionally filter by order status.
      *
      * @param status Optional order status filter
      * @return List of user's orders
      */
     @Query("myOrders")
     @Description("Get orders for the authenticated user. Requires authentication.")
-    @RolesAllowed("USER")
+    @RolesAllowed(Roles.USER)
     public List<CalendarOrder> myOrders(
-        @Name("status")
-        @Description("Filter by order status (optional)")
-        String status
-    ) {
+            @Name("status") @Description("Filter by order status (optional)") String status) {
         LOG.debugf("Query: myOrders(status=%s)", status);
 
         // Get current user from JWT
@@ -98,10 +92,10 @@ public class OrderGraphQL {
 
         // Apply status filter if provided
         if (status != null && !status.isEmpty()) {
-            orders = orders.stream()
-                .filter(order -> status.equals(order.status))
-                .toList();
-            LOG.infof("Found %d orders for user %s with status %s", orders.size(), user.email, status);
+            orders = orders.stream().filter(order -> status.equals(order.status)).toList();
+            LOG.infof(
+                    "Found %d orders for user %s with status %s",
+                    orders.size(), user.email, status);
         } else {
             LOG.infof("Found %d orders for user %s (all statuses)", orders.size(), user.email);
         }
@@ -110,26 +104,22 @@ public class OrderGraphQL {
     }
 
     /**
-     * Get orders for a specific user (admin only) with optional status filter.
-     * If userId is provided, requires ADMIN role.
-     * If userId is NOT provided, returns orders for authenticated user.
+     * Get orders for a specific user (admin only) with optional status filter. If userId is
+     * provided, requires ADMIN role. If userId is NOT provided, returns orders for authenticated
+     * user.
      *
      * @param userId User ID to fetch orders for (admin only)
      * @param status Order status filter (optional)
      * @return List of orders
      */
     @Query("orders")
-    @Description("Get orders for a specific user (admin only) with optional status filter. If userId is not provided, returns orders for authenticated user.")
-    @RolesAllowed("USER")
+    @Description(
+            "Get orders for a specific user (admin only) with optional status filter. If userId is"
+                    + " not provided, returns orders for authenticated user.")
+    @RolesAllowed(Roles.USER)
     public List<CalendarOrder> orders(
-        @Name("userId")
-        @Description("User ID to fetch orders for (admin only)")
-        String userId,
-
-        @Name("status")
-        @Description("Filter by order status (optional)")
-        String status
-    ) {
+            @Name("userId") @Description("User ID to fetch orders for (admin only)") String userId,
+            @Name("status") @Description("Filter by order status (optional)") String status) {
         LOG.infof("Query: orders(userId=%s, status=%s)", userId, status);
 
         // Get current user from JWT
@@ -147,9 +137,11 @@ public class OrderGraphQL {
             // Admin access requested - verify admin role
             boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains("ADMIN");
             if (!isAdmin) {
-                LOG.errorf("Non-admin user %s attempted to access orders for userId=%s",
-                    user.email, userId);
-                throw new SecurityException("Unauthorized: ADMIN role required to access other users' orders");
+                LOG.errorf(
+                        "Non-admin user %s attempted to access orders for userId=%s",
+                        user.email, userId);
+                throw new SecurityException(
+                        "Unauthorized: ADMIN role required to access other users' orders");
             }
 
             // Parse the provided user ID
@@ -172,10 +164,10 @@ public class OrderGraphQL {
 
         // Apply status filter if provided
         if (status != null && !status.isEmpty()) {
-            orders = orders.stream()
-                .filter(order -> status.equals(order.status))
-                .toList();
-            LOG.infof("Found %d orders for user %s with status %s", orders.size(), targetUserId, status);
+            orders = orders.stream().filter(order -> status.equals(order.status)).toList();
+            LOG.infof(
+                    "Found %d orders for user %s with status %s",
+                    orders.size(), targetUserId, status);
         } else {
             LOG.infof("Found %d orders for user %s (all statuses)", orders.size(), targetUserId);
         }
@@ -184,21 +176,15 @@ public class OrderGraphQL {
     }
 
     /**
-     * Get a single order by ID.
-     * User must own the order, or be an admin.
+     * Get a single order by ID. User must own the order, or be an admin.
      *
      * @param id Order ID
      * @return Order if found and authorized
      */
     @Query("order")
     @Description("Get a single order by ID. User must own the order or be an admin.")
-    @RolesAllowed("USER")
-    public CalendarOrder order(
-        @Name("id")
-        @Description("Order ID")
-        @NonNull
-        String id
-    ) {
+    @RolesAllowed(Roles.USER)
+    public CalendarOrder order(@Name("id") @Description("Order ID") @NonNull String id) {
         LOG.infof("Query: order(id=%s)", id);
 
         // Get current user
@@ -232,8 +218,7 @@ public class OrderGraphQL {
         boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains("ADMIN");
 
         if (!isOwner && !isAdmin) {
-            LOG.warnf("User %s attempted to access order %s owned by another user",
-                user.email, id);
+            LOG.warnf("User %s attempted to access order %s owned by another user", user.email, id);
             throw new SecurityException("Unauthorized: You don't have access to this order");
         }
 
@@ -241,9 +226,9 @@ public class OrderGraphQL {
     }
 
     /**
-     * Get a single order by order number (e.g., "VC-MB2B-UN2Z").
-     * This is a public query for order confirmation pages - no auth required.
-     * Only returns order if found (does not expose order existence to unauthorized users).
+     * Get a single order by order number (e.g., "VC-MB2B-UN2Z"). This is a public query for order
+     * confirmation pages - no auth required. Only returns order if found (does not expose order
+     * existence to unauthorized users).
      *
      * @param orderNumber Order number (e.g., "VC-MB2B-UN2Z")
      * @return Order if found
@@ -251,11 +236,7 @@ public class OrderGraphQL {
     @Query("orderByNumber")
     @Description("Get a single order by order number. Used for order confirmation pages.")
     public CalendarOrder orderByNumber(
-        @Name("orderNumber")
-        @Description("Order number (e.g., VC-MB2B-UN2Z)")
-        @NonNull
-        String orderNumber
-    ) {
+            @Name("orderNumber") @Description("Order number (e.g., VC-MB2B-UN2Z)") @NonNull String orderNumber) {
         LOG.infof("Query: orderByNumber(orderNumber=%s)", orderNumber);
 
         // Find order by order number
@@ -266,33 +247,29 @@ public class OrderGraphQL {
             return null;
         }
 
-        LOG.infof("Found order %s (id=%s) with %d items", orderNumber, order.id,
-            order.items != null ? order.items.size() : 0);
+        LOG.infof(
+                "Found order %s (id=%s) with %d items",
+                orderNumber, order.id, order.items != null ? order.items.size() : 0);
 
         return order;
     }
 
     /**
-     * Get a single order by order number and UUID (secure lookup).
-     * This is a public query for the order status page - no auth required.
-     * Both the order number AND UUID must match for security (prevents enumeration).
+     * Get a single order by order number and UUID (secure lookup). This is a public query for the
+     * order status page - no auth required. Both the order number AND UUID must match for security
+     * (prevents enumeration).
      *
      * @param orderNumber Order number (e.g., "VC-MB2B-UN2Z")
      * @param orderId Order UUID
      * @return Order if found and both identifiers match
      */
     @Query("orderByNumberAndId")
-    @Description("Get a single order by order number and UUID. Used for secure public order status pages.")
+    @Description(
+            "Get a single order by order number and UUID. Used for secure public order status"
+                    + " pages.")
     public CalendarOrder orderByNumberAndId(
-        @Name("orderNumber")
-        @Description("Order number (e.g., VC-MB2B-UN2Z)")
-        @NonNull
-        String orderNumber,
-        @Name("orderId")
-        @Description("Order UUID")
-        @NonNull
-        String orderId
-    ) {
+            @Name("orderNumber") @Description("Order number (e.g., VC-MB2B-UN2Z)") @NonNull String orderNumber,
+            @Name("orderId") @Description("Order UUID") @NonNull String orderId) {
         LOG.infof("Query: orderByNumberAndId(orderNumber=%s, orderId=%s)", orderNumber, orderId);
 
         // Parse UUID
@@ -314,38 +291,38 @@ public class OrderGraphQL {
 
         // Verify UUID matches (security check to prevent enumeration)
         if (!order.id.equals(orderUuid)) {
-            LOG.warnf("Order UUID mismatch for order number: %s (expected=%s, got=%s)",
-                orderNumber, order.id, orderId);
+            LOG.warnf(
+                    "Order UUID mismatch for order number: %s (expected=%s, got=%s)",
+                    orderNumber, order.id, orderId);
             return null;
         }
 
-        LOG.infof("Found order %s (id=%s) with %d items", orderNumber, order.id,
-            order.items != null ? order.items.size() : 0);
+        LOG.infof(
+                "Found order %s (id=%s) with %d items",
+                orderNumber, order.id, order.items != null ? order.items.size() : 0);
 
         return order;
     }
 
     /**
-     * Get a single order by Stripe checkout session ID.
-     * This is used when returning from Stripe embedded checkout.
-     * Retrieves the session from Stripe to get the orderId from metadata.
+     * Get a single order by Stripe checkout session ID. This is used when returning from Stripe
+     * embedded checkout. Retrieves the session from Stripe to get the orderId from metadata.
      *
      * @param sessionId Stripe checkout session ID
      * @return Order if found
      */
     @Query("orderByStripeSessionId")
-    @Description("Get a single order by Stripe checkout session ID. Used for order confirmation after Stripe redirect.")
+    @Description(
+            "Get a single order by Stripe checkout session ID. Used for order confirmation after"
+                    + " Stripe redirect.")
     public CalendarOrder orderByStripeSessionId(
-        @Name("sessionId")
-        @Description("Stripe checkout session ID")
-        @NonNull
-        String sessionId
-    ) {
+            @Name("sessionId") @Description("Stripe checkout session ID") @NonNull String sessionId) {
         LOG.infof("Query: orderByStripeSessionId(sessionId=%s)", sessionId);
 
         try {
             // Retrieve the session from Stripe
-            com.stripe.model.checkout.Session session = paymentService.getCheckoutSession(sessionId);
+            com.stripe.model.checkout.Session session =
+                    paymentService.getCheckoutSession(sessionId);
 
             if (session == null) {
                 LOG.warnf("Stripe session not found: %s", sessionId);
@@ -384,8 +361,8 @@ public class OrderGraphQL {
     }
 
     /**
-     * Get all orders across all users (admin only).
-     * Supports optional status filter and result limit.
+     * Get all orders across all users (admin only). Supports optional status filter and result
+     * limit.
      *
      * @param status Order status filter (optional)
      * @param limit Maximum number of orders to return
@@ -393,16 +370,11 @@ public class OrderGraphQL {
      */
     @Query("allOrders")
     @Description("Get all orders across all users (admin only). Requires ADMIN role in JWT claims.")
-    @RolesAllowed("ADMIN")
+    @RolesAllowed(Roles.ADMIN)
     public List<CalendarOrder> allOrders(
-        @Name("status")
-        @Description("Filter by order status (optional)")
-        String status,
-
-        @Name("limit")
-        @Description("Maximum number of orders to return (default: 50)")
-        Integer limit
-    ) {
+            @Name("status") @Description("Filter by order status (optional)") String status,
+            @Name("limit") @Description("Maximum number of orders to return (default: 50)")
+                    Integer limit) {
         LOG.infof("Query: allOrders(status=%s, limit=%s)", status, limit);
 
         // Apply limit with default of 50
@@ -418,9 +390,7 @@ public class OrderGraphQL {
             }
         } else {
             // Get all orders with limit
-            orders = CalendarOrder.<CalendarOrder>findAll()
-                .page(0, maxResults)
-                .list();
+            orders = CalendarOrder.<CalendarOrder>findAll().page(0, maxResults).list();
         }
 
         LOG.infof("Returning %d orders (status=%s, limit=%d)", orders.size(), status, maxResults);
@@ -432,25 +402,23 @@ public class OrderGraphQL {
     // ============================================================================
 
     /**
-     * Create a new order and Stripe PaymentIntent.
-     * Returns the order with Stripe client secret for payment processing.
+     * Create a new order and Stripe PaymentIntent. Returns the order with Stripe client secret for
+     * payment processing.
      *
      * @param input Order creation data
      * @return Created order with payment details
      */
     @Mutation("createOrder")
-    @Description("Create a new order and Stripe PaymentIntent. Returns order with clientSecret for payment.")
-    @RolesAllowed("USER")
+    @Description(
+            "Create a new order and Stripe PaymentIntent. Returns order with clientSecret for"
+                    + " payment.")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public CreateOrderResponse createOrder(
-        @Name("input")
-        @Description("Order creation data")
-        @NotNull
-        @Valid
-        OrderInput input
-    ) {
-        LOG.infof("Mutation: createOrder(calendarId=%s, quantity=%d)",
-            input.calendarId, input.quantity);
+            @Name("input") @Description("Order creation data") @NotNull @Valid OrderInput input) {
+        LOG.infof(
+                "Mutation: createOrder(calendarId=%s, quantity=%d)",
+                input.calendarId, input.quantity);
 
         // Get current user
         Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
@@ -470,7 +438,8 @@ public class OrderGraphQL {
             throw new IllegalArgumentException("Invalid calendar ID format");
         }
 
-        Optional<UserCalendar> calendarOpt = UserCalendar.<UserCalendar>findByIdOptional(calendarId);
+        Optional<UserCalendar> calendarOpt =
+                UserCalendar.<UserCalendar>findByIdOptional(calendarId);
         if (calendarOpt.isEmpty()) {
             LOG.errorf("Calendar not found: %s", input.calendarId);
             throw new IllegalArgumentException("Calendar not found");
@@ -480,8 +449,9 @@ public class OrderGraphQL {
 
         // Verify ownership
         if (calendar.user == null || !calendar.user.id.equals(user.id)) {
-            LOG.errorf("User %s attempted to order calendar %s owned by another user",
-                user.email, input.calendarId);
+            LOG.errorf(
+                    "User %s attempted to order calendar %s owned by another user",
+                    user.email, input.calendarId);
             throw new SecurityException("Unauthorized: You don't own this calendar");
         }
 
@@ -489,35 +459,32 @@ public class OrderGraphQL {
         ObjectNode shippingAddressJson = objectMapper.valueToTree(input.shippingAddress);
 
         // Create the order
-        CalendarOrder order = orderService.createOrder(
-            user,
-            calendar,
-            input.quantity,
-            BASE_UNIT_PRICE,
-            shippingAddressJson
-        );
+        CalendarOrder order =
+                orderService.createOrder(
+                        user, calendar, input.quantity, BASE_UNIT_PRICE, shippingAddressJson);
 
         // Create Stripe PaymentIntent with full breakdown for tax reporting
         try {
             // Calculate subtotal (unit price * quantity)
             BigDecimal subtotal = order.unitPrice.multiply(BigDecimal.valueOf(order.quantity));
 
-            Map<String, String> paymentDetails = paymentService.createPaymentIntent(
-                order.totalPrice,
-                "usd",
-                order.id.toString(),
-                subtotal,
-                order.taxAmount,
-                order.shippingCost,
-                order.orderNumber
-            );
+            Map<String, String> paymentDetails =
+                    paymentService.createPaymentIntent(
+                            order.totalPrice,
+                            "usd",
+                            order.id.toString(),
+                            subtotal,
+                            order.taxAmount,
+                            order.shippingCost,
+                            order.orderNumber);
 
             // Update order with Stripe payment intent ID
             order.stripePaymentIntentId = paymentDetails.get("paymentIntentId");
             order.persist();
 
-            LOG.infof("Created order %s with PaymentIntent %s",
-                order.id, order.stripePaymentIntentId);
+            LOG.infof(
+                    "Created order %s with PaymentIntent %s",
+                    order.id, order.stripePaymentIntentId);
 
             // Return response with client secret
             CreateOrderResponse response = new CreateOrderResponse();
@@ -532,28 +499,27 @@ public class OrderGraphQL {
     }
 
     /**
-     * Place an order for printed calendars.
-     * Alternative to createOrder mutation with more explicit input structure.
-     * Returns Stripe PaymentIntent for checkout processing.
+     * Place an order for printed calendars. Alternative to createOrder mutation with more explicit
+     * input structure. Returns Stripe PaymentIntent for checkout processing.
      *
-     * TODO: Implement placeOrder with ProductType support and pricing logic
+     * <p>TODO: Implement placeOrder with ProductType support and pricing logic
      *
      * @param input Order placement data (includes productType)
      * @return Created order with payment details
      */
     @Mutation("placeOrder")
-    @Description("Place an order for printed calendars. Alternative to createOrder with structured input type. Returns PaymentIntent for checkout.")
-    @RolesAllowed("USER")
+    @Description(
+            "Place an order for printed calendars. Alternative to createOrder with structured input"
+                    + " type. Returns PaymentIntent for checkout.")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public CreateOrderResponse placeOrder(
-        @Name("input")
-        @Description("Order placement data")
-        @NotNull
-        @Valid
-        PlaceOrderInput input
-    ) {
-        LOG.infof("Mutation: placeOrder(calendarId=%s, productType=%s, quantity=%d) (STUB IMPLEMENTATION)",
-            input.calendarId, input.productType, input.quantity);
+            @Name("input") @Description("Order placement data") @NotNull @Valid
+                    PlaceOrderInput input) {
+        LOG.infof(
+                "Mutation: placeOrder(calendarId=%s, productType=%s, quantity=%d) (STUB"
+                        + " IMPLEMENTATION)",
+                input.calendarId, input.productType, input.quantity);
 
         // Get current user
         Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
@@ -566,22 +532,25 @@ public class OrderGraphQL {
 
         // TODO: Implement the actual placeOrder logic:
         // 1. Validate calendar ID and verify ownership (similar to createOrder)
-        // 2. Use productType to determine pricing (different prices for WALL_CALENDAR, DESK_CALENDAR, POSTER)
+        // 2. Use productType to determine pricing (different prices for WALL_CALENDAR,
+        // DESK_CALENDAR, POSTER)
         // 3. Create order with product-specific pricing via orderService
         // 4. Create Stripe PaymentIntent via paymentService
         // 5. Return CreateOrderResponse with order and clientSecret
         //
-        // Note: This differs from createOrder by accepting PlaceOrderInput which includes productType field.
+        // Note: This differs from createOrder by accepting PlaceOrderInput which includes
+        // productType field.
         // The productType allows different product formats with different pricing.
 
-        LOG.warnf("placeOrder mutation not yet implemented. Would create order for calendar %s with product type %s",
-            input.calendarId, input.productType);
+        LOG.warnf(
+                "placeOrder mutation not yet implemented. Would create order for calendar %s with"
+                        + " product type %s",
+                input.calendarId, input.productType);
 
         throw new UnsupportedOperationException(
-            "placeOrder mutation not yet implemented. " +
-            "TODO: Implement product-type-specific pricing and order creation. " +
-            "Use createOrder mutation as a temporary alternative."
-        );
+                "placeOrder mutation not yet implemented. "
+                        + "TODO: Implement product-type-specific pricing and order creation. "
+                        + "Use createOrder mutation as a temporary alternative.");
     }
 
     /**
@@ -591,18 +560,15 @@ public class OrderGraphQL {
      * @return Updated order
      */
     @Mutation("updateOrderStatus")
-    @Description("Update order status (admin only). Used to move orders through fulfillment stages.")
-    @RolesAllowed("ADMIN")
+    @Description(
+            "Update order status (admin only). Used to move orders through fulfillment stages.")
+    @RolesAllowed(Roles.ADMIN)
     @Transactional
     public CalendarOrder updateOrderStatus(
-        @Name("input")
-        @Description("Order status update data")
-        @NotNull
-        @Valid
-        OrderStatusUpdateInput input
-    ) {
-        LOG.infof("Mutation: updateOrderStatus(orderId=%s, status=%s)",
-            input.orderId, input.status);
+            @Name("input") @Description("Order status update data") @NotNull @Valid
+                    OrderStatusUpdateInput input) {
+        LOG.infof(
+                "Mutation: updateOrderStatus(orderId=%s, status=%s)", input.orderId, input.status);
 
         // Parse order ID
         UUID orderId;
@@ -618,33 +584,29 @@ public class OrderGraphQL {
     }
 
     /**
-     * Cancel an order and initiate refund.
-     * Requires authentication and order ownership (or admin role).
-     * Can only cancel orders in PENDING or PAID status.
-     * Automatically triggers Stripe refund for paid orders.
+     * Cancel an order and initiate refund. Requires authentication and order ownership (or admin
+     * role). Can only cancel orders in PENDING or PAID status. Automatically triggers Stripe refund
+     * for paid orders.
      *
-     * TODO: Implement Stripe refund integration and order cancellation logic
+     * <p>TODO: Implement Stripe refund integration and order cancellation logic
      *
      * @param orderId Order ID to cancel
      * @param reason Reason for cancellation (optional, stored in notes)
      * @return Cancelled order
      */
     @Mutation("cancelOrder")
-    @Description("Cancel an order and initiate refund. Can only cancel orders in PENDING or PAID status.")
-    @RolesAllowed("USER")
+    @Description(
+            "Cancel an order and initiate refund. Can only cancel orders in PENDING or PAID"
+                    + " status.")
+    @RolesAllowed(Roles.USER)
     @Transactional
     public CalendarOrder cancelOrder(
-        @Name("orderId")
-        @Description("Order ID to cancel")
-        @NonNull
-        String orderId,
-
-        @Name("reason")
-        @Description("Reason for cancellation (optional, stored in notes)")
-        String reason
-    ) {
-        LOG.infof("Mutation: cancelOrder(orderId=%s, reason=%s) (STUB IMPLEMENTATION)",
-            orderId, reason);
+            @Name("orderId") @Description("Order ID to cancel") @NonNull String orderId,
+            @Name("reason") @Description("Reason for cancellation (optional, stored in notes)")
+                    String reason) {
+        LOG.infof(
+                "Mutation: cancelOrder(orderId=%s, reason=%s) (STUB IMPLEMENTATION)",
+                orderId, reason);
 
         // Get current user
         Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
@@ -677,8 +639,9 @@ public class OrderGraphQL {
         boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains("ADMIN");
 
         if (!isOwner && !isAdmin) {
-            LOG.warnf("User %s attempted to cancel order %s owned by another user",
-                user.email, orderId);
+            LOG.warnf(
+                    "User %s attempted to cancel order %s owned by another user",
+                    user.email, orderId);
             throw new SecurityException("Unauthorized: You don't have access to this order");
         }
 
@@ -689,34 +652,35 @@ public class OrderGraphQL {
         // 4. Store cancellation reason in notes field
         // 5. Update order timestamps
 
-        LOG.warnf("Order cancellation not yet implemented. Order %s would be cancelled with reason: %s",
-            orderId, reason);
+        LOG.warnf(
+                "Order cancellation not yet implemented. Order %s would be cancelled with reason:"
+                        + " %s",
+                orderId, reason);
 
         throw new UnsupportedOperationException(
-            "Order cancellation not yet implemented. " +
-            "TODO: Implement Stripe refund integration and order status update to CANCELLED."
-        );
+                "Order cancellation not yet implemented. TODO: Implement Stripe refund integration"
+                        + " and order status update to CANCELLED.");
     }
 
     /**
-     * Create a Stripe Checkout Session for embedded checkout.
-     * This creates an order and returns a client secret for the embedded checkout component.
-     * The checkout session handles payment, shipping address collection, and tax calculation.
+     * Create a Stripe Checkout Session for embedded checkout. This creates an order and returns a
+     * client secret for the embedded checkout component. The checkout session handles payment,
+     * shipping address collection, and tax calculation.
      *
      * @param input Checkout session input
      * @return Checkout session response with clientSecret
      */
     @Mutation("createCheckoutSession")
-    @Description("Create a Stripe Checkout Session for embedded checkout. Returns clientSecret for Stripe embedded checkout component.")
+    @Description(
+            "Create a Stripe Checkout Session for embedded checkout. Returns clientSecret for"
+                    + " Stripe embedded checkout component.")
     @Transactional
     public CheckoutSessionResponse createCheckoutSession(
-        @Name("input")
-        @Description("Checkout session input")
-        @NotNull
-        @Valid
-        CheckoutSessionInput input
-    ) {
-        LOG.infof("Mutation: createCheckoutSession(cartId=%s, email=%s)", input.cartId, input.customerEmail);
+            @Name("input") @Description("Checkout session input") @NotNull @Valid
+                    CheckoutSessionInput input) {
+        LOG.infof(
+                "Mutation: createCheckoutSession(cartId=%s, email=%s)",
+                input.cartId, input.customerEmail);
 
         try {
             // Get cart items and create line items
@@ -731,17 +695,21 @@ public class OrderGraphQL {
                         unitAmountCents = Math.round(item.unitPrice * 100);
                     } else {
                         // Look up price from product catalog
-                        String productCode = item.productCode != null ? item.productCode : PRODUCT_CODE_PRINT;
+                        String productCode =
+                                item.productCode != null ? item.productCode : PRODUCT_CODE_PRINT;
                         BigDecimal price = productService.getPrice(productCode);
                         unitAmountCents = price.multiply(BigDecimal.valueOf(100)).longValue();
-                        LOG.infof("Using product catalog price for '%s': $%.2f", productCode, price);
+                        LOG.infof(
+                                "Using product catalog price for '%s': $%.2f", productCode, price);
                     }
-                    lineItems.add(new PaymentService.CheckoutLineItem(
-                        item.name,
-                        item.description != null ? item.description : "Calendar " + item.year,
-                        unitAmountCents,
-                        item.quantity
-                    ));
+                    lineItems.add(
+                            new PaymentService.CheckoutLineItem(
+                                    item.name,
+                                    item.description != null
+                                            ? item.description
+                                            : "Calendar " + item.year,
+                                    unitAmountCents,
+                                    item.quantity));
                 }
             }
 
@@ -764,10 +732,16 @@ public class OrderGraphQL {
             order.quantity = lineItems.stream().mapToInt(i -> (int) i.quantity).sum();
 
             // Calculate totals from line items
-            BigDecimal subtotal = lineItems.stream()
-                .map(i -> BigDecimal.valueOf(i.unitAmountCents * i.quantity).divide(BigDecimal.valueOf(100)))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-            order.unitPrice = subtotal.divide(BigDecimal.valueOf(order.quantity), 2, java.math.RoundingMode.HALF_UP);
+            BigDecimal subtotal =
+                    lineItems.stream()
+                            .map(
+                                    i ->
+                                            BigDecimal.valueOf(i.unitAmountCents * i.quantity)
+                                                    .divide(BigDecimal.valueOf(100)))
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+            order.unitPrice =
+                    subtotal.divide(
+                            BigDecimal.valueOf(order.quantity), 2, java.math.RoundingMode.HALF_UP);
             order.subtotal = subtotal;
             order.totalPrice = subtotal; // Will be updated with tax/shipping from Stripe
 
@@ -784,13 +758,20 @@ public class OrderGraphQL {
                     orderItem.order = order;
 
                     // Determine product type from productCode
-                    String productCode = itemInput.productCode != null ? itemInput.productCode : PRODUCT_CODE_PRINT;
-                    orderItem.productType = "pdf".equalsIgnoreCase(productCode)
-                        ? CalendarOrderItem.TYPE_PDF
-                        : CalendarOrderItem.TYPE_PRINT;
+                    String productCode =
+                            itemInput.productCode != null
+                                    ? itemInput.productCode
+                                    : PRODUCT_CODE_PRINT;
+                    orderItem.productType =
+                            "pdf".equalsIgnoreCase(productCode)
+                                    ? CalendarOrderItem.TYPE_PDF
+                                    : CalendarOrderItem.TYPE_PRINT;
 
                     orderItem.productName = itemInput.name;
-                    orderItem.setYear(itemInput.year != null ? itemInput.year : java.time.Year.now().getValue());
+                    orderItem.setYear(
+                            itemInput.year != null
+                                    ? itemInput.year
+                                    : java.time.Year.now().getValue());
                     orderItem.quantity = itemInput.quantity != null ? itemInput.quantity : 1;
 
                     // Get unit price
@@ -806,7 +787,8 @@ public class OrderGraphQL {
                     // Parse and store configuration
                     if (itemInput.configuration != null && !itemInput.configuration.isEmpty()) {
                         try {
-                            orderItem.configuration = objectMapper.readTree(itemInput.configuration);
+                            orderItem.configuration =
+                                    objectMapper.readTree(itemInput.configuration);
                         } catch (Exception e) {
                             LOG.warnf("Failed to parse item configuration: %s", e.getMessage());
                         }
@@ -816,33 +798,42 @@ public class OrderGraphQL {
                     orderItem.persist();
                     order.items.add(orderItem);
 
-                    LOG.infof("Created order item: %s (%s) x%d @ $%.2f",
-                        orderItem.productName, orderItem.productType, orderItem.quantity, orderItem.unitPrice);
+                    LOG.infof(
+                            "Created order item: %s (%s) x%d @ $%.2f",
+                            orderItem.productName,
+                            orderItem.productType,
+                            orderItem.quantity,
+                            orderItem.unitPrice);
                 }
             }
 
             // Determine if shipping is required (any print products)
-            boolean shippingRequired = input.items != null && input.items.stream()
-                .anyMatch(item -> PRODUCT_CODE_PRINT.equals(item.productCode));
+            boolean shippingRequired =
+                    input.items != null
+                            && input.items.stream()
+                                    .anyMatch(item -> PRODUCT_CODE_PRINT.equals(item.productCode));
 
             // Build success/cancel URLs
-            String baseUrl = input.returnUrl != null ? input.returnUrl : "https://villagecompute.com";
+            String baseUrl =
+                    input.returnUrl != null ? input.returnUrl : "https://villagecompute.com";
             String successUrl = baseUrl + "/order-confirmation";
 
             // Create checkout session
-            Map<String, String> sessionDetails = paymentService.createCheckoutSession(
-                order.id.toString(),
-                order.orderNumber,
-                lineItems,
-                input.customerEmail,
-                successUrl,
-                baseUrl,
-                shippingRequired
-            );
+            Map<String, String> sessionDetails =
+                    paymentService.createCheckoutSession(
+                            order.id.toString(),
+                            order.orderNumber,
+                            lineItems,
+                            input.customerEmail,
+                            successUrl,
+                            baseUrl,
+                            shippingRequired);
 
             // Update order with session ID
-            order.notes = String.format("[%s] Checkout session created: %s\n",
-                java.time.Instant.now(), sessionDetails.get("sessionId"));
+            order.notes =
+                    String.format(
+                            "[%s] Checkout session created: %s%n",
+                            java.time.Instant.now(), sessionDetails.get("sessionId"));
             order.persist();
 
             // Return response
@@ -867,34 +858,27 @@ public class OrderGraphQL {
     // ============================================================================
 
     /**
-     * Response type for createOrder mutation.
-     * Includes the order and Stripe client secret for payment processing.
+     * Response type for createOrder mutation. Includes the order and Stripe client secret for
+     * payment processing.
      */
     @Type("CreateOrderResponse")
     public static class CreateOrderResponse {
-        @NonNull
-        public CalendarOrder order;
+        @NonNull public CalendarOrder order;
 
-        @NonNull
-        @Description("Stripe client secret for payment processing")
+        @NonNull @Description("Stripe client secret for payment processing")
         public String clientSecret;
     }
 
-    /**
-     * Response type for createCheckoutSession mutation.
-     */
+    /** Response type for createCheckoutSession mutation. */
     @Type("CheckoutSessionResponse")
     public static class CheckoutSessionResponse {
-        @NonNull
-        @Description("Stripe client secret for embedded checkout")
+        @NonNull @Description("Stripe client secret for embedded checkout")
         public String clientSecret;
 
-        @NonNull
-        @Description("Stripe checkout session ID")
+        @NonNull @Description("Stripe checkout session ID")
         public String sessionId;
 
-        @NonNull
-        @Description("Order ID")
+        @NonNull @Description("Order ID")
         public String orderId;
 
         @Description("Order number for display")
@@ -905,9 +889,7 @@ public class OrderGraphQL {
     // INPUT TYPES
     // ============================================================================
 
-    /**
-     * Input for createCheckoutSession mutation.
-     */
+    /** Input for createCheckoutSession mutation. */
     @Input("CheckoutSessionInput")
     public static class CheckoutSessionInput {
         @Description("Cart ID (optional)")
@@ -923,24 +905,19 @@ public class OrderGraphQL {
         public String returnUrl;
     }
 
-    /**
-     * Item input for checkout session.
-     */
+    /** Item input for checkout session. */
     @Input("CheckoutItemInput")
     public static class CheckoutItemInput {
-        @NonNull
-        @Description("Item name")
+        @NonNull @Description("Item name")
         public String name;
 
         @Description("Item description")
         public String description;
 
-        @NonNull
-        @Description("Quantity")
+        @NonNull @Description("Quantity")
         public Integer quantity;
 
-        @NonNull
-        @Description("Unit price in dollars")
+        @NonNull @Description("Unit price in dollars")
         public Double unitPrice;
 
         @Description("Year for calendar items")

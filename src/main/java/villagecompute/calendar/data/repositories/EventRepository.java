@@ -1,16 +1,17 @@
 package villagecompute.calendar.data.repositories;
 
-import io.quarkus.hibernate.orm.panache.PanacheRepository;
-import jakarta.enterprise.context.ApplicationScoped;
-import villagecompute.calendar.data.models.Event;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
+import villagecompute.calendar.data.models.Event;
+
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
+
 /**
- * Repository for Event entities.
- * Provides custom query methods for event management and filtering.
+ * Repository for Event entities. Provides custom query methods for event management and filtering.
  */
 @ApplicationScoped
 public class EventRepository implements PanacheRepository<Event> {
@@ -26,8 +27,8 @@ public class EventRepository implements PanacheRepository<Event> {
     }
 
     /**
-     * Find events for a calendar within a specific date range.
-     * This is one of the required custom query methods from the task specification.
+     * Find events for a calendar within a specific date range. This is one of the required custom
+     * query methods from the task specification.
      *
      * @param calendarId Calendar ID
      * @param startDate Start date (inclusive)
@@ -35,8 +36,13 @@ public class EventRepository implements PanacheRepository<Event> {
      * @return List of events in the date range ordered by date
      */
     public List<Event> findByDateRange(UUID calendarId, LocalDate startDate, LocalDate endDate) {
-        return find("calendar.id = ?1 AND eventDate >= ?2 AND eventDate <= ?3 ORDER BY eventDate ASC",
-                    calendarId, startDate, endDate).list();
+        return find(
+                        "calendar.id = ?1 AND eventDate >= ?2 AND eventDate <= ?3 ORDER BY"
+                                + " eventDate ASC",
+                        calendarId,
+                        startDate,
+                        endDate)
+                .list();
     }
 
     /**
@@ -88,13 +94,15 @@ public class EventRepository implements PanacheRepository<Event> {
      * @return List of matching events
      */
     public List<Event> searchByText(UUID calendarId, String searchText) {
-        return find("calendar.id = ?1 AND LOWER(eventText) LIKE ?2 ORDER BY eventDate ASC",
-                    calendarId, "%" + searchText.toLowerCase() + "%").list();
+        return find(
+                        "calendar.id = ?1 AND LOWER(eventText) LIKE ?2 ORDER BY eventDate ASC",
+                        calendarId,
+                        "%" + searchText.toLowerCase() + "%")
+                .list();
     }
 
     /**
-     * Batch load events for multiple calendars.
-     * Used by DataLoader to prevent N+1 queries.
+     * Batch load events for multiple calendars. Used by DataLoader to prevent N+1 queries.
      *
      * @param calendarIds List of calendar IDs
      * @return List of events for all the calendars ordered by calendar ID and date

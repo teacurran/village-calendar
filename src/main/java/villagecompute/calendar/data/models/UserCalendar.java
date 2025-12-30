@@ -1,27 +1,29 @@
 package villagecompute.calendar.data.models;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import java.util.List;
+import java.util.UUID;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+
 import org.eclipse.microprofile.graphql.Ignore;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.util.List;
-import java.util.UUID;
+import com.fasterxml.jackson.databind.JsonNode;
+
+import io.quarkus.hibernate.orm.panache.PanacheQuery;
 
 @Entity
 @Table(
-    name = "user_calendars",
-    indexes = {
-        @Index(name = "idx_user_calendars_user", columnList = "user_id, `year` DESC"),
-        @Index(name = "idx_user_calendars_session", columnList = "session_id, updated DESC"),
-        @Index(name = "idx_user_calendars_template", columnList = "template_id"),
-        @Index(name = "idx_user_calendars_public", columnList = "is_public, updated DESC")
-    }
-)
+        name = "user_calendars",
+        indexes = {
+            @Index(name = "idx_user_calendars_user", columnList = "user_id, `year` DESC"),
+            @Index(name = "idx_user_calendars_session", columnList = "session_id, updated DESC"),
+            @Index(name = "idx_user_calendars_template", columnList = "template_id"),
+            @Index(name = "idx_user_calendars_public", columnList = "is_public, updated DESC")
+        })
 public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -36,18 +38,17 @@ public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
     @Column(name = "is_public", nullable = false)
     public boolean isPublic = true;
 
-    @NotNull
-    @Size(max = 255)
+    @NotNull @Size(max = 255)
     @Column(nullable = false, length = 255)
     public String name;
 
-    @NotNull
-    @Column(name = "`year`", nullable = false)
+    @NotNull @Column(name = "`year`", nullable = false)
     public Integer year;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = true)
-    @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
+    @io.smallrye.graphql.api.AdaptWith(
+            villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
     public JsonNode configuration;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -82,8 +83,8 @@ public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Find calendars by authenticated user and year.
-     * This is the required custom query method from the task specification.
+     * Find calendars by authenticated user and year. This is the required custom query method from
+     * the task specification.
      *
      * @param userId User ID
      * @param year Calendar year

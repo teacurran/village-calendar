@@ -1,37 +1,36 @@
 package villagecompute.calendar.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.quarkus.security.identity.SecurityIdentity;
+import java.util.List;
+import java.util.UUID;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+
 import org.eclipse.microprofile.jwt.JsonWebToken;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import villagecompute.calendar.api.graphql.MazeGraphQL;
 import villagecompute.calendar.data.models.UserMaze;
 import villagecompute.calendar.data.models.enums.MazeType;
 import villagecompute.calendar.data.repositories.CalendarUserRepository;
 
-import java.util.List;
-import java.util.UUID;
+import io.quarkus.security.identity.SecurityIdentity;
 
 @ApplicationScoped
 public class MazeService {
 
-    @Inject
-    MazeGenerationService generationService;
+    @Inject MazeGenerationService generationService;
 
-    @Inject
-    CalendarUserRepository userRepository;
+    @Inject CalendarUserRepository userRepository;
 
-    @Inject
-    SecurityIdentity securityIdentity;
+    @Inject SecurityIdentity securityIdentity;
 
-    @Inject
-    JsonWebToken jwt;
+    @Inject JsonWebToken jwt;
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
     public UserMaze findById(UUID id) {
         return UserMaze.findById(id);
@@ -42,9 +41,10 @@ public class MazeService {
         if (email == null) {
             return List.of();
         }
-        return userRepository.findByEmail(email)
-            .map(user -> UserMaze.findByUser(user.id).list())
-            .orElse(List.of());
+        return userRepository
+                .findByEmail(email)
+                .map(user -> UserMaze.findByUser(user.id).list())
+                .orElse(List.of());
     }
 
     public List<UserMaze> findBySession(String sessionId) {
@@ -62,7 +62,8 @@ public class MazeService {
         maze.name = input.name != null ? input.name : "My Maze";
         maze.mazeType = input.mazeType != null ? input.mazeType : MazeType.ORTHOGONAL;
         maze.size = input.size != null ? Math.max(1, Math.min(20, input.size)) : 10;
-        maze.difficulty = input.difficulty != null ? Math.max(1, Math.min(20, input.difficulty)) : 10;
+        maze.difficulty =
+                input.difficulty != null ? Math.max(1, Math.min(20, input.difficulty)) : 10;
         maze.seed = input.seed != null ? input.seed : System.currentTimeMillis();
 
         // Set session or user
@@ -126,9 +127,10 @@ public class MazeService {
         }
 
         // Update configuration
-        ObjectNode config = maze.configuration != null
-            ? (ObjectNode) maze.configuration
-            : objectMapper.createObjectNode();
+        ObjectNode config =
+                maze.configuration != null
+                        ? (ObjectNode) maze.configuration
+                        : objectMapper.createObjectNode();
 
         if (input.showSolution != null) config.put("showSolution", input.showSolution);
         if (input.innerWallColor != null) config.put("innerWallColor", input.innerWallColor);

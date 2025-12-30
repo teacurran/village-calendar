@@ -1,8 +1,14 @@
 package villagecompute.calendar.services;
 
+import java.net.URI;
+
 import jakarta.enterprise.context.ApplicationScoped;
+
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
+
+import villagecompute.calendar.services.exceptions.StorageException;
+
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -10,13 +16,10 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-import villagecompute.calendar.services.exceptions.StorageException;
-
-import java.net.URI;
 
 /**
- * Service for uploading files to Cloudflare R2 object storage.
- * Uses AWS S3 SDK with S3-compatible API.
+ * Service for uploading files to Cloudflare R2 object storage. Uses AWS S3 SDK with S3-compatible
+ * API.
  */
 @ApplicationScoped
 public class StorageService {
@@ -41,9 +44,9 @@ public class StorageService {
     private S3Client s3Client;
 
     /**
-     * Get or create the S3 client for R2.
-     * Lazily initialized to avoid startup errors if credentials are not configured.
-     * Uses synchronized method instead of double-checked locking for thread safety.
+     * Get or create the S3 client for R2. Lazily initialized to avoid startup errors if credentials
+     * are not configured. Uses synchronized method instead of double-checked locking for thread
+     * safety.
      *
      * @return S3Client configured for Cloudflare R2
      */
@@ -53,11 +56,13 @@ public class StorageService {
 
             AwsBasicCredentials credentials = AwsBasicCredentials.create(r2AccessKey, r2SecretKey);
 
-            s3Client = S3Client.builder()
-                    .endpointOverride(URI.create(r2Endpoint))
-                    .region(Region.US_EAST_1) // R2 uses 'auto' region, but SDK requires a region
-                    .credentialsProvider(StaticCredentialsProvider.create(credentials))
-                    .build();
+            s3Client =
+                    S3Client.builder()
+                            .endpointOverride(URI.create(r2Endpoint))
+                            .region(Region.US_EAST_1) // R2 uses 'auto' region, but SDK requires a
+                            // region
+                            .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                            .build();
 
             LOG.info("R2 S3 client initialized successfully");
         }
@@ -67,8 +72,8 @@ public class StorageService {
     /**
      * Upload a file to Cloudflare R2 and return the public URL.
      *
-     * @param filename    The filename to store (e.g., "calendar-2025-abc123.pdf")
-     * @param fileBytes   The file content as bytes
+     * @param filename The filename to store (e.g., "calendar-2025-abc123.pdf")
+     * @param fileBytes The file content as bytes
      * @param contentType The MIME type (e.g., "application/pdf")
      * @return The public URL of the uploaded file
      * @throws StorageException if upload fails
@@ -89,16 +94,18 @@ public class StorageService {
             String key = "calendar-pdfs/" + filename;
 
             // Create the PutObject request
-            PutObjectRequest putRequest = PutObjectRequest.builder()
-                    .bucket(r2Bucket)
-                    .key(key)
-                    .contentType(contentType)
-                    .contentLength((long) fileBytes.length)
-                    .build();
+            PutObjectRequest putRequest =
+                    PutObjectRequest.builder()
+                            .bucket(r2Bucket)
+                            .key(key)
+                            .contentType(contentType)
+                            .contentLength((long) fileBytes.length)
+                            .build();
 
             // Upload the file
             S3Client client = getS3Client();
-            PutObjectResponse response = client.putObject(putRequest, RequestBody.fromBytes(fileBytes));
+            PutObjectResponse response =
+                    client.putObject(putRequest, RequestBody.fromBytes(fileBytes));
 
             LOG.infof("File uploaded successfully to R2: %s (ETag: %s)", key, response.eTag());
 
@@ -116,8 +123,8 @@ public class StorageService {
     }
 
     /**
-     * Delete a file from R2 by its public URL.
-     * Extracts the key from the URL and deletes the object.
+     * Delete a file from R2 by its public URL. Extracts the key from the URL and deletes the
+     * object.
      *
      * @param publicUrl The public URL of the file to delete
      * @throws StorageException if deletion fails

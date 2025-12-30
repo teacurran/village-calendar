@@ -110,6 +110,28 @@ services:
     networks:
       - calendar-network
 
+  # Database migrations using MyBatis Migrations
+  # Run with: docker compose run --rm migrations
+  # Check status: docker compose run --rm migrations migration:status
+  # Rollback: docker compose run --rm migrations migration:down
+  migrations:
+    image: maven:3.9-eclipse-temurin-21-alpine
+    working_dir: /migrations
+    depends_on:
+      calendar-db:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+      - maven-repo:/root/.m2
+    environment:
+      MAVEN_OPTS: "-Dmigration.env=docker"
+    entrypoint: ["mvn"]
+    command: ["migration:up"]
+    networks:
+      - calendar-network
+    profiles:
+      - tools
+
 networks:
   calendar-network:
     driver: bridge
@@ -118,4 +140,6 @@ volumes:
   calendar-db-data:
     driver: local
   mailpit-data:
+    driver: local
+  maven-repo:
     driver: local

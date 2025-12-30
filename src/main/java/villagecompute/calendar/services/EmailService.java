@@ -1,34 +1,33 @@
 package villagecompute.calendar.services;
 
+import java.util.Arrays;
+import java.util.List;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Scope;
 import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
-
-import java.util.Arrays;
-import java.util.List;
 
 /**
- * Service for sending emails via Quarkus Mailer.
- * Includes domain filtering for non-production environments to prevent
- * accidental email sends to real customers during testing.
+ * Service for sending emails via Quarkus Mailer. Includes domain filtering for non-production
+ * environments to prevent accidental email sends to real customers during testing.
  */
 @ApplicationScoped
 public class EmailService {
 
     private static final Logger LOG = Logger.getLogger(EmailService.class);
 
-    @Inject
-    Mailer mailer;
+    @Inject Mailer mailer;
 
-    @Inject
-    OpenTelemetry openTelemetry;
+    @Inject OpenTelemetry openTelemetry;
 
     @ConfigProperty(name = "quarkus.mailer.from", defaultValue = "no-reply@villagecompute.com")
     String defaultFromEmail;
@@ -39,12 +38,12 @@ public class EmailService {
     @ConfigProperty(name = "mail.enabled", defaultValue = "true")
     boolean emailEnabled;
 
-    @ConfigProperty(name = "email.safe-test-domains", defaultValue = "villagecompute.com,grilledcheese.com,approachingpi.com")
+    @ConfigProperty(
+            name = "email.safe-test-domains",
+            defaultValue = "villagecompute.com,grilledcheese.com,approachingpi.com")
     String safeTestDomains;
 
-    /**
-     * Get list of safe test domains.
-     */
+    /** Get list of safe test domains. */
     private List<String> getSafeTestDomainsList() {
         return Arrays.asList(safeTestDomains.split(","));
     }
@@ -59,8 +58,8 @@ public class EmailService {
     }
 
     /**
-     * Check if email domain is safe to send to in non-production environments.
-     * In production, all domains are allowed.
+     * Check if email domain is safe to send to in non-production environments. In production, all
+     * domains are allowed.
      *
      * @param email Email address to check
      * @return true if safe to send
@@ -80,9 +79,9 @@ public class EmailService {
         List<String> safeDomains = getSafeTestDomainsList();
 
         return safeDomains.stream()
-            .map(String::toLowerCase)
-            .map(String::trim)
-            .anyMatch(safeDomain -> domain.equals(safeDomain));
+                .map(String::toLowerCase)
+                .map(String::trim)
+                .anyMatch(safeDomain -> domain.equals(safeDomain));
     }
 
     /**
@@ -103,8 +102,9 @@ public class EmailService {
             span.setAttribute("environment", profile);
             span.addEvent("Email blocked in non-production environment");
 
-            LOG.warnf("EMAIL BLOCKED [%s]: Would have sent '%s' to %s - Reason: %s",
-                profile.toUpperCase(), subject, to, reason);
+            LOG.warnf(
+                    "EMAIL BLOCKED [%s]: Would have sent '%s' to %s - Reason: %s",
+                    profile.toUpperCase(), subject, to, reason);
         } finally {
             span.end();
         }
@@ -156,8 +156,7 @@ public class EmailService {
 
         try {
             String prefixedSubject = addEnvironmentPrefix(subject);
-            Mail mail = Mail.withText(to, prefixedSubject, body)
-                .setFrom(from);
+            Mail mail = Mail.withText(to, prefixedSubject, body).setFrom(from);
 
             mailer.send(mail);
             LOG.infof("[EMAIL SENT] '%s' from %s to %s", prefixedSubject, from, to);
@@ -200,8 +199,7 @@ public class EmailService {
 
         try {
             String prefixedSubject = addEnvironmentPrefix(subject);
-            Mail mail = Mail.withHtml(to, prefixedSubject, htmlBody)
-                .setFrom(from);
+            Mail mail = Mail.withHtml(to, prefixedSubject, htmlBody).setFrom(from);
 
             mailer.send(mail);
             LOG.infof("[EMAIL SENT] '%s' from %s to %s", prefixedSubject, from, to);

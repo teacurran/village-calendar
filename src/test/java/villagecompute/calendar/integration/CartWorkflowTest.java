@@ -1,30 +1,30 @@
 package villagecompute.calendar.integration;
 
-import io.quarkus.test.junit.QuarkusTest;
-import io.restassured.http.ContentType;
-import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.*;
-import villagecompute.calendar.data.models.Cart;
-import villagecompute.calendar.data.models.CartItem;
-
-import java.util.UUID;
-
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.UUID;
+
+import jakarta.transaction.Transactional;
+
+import org.junit.jupiter.api.*;
+
+import villagecompute.calendar.data.models.Cart;
+import villagecompute.calendar.data.models.CartItem;
+
+import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.http.ContentType;
+
 /**
  * End-to-end integration tests for shopping cart workflows.
  *
- * Tests:
- * 1. Guest adds item to cart via GraphQL with X-Session-ID header
- * 2. Same session ID returns same cart with items
- * 3. Different session IDs have isolated carts
- * 4. Static page add-to-cart workflow (no templateId)
- * 5. Cart persists across multiple requests
+ * <p>Tests: 1. Guest adds item to cart via GraphQL with X-Session-ID header 2. Same session ID
+ * returns same cart with items 3. Different session IDs have isolated carts 4. Static page
+ * add-to-cart workflow (no templateId) 5. Cart persists across multiple requests
  *
- * These tests verify the critical flow where static product pages
- * add items to cart and redirect to checkout.
+ * <p>These tests verify the critical flow where static product pages add items to cart and redirect
+ * to checkout.
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -47,7 +47,8 @@ public class CartWorkflowTest {
     void testAddToCart_WithSessionIdHeader_CreatesCartItem() {
         String sessionId = "test-session-" + UUID.randomUUID();
 
-        String mutation = """
+        String mutation =
+                """
             mutation AddToCart($input: AddToCartInput!) {
                 addToCart(input: $input) {
                     id
@@ -55,8 +56,8 @@ public class CartWorkflowTest {
                     subtotal
                     items {
                         id
-                        templateName
-                        year
+                        generatorType
+                        description
                         quantity
                         unitPrice
                         configuration
@@ -65,36 +66,40 @@ public class CartWorkflowTest {
             }
             """;
 
-        String variables = """
+        String variables =
+                """
             {
                 "input": {
-                    "templateName": "Test Calendar",
-                    "year": 2026,
+                    "generatorType": "calendar",
+                    "description": "Test Calendar 2026",
                     "quantity": 1,
                     "productCode": "print",
-                    "configuration": "{\\"theme\\":\\"modern\\"}"
+                    "configuration": "{\\"theme\\":\\"modern\\",\\"year\\":2026}"
                 }
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .header("X-Session-ID", sessionId)
-            .body("""
+        given().contentType(ContentType.JSON)
+                .header("X-Session-ID", sessionId)
+                .body(
+                        """
                 {
                     "query": "%s",
                     "variables": %s
                 }
-                """.formatted(mutation.replace("\n", "\\n").replace("\"", "\\\""), variables))
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.addToCart.itemCount", equalTo(1))
-            .body("data.addToCart.items", hasSize(1))
-            .body("data.addToCart.items[0].templateName", equalTo("Test Calendar"))
-            .body("data.addToCart.items[0].year", equalTo(2026))
-            .body("data.addToCart.items[0].quantity", equalTo(1));
+                """
+                                .formatted(
+                                        mutation.replace("\n", "\\n").replace("\"", "\\\""),
+                                        variables))
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.addToCart.itemCount", equalTo(1))
+                .body("data.addToCart.items", hasSize(1))
+                .body("data.addToCart.items[0].generatorType", equalTo("calendar"))
+                .body("data.addToCart.items[0].description", equalTo("Test Calendar 2026"))
+                .body("data.addToCart.items[0].quantity", equalTo(1));
     }
 
     // ============================================================================
@@ -107,42 +112,43 @@ public class CartWorkflowTest {
         String sessionId = "persistent-session-" + UUID.randomUUID();
 
         // First: Add item to cart
-        String addMutation = """
+        String addMutation =
+                """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"Persistent Calendar\\", year: 2026, quantity: 1, productCode: \\"print\\" }) { id itemCount } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"Persistent Calendar\\", quantity: 1, productCode: \\"print\\" }) { id itemCount } }"
             }
             """;
 
-        String cartId = given()
-            .contentType(ContentType.JSON)
-            .header("X-Session-ID", sessionId)
-            .body(addMutation)
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.addToCart.itemCount", equalTo(1))
-            .extract()
-            .path("data.addToCart.id");
+        String cartId =
+                given().contentType(ContentType.JSON)
+                        .header("X-Session-ID", sessionId)
+                        .body(addMutation)
+                        .when()
+                        .post("/graphql")
+                        .then()
+                        .statusCode(200)
+                        .body("data.addToCart.itemCount", equalTo(1))
+                        .extract()
+                        .path("data.addToCart.id");
 
         // Second: Query cart with same session ID
-        String getQuery = """
+        String getQuery =
+                """
             {
-                "query": "query { cart { id itemCount items { templateName } } }"
+                "query": "query { cart { id itemCount items { description } } }"
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .header("X-Session-ID", sessionId)
-            .body(getQuery)
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.cart.id", equalTo(cartId))
-            .body("data.cart.itemCount", equalTo(1))
-            .body("data.cart.items[0].templateName", equalTo("Persistent Calendar"));
+        given().contentType(ContentType.JSON)
+                .header("X-Session-ID", sessionId)
+                .body(getQuery)
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.cart.id", equalTo(cartId))
+                .body("data.cart.itemCount", equalTo(1))
+                .body("data.cart.items[0].description", equalTo("Persistent Calendar"));
     }
 
     // ============================================================================
@@ -156,38 +162,38 @@ public class CartWorkflowTest {
         String sessionId2 = "session-2-" + UUID.randomUUID();
 
         // Add item to session 1
-        String addMutation1 = """
+        String addMutation1 =
+                """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"Session 1 Calendar\\", year: 2026, quantity: 1, productCode: \\"print\\" }) { id itemCount } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"Session 1 Calendar\\", quantity: 1, productCode: \\"print\\" }) { id itemCount } }"
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .header("X-Session-ID", sessionId1)
-            .body(addMutation1)
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.addToCart.itemCount", equalTo(1));
+        given().contentType(ContentType.JSON)
+                .header("X-Session-ID", sessionId1)
+                .body(addMutation1)
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.addToCart.itemCount", equalTo(1));
 
         // Query cart for session 2 - should be empty (new cart)
-        String getQuery = """
+        String getQuery =
+                """
             {
                 "query": "query { cart { id itemCount } }"
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .header("X-Session-ID", sessionId2)
-            .body(getQuery)
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.cart.itemCount", equalTo(0));
+        given().contentType(ContentType.JSON)
+                .header("X-Session-ID", sessionId2)
+                .body(getQuery)
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.cart.itemCount", equalTo(0));
     }
 
     // ============================================================================
@@ -199,25 +205,25 @@ public class CartWorkflowTest {
     void testStaticPageAddToCart_NoTemplateId_WorksCorrectly() {
         String sessionId = "static-page-session-" + UUID.randomUUID();
 
-        // Simulates static product page behavior - no templateId, just configuration
-        String addMutation = """
+        // Simulates static product page behavior - uses generatorType and description
+        String addMutation =
+                """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"Vermont Weekends 2026\\", year: 2026, quantity: 1, productCode: \\"print\\", configuration: \\"{\\\\\\"theme\\\\\\":\\\\\\"vermont\\\\\\",\\\\\\"holidaySets\\\\\\":[]}\\" }) { id itemCount items { templateId templateName configuration } } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"Vermont Weekends 2026\\", quantity: 1, productCode: \\"print\\", configuration: \\"{\\\\\\"theme\\\\\\":\\\\\\"vermont\\\\\\",\\\\\\"year\\\\\\":2026,\\\\\\"holidaySets\\\\\\":[]}\\" }) { id itemCount items { generatorType description configuration } } }"
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .header("X-Session-ID", sessionId)
-            .body(addMutation)
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.addToCart.itemCount", equalTo(1))
-            .body("data.addToCart.items[0].templateId", nullValue())
-            .body("data.addToCart.items[0].templateName", equalTo("Vermont Weekends 2026"))
-            .body("data.addToCart.items[0].configuration", containsString("vermont"));
+        given().contentType(ContentType.JSON)
+                .header("X-Session-ID", sessionId)
+                .body(addMutation)
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.addToCart.itemCount", equalTo(1))
+                .body("data.addToCart.items[0].generatorType", equalTo("calendar"))
+                .body("data.addToCart.items[0].description", equalTo("Vermont Weekends 2026"))
+                .body("data.addToCart.items[0].configuration", containsString("vermont"));
     }
 
     // ============================================================================
@@ -230,44 +236,44 @@ public class CartWorkflowTest {
         String sessionId = "checkout-flow-" + UUID.randomUUID();
 
         // Step 1: Add to cart (from static page)
-        String addMutation = """
+        String addMutation =
+                """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"Checkout Test Calendar\\", year: 2026, quantity: 1, productCode: \\"print\\" }) { id itemCount } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"Checkout Test Calendar\\", quantity: 1, productCode: \\"print\\" }) { id itemCount } }"
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .header("X-Session-ID", sessionId)
-            .body(addMutation)
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.addToCart.itemCount", equalTo(1));
+        given().contentType(ContentType.JSON)
+                .header("X-Session-ID", sessionId)
+                .body(addMutation)
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.addToCart.itemCount", equalTo(1));
 
         // Step 2: Simulate page load delay (what happens when redirecting to /checkout)
         // No sleep needed - just verify persistence
 
         // Step 3: Fetch cart (what CheckoutEmbedded.vue does on mount)
-        String getQuery = """
+        String getQuery =
+                """
             {
-                "query": "query { cart { id itemCount subtotal items { templateName quantity unitPrice } } }"
+                "query": "query { cart { id itemCount subtotal items { description quantity unitPrice } } }"
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .header("X-Session-ID", sessionId)
-            .body(getQuery)
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.cart.itemCount", equalTo(1))
-            .body("data.cart.items", hasSize(1))
-            .body("data.cart.items[0].templateName", equalTo("Checkout Test Calendar"))
-            .body("data.cart.subtotal", greaterThan(0.0f));
+        given().contentType(ContentType.JSON)
+                .header("X-Session-ID", sessionId)
+                .body(getQuery)
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.cart.itemCount", equalTo(1))
+                .body("data.cart.items", hasSize(1))
+                .body("data.cart.items[0].description", equalTo("Checkout Test Calendar"))
+                .body("data.cart.subtotal", greaterThan(0.0f));
     }
 
     // ============================================================================
@@ -280,39 +286,39 @@ public class CartWorkflowTest {
         String sessionId = "multi-item-" + UUID.randomUUID();
 
         // Add first item
-        String addMutation1 = """
+        String addMutation1 =
+                """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"Calendar Config A\\", year: 2026, quantity: 1, productCode: \\"print\\", configuration: \\"{\\\\\\"theme\\\\\\":\\\\\\"A\\\\\\"}\\" }) { itemCount } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"Calendar Config A\\", quantity: 1, productCode: \\"print\\", configuration: \\"{\\\\\\"theme\\\\\\":\\\\\\"A\\\\\\"}\\" }) { itemCount } }"
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .header("X-Session-ID", sessionId)
-            .body(addMutation1)
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.addToCart.itemCount", equalTo(1));
+        given().contentType(ContentType.JSON)
+                .header("X-Session-ID", sessionId)
+                .body(addMutation1)
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.addToCart.itemCount", equalTo(1));
 
         // Add second item with different configuration
-        String addMutation2 = """
+        String addMutation2 =
+                """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"Calendar Config B\\", year: 2026, quantity: 2, productCode: \\"print\\", configuration: \\"{\\\\\\"theme\\\\\\":\\\\\\"B\\\\\\"}\\" }) { itemCount items { templateName quantity } } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"Calendar Config B\\", quantity: 2, productCode: \\"print\\", configuration: \\"{\\\\\\"theme\\\\\\":\\\\\\"B\\\\\\"}\\" }) { itemCount items { description quantity } } }"
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .header("X-Session-ID", sessionId)
-            .body(addMutation2)
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.addToCart.itemCount", equalTo(3))  // 1 + 2 = 3 total quantity
-            .body("data.addToCart.items", hasSize(2));     // 2 separate line items
+        given().contentType(ContentType.JSON)
+                .header("X-Session-ID", sessionId)
+                .body(addMutation2)
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.addToCart.itemCount", equalTo(3)) // 1 + 2 = 3 total quantity
+                .body("data.addToCart.items", hasSize(2)); // 2 separate line items
     }
 
     // ============================================================================
@@ -325,39 +331,39 @@ public class CartWorkflowTest {
         String sessionId = "clear-cart-" + UUID.randomUUID();
 
         // Add items
-        String addMutation = """
+        String addMutation =
+                """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"To Be Cleared\\", year: 2026, quantity: 3, productCode: \\"print\\" }) { itemCount } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"To Be Cleared\\", quantity: 3, productCode: \\"print\\" }) { itemCount } }"
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .header("X-Session-ID", sessionId)
-            .body(addMutation)
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.addToCart.itemCount", equalTo(3));
+        given().contentType(ContentType.JSON)
+                .header("X-Session-ID", sessionId)
+                .body(addMutation)
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.addToCart.itemCount", equalTo(3));
 
         // Clear cart
-        String clearMutation = """
+        String clearMutation =
+                """
             {
                 "query": "mutation { clearCart { itemCount items { id } } }"
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .header("X-Session-ID", sessionId)
-            .body(clearMutation)
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200)
-            .body("data.clearCart.itemCount", equalTo(0))
-            .body("data.clearCart.items", hasSize(0));
+        given().contentType(ContentType.JSON)
+                .header("X-Session-ID", sessionId)
+                .body(clearMutation)
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200)
+                .body("data.clearCart.itemCount", equalTo(0))
+                .body("data.clearCart.items", hasSize(0));
     }
 
     // ============================================================================
@@ -371,27 +377,28 @@ public class CartWorkflowTest {
         String sessionId = "db-test-" + UUID.randomUUID();
 
         // Add item via GraphQL
-        String addMutation = """
+        String addMutation =
+                """
             {
-                "query": "mutation { addToCart(input: { templateName: \\"DB Test Calendar\\", year: 2026, quantity: 2, productCode: \\"print\\" }) { id } }"
+                "query": "mutation { addToCart(input: { generatorType: \\"calendar\\", description: \\"DB Test Calendar\\", quantity: 2, productCode: \\"print\\" }) { id } }"
             }
             """;
 
-        given()
-            .contentType(ContentType.JSON)
-            .header("X-Session-ID", sessionId)
-            .body(addMutation)
-            .when()
-            .post("/graphql")
-            .then()
-            .statusCode(200);
+        given().contentType(ContentType.JSON)
+                .header("X-Session-ID", sessionId)
+                .body(addMutation)
+                .when()
+                .post("/graphql")
+                .then()
+                .statusCode(200);
 
         // Verify directly in database
         Cart dbCart = Cart.find("sessionId", sessionId).firstResult();
         assertNotNull(dbCart, "Cart should exist in database");
         assertEquals(sessionId, dbCart.sessionId);
         assertEquals(1, dbCart.items.size());
-        assertEquals("DB Test Calendar", dbCart.items.get(0).templateName);
+        assertEquals("calendar", dbCart.items.get(0).generatorType);
+        assertEquals("DB Test Calendar", dbCart.items.get(0).description);
         assertEquals(2, dbCart.items.get(0).quantity);
     }
 }

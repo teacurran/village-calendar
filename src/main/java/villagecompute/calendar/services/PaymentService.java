@@ -1,5 +1,20 @@
 package villagecompute.calendar.services;
 
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
@@ -9,26 +24,12 @@ import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.RefundCreateParams;
 import com.stripe.param.checkout.SessionCreateParams;
 
-import java.util.ArrayList;
-import java.util.List;
-import jakarta.annotation.PostConstruct;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.services.jobs.OrderEmailJobHandler;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
 /**
- * Service for integrating with Stripe payment processing.
- * Handles PaymentIntent creation, updates, payment confirmations, and webhook processing.
+ * Service for integrating with Stripe payment processing. Handles PaymentIntent creation, updates,
+ * payment confirmations, and webhook processing.
  */
 @ApplicationScoped
 public class PaymentService {
@@ -58,11 +59,9 @@ public class PaymentService {
     @ConfigProperty(name = "stripe.automatic.tax.enabled", defaultValue = "true")
     boolean automaticTaxEnabled;
 
-    @Inject
-    OrderService orderService;
+    @Inject OrderService orderService;
 
-    @Inject
-    DelayedJobService delayedJobService;
+    @Inject DelayedJobService delayedJobService;
 
     @PostConstruct
     void init() {
@@ -89,8 +88,8 @@ public class PaymentService {
     }
 
     /**
-     * Create a PaymentIntent for an order.
-     * Returns client secret and payment intent ID for frontend processing.
+     * Create a PaymentIntent for an order. Returns client secret and payment intent ID for frontend
+     * processing.
      *
      * @param amount Total amount to charge
      * @param currency Currency code (default: "usd")
@@ -99,16 +98,13 @@ public class PaymentService {
      * @throws StripeException if Stripe API call fails
      */
     public Map<String, String> createPaymentIntent(
-        BigDecimal amount,
-        String currency,
-        String orderId
-    ) throws StripeException {
+            BigDecimal amount, String currency, String orderId) throws StripeException {
         return createPaymentIntent(amount, currency, orderId, null, null, null, null);
     }
 
     /**
-     * Create a PaymentIntent for an order with full breakdown for Stripe reporting.
-     * Includes subtotal, tax, and shipping in metadata for tax reporting.
+     * Create a PaymentIntent for an order with full breakdown for Stripe reporting. Includes
+     * subtotal, tax, and shipping in metadata for tax reporting.
      *
      * @param amount Total amount to charge
      * @param currency Currency code (default: "usd")
@@ -121,16 +117,17 @@ public class PaymentService {
      * @throws StripeException if Stripe API call fails
      */
     public Map<String, String> createPaymentIntent(
-        BigDecimal amount,
-        String currency,
-        String orderId,
-        BigDecimal subtotal,
-        BigDecimal taxAmount,
-        BigDecimal shippingCost,
-        String orderNumber
-    ) throws StripeException {
-        LOG.infof("Creating payment intent for order %s, amount $%.2f (tax: $%.2f)",
-            orderId, amount, taxAmount != null ? taxAmount : BigDecimal.ZERO);
+            BigDecimal amount,
+            String currency,
+            String orderId,
+            BigDecimal subtotal,
+            BigDecimal taxAmount,
+            BigDecimal shippingCost,
+            String orderNumber)
+            throws StripeException {
+        LOG.infof(
+                "Creating payment intent for order %s, amount $%.2f (tax: $%.2f)",
+                orderId, amount, taxAmount != null ? taxAmount : BigDecimal.ZERO);
 
         // Convert BigDecimal to cents (Stripe uses smallest currency unit)
         long amountInCents = amount.multiply(BigDecimal.valueOf(100)).longValue();
@@ -139,20 +136,21 @@ public class PaymentService {
         String idempotencyKey = "order_" + orderId + "_" + System.currentTimeMillis();
 
         // Build description
-        String description = orderNumber != null
-            ? String.format("Village Calendar Order %s", orderNumber)
-            : String.format("Village Calendar Order");
+        String description =
+                orderNumber != null
+                        ? String.format("Village Calendar Order %s", orderNumber)
+                        : String.format("Village Calendar Order");
 
-        PaymentIntentCreateParams.Builder paramsBuilder = PaymentIntentCreateParams.builder()
-            .setAmount(amountInCents)
-            .setCurrency(currency != null ? currency : "usd")
-            .setDescription(description)
-            .putMetadata("orderId", orderId)
-            .setAutomaticPaymentMethods(
-                PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
-                    .setEnabled(true)
-                    .build()
-            );
+        PaymentIntentCreateParams.Builder paramsBuilder =
+                PaymentIntentCreateParams.builder()
+                        .setAmount(amountInCents)
+                        .setCurrency(currency != null ? currency : "usd")
+                        .setDescription(description)
+                        .putMetadata("orderId", orderId)
+                        .setAutomaticPaymentMethods(
+                                PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
+                                        .setEnabled(true)
+                                        .build());
 
         // Add order number to metadata if available
         if (orderNumber != null) {
@@ -176,25 +174,29 @@ public class PaymentService {
         PaymentIntentCreateParams params = paramsBuilder.build();
 
         // Create PaymentIntent with idempotency key
-        PaymentIntent intent = PaymentIntent.create(params,
-            com.stripe.net.RequestOptions.builder()
-                .setIdempotencyKey(idempotencyKey)
-                .build()
-        );
+        PaymentIntent intent =
+                PaymentIntent.create(
+                        params,
+                        com.stripe.net.RequestOptions.builder()
+                                .setIdempotencyKey(idempotencyKey)
+                                .build());
 
         Map<String, String> response = new HashMap<>();
         response.put("clientSecret", intent.getClientSecret());
         response.put("paymentIntentId", intent.getId());
 
-        LOG.infof("Created PaymentIntent %s for order %s (tax: %s cents)",
-            intent.getId(), orderId, taxAmount != null ? taxAmount.multiply(BigDecimal.valueOf(100)).longValue() : 0);
+        LOG.infof(
+                "Created PaymentIntent %s for order %s (tax: %s cents)",
+                intent.getId(),
+                orderId,
+                taxAmount != null ? taxAmount.multiply(BigDecimal.valueOf(100)).longValue() : 0);
 
         return response;
     }
 
     /**
-     * Update a PaymentIntent with order details.
-     * Used to add order information after the PaymentIntent is created.
+     * Update a PaymentIntent with order details. Used to add order information after the
+     * PaymentIntent is created.
      *
      * @param paymentIntentId PaymentIntent ID
      * @param order Order details
@@ -202,7 +204,7 @@ public class PaymentService {
      * @throws StripeException if Stripe API call fails
      */
     public PaymentIntent updatePaymentIntent(String paymentIntentId, CalendarOrder order)
-        throws StripeException {
+            throws StripeException {
         LOG.infof("Updating PaymentIntent %s with order details", paymentIntentId);
 
         PaymentIntent intent = PaymentIntent.retrieve(paymentIntentId);
@@ -236,8 +238,9 @@ public class PaymentService {
             return intent.confirm(params);
         }
 
-        LOG.infof("PaymentIntent %s does not require confirmation (status: %s)",
-            paymentIntentId, intent.getStatus());
+        LOG.infof(
+                "PaymentIntent %s does not require confirmation (status: %s)",
+                paymentIntentId, intent.getStatus());
         return intent;
     }
 
@@ -267,9 +270,8 @@ public class PaymentService {
     }
 
     /**
-     * Process successful payment from webhook.
-     * Updates order status to PAID and enqueues order confirmation email.
-     * Implements idempotent processing to handle duplicate webhook deliveries.
+     * Process successful payment from webhook. Updates order status to PAID and enqueues order
+     * confirmation email. Implements idempotent processing to handle duplicate webhook deliveries.
      *
      * @param paymentIntentId Stripe Payment Intent ID
      * @param chargeId Stripe Charge ID (optional)
@@ -286,7 +288,10 @@ public class PaymentService {
             // payment_intent.succeeded may arrive before the order's stripePaymentIntentId is set.
             // This is normal - checkout.session.completed will handle the order update.
             // Return success to acknowledge the webhook (no retry needed).
-            LOG.infof("Order not found for PaymentIntent: %s (likely using Checkout flow - checkout.session.completed will handle)", paymentIntentId);
+            LOG.infof(
+                    "Order not found for PaymentIntent: %s (likely using Checkout flow -"
+                            + " checkout.session.completed will handle)",
+                    paymentIntentId);
             return false;
         }
 
@@ -309,7 +314,10 @@ public class PaymentService {
 
         // Add payment success note
         String timestamp = Instant.now().toString();
-        String noteEntry = String.format("[%s] Payment succeeded via PaymentIntent %s\n", timestamp, paymentIntentId);
+        String noteEntry =
+                String.format(
+                        "[%s] Payment succeeded via PaymentIntent %s%n",
+                        timestamp, paymentIntentId);
         order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
 
         order.persist();
@@ -328,8 +336,8 @@ public class PaymentService {
     }
 
     /**
-     * Process refund via Stripe API and update order record.
-     * Creates a refund in Stripe and updates the order notes.
+     * Process refund via Stripe API and update order record. Creates a refund in Stripe and updates
+     * the order notes.
      *
      * @param paymentIntentId Stripe Payment Intent ID to refund
      * @param amountInCents Amount to refund in cents (null for full refund)
@@ -337,32 +345,37 @@ public class PaymentService {
      * @return Stripe Refund object
      * @throws StripeException if Stripe API call fails
      */
-    public Refund processRefund(String paymentIntentId, Long amountInCents, String reason) throws StripeException {
-        LOG.infof("Processing refund for PaymentIntent: %s (amount: %s cents)", paymentIntentId, amountInCents);
+    public Refund processRefund(String paymentIntentId, Long amountInCents, String reason)
+            throws StripeException {
+        LOG.infof(
+                "Processing refund for PaymentIntent: %s (amount: %s cents)",
+                paymentIntentId, amountInCents);
 
         // Find the order
         Optional<CalendarOrder> orderOpt = orderService.findByStripePaymentIntent(paymentIntentId);
         if (orderOpt.isEmpty()) {
             LOG.errorf("Order not found for PaymentIntent: %s", paymentIntentId);
-            throw new IllegalStateException("Order not found for PaymentIntent: " + paymentIntentId);
+            throw new IllegalStateException(
+                    "Order not found for PaymentIntent: " + paymentIntentId);
         }
 
         CalendarOrder order = orderOpt.get();
 
         // Build refund parameters
-        RefundCreateParams.Builder paramsBuilder = RefundCreateParams.builder()
-            .setPaymentIntent(paymentIntentId);
+        RefundCreateParams.Builder paramsBuilder =
+                RefundCreateParams.builder().setPaymentIntent(paymentIntentId);
 
         if (amountInCents != null) {
             paramsBuilder.setAmount(amountInCents);
         }
 
         if (reason != null) {
-            RefundCreateParams.Reason refundReason = switch (reason.toLowerCase()) {
-                case "duplicate" -> RefundCreateParams.Reason.DUPLICATE;
-                case "fraudulent" -> RefundCreateParams.Reason.FRAUDULENT;
-                default -> RefundCreateParams.Reason.REQUESTED_BY_CUSTOMER;
-            };
+            RefundCreateParams.Reason refundReason =
+                    switch (reason.toLowerCase()) {
+                        case "duplicate" -> RefundCreateParams.Reason.DUPLICATE;
+                        case "fraudulent" -> RefundCreateParams.Reason.FRAUDULENT;
+                        default -> RefundCreateParams.Reason.REQUESTED_BY_CUSTOMER;
+                    };
             paramsBuilder.setReason(refundReason);
         }
 
@@ -371,21 +384,25 @@ public class PaymentService {
 
         // Update order notes with refund information
         String timestamp = Instant.now().toString();
-        BigDecimal refundAmount = BigDecimal.valueOf(refund.getAmount()).divide(BigDecimal.valueOf(100));
-        String noteEntry = String.format("[%s] Refund processed: $%.2f (Refund ID: %s, Reason: %s)\n",
-            timestamp, refundAmount, refund.getId(), refund.getReason());
+        BigDecimal refundAmount =
+                BigDecimal.valueOf(refund.getAmount()).divide(BigDecimal.valueOf(100));
+        String noteEntry =
+                String.format(
+                        "[%s] Refund processed: $%.2f (Refund ID: %s, Reason: %s)%n",
+                        timestamp, refundAmount, refund.getId(), refund.getReason());
         order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
         order.persist();
 
-        LOG.infof("Refund %s created for order %s, amount: $%.2f", refund.getId(), order.id, refundAmount);
+        LOG.infof(
+                "Refund %s created for order %s, amount: $%.2f",
+                refund.getId(), order.id, refundAmount);
 
         return refund;
     }
 
     /**
-     * Process refund webhook event from Stripe.
-     * Updates order notes with refund information.
-     * This is called when Stripe sends a charge.refunded webhook event.
+     * Process refund webhook event from Stripe. Updates order notes with refund information. This
+     * is called when Stripe sends a charge.refunded webhook event.
      *
      * @param chargeId Stripe Charge ID
      * @param refundId Stripe Refund ID
@@ -393,13 +410,18 @@ public class PaymentService {
      */
     @Transactional
     public void processRefundWebhook(String chargeId, String refundId, Long amountRefunded) {
-        LOG.infof("Processing refund webhook for Charge: %s (Refund: %s, Amount: %s cents)",
-            chargeId, refundId, amountRefunded);
+        LOG.infof(
+                "Processing refund webhook for Charge: %s (Refund: %s, Amount: %s cents)",
+                chargeId, refundId, amountRefunded);
 
         // Find order by charge ID
-        Optional<CalendarOrder> orderOpt = CalendarOrder.find("stripeChargeId", chargeId).firstResultOptional();
+        Optional<CalendarOrder> orderOpt =
+                CalendarOrder.find("stripeChargeId", chargeId).firstResultOptional();
         if (orderOpt.isEmpty()) {
-            LOG.warnf("Order not found for Charge ID: %s (may be a direct refund not linked to our system)", chargeId);
+            LOG.warnf(
+                    "Order not found for Charge ID: %s (may be a direct refund not linked to our"
+                            + " system)",
+                    chargeId);
             return;
         }
 
@@ -407,19 +429,25 @@ public class PaymentService {
 
         // Check if refund already recorded (idempotent)
         if (order.notes != null && order.notes.contains("Refund ID: " + refundId)) {
-            LOG.infof("Refund %s already recorded for order %s, skipping (idempotent)", refundId, order.id);
+            LOG.infof(
+                    "Refund %s already recorded for order %s, skipping (idempotent)",
+                    refundId, order.id);
             return;
         }
 
         // Add refund note
         String timestamp = Instant.now().toString();
-        BigDecimal refundAmount = BigDecimal.valueOf(amountRefunded).divide(BigDecimal.valueOf(100));
-        String noteEntry = String.format("[%s] Refund received via webhook: $%.2f (Refund ID: %s, Charge: %s)\n",
-            timestamp, refundAmount, refundId, chargeId);
+        BigDecimal refundAmount =
+                BigDecimal.valueOf(amountRefunded).divide(BigDecimal.valueOf(100));
+        String noteEntry =
+                String.format(
+                        "[%s] Refund received via webhook: $%.2f (Refund ID: %s, Charge: %s)%n",
+                        timestamp, refundAmount, refundId, chargeId);
         order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
         order.persist();
 
-        LOG.infof("Recorded refund %s for order %s, amount: $%.2f", refundId, order.id, refundAmount);
+        LOG.infof(
+                "Recorded refund %s for order %s, amount: $%.2f", refundId, order.id, refundAmount);
     }
 
     // ========================================
@@ -427,8 +455,8 @@ public class PaymentService {
     // ========================================
 
     /**
-     * Create a Stripe Checkout Session for embedded checkout.
-     * Returns the client secret for the embedded checkout component.
+     * Create a Stripe Checkout Session for embedded checkout. Returns the client secret for the
+     * embedded checkout component.
      *
      * @param orderId Order ID for metadata
      * @param orderNumber Human-readable order number
@@ -441,21 +469,22 @@ public class PaymentService {
      * @throws StripeException if Stripe API call fails
      */
     public Map<String, String> createCheckoutSession(
-        String orderId,
-        String orderNumber,
-        List<CheckoutLineItem> lineItems,
-        String customerEmail,
-        String successUrl,
-        String cancelUrl,
-        boolean shippingRequired
-    ) throws StripeException {
+            String orderId,
+            String orderNumber,
+            List<CheckoutLineItem> lineItems,
+            String customerEmail,
+            String successUrl,
+            String cancelUrl,
+            boolean shippingRequired)
+            throws StripeException {
         LOG.infof("Creating Checkout Session for order %s", orderId);
 
-        SessionCreateParams.Builder paramsBuilder = SessionCreateParams.builder()
-            .setMode(SessionCreateParams.Mode.PAYMENT)
-            .setUiMode(SessionCreateParams.UiMode.EMBEDDED)
-            .setReturnUrl(successUrl + "?session_id={CHECKOUT_SESSION_ID}")
-            .putMetadata("orderId", orderId);
+        SessionCreateParams.Builder paramsBuilder =
+                SessionCreateParams.builder()
+                        .setMode(SessionCreateParams.Mode.PAYMENT)
+                        .setUiMode(SessionCreateParams.UiMode.EMBEDDED)
+                        .setReturnUrl(successUrl + "?session_id={CHECKOUT_SESSION_ID}")
+                        .putMetadata("orderId", orderId);
 
         if (orderNumber != null) {
             paramsBuilder.putMetadata("orderNumber", orderNumber);
@@ -464,22 +493,20 @@ public class PaymentService {
         // Add line items
         for (CheckoutLineItem item : lineItems) {
             paramsBuilder.addLineItem(
-                SessionCreateParams.LineItem.builder()
-                    .setPriceData(
-                        SessionCreateParams.LineItem.PriceData.builder()
-                            .setCurrency("usd")
-                            .setUnitAmount(item.unitAmountCents)
-                            .setProductData(
-                                SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                    .setName(item.name)
-                                    .setDescription(item.description)
-                                    .build()
-                            )
-                            .build()
-                    )
-                    .setQuantity(item.quantity)
-                    .build()
-            );
+                    SessionCreateParams.LineItem.builder()
+                            .setPriceData(
+                                    SessionCreateParams.LineItem.PriceData.builder()
+                                            .setCurrency("usd")
+                                            .setUnitAmount(item.unitAmountCents)
+                                            .setProductData(
+                                                    SessionCreateParams.LineItem.PriceData
+                                                            .ProductData.builder()
+                                                            .setName(item.name)
+                                                            .setDescription(item.description)
+                                                            .build())
+                                            .build())
+                            .setQuantity(item.quantity)
+                            .build());
         }
 
         // Customer email for receipts
@@ -490,11 +517,12 @@ public class PaymentService {
         // Shipping address collection and shipping options
         if (shippingRequired) {
             paramsBuilder.setShippingAddressCollection(
-                SessionCreateParams.ShippingAddressCollection.builder()
-                    .addAllowedCountry(SessionCreateParams.ShippingAddressCollection.AllowedCountry.US)
-                    .addAllowedCountry(SessionCreateParams.ShippingAddressCollection.AllowedCountry.CA)
-                    .build()
-            );
+                    SessionCreateParams.ShippingAddressCollection.builder()
+                            .addAllowedCountry(
+                                    SessionCreateParams.ShippingAddressCollection.AllowedCountry.US)
+                            .addAllowedCountry(
+                                    SessionCreateParams.ShippingAddressCollection.AllowedCountry.CA)
+                            .build());
 
             // Add shipping rate options
             long standardRateCents = Math.round(Double.parseDouble(domesticStandardRate) * 100);
@@ -502,115 +530,176 @@ public class PaymentService {
             long expressRateCents = Math.round(Double.parseDouble(domesticExpressRate) * 100);
 
             paramsBuilder.addShippingOption(
-                SessionCreateParams.ShippingOption.builder()
-                    .setShippingRateData(
-                        SessionCreateParams.ShippingOption.ShippingRateData.builder()
-                            .setType(SessionCreateParams.ShippingOption.ShippingRateData.Type.FIXED_AMOUNT)
-                            .setFixedAmount(
-                                SessionCreateParams.ShippingOption.ShippingRateData.FixedAmount.builder()
-                                    .setAmount(standardRateCents)
-                                    .setCurrency("usd")
-                                    .build()
-                            )
-                            .setDisplayName("Standard Shipping")
-                            .setDeliveryEstimate(
-                                SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.builder()
-                                    .setMinimum(
-                                        SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Minimum.builder()
-                                            .setUnit(SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Minimum.Unit.BUSINESS_DAY)
-                                            .setValue(5L)
-                                            .build()
-                                    )
-                                    .setMaximum(
-                                        SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Maximum.builder()
-                                            .setUnit(SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Maximum.Unit.BUSINESS_DAY)
-                                            .setValue(7L)
-                                            .build()
-                                    )
-                                    .build()
-                            )
-                            .build()
-                    )
-                    .build()
-            );
+                    SessionCreateParams.ShippingOption.builder()
+                            .setShippingRateData(
+                                    SessionCreateParams.ShippingOption.ShippingRateData.builder()
+                                            .setType(
+                                                    SessionCreateParams.ShippingOption
+                                                            .ShippingRateData.Type.FIXED_AMOUNT)
+                                            .setFixedAmount(
+                                                    SessionCreateParams.ShippingOption
+                                                            .ShippingRateData.FixedAmount.builder()
+                                                            .setAmount(standardRateCents)
+                                                            .setCurrency("usd")
+                                                            .build())
+                                            .setDisplayName("Standard Shipping")
+                                            .setDeliveryEstimate(
+                                                    SessionCreateParams.ShippingOption
+                                                            .ShippingRateData.DeliveryEstimate
+                                                            .builder()
+                                                            .setMinimum(
+                                                                    SessionCreateParams
+                                                                            .ShippingOption
+                                                                            .ShippingRateData
+                                                                            .DeliveryEstimate
+                                                                            .Minimum.builder()
+                                                                            .setUnit(
+                                                                                    SessionCreateParams
+                                                                                            .ShippingOption
+                                                                                            .ShippingRateData
+                                                                                            .DeliveryEstimate
+                                                                                            .Minimum
+                                                                                            .Unit
+                                                                                            .BUSINESS_DAY)
+                                                                            .setValue(5L)
+                                                                            .build())
+                                                            .setMaximum(
+                                                                    SessionCreateParams
+                                                                            .ShippingOption
+                                                                            .ShippingRateData
+                                                                            .DeliveryEstimate
+                                                                            .Maximum.builder()
+                                                                            .setUnit(
+                                                                                    SessionCreateParams
+                                                                                            .ShippingOption
+                                                                                            .ShippingRateData
+                                                                                            .DeliveryEstimate
+                                                                                            .Maximum
+                                                                                            .Unit
+                                                                                            .BUSINESS_DAY)
+                                                                            .setValue(7L)
+                                                                            .build())
+                                                            .build())
+                                            .build())
+                            .build());
 
             paramsBuilder.addShippingOption(
-                SessionCreateParams.ShippingOption.builder()
-                    .setShippingRateData(
-                        SessionCreateParams.ShippingOption.ShippingRateData.builder()
-                            .setType(SessionCreateParams.ShippingOption.ShippingRateData.Type.FIXED_AMOUNT)
-                            .setFixedAmount(
-                                SessionCreateParams.ShippingOption.ShippingRateData.FixedAmount.builder()
-                                    .setAmount(priorityRateCents)
-                                    .setCurrency("usd")
-                                    .build()
-                            )
-                            .setDisplayName("Priority Shipping")
-                            .setDeliveryEstimate(
-                                SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.builder()
-                                    .setMinimum(
-                                        SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Minimum.builder()
-                                            .setUnit(SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Minimum.Unit.BUSINESS_DAY)
-                                            .setValue(2L)
-                                            .build()
-                                    )
-                                    .setMaximum(
-                                        SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Maximum.builder()
-                                            .setUnit(SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Maximum.Unit.BUSINESS_DAY)
-                                            .setValue(3L)
-                                            .build()
-                                    )
-                                    .build()
-                            )
-                            .build()
-                    )
-                    .build()
-            );
+                    SessionCreateParams.ShippingOption.builder()
+                            .setShippingRateData(
+                                    SessionCreateParams.ShippingOption.ShippingRateData.builder()
+                                            .setType(
+                                                    SessionCreateParams.ShippingOption
+                                                            .ShippingRateData.Type.FIXED_AMOUNT)
+                                            .setFixedAmount(
+                                                    SessionCreateParams.ShippingOption
+                                                            .ShippingRateData.FixedAmount.builder()
+                                                            .setAmount(priorityRateCents)
+                                                            .setCurrency("usd")
+                                                            .build())
+                                            .setDisplayName("Priority Shipping")
+                                            .setDeliveryEstimate(
+                                                    SessionCreateParams.ShippingOption
+                                                            .ShippingRateData.DeliveryEstimate
+                                                            .builder()
+                                                            .setMinimum(
+                                                                    SessionCreateParams
+                                                                            .ShippingOption
+                                                                            .ShippingRateData
+                                                                            .DeliveryEstimate
+                                                                            .Minimum.builder()
+                                                                            .setUnit(
+                                                                                    SessionCreateParams
+                                                                                            .ShippingOption
+                                                                                            .ShippingRateData
+                                                                                            .DeliveryEstimate
+                                                                                            .Minimum
+                                                                                            .Unit
+                                                                                            .BUSINESS_DAY)
+                                                                            .setValue(2L)
+                                                                            .build())
+                                                            .setMaximum(
+                                                                    SessionCreateParams
+                                                                            .ShippingOption
+                                                                            .ShippingRateData
+                                                                            .DeliveryEstimate
+                                                                            .Maximum.builder()
+                                                                            .setUnit(
+                                                                                    SessionCreateParams
+                                                                                            .ShippingOption
+                                                                                            .ShippingRateData
+                                                                                            .DeliveryEstimate
+                                                                                            .Maximum
+                                                                                            .Unit
+                                                                                            .BUSINESS_DAY)
+                                                                            .setValue(3L)
+                                                                            .build())
+                                                            .build())
+                                            .build())
+                            .build());
 
             paramsBuilder.addShippingOption(
-                SessionCreateParams.ShippingOption.builder()
-                    .setShippingRateData(
-                        SessionCreateParams.ShippingOption.ShippingRateData.builder()
-                            .setType(SessionCreateParams.ShippingOption.ShippingRateData.Type.FIXED_AMOUNT)
-                            .setFixedAmount(
-                                SessionCreateParams.ShippingOption.ShippingRateData.FixedAmount.builder()
-                                    .setAmount(expressRateCents)
-                                    .setCurrency("usd")
-                                    .build()
-                            )
-                            .setDisplayName("Express Shipping")
-                            .setDeliveryEstimate(
-                                SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.builder()
-                                    .setMinimum(
-                                        SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Minimum.builder()
-                                            .setUnit(SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Minimum.Unit.BUSINESS_DAY)
-                                            .setValue(1L)
-                                            .build()
-                                    )
-                                    .setMaximum(
-                                        SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Maximum.builder()
-                                            .setUnit(SessionCreateParams.ShippingOption.ShippingRateData.DeliveryEstimate.Maximum.Unit.BUSINESS_DAY)
-                                            .setValue(2L)
-                                            .build()
-                                    )
-                                    .build()
-                            )
-                            .build()
-                    )
-                    .build()
-            );
+                    SessionCreateParams.ShippingOption.builder()
+                            .setShippingRateData(
+                                    SessionCreateParams.ShippingOption.ShippingRateData.builder()
+                                            .setType(
+                                                    SessionCreateParams.ShippingOption
+                                                            .ShippingRateData.Type.FIXED_AMOUNT)
+                                            .setFixedAmount(
+                                                    SessionCreateParams.ShippingOption
+                                                            .ShippingRateData.FixedAmount.builder()
+                                                            .setAmount(expressRateCents)
+                                                            .setCurrency("usd")
+                                                            .build())
+                                            .setDisplayName("Express Shipping")
+                                            .setDeliveryEstimate(
+                                                    SessionCreateParams.ShippingOption
+                                                            .ShippingRateData.DeliveryEstimate
+                                                            .builder()
+                                                            .setMinimum(
+                                                                    SessionCreateParams
+                                                                            .ShippingOption
+                                                                            .ShippingRateData
+                                                                            .DeliveryEstimate
+                                                                            .Minimum.builder()
+                                                                            .setUnit(
+                                                                                    SessionCreateParams
+                                                                                            .ShippingOption
+                                                                                            .ShippingRateData
+                                                                                            .DeliveryEstimate
+                                                                                            .Minimum
+                                                                                            .Unit
+                                                                                            .BUSINESS_DAY)
+                                                                            .setValue(1L)
+                                                                            .build())
+                                                            .setMaximum(
+                                                                    SessionCreateParams
+                                                                            .ShippingOption
+                                                                            .ShippingRateData
+                                                                            .DeliveryEstimate
+                                                                            .Maximum.builder()
+                                                                            .setUnit(
+                                                                                    SessionCreateParams
+                                                                                            .ShippingOption
+                                                                                            .ShippingRateData
+                                                                                            .DeliveryEstimate
+                                                                                            .Maximum
+                                                                                            .Unit
+                                                                                            .BUSINESS_DAY)
+                                                                            .setValue(2L)
+                                                                            .build())
+                                                            .build())
+                                            .build())
+                            .build());
 
-            LOG.infof("Added shipping options: Standard $%.2f, Priority $%.2f, Express $%.2f",
-                standardRateCents / 100.0, priorityRateCents / 100.0, expressRateCents / 100.0);
+            LOG.infof(
+                    "Added shipping options: Standard $%.2f, Priority $%.2f, Express $%.2f",
+                    standardRateCents / 100.0, priorityRateCents / 100.0, expressRateCents / 100.0);
         }
 
         // Enable automatic tax calculation if configured
         if (automaticTaxEnabled) {
             paramsBuilder.setAutomaticTax(
-                SessionCreateParams.AutomaticTax.builder()
-                    .setEnabled(true)
-                    .build()
-            );
+                    SessionCreateParams.AutomaticTax.builder().setEnabled(true).build());
             LOG.info("Automatic tax calculation enabled for checkout session");
         }
 
@@ -637,9 +726,8 @@ public class PaymentService {
     }
 
     /**
-     * Process successful checkout from webhook using session ID.
-     * Retrieves the session from Stripe API.
-     * Called when checkout.session.completed event is received.
+     * Process successful checkout from webhook using session ID. Retrieves the session from Stripe
+     * API. Called when checkout.session.completed event is received.
      *
      * @param sessionId Stripe Checkout Session ID
      * @return true if processed, false if already processed (idempotent)
@@ -652,8 +740,8 @@ public class PaymentService {
     }
 
     /**
-     * Process successful checkout from webhook using Session object.
-     * Called with the session data deserialized from the webhook event.
+     * Process successful checkout from webhook using Session object. Called with the session data
+     * deserialized from the webhook event.
      *
      * @param session Stripe Checkout Session object
      * @return true if processed, false if already processed (idempotent)
@@ -700,42 +788,54 @@ public class PaymentService {
 
         // Update totals from Stripe session (which includes shipping and tax)
         if (session.getAmountTotal() != null) {
-            order.totalPrice = BigDecimal.valueOf(session.getAmountTotal()).divide(BigDecimal.valueOf(100));
+            order.totalPrice =
+                    BigDecimal.valueOf(session.getAmountTotal()).divide(BigDecimal.valueOf(100));
         }
         if (session.getAmountSubtotal() != null) {
-            order.subtotal = BigDecimal.valueOf(session.getAmountSubtotal()).divide(BigDecimal.valueOf(100));
+            order.subtotal =
+                    BigDecimal.valueOf(session.getAmountSubtotal()).divide(BigDecimal.valueOf(100));
         }
         if (session.getTotalDetails() != null) {
             if (session.getTotalDetails().getAmountShipping() != null) {
-                order.shippingCost = BigDecimal.valueOf(session.getTotalDetails().getAmountShipping()).divide(BigDecimal.valueOf(100));
+                order.shippingCost =
+                        BigDecimal.valueOf(session.getTotalDetails().getAmountShipping())
+                                .divide(BigDecimal.valueOf(100));
             }
             if (session.getTotalDetails().getAmountTax() != null) {
-                order.taxAmount = BigDecimal.valueOf(session.getTotalDetails().getAmountTax()).divide(BigDecimal.valueOf(100));
+                order.taxAmount =
+                        BigDecimal.valueOf(session.getTotalDetails().getAmountTax())
+                                .divide(BigDecimal.valueOf(100));
             }
         }
 
-        LOG.infof("Updated order totals from Stripe: subtotal=$%.2f, shipping=$%.2f, tax=$%.2f, total=$%.2f",
-            order.subtotal, order.shippingCost, order.taxAmount, order.totalPrice);
+        LOG.infof(
+                "Updated order totals from Stripe: subtotal=$%.2f, shipping=$%.2f, tax=$%.2f,"
+                        + " total=$%.2f",
+                order.subtotal, order.shippingCost, order.taxAmount, order.totalPrice);
 
         // Always capture customer email from session (required for confirmation emails)
         if (session.getCustomerEmail() != null && !session.getCustomerEmail().isEmpty()) {
             order.customerEmail = session.getCustomerEmail();
             LOG.infof("Set customer email for order %s: %s", order.id, order.customerEmail);
-        } else if (session.getCustomerDetails() != null && session.getCustomerDetails().getEmail() != null) {
+        } else if (session.getCustomerDetails() != null
+                && session.getCustomerDetails().getEmail() != null) {
             // Fallback to customer details email
             order.customerEmail = session.getCustomerDetails().getEmail();
-            LOG.infof("Set customer email from customer details for order %s: %s", order.id, order.customerEmail);
+            LOG.infof(
+                    "Set customer email from customer details for order %s: %s",
+                    order.id, order.customerEmail);
         }
 
         // Store shipping address if collected (as JSON)
         if (session.getCollectedInformation() != null
-            && session.getCollectedInformation().getShippingDetails() != null) {
+                && session.getCollectedInformation().getShippingDetails() != null) {
             var shipping = session.getCollectedInformation().getShippingDetails();
             var address = shipping.getAddress();
             if (address != null) {
                 // Store as JSON in the shippingAddress field
                 // Format to match frontend expectations (firstName/lastName, address1, etc.)
-                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.ObjectMapper mapper =
+                        new com.fasterxml.jackson.databind.ObjectMapper();
                 try {
                     Map<String, Object> addressMap = new HashMap<>();
 
@@ -760,17 +860,22 @@ public class PaymentService {
 
                     order.shippingAddress = mapper.valueToTree(addressMap);
 
-                    LOG.infof("Stored shipping address for order %s: %s, %s %s",
-                        order.id, address.getLine1(), address.getCity(), address.getState());
+                    LOG.infof(
+                            "Stored shipping address for order %s: %s, %s %s",
+                            order.id, address.getLine1(), address.getCity(), address.getState());
                 } catch (Exception e) {
-                    LOG.warnf("Failed to store shipping address for order %s: %s", order.id, e.getMessage());
+                    LOG.warnf(
+                            "Failed to store shipping address for order %s: %s",
+                            order.id, e.getMessage());
                 }
             }
         }
 
         // Add note
         String timestamp = Instant.now().toString();
-        String noteEntry = String.format("[%s] Payment succeeded via Checkout Session %s\n", timestamp, sessionId);
+        String noteEntry =
+                String.format(
+                        "[%s] Payment succeeded via Checkout Session %s%n", timestamp, sessionId);
         order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
 
         order.persist();
@@ -788,16 +893,15 @@ public class PaymentService {
         return true;
     }
 
-    /**
-     * Line item for checkout session
-     */
+    /** Line item for checkout session */
     public static class CheckoutLineItem {
         public String name;
         public String description;
         public long unitAmountCents;
         public long quantity;
 
-        public CheckoutLineItem(String name, String description, long unitAmountCents, long quantity) {
+        public CheckoutLineItem(
+                String name, String description, long unitAmountCents, long quantity) {
             this.name = name;
             this.description = description;
             this.unitAmountCents = unitAmountCents;

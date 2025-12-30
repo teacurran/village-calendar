@@ -164,9 +164,6 @@ function getCalendarSvg(order: CalendarOrder | null): string | null {
             continue;
           }
         }
-        if (configObj?.svgContent) {
-          return configObj.svgContent;
-        }
         if (configObj?.generatedSvg) {
           return configObj.generatedSvg;
         }

@@ -1,8 +1,8 @@
 package villagecompute.calendar.services.exceptions;
 
 /**
- * Exception thrown by DelayedJob handlers to indicate job failure.
- * Includes information about whether the job should be retried.
+ * Exception thrown by DelayedJob handlers to indicate job failure. Includes information about
+ * whether the job should be retried.
  */
 public class DelayedJobException extends Exception {
 

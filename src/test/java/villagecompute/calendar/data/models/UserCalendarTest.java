@@ -1,43 +1,41 @@
 package villagecompute.calendar.data.models;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validator;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import villagecompute.calendar.data.repositories.CalendarTemplateRepository;
-import villagecompute.calendar.data.repositories.CalendarUserRepository;
-import villagecompute.calendar.data.repositories.TestDataCleaner;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import villagecompute.calendar.data.repositories.CalendarTemplateRepository;
+import villagecompute.calendar.data.repositories.CalendarUserRepository;
+import villagecompute.calendar.data.repositories.TestDataCleaner;
+
+import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 class UserCalendarTest {
 
-    @Inject
-    Validator validator;
+    @Inject Validator validator;
 
-    @Inject
-    TestDataCleaner testDataCleaner;
+    @Inject TestDataCleaner testDataCleaner;
 
-    @Inject
-    CalendarUserRepository calendarUserRepository;
+    @Inject CalendarUserRepository calendarUserRepository;
 
-    @Inject
-    CalendarTemplateRepository templateRepository;
+    @Inject CalendarTemplateRepository templateRepository;
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
-    @Inject
-    jakarta.persistence.EntityManager entityManager;
+    @Inject jakarta.persistence.EntityManager entityManager;
 
     private CalendarUser testUser;
     private CalendarTemplate testTemplate;
@@ -239,7 +237,8 @@ class UserCalendarTest {
         cal2.persist();
 
         // When
-        List<UserCalendar> calendars = UserCalendar.findBySessionAndName("session-123", "My Calendar").list();
+        List<UserCalendar> calendars =
+                UserCalendar.findBySessionAndName("session-123", "My Calendar").list();
 
         // Then
         assertEquals(1, calendars.size());
@@ -459,7 +458,10 @@ class UserCalendarTest {
         java.time.Instant originalUpdated = calendar.updated;
 
         // Wait to ensure timestamp changes
-        try { Thread.sleep(10); } catch (InterruptedException e) {}
+        try {
+            Thread.sleep(10);
+        } catch (InterruptedException e) {
+        }
 
         // When
         calendar.name = "Updated Name";
@@ -555,8 +557,9 @@ class UserCalendarTest {
 
         // Then
         assertTrue(violations.size() >= 1);
-        boolean hasViolation = violations.stream()
-                .anyMatch(v -> "sessionId".equals(v.getPropertyPath().toString()));
+        boolean hasViolation =
+                violations.stream()
+                        .anyMatch(v -> "sessionId".equals(v.getPropertyPath().toString()));
         assertTrue(hasViolation);
     }
 
@@ -564,15 +567,17 @@ class UserCalendarTest {
     void testValidation_GeneratedPdfUrlTooLong() {
         // Given
         UserCalendar calendar = createValidCalendar("Test", 2025);
-        calendar.generatedPdfUrl = "https://example.com/" + "a".repeat(500); // Exceeds 500 char limit
+        calendar.generatedPdfUrl =
+                "https://example.com/" + "a".repeat(500); // Exceeds 500 char limit
 
         // When
         Set<ConstraintViolation<UserCalendar>> violations = validator.validate(calendar);
 
         // Then
         assertTrue(violations.size() >= 1);
-        boolean hasViolation = violations.stream()
-                .anyMatch(v -> "generatedPdfUrl".equals(v.getPropertyPath().toString()));
+        boolean hasViolation =
+                violations.stream()
+                        .anyMatch(v -> "generatedPdfUrl".equals(v.getPropertyPath().toString()));
         assertTrue(hasViolation);
     }
 
@@ -581,9 +586,10 @@ class UserCalendarTest {
     void testGeneratedSvg_LongText() {
         // Given - TEXT column should support long SVG
         UserCalendar calendar = createValidCalendar("SVG Test", 2025);
-        String longSvg = "<svg xmlns=\"http://www.w3.org/2000/svg\">" +
-                        "<rect x=\"0\" y=\"0\" width=\"100\" height=\"100\"/>".repeat(100) +
-                        "</svg>";
+        String longSvg =
+                "<svg xmlns=\"http://www.w3.org/2000/svg\">"
+                        + "<rect x=\"0\" y=\"0\" width=\"100\" height=\"100\"/>".repeat(100)
+                        + "</svg>";
         calendar.generatedSvg = longSvg;
         calendar.persist();
         entityManager.flush();

@@ -1,17 +1,20 @@
 package villagecompute.calendar.data.models;
 
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import villagecompute.calendar.data.repositories.TestDataCleaner;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import villagecompute.calendar.data.repositories.TestDataCleaner;
+
+import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 class DelayedJobTest {
@@ -20,11 +23,9 @@ class DelayedJobTest {
     private static final String QUEUE_SHIPPING = "ShippingNotificationJobHandler";
     private static final String QUEUE_CANCELLATION = "OrderCancellationJobHandler";
 
-    @Inject
-    TestDataCleaner testDataCleaner;
+    @Inject TestDataCleaner testDataCleaner;
 
-    @Inject
-    jakarta.persistence.EntityManager entityManager;
+    @Inject jakarta.persistence.EntityManager entityManager;
 
     @BeforeEach
     @Transactional
@@ -99,8 +100,12 @@ class DelayedJobTest {
         int lowPriority = 5;
 
         // When
-        DelayedJob highPriorityJob = DelayedJob.createDelayedJob("actor1", QUEUE_ORDER_EMAIL, highPriority, Instant.now());
-        DelayedJob lowPriorityJob = DelayedJob.createDelayedJob("actor2", QUEUE_CANCELLATION, lowPriority, Instant.now());
+        DelayedJob highPriorityJob =
+                DelayedJob.createDelayedJob(
+                        "actor1", QUEUE_ORDER_EMAIL, highPriority, Instant.now());
+        DelayedJob lowPriorityJob =
+                DelayedJob.createDelayedJob(
+                        "actor2", QUEUE_CANCELLATION, lowPriority, Instant.now());
 
         // Then
         assertEquals(10, highPriorityJob.priority);
@@ -356,7 +361,10 @@ class DelayedJobTest {
         Long originalVersion = job.version;
 
         // Wait to ensure timestamp changes
-        try { Thread.sleep(10); } catch (InterruptedException e) {}
+        try {
+            Thread.sleep(10);
+        } catch (InterruptedException e) {
+        }
 
         // When
         job.attempts = 5;

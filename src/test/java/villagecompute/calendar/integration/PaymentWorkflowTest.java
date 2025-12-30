@@ -1,49 +1,46 @@
 package villagecompute.calendar.integration;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.InjectMock;
-import io.restassured.http.ContentType;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.*;
-import villagecompute.calendar.data.models.*;
-import villagecompute.calendar.services.PaymentService;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import org.junit.jupiter.api.*;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import villagecompute.calendar.data.models.*;
+import villagecompute.calendar.services.PaymentService;
+
+import io.quarkus.test.InjectMock;
+import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * Integration tests for payment and refund workflows.
- * Tests payment processing, order cancellation, and refund handling.
+ * Integration tests for payment and refund workflows. Tests payment processing, order cancellation,
+ * and refund handling.
  *
- * This test suite validates:
- * 1. Order cancellation with refund processing
- * 2. Authorization checks (user can only cancel own orders)
- * 3. Payment entity creation on webhook
- * 4. Refund processing via Stripe
+ * <p>This test suite validates: 1. Order cancellation with refund processing 2. Authorization
+ * checks (user can only cancel own orders) 3. Payment entity creation on webhook 4. Refund
+ * processing via Stripe
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class PaymentWorkflowTest {
 
-    @Inject
-    ObjectMapper objectMapper;
+    @Inject ObjectMapper objectMapper;
 
-    @Inject
-    villagecompute.calendar.services.OrderService orderService;
+    @Inject villagecompute.calendar.services.OrderService orderService;
 
-    @InjectMock
-    PaymentService paymentService;
+    @InjectMock PaymentService paymentService;
 
     private CalendarUser testUser;
     private CalendarUser testUser2;
@@ -60,7 +57,9 @@ class PaymentWorkflowTest {
         testTemplate.isActive = true;
         testTemplate.isFeatured = false;
         testTemplate.displayOrder = 1;
-        testTemplate.configuration = objectMapper.readTree("""
+        testTemplate.configuration =
+                objectMapper.readTree(
+                        """
             {
                 "theme": "modern"
             }
@@ -90,7 +89,9 @@ class PaymentWorkflowTest {
         testCalendar.year = 2025;
         testCalendar.template = testTemplate;
         testCalendar.isPublic = false;
-        testCalendar.configuration = objectMapper.readTree("""
+        testCalendar.configuration =
+                objectMapper.readTree(
+                        """
             {
                 "theme": "modern"
             }
@@ -102,8 +103,11 @@ class PaymentWorkflowTest {
         mockPaymentIntent.put("clientSecret", "pi_test_secret_123");
         mockPaymentIntent.put("paymentIntentId", "pi_test_payment_" + System.currentTimeMillis());
 
-        when(paymentService.createPaymentIntent(org.mockito.ArgumentMatchers.any(BigDecimal.class), anyString(), anyString()))
-            .thenReturn(mockPaymentIntent);
+        when(paymentService.createPaymentIntent(
+                        org.mockito.ArgumentMatchers.any(BigDecimal.class),
+                        anyString(),
+                        anyString()))
+                .thenReturn(mockPaymentIntent);
         when(paymentService.getWebhookSecret()).thenReturn("");
     }
 
@@ -137,7 +141,8 @@ class PaymentWorkflowTest {
     }
 
     private JsonNode createTestAddress() throws Exception {
-        return objectMapper.readTree("""
+        return objectMapper.readTree(
+                """
             {
                 "street": "123 Main St",
                 "city": "Nashville",
@@ -172,24 +177,27 @@ class PaymentWorkflowTest {
         order.persist();
 
         // When: Cancel order via service layer
-        CalendarOrder cancelledOrder = orderService.cancelOrder(
-            order.id,
-            testUser.id,
-            false, // not admin
-            "Customer requested cancellation"
-        );
+        CalendarOrder cancelledOrder =
+                orderService.cancelOrder(
+                        order.id,
+                        testUser.id,
+                        false, // not admin
+                        "Customer requested cancellation");
 
         // Then: Verify order was cancelled
-        assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status, "Order should be CANCELLED");
+        assertEquals(
+                CalendarOrder.STATUS_CANCELLED, cancelledOrder.status, "Order should be CANCELLED");
         assertNotNull(cancelledOrder.notes, "Cancellation notes should be added");
-        assertTrue(cancelledOrder.notes.contains("Customer requested cancellation"),
-            "Notes should contain cancellation reason");
+        assertTrue(
+                cancelledOrder.notes.contains("Customer requested cancellation"),
+                "Notes should contain cancellation reason");
 
         // Note: Refund processing is handled separately by PaymentService (see I3.T3)
         // OrderService.cancelOrder() only updates order status and adds a TODO note about refund
-        assertTrue(cancelledOrder.notes.contains("TODO: Process refund") ||
-                   cancelledOrder.notes.contains("refund"),
-            "Notes should mention refund processing needed");
+        assertTrue(
+                cancelledOrder.notes.contains("TODO: Process refund")
+                        || cancelledOrder.notes.contains("refund"),
+                "Notes should mention refund processing needed");
     }
 
     @Test
@@ -212,24 +220,29 @@ class PaymentWorkflowTest {
         order.persist();
 
         // When/Then: Try to cancel shipped order (should throw exception)
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
-            orderService.cancelOrder(
-                order.id,
-                testUser.id,
-                false, // not admin
-                "Want to cancel"
-            );
-        });
+        IllegalStateException exception =
+                assertThrows(
+                        IllegalStateException.class,
+                        () -> {
+                            orderService.cancelOrder(
+                                    order.id,
+                                    testUser.id,
+                                    false, // not admin
+                                    "Want to cancel");
+                        });
 
         // Verify exception message mentions cancellation not allowed
-        assertTrue(exception.getMessage().toLowerCase().contains("cannot cancel") ||
-                   exception.getMessage().toLowerCase().contains("shipped"),
-            "Exception should mention order cannot be cancelled: " + exception.getMessage());
+        assertTrue(
+                exception.getMessage().toLowerCase().contains("cannot cancel")
+                        || exception.getMessage().toLowerCase().contains("shipped"),
+                "Exception should mention order cannot be cancelled: " + exception.getMessage());
 
         // Verify order status unchanged
         CalendarOrder unchangedOrder = CalendarOrder.<CalendarOrder>findById(order.id);
-        assertEquals(CalendarOrder.STATUS_SHIPPED, unchangedOrder.status,
-            "Order status should remain SHIPPED");
+        assertEquals(
+                CalendarOrder.STATUS_SHIPPED,
+                unchangedOrder.status,
+                "Order status should remain SHIPPED");
     }
 
     @Test
@@ -251,12 +264,12 @@ class PaymentWorkflowTest {
         order.persist();
 
         // When: Cancel pending order via service layer
-        CalendarOrder cancelledOrder = orderService.cancelOrder(
-            order.id,
-            testUser.id,
-            false, // not admin
-            "Changed my mind"
-        );
+        CalendarOrder cancelledOrder =
+                orderService.cancelOrder(
+                        order.id,
+                        testUser.id,
+                        false, // not admin
+                        "Changed my mind");
 
         // Then: Order should be cancelled without refund attempt
         assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status);
@@ -326,19 +339,18 @@ class PaymentWorkflowTest {
 
         // When: Cancel order via service layer
         orderService.cancelOrder(
-            order.id,
-            testUser.id,
-            false, // not admin
-            "Testing email"
-        );
+                order.id,
+                testUser.id,
+                false, // not admin
+                "Testing email");
 
         // Then: Verify cancellation email job was enqueued
         List<DelayedJob> jobs = DelayedJob.find("actorId", order.id.toString()).list();
         assertTrue(jobs.size() >= 1, "At least one email job should be enqueued");
 
         // Find the cancellation email job
-        boolean foundCancellationEmail = jobs.stream()
-            .anyMatch(job -> "OrderCancellationJobHandler".equals(job.queueName));
+        boolean foundCancellationEmail =
+                jobs.stream().anyMatch(job -> "OrderCancellationJobHandler".equals(job.queueName));
         assertTrue(foundCancellationEmail, "Cancellation email job should be enqueued");
     }
 }

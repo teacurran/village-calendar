@@ -38,7 +38,12 @@ const emit = defineEmits<{
   (e: "mazeTypeChange", type: string): void;
   (
     e: "configChange",
-    config: { size: number; difficulty: number; showSolution: boolean; showDeadEnds: boolean },
+    config: {
+      size: number;
+      difficulty: number;
+      showSolution: boolean;
+      showDeadEnds: boolean;
+    },
   ): void;
   (
     e: "colorsChange",
@@ -88,7 +93,7 @@ const sizeLabel = computed(() => {
   if (size.value <= 10) return "Medium complexity";
   if (size.value <= 15) return "Many passages";
   if (size.value <= 18) return "Very complex";
-  return "Maximum (1/4\" paths)";
+  return 'Maximum (1/4" paths)';
 });
 
 const difficultyLabel = computed(() => {
