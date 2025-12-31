@@ -191,6 +191,23 @@ public class AuthenticationService {
     }
 
     /**
+     * Get the current authenticated user, throwing if not found. Use this in @RolesAllowed
+     * endpoints where a valid user is guaranteed by the security layer.
+     *
+     * @param jwt The JWT token from the Authorization header
+     * @return The CalendarUser
+     * @throws SecurityException if user not found (should not happen in @RolesAllowed endpoints)
+     */
+    public CalendarUser requireCurrentUser(JsonWebToken jwt) {
+        return getCurrentUser(jwt)
+                .orElseThrow(
+                        () -> {
+                            LOG.error("User not found despite passing @RolesAllowed check");
+                            return new SecurityException("Unauthorized: User not found");
+                        });
+    }
+
+    /**
      * Validate that the current request has a valid JWT token. This is mainly used for checking
      * authentication status.
      *

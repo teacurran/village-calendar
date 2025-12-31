@@ -89,14 +89,7 @@ public class OrderResolver {
     public CalendarOrder order(@Name("id") @Description("Order ID") @NotNull final UUID orderId) {
         LOG.infof("Query: order(id=%s)", orderId);
 
-        // Get current user
-        Optional<CalendarUser> userOpt = authService.getCurrentUser(jwt);
-        if (userOpt.isEmpty()) {
-            LOG.error("User not found despite passing @RolesAllowed check");
-            throw new SecurityException("Unauthorized: User not found");
-        }
-
-        CalendarUser currentUser = userOpt.get();
+        CalendarUser currentUser = authService.requireCurrentUser(jwt);
 
         // Fetch the order
         Optional<CalendarOrder> orderOpt = orderService.getOrderById(orderId);
@@ -138,14 +131,7 @@ public class OrderResolver {
             @Name("status") @Description("Filter by order status (optional)") final String status) {
         LOG.infof("Query: orders(userId=%s, status=%s)", userId, status);
 
-        // Get current user
-        Optional<CalendarUser> userOpt = authService.getCurrentUser(jwt);
-        if (userOpt.isEmpty()) {
-            LOG.error("User not found despite passing @RolesAllowed check");
-            throw new SecurityException("Unauthorized: User not found");
-        }
-
-        CalendarUser currentUser = userOpt.get();
+        CalendarUser currentUser = authService.requireCurrentUser(jwt);
         boolean isAdmin = currentUser.isAdmin != null && currentUser.isAdmin;
 
         // Determine target user ID
@@ -194,14 +180,7 @@ public class OrderResolver {
             @Name("status") @Description("Filter by order status (optional)") final String status) {
         LOG.infof("Query: myOrders(status=%s)", status);
 
-        // Get current user
-        Optional<CalendarUser> userOpt = authService.getCurrentUser(jwt);
-        if (userOpt.isEmpty()) {
-            LOG.error("User not found despite passing @RolesAllowed check");
-            throw new SecurityException("Unauthorized: User not found");
-        }
-
-        CalendarUser currentUser = userOpt.get();
+        CalendarUser currentUser = authService.requireCurrentUser(jwt);
 
         // Fetch orders
         List<CalendarOrder> orders = orderService.getUserOrders(currentUser.id);
@@ -278,14 +257,7 @@ public class OrderResolver {
                 "Mutation: placeOrder(calendarId=%s, productType=%s, quantity=%d)",
                 input.calendarId, input.productType, input.quantity);
 
-        // Get current user
-        Optional<CalendarUser> userOpt = authService.getCurrentUser(jwt);
-        if (userOpt.isEmpty()) {
-            LOG.error("User not found despite passing @RolesAllowed check");
-            throw new SecurityException("Unauthorized: User not found");
-        }
-
-        CalendarUser currentUser = userOpt.get();
+        CalendarUser currentUser = authService.requireCurrentUser(jwt);
 
         // Parse calendar ID
         UUID calendarId;
@@ -409,14 +381,7 @@ public class OrderResolver {
                     final String reason) {
         LOG.infof("Mutation: cancelOrder(orderId=%s, reason=%s)", orderId, reason);
 
-        // Get current user
-        Optional<CalendarUser> userOpt = authService.getCurrentUser(jwt);
-        if (userOpt.isEmpty()) {
-            LOG.error("User not found despite passing @RolesAllowed check");
-            throw new SecurityException("Unauthorized: User not found");
-        }
-
-        CalendarUser currentUser = userOpt.get();
+        CalendarUser currentUser = authService.requireCurrentUser(jwt);
         boolean isAdmin = currentUser.isAdmin != null && currentUser.isAdmin;
 
         // Cancel the order via OrderService (handles authorization and validation)

@@ -80,14 +80,7 @@ public class OrderGraphQL {
             @Name("status") @Description("Filter by order status (optional)") String status) {
         LOG.debugf("Query: myOrders(status=%s)", status);
 
-        // Get current user from JWT
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            LOG.error("User not found despite passing @RolesAllowed check");
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser user = currentUser.get();
+        CalendarUser user = authService.requireCurrentUser(jwt);
         List<CalendarOrder> orders = orderService.getUserOrders(user.id);
 
         // Apply status filter if provided
@@ -122,20 +115,13 @@ public class OrderGraphQL {
             @Name("status") @Description("Filter by order status (optional)") String status) {
         LOG.infof("Query: orders(userId=%s, status=%s)", userId, status);
 
-        // Get current user from JWT
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            LOG.error("User not found despite passing @RolesAllowed check");
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser user = currentUser.get();
+        CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Determine target user ID
         UUID targetUserId;
         if (userId != null && !userId.isEmpty()) {
             // Admin access requested - verify admin role
-            boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains("ADMIN");
+            boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains(ROLE_ADMIN);
             if (!isAdmin) {
                 LOG.errorf(
                         "Non-admin user %s attempted to access orders for userId=%s",
@@ -187,13 +173,7 @@ public class OrderGraphQL {
     public CalendarOrder order(@Name("id") @Description("Order ID") @NonNull String id) {
         LOG.infof("Query: order(id=%s)", id);
 
-        // Get current user
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser user = currentUser.get();
+        CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Parse order ID
         UUID orderId;
@@ -215,7 +195,7 @@ public class OrderGraphQL {
 
         // Check authorization (user must own the order or be admin)
         boolean isOwner = order.user != null && order.user.id.equals(user.id);
-        boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains("ADMIN");
+        boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains(ROLE_ADMIN);
 
         if (!isOwner && !isAdmin) {
             LOG.warnf("User %s attempted to access order %s owned by another user", user.email, id);
@@ -420,14 +400,7 @@ public class OrderGraphQL {
                 "Mutation: createOrder(calendarId=%s, quantity=%d)",
                 input.calendarId, input.quantity);
 
-        // Get current user
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            LOG.error("User not found despite passing @RolesAllowed check");
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser user = currentUser.get();
+        CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Validate and find the calendar
         UUID calendarId;
@@ -521,14 +494,7 @@ public class OrderGraphQL {
                         + " IMPLEMENTATION)",
                 input.calendarId, input.productType, input.quantity);
 
-        // Get current user
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            LOG.error("User not found despite passing @RolesAllowed check");
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser user = currentUser.get();
+        CalendarUser user = authService.requireCurrentUser(jwt);
 
         // TODO: Implement the actual placeOrder logic:
         // 1. Validate calendar ID and verify ownership (similar to createOrder)
@@ -608,13 +574,7 @@ public class OrderGraphQL {
                 "Mutation: cancelOrder(orderId=%s, reason=%s) (STUB IMPLEMENTATION)",
                 orderId, reason);
 
-        // Get current user
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser user = currentUser.get();
+        CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Parse order ID
         UUID orderIdUuid;
@@ -636,7 +596,7 @@ public class OrderGraphQL {
 
         // Check authorization (user must own the order or be admin)
         boolean isOwner = order.user != null && order.user.id.equals(user.id);
-        boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains("ADMIN");
+        boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains(ROLE_ADMIN);
 
         if (!isOwner && !isAdmin) {
             LOG.warnf(
