@@ -44,7 +44,7 @@ public class BootstrapResource {
             summary = "Check bootstrap status",
             description =
                     "Check if the system needs to be bootstrapped with an initial admin user."
-                        + " Returns needsBootstrap=true when no admin users exist in the database.")
+                            + " Returns needsBootstrap=true when no admin users exist in the database.")
     @APIResponses({
         @APIResponse(
                 responseCode = "200",
@@ -88,9 +88,9 @@ public class BootstrapResource {
             summary = "Create first admin user",
             description =
                     "Promotes an existing OAuth user to admin status. This endpoint is only"
-                        + " accessible when no admin users exist in the system. The user must have"
-                        + " already authenticated via OAuth (Google or Facebook) before being"
-                        + " promoted to admin.")
+                            + " accessible when no admin users exist in the system. The user must have"
+                            + " already authenticated via OAuth (Google or Facebook) before being"
+                            + " promoted to admin.")
     @APIResponses({
         @APIResponse(
                 responseCode = "200",

@@ -436,8 +436,8 @@ public class AstronomicalServiceTest {
                             Math.abs(phase.phaseValue - 0.75) < 0.1,
                             "Last quarter phase value should be near 0.75");
                     break;
-              default:
-                break;
+                default:
+                    break;
             }
         }
     }

@@ -1,7 +1,6 @@
 package villagecompute.calendar.api.graphql;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.annotation.security.PermitAll;

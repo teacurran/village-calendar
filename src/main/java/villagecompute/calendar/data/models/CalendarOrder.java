@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import io.quarkus.panache.common.Parameters;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -20,6 +19,7 @@ import org.hibernate.type.SqlTypes;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
+import io.quarkus.panache.common.Parameters;
 
 /**
  * Entity representing an e-commerce order for printed calendars. Integrates with Stripe for payment
@@ -260,7 +260,10 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
      * @return Optional containing the order with items loaded, or empty if not found
      */
     public static java.util.Optional<CalendarOrder> findByOrderNumberWithItems(String orderNumber) {
-      return find("#" + QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS, Parameters.with("orderNumber", orderNumber)).firstResultOptional();
+        return find(
+                        "#" + QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS,
+                        Parameters.with("orderNumber", orderNumber))
+                .firstResultOptional();
     }
 
     /**

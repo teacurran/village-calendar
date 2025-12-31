@@ -303,11 +303,11 @@
         <configuration>
           <java>
             <!-- Google Java Format for consistent style -->
+            <!-- Note: Google Java Format uses fixed 100-char line length, not configurable -->
             <googleJavaFormat>
               <version>1.19.2</version>
               <style>AOSP</style>
               <reflowLongStrings>false</reflowLongStrings>
-              <maxLineLength>120</maxLineLength>
             </googleJavaFormat>
             <!-- Import ordering and cleanup -->
             <removeUnusedImports/>

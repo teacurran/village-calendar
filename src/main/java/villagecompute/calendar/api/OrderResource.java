@@ -1,5 +1,7 @@
 package villagecompute.calendar.api;
 
+import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
+
 import java.util.UUID;
 
 import jakarta.inject.Inject;
@@ -20,8 +22,6 @@ import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PDFRenderingService;
-
-import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
 
 /** REST endpoint for secure order-related operations */
 @Path("/orders")

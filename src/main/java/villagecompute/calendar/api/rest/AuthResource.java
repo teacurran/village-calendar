@@ -108,10 +108,10 @@ public class AuthResource {
             summary = "Handle Google OAuth callback",
             description =
                     "OAuth2 callback endpoint invoked by Google after user grants permissions."
-                        + " Exchanges the authorization code for an access token, creates/updates"
-                        + " the user record, and issues a JWT token for subsequent API requests."
-                        + " This endpoint is NOT directly callable by clients - it's part of the"
-                        + " OAuth2 authorization code flow.")
+                            + " Exchanges the authorization code for an access token, creates/updates"
+                            + " the user record, and issues a JWT token for subsequent API requests."
+                            + " This endpoint is NOT directly callable by clients - it's part of the"
+                            + " OAuth2 authorization code flow.")
     @APIResponses({
         @APIResponse(
                 responseCode = "200",
@@ -239,10 +239,10 @@ public class AuthResource {
             summary = "Handle Facebook OAuth callback",
             description =
                     "OAuth2 callback endpoint invoked by Facebook after user grants permissions."
-                        + " Exchanges the authorization code for an access token, creates/updates"
-                        + " the user record, and issues a JWT token for subsequent API requests."
-                        + " This endpoint is NOT directly callable by clients - it's part of the"
-                        + " OAuth2 authorization code flow.")
+                            + " Exchanges the authorization code for an access token, creates/updates"
+                            + " the user record, and issues a JWT token for subsequent API requests."
+                            + " This endpoint is NOT directly callable by clients - it's part of the"
+                            + " OAuth2 authorization code flow.")
     @APIResponses({
         @APIResponse(
                 responseCode = "200",
@@ -322,9 +322,9 @@ public class AuthResource {
             summary = "Initiate Apple OAuth login",
             description =
                     "Redirects user to Apple Sign In page. This endpoint triggers the OAuth2"
-                        + " authorization code flow. After user grants permissions on Apple's"
-                        + " consent page, they will be redirected back to /auth/apple/callback with"
-                        + " an authorization code.")
+                            + " authorization code flow. After user grants permissions on Apple's"
+                            + " consent page, they will be redirected back to /auth/apple/callback with"
+                            + " an authorization code.")
     @APIResponses({
         @APIResponse(
                 responseCode = "303",
@@ -354,10 +354,10 @@ public class AuthResource {
             summary = "Handle Apple OAuth callback",
             description =
                     "OAuth2 callback endpoint invoked by Apple after user grants permissions."
-                        + " Exchanges the authorization code for an access token, creates/updates"
-                        + " the user record, and issues a JWT token for subsequent API requests."
-                        + " This endpoint is NOT directly callable by clients - it's part of the"
-                        + " OAuth2 authorization code flow.")
+                            + " Exchanges the authorization code for an access token, creates/updates"
+                            + " the user record, and issues a JWT token for subsequent API requests."
+                            + " This endpoint is NOT directly callable by clients - it's part of the"
+                            + " OAuth2 authorization code flow.")
     @APIResponses({
         @APIResponse(
                 responseCode = "200",

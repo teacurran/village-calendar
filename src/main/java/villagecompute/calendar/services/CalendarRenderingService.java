@@ -29,8 +29,9 @@ import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import io.quarkus.logging.Log;
 import villagecompute.calendar.util.Colors;
+
+import io.quarkus.logging.Log;
 
 @ApplicationScoped
 public class CalendarRenderingService {
@@ -498,7 +499,9 @@ public class CalendarRenderingService {
         }
 
         StringBuilder result = new StringBuilder();
-        boolean largeEmoji = "large".equals(config.eventDisplayMode) || "large-text".equals(config.eventDisplayMode);
+        boolean largeEmoji =
+                "large".equals(config.eventDisplayMode)
+                        || "large-text".equals(config.eventDisplayMode);
 
         // Render emoji based on display mode
         if (largeEmoji && !holidayEmoji.isEmpty()) {
@@ -769,8 +772,8 @@ public class CalendarRenderingService {
                     svg.append(
                             String.format(
                                     "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
-                                        + " font-weight: %s; text-anchor: %s; font-family: Arial,"
-                                        + " sans-serif;\"%s>%s</text>%n",
+                                            + " font-weight: %s; text-anchor: %s; font-family: Arial,"
+                                            + " sans-serif;\"%s>%s</text>%n",
                                     textX,
                                     textY - lineHeight / 2,
                                     textSize,
@@ -783,8 +786,8 @@ public class CalendarRenderingService {
                         svg.append(
                                 String.format(
                                         "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill:"
-                                            + " %s; font-weight: %s; text-anchor: %s; font-family:"
-                                            + " Arial, sans-serif;\"%s>%s</text>%n",
+                                                + " %s; font-weight: %s; text-anchor: %s; font-family:"
+                                                + " Arial, sans-serif;\"%s>%s</text>%n",
                                         textX,
                                         textY + lineHeight / 2,
                                         textSize,
@@ -809,8 +812,8 @@ public class CalendarRenderingService {
                     svg.append(
                             String.format(
                                     "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
-                                        + " font-weight: %s; text-anchor: %s; font-family: Arial,"
-                                        + " sans-serif;\"%s>%s</text>%n",
+                                            + " font-weight: %s; text-anchor: %s; font-family: Arial,"
+                                            + " sans-serif;\"%s>%s</text>%n",
                                     textX,
                                     textY,
                                     textSize,
@@ -889,14 +892,29 @@ public class CalendarRenderingService {
         },
         // April - Spring bloom
         {
-            "#7CFC00", Colors.SPRING_LIME, Colors.SPRING_LIME, Colors.SPRING_LIME,
-            Colors.SPRING_LIME, Colors.SPRING_LIME, Colors.SPRING_LIME, Colors.SPRING_LIME,
-            Colors.SPRING_LIME, Colors.SPRING_LAVENDER
+            "#7CFC00",
+            Colors.SPRING_LIME,
+            Colors.SPRING_LIME,
+            Colors.SPRING_LIME,
+            Colors.SPRING_LIME,
+            Colors.SPRING_LIME,
+            Colors.SPRING_LIME,
+            Colors.SPRING_LIME,
+            Colors.SPRING_LIME,
+            Colors.SPRING_LAVENDER
         },
         // May - Late spring, lush
         {
-            Colors.EMERALD, "#D0ECE7", "#A2D9CE", "#73C6B6", "#45B39D", "#58D68D",
-            Colors.EMERALD, "#ABEBC6", "#D5F5E3", "#FEF9E7"
+            Colors.EMERALD,
+            "#D0ECE7",
+            "#A2D9CE",
+            "#73C6B6",
+            "#45B39D",
+            "#58D68D",
+            Colors.EMERALD,
+            "#ABEBC6",
+            "#D5F5E3",
+            "#FEF9E7"
         },
         // June - Early summer
         {Colors.SUMMER_AQUAMARINE},
@@ -906,14 +924,29 @@ public class CalendarRenderingService {
         {Colors.SUMMER_CYAN},
         // September - Early fall
         {
-            "#FAD7A0", "#F8C471", "#F5B041", Colors.ORANGE, Colors.ORANGE,
-            Colors.ORANGE, Colors.ORANGE, Colors.ORANGE, Colors.GOLD, Colors.GOLD
+            "#FAD7A0",
+            "#F8C471",
+            "#F5B041",
+            Colors.ORANGE,
+            Colors.ORANGE,
+            Colors.ORANGE,
+            Colors.ORANGE,
+            Colors.ORANGE,
+            Colors.GOLD,
+            Colors.GOLD
         },
         // October - Peak fall foliage
         {
-            "#FF4500", "#FF8C00", "#DAA520",
-            "rgba(180,120,60,0.4)", "rgba(190,130,70,0.4)", "rgba(200,140,80,0.4)",
-            "rgba(210,160,100,0.4)", "rgba(225,190,140,0.4)", "#C0C0C0", "#808080"
+            "#FF4500",
+            "#FF8C00",
+            "#DAA520",
+            "rgba(180,120,60,0.4)",
+            "rgba(190,130,70,0.4)",
+            "rgba(200,140,80,0.4)",
+            "rgba(210,160,100,0.4)",
+            "rgba(225,190,140,0.4)",
+            "#C0C0C0",
+            "#808080"
         },
         // November - Late fall
         {Colors.OVERLAY_GRAY_LIGHT},
@@ -995,42 +1028,60 @@ public class CalendarRenderingService {
         THEMES.put(
                 "vermontWeekends",
                 new ThemeColors(
-                        Colors.BLACK, Colors.WHITE, null, // weekend color will be dynamic
-                        "#1b5e20", Colors.GRAY_900));
+                        Colors.BLACK,
+                        Colors.WHITE,
+                        null, // weekend color will be dynamic
+                        "#1b5e20",
+                        Colors.GRAY_900));
 
         // Rainbow themes
         THEMES.put(
                 "rainbowWeekends",
                 new ThemeColors(
-                        Colors.BLACK, Colors.WHITE, null, // will be calculated dynamically
-                        "#e91e63", "#9c27b0"));
+                        Colors.BLACK,
+                        Colors.WHITE,
+                        null, // will be calculated dynamically
+                        "#e91e63",
+                        "#9c27b0"));
 
         THEMES.put(
                 "rainbowDays",
                 new ThemeColors(
-                        Colors.BLACK, null, // will be calculated dynamically
-                        null, Colors.GRAY_900, Colors.GRAY_600));
+                        Colors.BLACK,
+                        null, // will be calculated dynamically
+                        null,
+                        Colors.GRAY_900,
+                        Colors.GRAY_600));
 
         // Lakeshore theme - cool blue tones
         THEMES.put(
                 "lakeshoreWeekends",
                 new ThemeColors(
-                        Colors.BLACK, Colors.WHITE, null, // weekend color will be dynamic per month
-                        "#1565c0", Colors.GRAY_900));
+                        Colors.BLACK,
+                        Colors.WHITE,
+                        null, // weekend color will be dynamic per month
+                        "#1565c0",
+                        Colors.GRAY_900));
 
         // Sunset Glow theme - warm orange/pink tones
         THEMES.put(
                 "sunsetWeekends",
                 new ThemeColors(
-                        Colors.BLACK, Colors.WHITE, null, // weekend color will be dynamic per month
-                        "#e65100", Colors.GRAY_900));
+                        Colors.BLACK,
+                        Colors.WHITE,
+                        null, // weekend color will be dynamic per month
+                        "#e65100",
+                        Colors.GRAY_900));
 
         // Forest Floor theme - earth/green tones
         THEMES.put(
                 "forestWeekends",
                 new ThemeColors(
-                        Colors.BLACK, Colors.WHITE, null, // weekend color will be dynamic per month
-                        "#2e7d32", Colors.GRAY_900));
+                        Colors.BLACK,
+                        Colors.WHITE,
+                        null, // weekend color will be dynamic per month
+                        "#2e7d32",
+                        Colors.GRAY_900));
     }
 
     private static class ThemeColors {
@@ -1133,7 +1184,7 @@ public class CalendarRenderingService {
         svg.append(
                 String.format(
                         "<text x=\"50\" y=\"80\" fill=\"%s\" font-family=\"Helvetica, Arial,"
-                            + " sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n",
+                                + " sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n",
                         yearFill, year));
 
         // Generate each month row
@@ -1241,9 +1292,9 @@ public class CalendarRenderingService {
         svg.append(
                 String.format(
                         "<svg xmlns=\"http://www.w3.org/2000/svg\""
-                            + " xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%d\""
-                            + " height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid"
-                            + " meet\">%n",
+                                + " xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%d\""
+                                + " height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid"
+                                + " meet\">%n",
                         width, height, width, height));
     }
 

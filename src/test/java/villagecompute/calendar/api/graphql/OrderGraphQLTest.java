@@ -206,7 +206,9 @@ class OrderGraphQLTest {
         for (ProductType type : ProductType.values()) {
             String productCode = type.getProductCode();
             assertNotNull(productCode);
-            assertTrue(productService.isValidProductCode(productCode), "Invalid product code for " + type);
+            assertTrue(
+                    productService.isValidProductCode(productCode),
+                    "Invalid product code for " + type);
         }
     }
 

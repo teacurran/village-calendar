@@ -1,5 +1,8 @@
 package villagecompute.calendar.api;
 
+import static villagecompute.calendar.util.MimeTypes.HEADER_CACHE_CONTROL;
+import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
+
 import java.time.DayOfWeek;
 import java.util.HashMap;
 import java.util.List;
@@ -23,9 +26,6 @@ import villagecompute.calendar.services.PDFRenderingService;
 import villagecompute.calendar.util.MimeTypes;
 
 import io.quarkus.logging.Log;
-
-import static villagecompute.calendar.util.MimeTypes.HEADER_CACHE_CONTROL;
-import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
 
 @Path("/calendar")
 @Produces(MediaType.APPLICATION_JSON)
@@ -258,7 +258,7 @@ public class CalendarResource {
         return Response.ok(pdf)
                 .header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.APPLICATION_PDF)
                 .header(
-                    HEADER_CONTENT_DISPOSITION,
+                        HEADER_CONTENT_DISPOSITION,
                         "attachment; filename=\"calendar-" + config.year + ".pdf\"")
                 .build();
     }

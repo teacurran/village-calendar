@@ -1,5 +1,8 @@
 package villagecompute.calendar.api;
 
+import static villagecompute.calendar.util.MimeTypes.HEADER_CACHE_CONTROL;
+import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,9 +25,6 @@ import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.services.PDFRenderingService;
-
-import static villagecompute.calendar.util.MimeTypes.HEADER_CACHE_CONTROL;
-import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
 
 /**
  * API endpoint for static content generation. CI/CD calls these endpoints to download data and
@@ -199,7 +199,9 @@ public class StaticContentResource {
             byte[] pngBytes = pdfRenderingService.renderSVGToPNG(wrappedSvg, 400);
 
             return Response.ok(pngBytes)
-                    .header(HEADER_CONTENT_DISPOSITION, "inline; filename=\"" + templateId + ".png\"")
+                    .header(
+                            HEADER_CONTENT_DISPOSITION,
+                            "inline; filename=\"" + templateId + ".png\"")
                     .header(HEADER_CACHE_CONTROL, "public, max-age=86400") // Cache for 1 day
                     .build();
         } catch (Exception e) {

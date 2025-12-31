@@ -42,7 +42,7 @@ public class AssetResource {
                             asset.contentType != null ? asset.contentType : MimeTypes.IMAGE_SVG)
                     .header(
                             MimeTypes.HEADER_CACHE_CONTROL,
-                        SVG_CACHE_CONTROL) // Cache for 1 year (assets are immutable)
+                            SVG_CACHE_CONTROL) // Cache for 1 year (assets are immutable)
                     .build();
 
         } catch (IllegalArgumentException e) {
@@ -110,9 +110,7 @@ public class AssetResource {
                                             .replace("\\\\", "\\");
                             return Response.ok(svg)
                                     .header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.IMAGE_SVG)
-                                    .header(
-                                            MimeTypes.HEADER_CACHE_CONTROL,
-                                        SVG_CACHE_CONTROL)
+                                    .header(MimeTypes.HEADER_CACHE_CONTROL, SVG_CACHE_CONTROL)
                                     .build();
                         }
                     }

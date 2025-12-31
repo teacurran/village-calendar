@@ -5,8 +5,8 @@ import java.math.BigDecimal;
 import org.eclipse.microprofile.graphql.Type;
 
 /**
- * API type representing an asset (SVG) associated with a cart or order item.
- * Used by both REST and GraphQL endpoints.
+ * API type representing an asset (SVG) associated with a cart or order item. Used by both REST and
+ * GraphQL endpoints.
  */
 @Type("Asset")
 public class Asset {

@@ -181,7 +181,9 @@ public class OrderResourceTest {
                 .statusCode(200)
                 .contentType("application/pdf")
                 .header(HEADER_CONTENT_DISPOSITION, containsString("calendar-"))
-                .header(HEADER_CONTENT_DISPOSITION, containsString("-2027.pdf")); // Year should appear in filename
+                .header(
+                        HEADER_CONTENT_DISPOSITION,
+                        containsString("-2027.pdf")); // Year should appear in filename
     }
 
     @Test

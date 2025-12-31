@@ -5,10 +5,7 @@ import java.util.List;
 
 import org.eclipse.microprofile.graphql.Type;
 
-/**
- * API type representing a shopping cart.
- * Used by both REST and GraphQL endpoints.
- */
+/** API type representing a shopping cart. Used by both REST and GraphQL endpoints. */
 @Type("Cart")
 public class Cart {
     public String id;

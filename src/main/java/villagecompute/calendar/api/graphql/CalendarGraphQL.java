@@ -1,5 +1,9 @@
 package villagecompute.calendar.api.graphql;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -7,6 +11,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+
 import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.GraphQLApi;
 import org.eclipse.microprofile.graphql.Mutation;
@@ -15,6 +20,7 @@ import org.eclipse.microprofile.graphql.NonNull;
 import org.eclipse.microprofile.graphql.Query;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
+
 import villagecompute.calendar.api.graphql.inputs.CalendarInput;
 import villagecompute.calendar.api.graphql.inputs.CalendarUpdateInput;
 import villagecompute.calendar.data.models.CalendarOrder;
@@ -24,10 +30,6 @@ import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.CalendarService;
 import villagecompute.calendar.services.EventService;
 import villagecompute.calendar.util.Roles;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 /**
  * GraphQL resolver for calendar queries and mutations. Handles user authentication, calendar CRUD

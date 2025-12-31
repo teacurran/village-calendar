@@ -2,6 +2,8 @@ package villagecompute.calendar.api.web;
 
 import static villagecompute.calendar.util.MimeTypes.*;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.List;
@@ -21,9 +23,6 @@ import io.quarkus.vertx.web.RouteBase;
 import io.smallrye.common.annotation.Blocking;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
-
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Serves dynamically rendered calendar product pages using Qute templates. These pages are rendered
@@ -250,9 +249,8 @@ public class CalendarsPageResource {
             int year) {}
 
     /**
-     * Serve the SPA index.html for Vue Router routes.
-     * In production, serves from META-INF/resources/index.html.
-     * In dev mode, fetches from the Vite dev server.
+     * Serve the SPA index.html for Vue Router routes. In production, serves from
+     * META-INF/resources/index.html. In dev mode, fetches from the Vite dev server.
      */
     private void serveSpaIndex(RoutingContext rc) {
         // Try to read the SPA index.html from the classpath (production build)
@@ -269,18 +267,12 @@ public class CalendarsPageResource {
         // In dev mode, fetch index.html from Vite dev server
         rc.vertx()
                 .createHttpClient()
-                .request(
-                        io.vertx.core.http.HttpMethod.GET,
-                        5176,
-                        "localhost",
-                        "/index.html")
+                .request(io.vertx.core.http.HttpMethod.GET, 5176, "localhost", "/index.html")
                 .compose(req -> req.send())
                 .compose(resp -> resp.body())
                 .onSuccess(
                         body -> {
-                            rc.response()
-                                    .putHeader(HEADER_CONTENT_TYPE, TEXT_HTML)
-                                    .end(body);
+                            rc.response().putHeader(HEADER_CONTENT_TYPE, TEXT_HTML).end(body);
                         })
                 .onFailure(
                         err -> {
