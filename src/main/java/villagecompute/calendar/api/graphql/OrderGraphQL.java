@@ -51,6 +51,15 @@ public class OrderGraphQL {
     // Product code constants
     private static final String PRODUCT_CODE_PRINT = "print";
 
+    // Payment/Stripe map key constants
+    private static final String KEY_CLIENT_SECRET = "clientSecret";
+    private static final String KEY_PAYMENT_INTENT_ID = "paymentIntentId";
+    private static final String KEY_SESSION_ID = "sessionId";
+    private static final String KEY_ORDER_ID = "orderId";
+
+    // Currency constants
+    private static final String CURRENCY_USD = "usd";
+
     @Inject JsonWebToken jwt;
 
     @Inject AuthenticationService authService;
@@ -310,7 +319,7 @@ public class OrderGraphQL {
             }
 
             // Extract orderId from session metadata
-            String orderId = session.getMetadata().get("orderId");
+            String orderId = session.getMetadata().get(KEY_ORDER_ID);
             if (orderId == null || orderId.isEmpty()) {
                 LOG.warnf("No orderId in session metadata for session: %s", sessionId);
                 return null;
@@ -444,7 +453,7 @@ public class OrderGraphQL {
             Map<String, String> paymentDetails =
                     paymentService.createPaymentIntent(
                             order.totalPrice,
-                            "usd",
+                            CURRENCY_USD,
                             order.id.toString(),
                             subtotal,
                             order.taxAmount,
@@ -452,7 +461,7 @@ public class OrderGraphQL {
                             order.orderNumber);
 
             // Update order with Stripe payment intent ID
-            order.stripePaymentIntentId = paymentDetails.get("paymentIntentId");
+            order.stripePaymentIntentId = paymentDetails.get(KEY_PAYMENT_INTENT_ID);
             order.persist();
 
             LOG.infof(
@@ -462,7 +471,7 @@ public class OrderGraphQL {
             // Return response with client secret
             CreateOrderResponse response = new CreateOrderResponse();
             response.order = order;
-            response.clientSecret = paymentDetails.get("clientSecret");
+            response.clientSecret = paymentDetails.get(KEY_CLIENT_SECRET);
             return response;
 
         } catch (StripeException e) {
@@ -539,7 +548,7 @@ public class OrderGraphQL {
             Map<String, String> paymentDetails =
                     paymentService.createPaymentIntent(
                             order.totalPrice,
-                            "usd",
+                            CURRENCY_USD,
                             order.id.toString(),
                             subtotal,
                             order.taxAmount,
@@ -547,7 +556,7 @@ public class OrderGraphQL {
                             order.orderNumber);
 
             // Update order with Stripe payment intent ID
-            order.stripePaymentIntentId = paymentDetails.get("paymentIntentId");
+            order.stripePaymentIntentId = paymentDetails.get(KEY_PAYMENT_INTENT_ID);
             order.persist();
 
             LOG.infof(
@@ -557,7 +566,7 @@ public class OrderGraphQL {
             // Return response with client secret
             CreateOrderResponse response = new CreateOrderResponse();
             response.order = order;
-            response.clientSecret = paymentDetails.get("clientSecret");
+            response.clientSecret = paymentDetails.get(KEY_CLIENT_SECRET);
             return response;
 
         } catch (StripeException e) {
@@ -830,13 +839,13 @@ public class OrderGraphQL {
             order.notes =
                     String.format(
                             "[%s] Checkout session created: %s%n",
-                            java.time.Instant.now(), sessionDetails.get("sessionId"));
+                            java.time.Instant.now(), sessionDetails.get(KEY_SESSION_ID));
             order.persist();
 
             // Return response
             CheckoutSessionResponse response = new CheckoutSessionResponse();
-            response.clientSecret = sessionDetails.get("clientSecret");
-            response.sessionId = sessionDetails.get("sessionId");
+            response.clientSecret = sessionDetails.get(KEY_CLIENT_SECRET);
+            response.sessionId = sessionDetails.get(KEY_SESSION_ID);
             response.orderId = order.id.toString();
             response.orderNumber = order.orderNumber;
 
