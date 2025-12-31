@@ -40,33 +40,6 @@ public class CartItem extends DefaultPanacheEntityWithTimestamps {
     @Column(name = "description", length = 500)
     public String description;
 
-    /**
-     * @deprecated since 1.0, use generatorType and description instead. Kept for backward
-     *     compatibility. Template ID from database (null for static product pages with frozen
-     *     configuration)
-     */
-    @Deprecated(since = "1.0", forRemoval = false)
-    @Size(max = 255)
-    @Column(name = "template_id", length = 255)
-    public String templateId;
-
-    /**
-     * @deprecated since 1.0, use description instead. Kept for backward compatibility. Template
-     *     name for display
-     */
-    @Deprecated(since = "1.0", forRemoval = false)
-    @Size(max = 255)
-    @Column(name = "template_name", length = 255)
-    public String templateName;
-
-    /**
-     * @deprecated since 1.0, use configuration JSON instead. Kept for backward compatibility.
-     *     Calendar year
-     */
-    @Deprecated(since = "1.0", forRemoval = false)
-    @Column(name = "calendar_year")
-    public Integer year;
-
     @NotNull @Min(1)
     @Column(nullable = false)
     public Integer quantity = 1;

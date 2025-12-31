@@ -81,24 +81,14 @@ export interface Asset {
 
 export interface CartItem {
   id: string;
-  // New generic fields
   generatorType?: string;
   description?: string;
   assets?: Asset[];
-  // Common fields
   quantity: number;
   unitPrice: number;
   lineTotal: number;
   productCode?: string;
   configuration?: CalendarConfiguration | string;
-  // Legacy fields (deprecated)
-  templateId?: string;
-  templateName?: string;
-  year?: number;
-  productName?: string;
-  imageUrl?: string;
-  notes?: string;
-  options?: Record<string, string>;
 }
 
 export interface Cart {
@@ -149,9 +139,6 @@ export const useCartStore = defineStore("cart", {
                     id
                     generatorType
                     description
-                    templateId
-                    templateName
-                    year
                     quantity
                     unitPrice
                     lineTotal
@@ -213,9 +200,8 @@ export const useCartStore = defineStore("cart", {
     },
 
     async addToCart(
-      templateId: string,
-      templateName: string,
-      year: number,
+      generatorType: string,
+      description: string,
       quantity: number,
       productCode: string,
       configuration?: CalendarConfiguration,
@@ -242,9 +228,6 @@ export const useCartStore = defineStore("cart", {
                     id
                     generatorType
                     description
-                    templateId
-                    templateName
-                    year
                     quantity
                     unitPrice
                     lineTotal
@@ -263,9 +246,8 @@ export const useCartStore = defineStore("cart", {
             `,
             variables: {
               input: {
-                templateId,
-                templateName,
-                year,
+                generatorType,
+                description,
                 quantity,
                 productCode,
                 configuration: configuration
@@ -407,9 +389,6 @@ export const useCartStore = defineStore("cart", {
                     id
                     generatorType
                     description
-                    templateId
-                    templateName
-                    year
                     quantity
                     unitPrice
                     lineTotal
@@ -479,9 +458,6 @@ export const useCartStore = defineStore("cart", {
                     id
                     generatorType
                     description
-                    templateId
-                    templateName
-                    year
                     quantity
                     unitPrice
                     lineTotal
