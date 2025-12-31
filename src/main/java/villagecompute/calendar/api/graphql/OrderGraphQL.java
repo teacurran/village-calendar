@@ -472,51 +472,98 @@ public class OrderGraphQL {
     }
 
     /**
-     * Place an order for printed calendars. Alternative to createOrder mutation with more explicit
-     * input structure. Returns Stripe PaymentIntent for checkout processing.
+     * Place an order for a calendar product. Uses ProductType to determine pricing from the product
+     * catalog. Returns Stripe PaymentIntent for checkout processing.
      *
-     * <p>TODO: Implement placeOrder with ProductType support and pricing logic
-     *
-     * @param input Order placement data (includes productType)
+     * @param input Order placement data (includes productType: PRINT or PDF)
      * @return Created order with payment details
      */
     @Mutation("placeOrder")
     @Description(
-            "Place an order for printed calendars. Alternative to createOrder with structured input"
-                    + " type. Returns PaymentIntent for checkout.")
+            "Place an order for a calendar product. Uses ProductType (PRINT or PDF) for pricing."
+                    + " Returns PaymentIntent for checkout.")
     @RolesAllowed(Roles.USER)
     @Transactional
     public CreateOrderResponse placeOrder(
             @Name("input") @Description("Order placement data") @NotNull @Valid
                     PlaceOrderInput input) {
         LOG.infof(
-                "Mutation: placeOrder(calendarId=%s, productType=%s, quantity=%d) (STUB"
-                        + " IMPLEMENTATION)",
+                "Mutation: placeOrder(calendarId=%s, productType=%s, quantity=%d)",
                 input.calendarId, input.productType, input.quantity);
 
         CalendarUser user = authService.requireCurrentUser(jwt);
 
-        // TODO: Implement the actual placeOrder logic:
-        // 1. Validate calendar ID and verify ownership (similar to createOrder)
-        // 2. Use productType to determine pricing (different prices for WALL_CALENDAR,
-        // DESK_CALENDAR, POSTER)
-        // 3. Create order with product-specific pricing via orderService
-        // 4. Create Stripe PaymentIntent via paymentService
-        // 5. Return CreateOrderResponse with order and clientSecret
-        //
-        // Note: This differs from createOrder by accepting PlaceOrderInput which includes
-        // productType field.
-        // The productType allows different product formats with different pricing.
+        // Validate and find the calendar
+        UUID calendarId;
+        try {
+            calendarId = UUID.fromString(input.calendarId);
+        } catch (IllegalArgumentException e) {
+            LOG.errorf("Invalid calendar ID format: %s", input.calendarId);
+            throw new IllegalArgumentException("Invalid calendar ID format");
+        }
 
-        LOG.warnf(
-                "placeOrder mutation not yet implemented. Would create order for calendar %s with"
-                        + " product type %s",
-                input.calendarId, input.productType);
+        Optional<UserCalendar> calendarOpt =
+                UserCalendar.<UserCalendar>findByIdOptional(calendarId);
+        if (calendarOpt.isEmpty()) {
+            LOG.errorf("Calendar not found: %s", input.calendarId);
+            throw new IllegalArgumentException("Calendar not found");
+        }
 
-        throw new UnsupportedOperationException(
-                "placeOrder mutation not yet implemented. "
-                        + "TODO: Implement product-type-specific pricing and order creation. "
-                        + "Use createOrder mutation as a temporary alternative.");
+        UserCalendar calendar = calendarOpt.get();
+
+        // Verify ownership
+        if (calendar.user == null || !calendar.user.id.equals(user.id)) {
+            LOG.errorf(
+                    "User %s attempted to order calendar %s owned by another user",
+                    user.email, input.calendarId);
+            throw new SecurityException("Unauthorized: You don't own this calendar");
+        }
+
+        // Get price from product catalog using ProductType
+        String productCode = input.productType.getProductCode();
+        BigDecimal unitPrice = productService.getPrice(productCode);
+        LOG.infof("Using price $%.2f for product type %s", unitPrice, input.productType);
+
+        // Convert shipping address to JSON
+        ObjectNode shippingAddressJson = objectMapper.valueToTree(input.shippingAddress);
+
+        // Create the order
+        CalendarOrder order =
+                orderService.createOrder(
+                        user, calendar, input.quantity, unitPrice, shippingAddressJson);
+
+        // Create Stripe PaymentIntent
+        try {
+            BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(input.quantity));
+
+            Map<String, String> paymentDetails =
+                    paymentService.createPaymentIntent(
+                            order.totalPrice,
+                            "usd",
+                            order.id.toString(),
+                            subtotal,
+                            order.taxAmount,
+                            order.shippingCost,
+                            order.orderNumber);
+
+            // Update order with Stripe payment intent ID
+            order.stripePaymentIntentId = paymentDetails.get("paymentIntentId");
+            order.persist();
+
+            LOG.infof(
+                    "Created order %s with PaymentIntent %s for %s",
+                    order.id, order.stripePaymentIntentId, input.productType);
+
+            // Return response with client secret
+            CreateOrderResponse response = new CreateOrderResponse();
+            response.order = order;
+            response.clientSecret = paymentDetails.get("clientSecret");
+            return response;
+
+        } catch (StripeException e) {
+            LOG.errorf(e, "Failed to create PaymentIntent for order %s", order.id);
+            throw new RuntimeException("Failed to create payment intent: " + e.getMessage());
+        }
     }
 
     /**
@@ -554,8 +601,6 @@ public class OrderGraphQL {
      * role). Can only cancel orders in PENDING or PAID status. Automatically triggers Stripe refund
      * for paid orders.
      *
-     * <p>TODO: Implement Stripe refund integration and order cancellation logic
-     *
      * @param orderId Order ID to cancel
      * @param reason Reason for cancellation (optional, stored in notes)
      * @return Cancelled order
@@ -570,9 +615,7 @@ public class OrderGraphQL {
             @Name("orderId") @Description("Order ID to cancel") @NonNull String orderId,
             @Name("reason") @Description("Reason for cancellation (optional, stored in notes)")
                     String reason) {
-        LOG.infof(
-                "Mutation: cancelOrder(orderId=%s, reason=%s) (STUB IMPLEMENTATION)",
-                orderId, reason);
+        LOG.infof("Mutation: cancelOrder(orderId=%s, reason=%s)", orderId, reason);
 
         CalendarUser user = authService.requireCurrentUser(jwt);
 
@@ -585,41 +628,35 @@ public class OrderGraphQL {
             throw new IllegalArgumentException("Invalid order ID format");
         }
 
-        // Find the order
-        Optional<CalendarOrder> orderOpt = orderService.getOrderById(orderIdUuid);
-        if (orderOpt.isEmpty()) {
-            LOG.warnf("Order not found: %s", orderId);
-            throw new IllegalArgumentException("Order not found");
-        }
-
-        CalendarOrder order = orderOpt.get();
-
-        // Check authorization (user must own the order or be admin)
-        boolean isOwner = order.user != null && order.user.id.equals(user.id);
+        // Check if user is admin
         boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains(Roles.ADMIN);
 
-        if (!isOwner && !isAdmin) {
-            LOG.warnf(
-                    "User %s attempted to cancel order %s owned by another user",
-                    user.email, orderId);
-            throw new SecurityException("Unauthorized: You don't have access to this order");
+        // Cancel the order (service handles authorization and status validation)
+        CalendarOrder order = orderService.cancelOrder(orderIdUuid, user.id, isAdmin, reason);
+
+        // If order was paid, process refund via Stripe
+        if (order.stripePaymentIntentId != null && order.paidAt != null) {
+            try {
+                paymentService.processRefund(
+                        order.stripePaymentIntentId,
+                        null, // Full refund
+                        reason != null ? reason : "requested_by_customer");
+                LOG.infof("Processed refund for cancelled order %s", orderId);
+            } catch (StripeException e) {
+                // Log but don't fail - order is already cancelled
+                LOG.errorf(e, "Failed to process refund for order %s", orderId);
+                // Add note about failed refund
+                order.notes =
+                        order.notes
+                                + String.format(
+                                        "[%s] WARNING: Automatic refund failed: %s. Manual refund"
+                                                + " may be required.%n",
+                                        java.time.Instant.now(), e.getMessage());
+                order.persist();
+            }
         }
 
-        // TODO: Implement the actual cancellation logic:
-        // 1. Verify order is in PENDING or PAID status (not PROCESSING, SHIPPED, or DELIVERED)
-        // 2. If order is PAID, initiate Stripe refund via paymentService
-        // 3. Update order status to CANCELLED
-        // 4. Store cancellation reason in notes field
-        // 5. Update order timestamps
-
-        LOG.warnf(
-                "Order cancellation not yet implemented. Order %s would be cancelled with reason:"
-                        + " %s",
-                orderId, reason);
-
-        throw new UnsupportedOperationException(
-                "Order cancellation not yet implemented. TODO: Implement Stripe refund integration"
-                        + " and order status update to CANCELLED.");
+        return order;
     }
 
     /**
