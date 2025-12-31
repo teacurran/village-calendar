@@ -10,27 +10,24 @@ import jakarta.validation.constraints.Size;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 
 /**
- * Entity representing analytics tracking for user navigation and behavior analysis. Captures user
- * navigation patterns and behavior for product insights.
+ * Entity representing analytics tracking for user navigation and behavior analysis. Captures user navigation patterns
+ * and behavior for product insights.
  *
- * <p>Supports:
+ * <p>
+ * Supports:
  *
  * <ul>
- *   <li>User behavior tracking (anonymous and authenticated)
- *   <li>Funnel analysis (template browsing -> customization -> checkout)
- *   <li>Session reconstruction via session_id
- *   <li>Referral source tracking
+ * <li>User behavior tracking (anonymous and authenticated)
+ * <li>Funnel analysis (template browsing -> customization -> checkout)
+ * <li>Session reconstruction via session_id
+ * <li>Referral source tracking
  * </ul>
  */
 @Entity
-@Table(
-        name = "page_views",
-        indexes = {
-            @Index(name = "idx_page_views_session", columnList = "session_id, created DESC"),
-            @Index(name = "idx_page_views_user", columnList = "user_id, created DESC"),
-            @Index(name = "idx_page_views_path", columnList = "path, created DESC"),
-            @Index(name = "idx_page_views_created", columnList = "created DESC")
-        })
+@Table(name = "page_views", indexes = {@Index(name = "idx_page_views_session", columnList = "session_id, created DESC"),
+        @Index(name = "idx_page_views_user", columnList = "user_id, created DESC"),
+        @Index(name = "idx_page_views_path", columnList = "path, created DESC"),
+        @Index(name = "idx_page_views_created", columnList = "created DESC")})
 public class PageView extends DefaultPanacheEntityWithTimestamps {
 
     @NotNull @Size(max = 255)
@@ -56,10 +53,11 @@ public class PageView extends DefaultPanacheEntityWithTimestamps {
     // Static finder methods (ActiveRecord pattern)
 
     /**
-     * Find all page views for a specific session, ordered by creation time. Used for session
-     * reconstruction and funnel analysis.
+     * Find all page views for a specific session, ordered by creation time. Used for session reconstruction and funnel
+     * analysis.
      *
-     * @param sessionId Session identifier
+     * @param sessionId
+     *            Session identifier
      * @return Query of page views
      */
     public static PanacheQuery<PageView> findBySession(String sessionId) {
@@ -67,10 +65,10 @@ public class PageView extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Find all page views for a specific user, ordered by creation time descending. Used for user
-     * behavior tracking.
+     * Find all page views for a specific user, ordered by creation time descending. Used for user behavior tracking.
      *
-     * @param userId User ID
+     * @param userId
+     *            User ID
      * @return Query of page views
      */
     public static PanacheQuery<PageView> findByUser(UUID userId) {
@@ -78,10 +76,11 @@ public class PageView extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Find all page views for a specific path, ordered by creation time descending. Used for path
-     * analysis and popular pages tracking.
+     * Find all page views for a specific path, ordered by creation time descending. Used for path analysis and popular
+     * pages tracking.
      *
-     * @param path URL path (e.g., "/templates", "/calendar/123/edit")
+     * @param path
+     *            URL path (e.g., "/templates", "/calendar/123/edit")
      * @return Query of page views
      */
     public static PanacheQuery<PageView> findByPath(String path) {
@@ -89,11 +88,12 @@ public class PageView extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Find page views within a time range, ordered by creation time descending. Used for time-based
-     * analytics queries.
+     * Find page views within a time range, ordered by creation time descending. Used for time-based analytics queries.
      *
-     * @param since Start time (inclusive)
-     * @param until End time (exclusive)
+     * @param since
+     *            Start time (inclusive)
+     * @param until
+     *            End time (exclusive)
      * @return Query of page views
      */
     public static PanacheQuery<PageView> findByTimeRange(Instant since, Instant until) {
@@ -103,7 +103,8 @@ public class PageView extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find page views for a specific referrer source. Used for traffic source attribution.
      *
-     * @param referrer HTTP Referer header
+     * @param referrer
+     *            HTTP Referer header
      * @return Query of page views
      */
     public static PanacheQuery<PageView> findByReferrer(String referrer) {
@@ -113,9 +114,12 @@ public class PageView extends DefaultPanacheEntityWithTimestamps {
     /**
      * Count page views for a specific path within a time range. Used for analytics dashboards.
      *
-     * @param path URL path
-     * @param since Start time (inclusive)
-     * @param until End time (exclusive)
+     * @param path
+     *            URL path
+     * @param since
+     *            Start time (inclusive)
+     * @param until
+     *            End time (exclusive)
      * @return Count of page views
      */
     public static long countByPathAndTimeRange(String path, Instant since, Instant until) {

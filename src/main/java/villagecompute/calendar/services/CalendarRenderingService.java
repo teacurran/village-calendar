@@ -36,9 +36,11 @@ import io.quarkus.logging.Log;
 @ApplicationScoped
 public class CalendarRenderingService {
 
-    @Inject HolidayService holidayService;
+    @Inject
+    HolidayService holidayService;
 
-    @Inject EmojiSvgService emojiSvgService;
+    @Inject
+    EmojiSvgService emojiSvgService;
 
     // ===========================================
     // PRINT DIMENSIONS (in inches)
@@ -51,10 +53,8 @@ public class CalendarRenderingService {
     public static final float MARGIN_INCHES = 0.5f;
 
     // Printable area (calculated from page size minus margins)
-    public static final float PRINTABLE_WIDTH_INCHES =
-            PAGE_WIDTH_INCHES - (2 * MARGIN_INCHES); // 34"
-    public static final float PRINTABLE_HEIGHT_INCHES =
-            PAGE_HEIGHT_INCHES - (2 * MARGIN_INCHES); // 22"
+    public static final float PRINTABLE_WIDTH_INCHES = PAGE_WIDTH_INCHES - (2 * MARGIN_INCHES); // 34"
+    public static final float PRINTABLE_HEIGHT_INCHES = PAGE_HEIGHT_INCHES - (2 * MARGIN_INCHES); // 22"
 
     // Points per inch (PDF standard)
     private static final float POINTS_PER_INCH = 72f;
@@ -76,8 +76,7 @@ public class CalendarRenderingService {
         public boolean rotateMonthNames = false;
         public double latitude = 0; // Default: No location (no rotation)
         public double longitude = 0; // Default: No location (no rotation)
-        public LocalTime observationTime =
-                LocalTime.of(20, 0); // Default: 8:00 PM for moon calculations
+        public LocalTime observationTime = LocalTime.of(20, 0); // Default: 8:00 PM for moon calculations
         public String timeZone = "America/New_York"; // Time zone for calculations
         public int moonSize = 24; // Default moon radius in pixels
         public int moonOffsetX = 30; // Horizontal offset in pixels from left edge of cell
@@ -96,22 +95,17 @@ public class CalendarRenderingService {
         public String moonDarkColor = Colors.GRAY_400; // Default moon dark side
         public String moonLightColor = Colors.WHITE; // Default moon light side
         public String emojiPosition = "bottom-left"; // Position of emojis in calendar cells
-        public Map<String, Object> customDates =
-                new HashMap<>(); // date -> emoji/text or CustomEventDisplay object
+        public Map<String, Object> customDates = new HashMap<>(); // date -> emoji/text or CustomEventDisplay object
         public Map<String, String> eventTitles = new HashMap<>(); // date -> title mapping
         public Set<String> holidays = new HashSet<>();
         public Map<String, String> holidayEmojis = new HashMap<>(); // date -> emoji for holidays
-        public Map<String, String> holidayNames =
-                new HashMap<>(); // date -> holiday name for text display
+        public Map<String, String> holidayNames = new HashMap<>(); // date -> holiday name for text display
         public List<String> holidaySets = new ArrayList<>(); // List of holiday set IDs to include
-        public String eventDisplayMode =
-                "large"; // "large", "large-text", "small", "text", or "none"
-        public String emojiFont =
-                "noto-color"; // "noto-color", "noto-mono", or "mono-{color}" for colored monochrome
+        public String eventDisplayMode = "large"; // "large", "large-text", "small", "text", or "none"
+        public String emojiFont = "noto-color"; // "noto-color", "noto-mono", or "mono-{color}" for colored monochrome
         public String locale = "en-US";
         public DayOfWeek firstDayOfWeek = DayOfWeek.SUNDAY;
-        public String layoutStyle =
-                "grid"; // "grid" for 12x31 layout, "weekday-grid" for weekday-aligned layout
+        public String layoutStyle = "grid"; // "grid" for 12x31 layout, "weekday-grid" for weekday-aligned layout
     }
 
     // JSON configuration field names
@@ -123,11 +117,13 @@ public class CalendarRenderingService {
     public static final String CUSTOM_DATES = "customDates";
 
     /**
-     * Apply JSON configuration to a CalendarConfig object. This is the single source of truth for
-     * JSON -> CalendarConfig mapping.
+     * Apply JSON configuration to a CalendarConfig object. This is the single source of truth for JSON ->
+     * CalendarConfig mapping.
      *
-     * @param config The CalendarConfig to modify
-     * @param jsonConfig The JSON configuration node
+     * @param config
+     *            The CalendarConfig to modify
+     * @param jsonConfig
+     *            The JSON configuration node
      */
     public static void applyJsonConfiguration(CalendarConfig config, JsonNode jsonConfig) {
         if (jsonConfig == null) {
@@ -135,7 +131,8 @@ public class CalendarRenderingService {
         }
         try {
             // String fields
-            if (jsonConfig.has("theme")) config.theme = jsonConfig.get("theme").asText();
+            if (jsonConfig.has("theme"))
+                config.theme = jsonConfig.get("theme").asText();
             if (jsonConfig.has("moonDisplayMode"))
                 config.moonDisplayMode = jsonConfig.get("moonDisplayMode").asText();
 
@@ -156,10 +153,12 @@ public class CalendarRenderingService {
                 config.rotateMonthNames = jsonConfig.get("rotateMonthNames").asBoolean();
 
             // Numeric fields
-            if (jsonConfig.has("latitude")) config.latitude = jsonConfig.get("latitude").asDouble();
+            if (jsonConfig.has("latitude"))
+                config.latitude = jsonConfig.get("latitude").asDouble();
             if (jsonConfig.has("longitude"))
                 config.longitude = jsonConfig.get("longitude").asDouble();
-            if (jsonConfig.has("moonSize")) config.moonSize = jsonConfig.get("moonSize").asInt();
+            if (jsonConfig.has("moonSize"))
+                config.moonSize = jsonConfig.get("moonSize").asInt();
             if (jsonConfig.has("moonOffsetX"))
                 config.moonOffsetX = jsonConfig.get("moonOffsetX").asInt();
             if (jsonConfig.has("moonOffsetY"))
@@ -198,10 +197,12 @@ public class CalendarRenderingService {
                 config.emojiFont = jsonConfig.get("emojiFont").asText();
             if (jsonConfig.has("eventDisplayMode"))
                 config.eventDisplayMode = jsonConfig.get("eventDisplayMode").asText();
-            if (jsonConfig.has("locale")) config.locale = jsonConfig.get("locale").asText();
+            if (jsonConfig.has("locale"))
+                config.locale = jsonConfig.get("locale").asText();
             if (jsonConfig.has("layoutStyle"))
                 config.layoutStyle = jsonConfig.get("layoutStyle").asText();
-            if (jsonConfig.has("timeZone")) config.timeZone = jsonConfig.get("timeZone").asText();
+            if (jsonConfig.has("timeZone"))
+                config.timeZone = jsonConfig.get("timeZone").asText();
 
             // Enum fields
             if (jsonConfig.has("firstDayOfWeek")) {
@@ -216,95 +217,66 @@ public class CalendarRenderingService {
             // Complex types: customDates (Map<String, Object>)
             if (jsonConfig.has(CUSTOM_DATES) && jsonConfig.get(CUSTOM_DATES).isObject()) {
                 JsonNode customDates = jsonConfig.get(CUSTOM_DATES);
-                customDates
-                        .properties()
-                        .forEach(
-                                entry -> {
-                                    String date = entry.getKey();
-                                    JsonNode value = entry.getValue();
-                                    if (value.isTextual()) {
-                                        config.customDates.put(date, value.asText());
-                                    } else if (value.isObject()) {
-                                        Map<String, Object> map = new HashMap<>();
-                                        value.properties()
-                                                .forEach(
-                                                        f -> {
-                                                            if (f.getValue().isTextual())
-                                                                map.put(
-                                                                        f.getKey(),
-                                                                        f.getValue().asText());
-                                                            else if (f.getValue().isNumber())
-                                                                map.put(
-                                                                        f.getKey(),
-                                                                        f.getValue().asDouble());
-                                                            else if (f.getValue().isBoolean())
-                                                                map.put(
-                                                                        f.getKey(),
-                                                                        f.getValue().asBoolean());
-                                                        });
-                                        config.customDates.put(date, map);
-                                    }
-                                });
+                customDates.properties().forEach(entry -> {
+                    String date = entry.getKey();
+                    JsonNode value = entry.getValue();
+                    if (value.isTextual()) {
+                        config.customDates.put(date, value.asText());
+                    } else if (value.isObject()) {
+                        Map<String, Object> map = new HashMap<>();
+                        value.properties().forEach(f -> {
+                            if (f.getValue().isTextual())
+                                map.put(f.getKey(), f.getValue().asText());
+                            else if (f.getValue().isNumber())
+                                map.put(f.getKey(), f.getValue().asDouble());
+                            else if (f.getValue().isBoolean())
+                                map.put(f.getKey(), f.getValue().asBoolean());
+                        });
+                        config.customDates.put(date, map);
+                    }
+                });
             }
 
             // Complex types: eventTitles (Map<String, String>)
             if (jsonConfig.has(EVENT_TITLES) && jsonConfig.get(EVENT_TITLES).isObject()) {
                 JsonNode eventTitles = jsonConfig.get(EVENT_TITLES);
-                eventTitles
-                        .properties()
-                        .forEach(
-                                entry -> {
-                                    config.eventTitles.put(
-                                            entry.getKey(), entry.getValue().asText());
-                                });
+                eventTitles.properties().forEach(entry -> {
+                    config.eventTitles.put(entry.getKey(), entry.getValue().asText());
+                });
             }
 
             // Complex types: holidays (Set<String>)
             if (jsonConfig.has(HOLIDAYS) && jsonConfig.get(HOLIDAYS).isArray()) {
                 config.holidays.clear();
-                jsonConfig
-                        .get(HOLIDAYS)
-                        .forEach(
-                                holiday -> {
-                                    config.holidays.add(holiday.asText());
-                                });
+                jsonConfig.get(HOLIDAYS).forEach(holiday -> {
+                    config.holidays.add(holiday.asText());
+                });
             }
 
             // Complex types: holidaySets (List<String>)
             if (jsonConfig.has(HOLIDAY_SETS) && jsonConfig.get(HOLIDAY_SETS).isArray()) {
                 config.holidaySets.clear();
-                jsonConfig
-                        .get(HOLIDAY_SETS)
-                        .forEach(
-                                set -> {
-                                    config.holidaySets.add(set.asText());
-                                });
+                jsonConfig.get(HOLIDAY_SETS).forEach(set -> {
+                    config.holidaySets.add(set.asText());
+                });
             }
 
             // Complex types: holidayEmojis (Map<String, String>)
             if (jsonConfig.has(HOLIDAY_EMOJIS) && jsonConfig.get(HOLIDAY_EMOJIS).isObject()) {
                 config.holidayEmojis.clear();
                 JsonNode holidayEmojis = jsonConfig.get(HOLIDAY_EMOJIS);
-                holidayEmojis
-                        .properties()
-                        .forEach(
-                                entry -> {
-                                    config.holidayEmojis.put(
-                                            entry.getKey(), entry.getValue().asText());
-                                });
+                holidayEmojis.properties().forEach(entry -> {
+                    config.holidayEmojis.put(entry.getKey(), entry.getValue().asText());
+                });
             }
 
             // Complex types: holidayNames (Map<String, String>)
             if (jsonConfig.has(HOLIDAY_NAMES) && jsonConfig.get(HOLIDAY_NAMES).isObject()) {
                 config.holidayNames.clear();
                 JsonNode holidayNames = jsonConfig.get(HOLIDAY_NAMES);
-                holidayNames
-                        .properties()
-                        .forEach(
-                                entry -> {
-                                    config.holidayNames.put(
-                                            entry.getKey(), entry.getValue().asText());
-                                });
+                holidayNames.properties().forEach(entry -> {
+                    config.holidayNames.put(entry.getKey(), entry.getValue().asText());
+                });
             }
 
         } catch (Exception e) {
@@ -313,9 +285,8 @@ public class CalendarRenderingService {
     }
 
     /**
-     * Returns the CSS font-family string for emoji rendering based on config. Noto Color Emoji is
-     * the default (Apache 2.0 licensed, safe for commercial printing). Noto Emoji (monochrome) is
-     * available for a text-only look.
+     * Returns the CSS font-family string for emoji rendering based on config. Noto Color Emoji is the default (Apache
+     * 2.0 licensed, safe for commercial printing). Noto Emoji (monochrome) is available for a text-only look.
      */
     private static String getEmojiFontFamily(CalendarConfig config) {
         if ("noto-mono".equals(config.emojiFont)) {
@@ -347,8 +318,7 @@ public class CalendarRenderingService {
         MONOCHROME_EMOJI_SUBSTITUTIONS.put("🤲", "🙏"); // Palms Up -> Folded Hands (Ashura)
         MONOCHROME_EMOJI_SUBSTITUTIONS.put("☪️", "🌙"); // Star and Crescent -> Crescent Moon
         // Chinese
-        MONOCHROME_EMOJI_SUBSTITUTIONS.put(
-                "🧧", "🏮"); // Red Envelope -> Lantern (Chinese New Year)
+        MONOCHROME_EMOJI_SUBSTITUTIONS.put("🧧", "🏮"); // Red Envelope -> Lantern (Chinese New Year)
         MONOCHROME_EMOJI_SUBSTITUTIONS.put("🪦", "🌸"); // Headstone -> Blossom (Qingming)
         MONOCHROME_EMOJI_SUBSTITUTIONS.put("🥮", "🌕"); // Moon Cake -> Full Moon (Mid-Autumn)
         MONOCHROME_EMOJI_SUBSTITUTIONS.put("🏔️", "⛰️"); // Snow Mountain -> Mountain (Double Ninth)
@@ -374,14 +344,13 @@ public class CalendarRenderingService {
     }
 
     /**
-     * Substitutes emojis that aren't available in Noto Emoji monochrome font with compatible
-     * alternatives. Also applies to colored monochrome variants.
+     * Substitutes emojis that aren't available in Noto Emoji monochrome font with compatible alternatives. Also applies
+     * to colored monochrome variants.
      */
     private static String substituteEmojiForMonochrome(String emoji, CalendarConfig config) {
         // Apply substitutions for noto-mono and all mono-* color variants
-        boolean needsSubstitution =
-                "noto-mono".equals(config.emojiFont)
-                        || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
+        boolean needsSubstitution = "noto-mono".equals(config.emojiFont)
+                || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
         if (!needsSubstitution) {
             return emoji; // No substitution needed for color mode
         }
@@ -389,23 +358,27 @@ public class CalendarRenderingService {
     }
 
     /**
-     * Render an emoji as either inline SVG (preferred for PDF) or text with font fallback. Uses
-     * EmojiSvgService for vector rendering when available.
+     * Render an emoji as either inline SVG (preferred for PDF) or text with font fallback. Uses EmojiSvgService for
+     * vector rendering when available.
      *
-     * @param emoji The emoji character(s) to render
-     * @param x X position (center for centered, left for left-aligned)
-     * @param y Y position (center for centered, baseline for text)
-     * @param size Font size in pixels
-     * @param config Calendar configuration
-     * @param centered Whether the emoji should be centered at x,y
+     * @param emoji
+     *            The emoji character(s) to render
+     * @param x
+     *            X position (center for centered, left for left-aligned)
+     * @param y
+     *            Y position (center for centered, baseline for text)
+     * @param size
+     *            Font size in pixels
+     * @param config
+     *            Calendar configuration
+     * @param centered
+     *            Whether the emoji should be centered at x,y
      * @return SVG element string (either <svg> or <text>)
      */
-    private String renderEmoji(
-            String emoji, double x, double y, int size, CalendarConfig config, boolean centered) {
+    private String renderEmoji(String emoji, double x, double y, int size, CalendarConfig config, boolean centered) {
         // Check if monochrome mode is enabled (noto-mono or any mono-* color variant)
-        boolean isMonochrome =
-                "noto-mono".equals(config.emojiFont)
-                        || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
+        boolean isMonochrome = "noto-mono".equals(config.emojiFont)
+                || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
         // Get color for colored monochrome variants
         String colorHex = EMOJI_COLOR_MAP.get(config.emojiFont);
 
@@ -426,33 +399,33 @@ public class CalendarRenderingService {
                     x, y, size, getEmojiFontFamily(config), processedEmoji);
         } else {
             return String.format(
-                    "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; font-family:"
-                            + " %s;\">%s</text>",
-                    x, y, size, getEmojiFontFamily(config), processedEmoji);
+                    "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; font-family:" + " %s;\">%s</text>", x, y,
+                    size, getEmojiFontFamily(config), processedEmoji);
         }
     }
 
     /**
-     * Renders a month name label with optional rotation. When rotated, text is centered in
-     * cellWidth and rotated -90 degrees. When not rotated, text is positioned at (x, y) with the
-     * specified anchor. Uses inline styles for immediate visual update (no CSS class dependency).
+     * Renders a month name label with optional rotation. When rotated, text is centered in cellWidth and rotated -90
+     * degrees. When not rotated, text is positioned at (x, y) with the specified anchor. Uses inline styles for
+     * immediate visual update (no CSS class dependency).
      *
-     * @param monthName The month name to display
-     * @param x X position for non-rotated text
-     * @param y Y position (vertical center of the row)
-     * @param cellWidth Width of the month label cell (used for centering when rotated)
-     * @param rotated Whether to rotate the text -90 degrees
-     * @param textAnchor Text anchor for non-rotated text ("start", "middle", or "end")
-     * @param fillColor The fill color for the text
+     * @param monthName
+     *            The month name to display
+     * @param x
+     *            X position for non-rotated text
+     * @param y
+     *            Y position (vertical center of the row)
+     * @param cellWidth
+     *            Width of the month label cell (used for centering when rotated)
+     * @param rotated
+     *            Whether to rotate the text -90 degrees
+     * @param textAnchor
+     *            Text anchor for non-rotated text ("start", "middle", or "end")
+     * @param fillColor
+     *            The fill color for the text
      * @return SVG text element string
      */
-    private String renderMonthName(
-            String monthName,
-            int x,
-            int y,
-            int cellWidth,
-            boolean rotated,
-            String textAnchor,
+    private String renderMonthName(String monthName, int x, int y, int cellWidth, boolean rotated, String textAnchor,
             String fillColor) {
         if (rotated) {
             int centerX = cellWidth / 2;
@@ -462,46 +435,43 @@ public class CalendarRenderingService {
                             + " text-anchor=\"middle\" transform=\"rotate(-90 %d %d)\">%s</text>%n",
                     centerX, y, fillColor, centerX, y, monthName);
         } else {
-            return String.format(
-                    "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-family=\"Helvetica, Arial,"
-                            + " sans-serif\" font-size=\"20px\" font-weight=\"bold\""
-                            + " text-anchor=\"%s\">%s</text>%n",
-                    x, y, fillColor, textAnchor, monthName);
+            return String.format("<text x=\"%d\" y=\"%d\" fill=\"%s\" font-family=\"Helvetica, Arial,"
+                    + " sans-serif\" font-size=\"20px\" font-weight=\"bold\"" + " text-anchor=\"%s\">%s</text>%n", x, y,
+                    fillColor, textAnchor, monthName);
         }
     }
 
     /**
-     * Renders holiday emoji and text based on eventDisplayMode. Shared between grid and
-     * weekday-grid layouts for consistency.
+     * Renders holiday emoji and text based on eventDisplayMode. Shared between grid and weekday-grid layouts for
+     * consistency.
      *
-     * @param holidayEmoji The emoji to display (may be empty)
-     * @param holidayName The holiday name for text modes (may be empty)
-     * @param cellX Cell X position
-     * @param cellY Cell Y position
-     * @param cellWidth Cell width
-     * @param cellHeight Cell height
-     * @param shouldShowMoon Whether moon is displayed (affects large emoji positioning)
-     * @param config Calendar configuration
+     * @param holidayEmoji
+     *            The emoji to display (may be empty)
+     * @param holidayName
+     *            The holiday name for text modes (may be empty)
+     * @param cellX
+     *            Cell X position
+     * @param cellY
+     *            Cell Y position
+     * @param cellWidth
+     *            Cell width
+     * @param cellHeight
+     *            Cell height
+     * @param shouldShowMoon
+     *            Whether moon is displayed (affects large emoji positioning)
+     * @param config
+     *            Calendar configuration
      * @return SVG string for holiday content
      */
-    private String renderHolidayContent(
-            String holidayEmoji,
-            String holidayName,
-            int cellX,
-            int cellY,
-            int cellWidth,
-            int cellHeight,
-            boolean shouldShowMoon,
-            CalendarConfig config) {
+    private String renderHolidayContent(String holidayEmoji, String holidayName, int cellX, int cellY, int cellWidth,
+            int cellHeight, boolean shouldShowMoon, CalendarConfig config) {
 
         if ("none".equals(config.eventDisplayMode)) {
             return "";
         }
 
         StringBuilder result = new StringBuilder();
-        boolean largeEmoji =
-                "large".equals(config.eventDisplayMode)
-                        || "large-text".equals(config.eventDisplayMode);
+        boolean largeEmoji = "large".equals(config.eventDisplayMode) || "large-text".equals(config.eventDisplayMode);
 
         // Render emoji based on display mode
         if (largeEmoji && !holidayEmoji.isEmpty()) {
@@ -534,93 +504,81 @@ public class CalendarRenderingService {
             int textX = cellX + cellWidth / 2;
             int textY = cellY + cellHeight - 3;
             int textSize = Math.max(5, cellWidth / 10);
-            result.append(
-                    String.format(
-                            "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
-                                    + " fill=\"%s\" font-family=\"Helvetica, Arial,"
-                                    + " sans-serif\">%s</text>%n",
-                            textX, textY, textSize, config.holidayColor, escapeXml(holidayName)));
+            result.append(String.format(
+                    "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
+                            + " fill=\"%s\" font-family=\"Helvetica, Arial," + " sans-serif\">%s</text>%n",
+                    textX, textY, textSize, config.holidayColor, escapeXml(holidayName)));
         }
 
         return result.toString();
     }
 
     /**
-     * Renders all content inside a day cell. Shared between grid and weekday-grid layouts. Both
-     * layouts calculate cellX, cellY based on their own structure, then call this method to render
-     * identical day content.
+     * Renders all content inside a day cell. Shared between grid and weekday-grid layouts. Both layouts calculate
+     * cellX, cellY based on their own structure, then call this method to render identical day content.
      *
-     * @param svg StringBuilder to append SVG content to
-     * @param cellX Cell X position
-     * @param cellY Cell Y position
-     * @param cellWidth Cell width
-     * @param cellHeight Cell height
-     * @param date The date being rendered
-     * @param dayOfWeek Day of week for this date
-     * @param isWeekend Whether this is a weekend day
-     * @param monthNum Month number (1-12)
-     * @param weekendIndex Weekend index for Vermont colors
-     * @param locale Locale for day name formatting
-     * @param config Calendar configuration
-     * @param theme Theme colors
+     * @param svg
+     *            StringBuilder to append SVG content to
+     * @param cellX
+     *            Cell X position
+     * @param cellY
+     *            Cell Y position
+     * @param cellWidth
+     *            Cell width
+     * @param cellHeight
+     *            Cell height
+     * @param date
+     *            The date being rendered
+     * @param dayOfWeek
+     *            Day of week for this date
+     * @param isWeekend
+     *            Whether this is a weekend day
+     * @param monthNum
+     *            Month number (1-12)
+     * @param weekendIndex
+     *            Weekend index for Vermont colors
+     * @param locale
+     *            Locale for day name formatting
+     * @param config
+     *            Calendar configuration
+     * @param theme
+     *            Theme colors
      */
-    private void renderDayCell(
-            StringBuilder svg,
-            int cellX,
-            int cellY,
-            int cellWidth,
-            int cellHeight,
-            LocalDate date,
-            DayOfWeek dayOfWeek,
-            boolean isWeekend,
-            int monthNum,
-            int weekendIndex,
-            Locale locale,
-            CalendarConfig config,
-            ThemeColors theme) {
+    private void renderDayCell(StringBuilder svg, int cellX, int cellY, int cellWidth, int cellHeight, LocalDate date,
+            DayOfWeek dayOfWeek, boolean isWeekend, int monthNum, int weekendIndex, Locale locale,
+            CalendarConfig config, ThemeColors theme) {
 
         int day = date.getDayOfMonth();
         String dateStr = date.toString();
 
         // Cell background
-        String cellBackground =
-                getCellBackgroundColor(config, date, monthNum, day, isWeekend, weekendIndex);
+        String cellBackground = getCellBackgroundColor(config, date, monthNum, day, isWeekend, weekendIndex);
         String pdfSafeColor = convertColorForPDF(cellBackground);
-        if (pdfSafeColor != null
-                && !pdfSafeColor.equals("none")
-                && !pdfSafeColor.equals(Colors.WHITE)) {
-            svg.append(
-                    String.format(
-                            "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\"/>%n",
-                            cellX, cellY, cellWidth, cellHeight, pdfSafeColor));
+        if (pdfSafeColor != null && !pdfSafeColor.equals("none") && !pdfSafeColor.equals(Colors.WHITE)) {
+            svg.append(String.format("<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\"/>%n", cellX, cellY,
+                    cellWidth, cellHeight, pdfSafeColor));
         }
 
         // Moon display based on moonDisplayMode
-        boolean shouldShowMoon =
-                "illumination".equals(config.moonDisplayMode)
-                        || ("phases".equals(config.moonDisplayMode) && isMoonPhaseDay(date))
-                        || ("full-only".equals(config.moonDisplayMode) && isFullMoonDay(date));
+        boolean shouldShowMoon = "illumination".equals(config.moonDisplayMode)
+                || ("phases".equals(config.moonDisplayMode) && isMoonPhaseDay(date))
+                || ("full-only".equals(config.moonDisplayMode) && isFullMoonDay(date));
 
         if (shouldShowMoon) {
             int moonX = cellX + config.moonOffsetX;
             int moonY = cellY + config.moonOffsetY;
             // Move moon up by 3px when text will be displayed below
-            boolean hasTextBelow =
-                    "large-text".equals(config.eventDisplayMode)
-                            || "text".equals(config.eventDisplayMode);
+            boolean hasTextBelow = "large-text".equals(config.eventDisplayMode)
+                    || "text".equals(config.eventDisplayMode);
             if (hasTextBelow) {
                 moonY -= 3;
             }
 
-            svg.append(
-                    generateMoonIlluminationSVG(
-                            date, moonX, moonY, config.latitude, config.longitude, config));
+            svg.append(generateMoonIlluminationSVG(date, moonX, moonY, config.latitude, config.longitude, config));
         }
 
         // Check for holidays or custom dates
-        String holidayEmoji =
-                substituteEmojiForMonochrome(
-                        config.holidayEmojis.getOrDefault(dateStr, ""), config);
+        String holidayEmoji = substituteEmojiForMonochrome(config.holidayEmojis.getOrDefault(dateStr, ""), config);
         String customEmoji = "";
         boolean isHoliday = config.holidays.contains(dateStr);
         boolean isCustomDate = config.customDates.containsKey(dateStr);
@@ -634,12 +592,9 @@ public class CalendarRenderingService {
             } else if (customData instanceof Map) {
                 Map<String, Object> dataMap = (Map<String, Object>) customData;
                 if (dataMap.containsKey("emoji")) {
-                    customEmoji =
-                            substituteEmojiForMonochrome((String) dataMap.get("emoji"), config);
-                    if (dataMap.containsKey("displaySettings")
-                            && dataMap.get("displaySettings") instanceof Map) {
-                        Map<String, Object> settings =
-                                (Map<String, Object>) dataMap.get("displaySettings");
+                    customEmoji = substituteEmojiForMonochrome((String) dataMap.get("emoji"), config);
+                    if (dataMap.containsKey("displaySettings") && dataMap.get("displaySettings") instanceof Map) {
+                        Map<String, Object> settings = (Map<String, Object>) dataMap.get("displaySettings");
                         eventDisplay = new CustomEventDisplay(customEmoji, settings);
                     } else {
                         eventDisplay = new CustomEventDisplay(customEmoji);
@@ -650,16 +605,8 @@ public class CalendarRenderingService {
 
         // Holiday emoji/text
         String holidayName = config.holidayNames.getOrDefault(dateStr, "");
-        svg.append(
-                renderHolidayContent(
-                        holidayEmoji,
-                        holidayName,
-                        cellX,
-                        cellY,
-                        cellWidth,
-                        cellHeight,
-                        shouldShowMoon,
-                        config));
+        svg.append(renderHolidayContent(holidayEmoji, holidayName, cellX, cellY, cellWidth, cellHeight, shouldShowMoon,
+                config));
 
         // Custom emoji - skip if holiday emoji already rendered
         if (!customEmoji.isEmpty() && holidayEmoji.isEmpty()) {
@@ -678,40 +625,40 @@ public class CalendarRenderingService {
                 int emojiY = cellY;
 
                 switch (config.emojiPosition) {
-                    case "top-left":
+                    case "top-left" :
                         emojiX += 5;
                         emojiY += 13;
                         break;
-                    case "top-center":
+                    case "top-center" :
                         emojiX += cellWidth / 2 - 5;
                         emojiY += 13;
                         break;
-                    case "top-right":
+                    case "top-right" :
                         emojiX += cellWidth - 15;
                         emojiY += 13;
                         break;
-                    case "middle-left":
+                    case "middle-left" :
                         emojiX += 5;
                         emojiY += cellHeight / 2 + 5;
                         break;
-                    case "middle-center":
+                    case "middle-center" :
                         emojiX += cellWidth / 2 - 5;
                         emojiY += cellHeight / 2 + 5;
                         break;
-                    case "middle-right":
+                    case "middle-right" :
                         emojiX += cellWidth - 15;
                         emojiY += cellHeight / 2 + 5;
                         break;
-                    case "bottom-left":
-                    default:
+                    case "bottom-left" :
+                    default :
                         emojiX += 5;
                         emojiY += cellHeight - 5;
                         break;
-                    case "bottom-center":
+                    case "bottom-center" :
                         emojiX += cellWidth / 2 - 5;
                         emojiY += cellHeight - 5;
                         break;
-                    case "bottom-right":
+                    case "bottom-right" :
                         emojiX += cellWidth - 15;
                         emojiY += cellHeight - 5;
                         break;
@@ -739,8 +686,10 @@ public class CalendarRenderingService {
                 String fontWeight = eventDisplay.isTextBold() ? "bold" : "normal";
 
                 String textAnchor = "middle";
-                if ("left".equals(textAlign)) textAnchor = "start";
-                else if ("right".equals(textAlign)) textAnchor = "end";
+                if ("left".equals(textAlign))
+                    textAnchor = "start";
+                else if ("right".equals(textAlign))
+                    textAnchor = "end";
 
                 if (eventDisplay.isTextWrap() && title.length() > 8) {
                     String[] words = title.split(" ");
@@ -750,7 +699,8 @@ public class CalendarRenderingService {
 
                     for (String word : words) {
                         if (charCount + word.length() <= 8) {
-                            if (line1.length() > 0) line1.append(" ");
+                            if (line1.length() > 0)
+                                line1.append(" ");
                             line1.append(word);
                             charCount += word.length() + 1;
                         } else if (line2.length() == 0) {
@@ -761,77 +711,42 @@ public class CalendarRenderingService {
                         }
                     }
 
-                    String transform =
-                            rotation != 0
-                                    ? String.format(
-                                            " transform=\"rotate(%.1f %.1f %.1f)\"",
-                                            rotation, textX, textY)
-                                    : "";
+                    String transform = rotation != 0
+                            ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", rotation, textX, textY)
+                            : "";
 
                     double lineHeight = textSize * 1.2;
-                    svg.append(
-                            String.format(
-                                    "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
-                                            + " font-weight: %s; text-anchor: %s; font-family: Arial,"
-                                            + " sans-serif;\"%s>%s</text>%n",
-                                    textX,
-                                    textY - lineHeight / 2,
-                                    textSize,
-                                    textColor,
-                                    fontWeight,
-                                    textAnchor,
-                                    transform,
-                                    line1.toString()));
+                    svg.append(String.format("<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
+                            + " font-weight: %s; text-anchor: %s; font-family: Arial," + " sans-serif;\"%s>%s</text>%n",
+                            textX, textY - lineHeight / 2, textSize, textColor, fontWeight, textAnchor, transform,
+                            line1.toString()));
                     if (line2.length() > 0) {
-                        svg.append(
-                                String.format(
-                                        "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill:"
-                                                + " %s; font-weight: %s; text-anchor: %s; font-family:"
-                                                + " Arial, sans-serif;\"%s>%s</text>%n",
-                                        textX,
-                                        textY + lineHeight / 2,
-                                        textSize,
-                                        textColor,
-                                        fontWeight,
-                                        textAnchor,
-                                        transform,
-                                        line2.toString()));
+                        svg.append(String.format(
+                                "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill:"
+                                        + " %s; font-weight: %s; text-anchor: %s; font-family:"
+                                        + " Arial, sans-serif;\"%s>%s</text>%n",
+                                textX, textY + lineHeight / 2, textSize, textColor, fontWeight, textAnchor, transform,
+                                line2.toString()));
                     }
                 } else {
                     if (!eventDisplay.isTextWrap() && title.length() > 10) {
                         title = title.substring(0, 9) + "…";
                     }
 
-                    String transform =
-                            rotation != 0
-                                    ? String.format(
-                                            " transform=\"rotate(%.1f %.1f %.1f)\"",
-                                            rotation, textX, textY)
-                                    : "";
+                    String transform = rotation != 0
+                            ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", rotation, textX, textY)
+                            : "";
 
-                    svg.append(
-                            String.format(
-                                    "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
-                                            + " font-weight: %s; text-anchor: %s; font-family: Arial,"
-                                            + " sans-serif;\"%s>%s</text>%n",
-                                    textX,
-                                    textY,
-                                    textSize,
-                                    textColor,
-                                    fontWeight,
-                                    textAnchor,
-                                    transform,
-                                    title));
+                    svg.append(String.format("<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
+                            + " font-weight: %s; text-anchor: %s; font-family: Arial," + " sans-serif;\"%s>%s</text>%n",
+                            textX, textY, textSize, textColor, fontWeight, textAnchor, transform, title));
                 }
             } else {
                 if (title.length() > 10) {
                     title = title.substring(0, 9) + "…";
                 }
-                svg.append(
-                        String.format(
-                                "<text x=\"%d\" y=\"%d\" style=\"font-size: 7px; fill:"
-                                        + " %s;\">%s</text>%n",
-                                cellX + 5, cellY + 38, config.customDateColor, title));
+                svg.append(String.format("<text x=\"%d\" y=\"%d\" style=\"font-size: 7px; fill:" + " %s;\">%s</text>%n",
+                        cellX + 5, cellY + 38, config.customDateColor, title));
             }
         }
 
@@ -845,33 +760,26 @@ public class CalendarRenderingService {
             } else if (isCustomDate && config.customDateColor != null) {
                 dayFill = config.customDateColor;
             }
-            svg.append(
-                    String.format(
-                            "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-weight=\"%s\""
-                                    + " font-family=\"Helvetica, Arial, sans-serif\""
-                                    + " font-size=\"12px\">%d</text>%n",
-                            cellX + 5, cellY + 14, dayFill, fontWeight, day));
+            svg.append(String.format(
+                    "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-weight=\"%s\""
+                            + " font-family=\"Helvetica, Arial, sans-serif\"" + " font-size=\"12px\">%d</text>%n",
+                    cellX + 5, cellY + 14, dayFill, fontWeight, day));
         }
 
         // Day name
         if (config.showDayNames) {
             String dayName = dayOfWeek.getDisplayName(TextStyle.SHORT, locale).substring(0, 2);
-            String dayNameFill =
-                    config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader;
-            svg.append(
-                    String.format(
-                            "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-family=\"Arial, sans-serif\""
-                                    + " font-size=\"8px\">%s</text>%n",
-                            cellX + 5, cellY + 26, dayNameFill, dayName));
+            String dayNameFill = config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader;
+            svg.append(String.format("<text x=\"%d\" y=\"%d\" fill=\"%s\" font-family=\"Arial, sans-serif\""
+                    + " font-size=\"8px\">%s</text>%n", cellX + 5, cellY + 26, dayNameFill, dayName));
         }
 
         // Grid lines
         if (config.showGrid) {
-            svg.append(
-                    String.format(
-                            "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\""
-                                    + " stroke=\"%s\" stroke-width=\"1\"/>%n",
-                            cellX, cellY, cellWidth, cellHeight, config.gridLineColor));
+            svg.append(String.format(
+                    "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\""
+                            + " stroke=\"%s\" stroke-width=\"1\"/>%n",
+                    cellX, cellY, cellWidth, cellHeight, config.gridLineColor));
         }
     }
 
@@ -880,126 +788,81 @@ public class CalendarRenderingService {
 
     // Vermont monthly colors for weekends
     private static final String[][] VERMONT_MONTHLY_COLORS = {
-        // January - Snowy and frosty hues
-        {Colors.WINTER_FROST},
-        // February - Late winter
-        {"#F0F8FF"},
-        // March - Early spring
-        {
-            Colors.SPRING_MINT, Colors.SPRING_MINT, Colors.SPRING_MINT, Colors.SPRING_MINT,
-            Colors.SPRING_MINT, Colors.SPRING_MINT, Colors.SPRING_MINT, Colors.SPRING_MINT,
-            Colors.SPRING_LAVENDER, Colors.SPRING_LAVENDER
-        },
-        // April - Spring bloom
-        {
-            "#7CFC00",
-            Colors.SPRING_LIME,
-            Colors.SPRING_LIME,
-            Colors.SPRING_LIME,
-            Colors.SPRING_LIME,
-            Colors.SPRING_LIME,
-            Colors.SPRING_LIME,
-            Colors.SPRING_LIME,
-            Colors.SPRING_LIME,
-            Colors.SPRING_LAVENDER
-        },
-        // May - Late spring, lush
-        {
-            Colors.EMERALD,
-            "#D0ECE7",
-            "#A2D9CE",
-            "#73C6B6",
-            "#45B39D",
-            "#58D68D",
-            Colors.EMERALD,
-            "#ABEBC6",
-            "#D5F5E3",
-            "#FEF9E7"
-        },
-        // June - Early summer
-        {Colors.SUMMER_AQUAMARINE},
-        // July - Mid summer
-        {Colors.SUMMER_GREEN},
-        // August - Late summer
-        {Colors.SUMMER_CYAN},
-        // September - Early fall
-        {
-            "#FAD7A0",
-            "#F8C471",
-            "#F5B041",
-            Colors.ORANGE,
-            Colors.ORANGE,
-            Colors.ORANGE,
-            Colors.ORANGE,
-            Colors.ORANGE,
-            Colors.GOLD,
-            Colors.GOLD
-        },
-        // October - Peak fall foliage
-        {
-            "#FF4500",
-            "#FF8C00",
-            "#DAA520",
-            "rgba(180,120,60,0.4)",
-            "rgba(190,130,70,0.4)",
-            "rgba(200,140,80,0.4)",
-            "rgba(210,160,100,0.4)",
-            "rgba(225,190,140,0.4)",
-            "#C0C0C0",
-            "#808080"
-        },
-        // November - Late fall
-        {Colors.OVERLAY_GRAY_LIGHT},
-        // December - Winter
-        {Colors.OVERLAY_GRAY_MEDIUM}
-    };
+            // January - Snowy and frosty hues
+            {Colors.WINTER_FROST},
+            // February - Late winter
+            {"#F0F8FF"},
+            // March - Early spring
+            {Colors.SPRING_MINT, Colors.SPRING_MINT, Colors.SPRING_MINT, Colors.SPRING_MINT, Colors.SPRING_MINT,
+                    Colors.SPRING_MINT, Colors.SPRING_MINT, Colors.SPRING_MINT, Colors.SPRING_LAVENDER,
+                    Colors.SPRING_LAVENDER},
+            // April - Spring bloom
+            {"#7CFC00", Colors.SPRING_LIME, Colors.SPRING_LIME, Colors.SPRING_LIME, Colors.SPRING_LIME,
+                    Colors.SPRING_LIME, Colors.SPRING_LIME, Colors.SPRING_LIME, Colors.SPRING_LIME,
+                    Colors.SPRING_LAVENDER},
+            // May - Late spring, lush
+            {Colors.EMERALD, "#D0ECE7", "#A2D9CE", "#73C6B6", "#45B39D", "#58D68D", Colors.EMERALD, "#ABEBC6",
+                    "#D5F5E3", "#FEF9E7"},
+            // June - Early summer
+            {Colors.SUMMER_AQUAMARINE},
+            // July - Mid summer
+            {Colors.SUMMER_GREEN},
+            // August - Late summer
+            {Colors.SUMMER_CYAN},
+            // September - Early fall
+            {"#FAD7A0", "#F8C471", "#F5B041", Colors.ORANGE, Colors.ORANGE, Colors.ORANGE, Colors.ORANGE, Colors.ORANGE,
+                    Colors.GOLD, Colors.GOLD},
+            // October - Peak fall foliage
+            {"#FF4500", "#FF8C00", "#DAA520", "rgba(180,120,60,0.4)", "rgba(190,130,70,0.4)", "rgba(200,140,80,0.4)",
+                    "rgba(210,160,100,0.4)", "rgba(225,190,140,0.4)", "#C0C0C0", "#808080"},
+            // November - Late fall
+            {Colors.OVERLAY_GRAY_LIGHT},
+            // December - Winter
+            {Colors.OVERLAY_GRAY_MEDIUM}};
 
     // Lakeshore monthly colors - cool blue gradient through the year (single color per month)
-    private static final String[] LAKESHORE_MONTHLY_COLORS = {
-        "#e3f2fd", // January - Icy blue
-        "#e1f5fe", // February - Pale azure
-        "#b3e5fc", // March - Soft sky
-        "#e0f7fa", // April - Spring mist
-        "#b2ebf2", // May - Aqua tint
-        "#b2dfdb", // June - Light cyan
-        "#80deea", // July - Tropical mist
-        "#84ffff", // August - Seafoam
-        "#a7ffeb", // September - Pale teal
-        "#b2dfdb", // October - Cool aqua
-        "#b3e5fc", // November - Soft cyan
-        "#bbdefb" // December - Winter blue
+    private static final String[] LAKESHORE_MONTHLY_COLORS = {"#e3f2fd", // January - Icy blue
+            "#e1f5fe", // February - Pale azure
+            "#b3e5fc", // March - Soft sky
+            "#e0f7fa", // April - Spring mist
+            "#b2ebf2", // May - Aqua tint
+            "#b2dfdb", // June - Light cyan
+            "#80deea", // July - Tropical mist
+            "#84ffff", // August - Seafoam
+            "#a7ffeb", // September - Pale teal
+            "#b2dfdb", // October - Cool aqua
+            "#b3e5fc", // November - Soft cyan
+            "#bbdefb" // December - Winter blue
     };
 
     // Sunset Glow monthly colors - warm pastel peach/pink/coral tones (single color per month)
-    private static final String[] SUNSET_MONTHLY_COLORS = {
-        "#fce4ec", // January - Blush pink
-        "#f8bbd0", // February - Rose tint
-        "#ffcdd2", // March - Soft coral
-        "#ffccbc", // April - Pale peach
-        "#ffe0b2", // May - Light apricot
-        "#fff8e1", // June - Cream gold
-        "#ffecb3", // July - Warm butter
-        "#ffe082", // August - Soft amber
-        "#ffd180", // September - Mellow peach
-        "#ffab91", // October - Light terracotta
-        "#ffcdd2", // November - Dusty rose
-        "#f8bbd0" // December - Winter blush
+    private static final String[] SUNSET_MONTHLY_COLORS = {"#fce4ec", // January - Blush pink
+            "#f8bbd0", // February - Rose tint
+            "#ffcdd2", // March - Soft coral
+            "#ffccbc", // April - Pale peach
+            "#ffe0b2", // May - Light apricot
+            "#fff8e1", // June - Cream gold
+            "#ffecb3", // July - Warm butter
+            "#ffe082", // August - Soft amber
+            "#ffd180", // September - Mellow peach
+            "#ffab91", // October - Light terracotta
+            "#ffcdd2", // November - Dusty rose
+            "#f8bbd0" // December - Winter blush
     };
 
     // Forest Floor monthly colors - light sage and mint tones (single color per month)
-    private static final String[] FOREST_MONTHLY_COLORS = {
-        "#e8f5e9", // January - Frost sage
-        "#c8e6c9", // February - Pale mint
-        "#dcedc8", // March - Spring bud
-        "#c5e1a5", // April - Fresh leaf
-        "#aed581", // May - Soft fern
-        "#c8e6c9", // June - Light moss
-        "#a5d6a7", // July - Meadow mist
-        "#b9f6ca", // August - Summer sage
-        "#dcedc8", // September - Pale olive
-        "#d7ccc8", // October - Light cedar
-        "#efebe9", // November - Soft birch
-        "#e8f5e9" // December - Winter pine
+    private static final String[] FOREST_MONTHLY_COLORS = {"#e8f5e9", // January - Frost sage
+            "#c8e6c9", // February - Pale mint
+            "#dcedc8", // March - Spring bud
+            "#c5e1a5", // April - Fresh leaf
+            "#aed581", // May - Soft fern
+            "#c8e6c9", // June - Light moss
+            "#a5d6a7", // July - Meadow mist
+            "#b9f6ca", // August - Summer sage
+            "#dcedc8", // September - Pale olive
+            "#d7ccc8", // October - Light cedar
+            "#efebe9", // November - Soft birch
+            "#e8f5e9" // December - Winter pine
     };
 
     // Map theme names to their color arrays for DRY weekend color lookup
@@ -1014,74 +877,39 @@ public class CalendarRenderingService {
 
     static {
         // Default theme
-        THEMES.put(
-                DEFAULT_THEME,
-                new ThemeColors(
-                        Colors.BLACK, // text
-                        Colors.WHITE, // background
-                        "#f0f0f0", // weekend background
-                        Colors.GRAY_900, // month header
-                        Colors.GRAY_600 // weekday header
-                        ));
+        THEMES.put(DEFAULT_THEME, new ThemeColors(Colors.BLACK, // text
+                Colors.WHITE, // background
+                "#f0f0f0", // weekend background
+                Colors.GRAY_900, // month header
+                Colors.GRAY_600 // weekday header
+        ));
 
         // Vermont Weekends theme - colors will be applied per month
-        THEMES.put(
-                "vermontWeekends",
-                new ThemeColors(
-                        Colors.BLACK,
-                        Colors.WHITE,
-                        null, // weekend color will be dynamic
-                        "#1b5e20",
-                        Colors.GRAY_900));
+        THEMES.put("vermontWeekends", new ThemeColors(Colors.BLACK, Colors.WHITE, null, // weekend color will be dynamic
+                "#1b5e20", Colors.GRAY_900));
 
         // Rainbow themes
-        THEMES.put(
-                "rainbowWeekends",
-                new ThemeColors(
-                        Colors.BLACK,
-                        Colors.WHITE,
-                        null, // will be calculated dynamically
-                        "#e91e63",
-                        "#9c27b0"));
+        THEMES.put("rainbowWeekends", new ThemeColors(Colors.BLACK, Colors.WHITE, null, // will be calculated
+                                                                                        // dynamically
+                "#e91e63", "#9c27b0"));
 
-        THEMES.put(
-                "rainbowDays",
-                new ThemeColors(
-                        Colors.BLACK,
-                        null, // will be calculated dynamically
-                        null,
-                        Colors.GRAY_900,
-                        Colors.GRAY_600));
+        THEMES.put("rainbowDays", new ThemeColors(Colors.BLACK, null, // will be calculated dynamically
+                null, Colors.GRAY_900, Colors.GRAY_600));
 
         // Lakeshore theme - cool blue tones
-        THEMES.put(
-                "lakeshoreWeekends",
-                new ThemeColors(
-                        Colors.BLACK,
-                        Colors.WHITE,
-                        null, // weekend color will be dynamic per month
-                        "#1565c0",
-                        Colors.GRAY_900));
+        THEMES.put("lakeshoreWeekends", new ThemeColors(Colors.BLACK, Colors.WHITE, null, // weekend color will be
+                                                                                          // dynamic per month
+                "#1565c0", Colors.GRAY_900));
 
         // Sunset Glow theme - warm orange/pink tones
-        THEMES.put(
-                "sunsetWeekends",
-                new ThemeColors(
-                        Colors.BLACK,
-                        Colors.WHITE,
-                        null, // weekend color will be dynamic per month
-                        "#e65100",
-                        Colors.GRAY_900));
+        THEMES.put("sunsetWeekends", new ThemeColors(Colors.BLACK, Colors.WHITE, null, // weekend color will be dynamic
+                                                                                       // per month
+                "#e65100", Colors.GRAY_900));
 
         // Forest Floor theme - earth/green tones
-        THEMES.put(
-                "forestWeekends",
-                new ThemeColors(
-                        Colors.BLACK,
-                        Colors.WHITE,
-                        null, // weekend color will be dynamic per month
-                        "#2e7d32",
-                        Colors.GRAY_900));
+        THEMES.put("forestWeekends", new ThemeColors(Colors.BLACK, Colors.WHITE, null, // weekend color will be dynamic
+                                                                                       // per month
+                "#2e7d32", Colors.GRAY_900));
     }
 
     private static class ThemeColors {
@@ -1091,11 +919,7 @@ public class CalendarRenderingService {
         final String monthHeader;
         final String weekdayHeader;
 
-        ThemeColors(
-                String text,
-                String background,
-                String weekendBackground,
-                String monthHeader,
+        ThemeColors(String text, String background, String weekendBackground, String monthHeader,
                 String weekdayHeader) {
             this.text = text;
             this.background = background;
@@ -1110,13 +934,11 @@ public class CalendarRenderingService {
         if (config.holidaySets != null && !config.holidaySets.isEmpty()) {
             for (String setId : config.holidaySets) {
                 // Get holidays from HolidayService (handles ID mapping internally)
-                Map<String, String> setHolidayEmojis =
-                        holidayService.getHolidaysWithEmoji(config.year, setId);
+                Map<String, String> setHolidayEmojis = holidayService.getHolidaysWithEmoji(config.year, setId);
                 config.holidays.addAll(setHolidayEmojis.keySet());
                 config.holidayEmojis.putAll(setHolidayEmojis);
                 // Also get holiday names for text display modes
-                Map<String, String> setHolidayNames =
-                        holidayService.getHolidayNames(config.year, setId);
+                Map<String, String> setHolidayNames = holidayService.getHolidayNames(config.year, setId);
                 config.holidayNames.putAll(setHolidayNames);
             }
         }
@@ -1132,8 +954,7 @@ public class CalendarRenderingService {
 
     // Grid layout modes
     private static final boolean LAYOUT_FIXED_GRID = false; // 12 rows x 31 columns
-    private static final boolean LAYOUT_WEEKDAY_GRID =
-            true; // 12 rows x 37 columns, weekday-aligned
+    private static final boolean LAYOUT_WEEKDAY_GRID = true; // 12 rows x 37 columns, weekday-aligned
 
     // Fixed grid layout (12 rows x 31 columns)
     private String generateGridCalendarSVG(CalendarConfig config) {
@@ -1148,8 +969,10 @@ public class CalendarRenderingService {
     /**
      * Unified calendar grid generator for both fixed and weekday-aligned layouts.
      *
-     * @param config Calendar configuration
-     * @param weekdayAligned If true, use weekday-aligned layout; if false, use fixed 31-column grid
+     * @param config
+     *            Calendar configuration
+     * @param weekdayAligned
+     *            If true, use weekday-aligned layout; if false, use fixed 31-column grid
      */
     private String generateCalendarGridSVG(CalendarConfig config, boolean weekdayAligned) {
         ThemeColors theme = THEMES.getOrDefault(config.theme, THEMES.get(DEFAULT_THEME));
@@ -1181,11 +1004,8 @@ public class CalendarRenderingService {
 
         // Year title
         String yearFill = config.yearColor != null ? config.yearColor : theme.monthHeader;
-        svg.append(
-                String.format(
-                        "<text x=\"50\" y=\"80\" fill=\"%s\" font-family=\"Helvetica, Arial,"
-                                + " sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n",
-                        yearFill, year));
+        svg.append(String.format("<text x=\"50\" y=\"80\" fill=\"%s\" font-family=\"Helvetica, Arial,"
+                + " sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n", yearFill, year));
 
         // Generate each month row
         Locale locale = Locale.forLanguageTag(config.locale);
@@ -1198,25 +1018,11 @@ public class CalendarRenderingService {
             String monthName = Month.of(monthNum).getDisplayName(TextStyle.SHORT, locale);
             String monthFill = config.monthColor != null ? config.monthColor : theme.monthHeader;
             if (weekdayAligned) {
-                svg.append(
-                        renderMonthName(
-                                monthName,
-                                cellWidth - 5,
-                                rowY + cellHeight / 2 + 4,
-                                cellWidth,
-                                config.rotateMonthNames,
-                                "end",
-                                monthFill));
+                svg.append(renderMonthName(monthName, cellWidth - 5, rowY + cellHeight / 2 + 4, cellWidth,
+                        config.rotateMonthNames, "end", monthFill));
             } else {
-                svg.append(
-                        renderMonthName(
-                                monthName,
-                                5,
-                                rowY + cellHeight / 2 + 5,
-                                cellWidth,
-                                config.rotateMonthNames,
-                                "start",
-                                monthFill));
+                svg.append(renderMonthName(monthName, 5, rowY + cellHeight / 2 + 5, cellWidth, config.rotateMonthNames,
+                        "start", monthFill));
             }
 
             // Calculate starting column for weekday-aligned layout
@@ -1247,41 +1053,23 @@ public class CalendarRenderingService {
 
                 LocalDate date = yearMonth.atDay(day);
                 DayOfWeek dayOfWeek = date.getDayOfWeek();
-                boolean isWeekend =
-                        dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY;
+                boolean isWeekend = dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY;
 
                 if (isWeekend) {
                     weekendIndex++;
                 }
 
-                renderDayCell(
-                        svg,
-                        cellX,
-                        cellY,
-                        cellWidth,
-                        cellHeight,
-                        date,
-                        dayOfWeek,
-                        isWeekend,
-                        monthNum,
-                        weekendIndex - 1,
-                        locale,
-                        config,
-                        theme);
+                renderDayCell(svg, cellX, cellY, cellWidth, cellHeight, date, dayOfWeek, isWeekend, monthNum,
+                        weekendIndex - 1, locale, config, theme);
             }
         }
 
         // Outer border (fixed grid only)
         if (!weekdayAligned && config.showGrid) {
-            svg.append(
-                    String.format(
-                            "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\""
-                                    + " stroke=\"%s\" stroke-width=\"2\"/>%n",
-                            cellWidth,
-                            headerHeight - 1,
-                            cellWidth * 31,
-                            cellHeight * 12 + 2,
-                            config.gridLineColor));
+            svg.append(String.format(
+                    "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\""
+                            + " stroke=\"%s\" stroke-width=\"2\"/>%n",
+                    cellWidth, headerHeight - 1, cellWidth * 31, cellHeight * 12 + 2, config.gridLineColor));
         }
 
         svg.append("</svg>");
@@ -1289,61 +1077,45 @@ public class CalendarRenderingService {
     }
 
     private void appendSvgHeader(StringBuilder svg, int width, int height) {
-        svg.append(
-                String.format(
-                        "<svg xmlns=\"http://www.w3.org/2000/svg\""
-                                + " xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%d\""
-                                + " height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid"
-                                + " meet\">%n",
-                        width, height, width, height));
+        svg.append(String.format(
+                "<svg xmlns=\"http://www.w3.org/2000/svg\""
+                        + " xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%d\""
+                        + " height=\"%d\" viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid" + " meet\">%n",
+                width, height, width, height));
     }
 
     private void appendGridStyles(StringBuilder svg, CalendarConfig config, ThemeColors theme) {
         svg.append("<style>").append(System.lineSeparator());
-        svg.append(
-                String.format(
-                        ".year-text { fill: %s; font-family: Helvetica, Arial, sans-serif;"
-                                + " font-size: 80px; font-weight: bold; }%n",
-                        config.yearColor != null ? config.yearColor : theme.monthHeader));
-        svg.append(
-                String.format(
-                        ".month-name { fill: %s; font-family: Helvetica, Arial, sans-serif;"
-                                + " font-size: 20px; font-weight: bold; }%n",
-                        config.monthColor != null ? config.monthColor : theme.monthHeader));
-        svg.append(
-                String.format(
-                        ".day-text { fill: %s; font-family: Helvetica, Arial, sans-serif;"
-                                + " font-size: 12px; }%n",
-                        config.dayTextColor != null ? config.dayTextColor : theme.text));
-        svg.append(
-                String.format(
-                        ".day-name { fill: %s; font-family: Arial, sans-serif; font-size: 8px; }%n",
-                        config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader));
-        svg.append(
-                String.format(
-                        ".grid-line { stroke: %s; stroke-width: 1; fill: none; }%n",
-                        config.gridLineColor));
+        svg.append(String.format(
+                ".year-text { fill: %s; font-family: Helvetica, Arial, sans-serif;"
+                        + " font-size: 80px; font-weight: bold; }%n",
+                config.yearColor != null ? config.yearColor : theme.monthHeader));
+        svg.append(String.format(
+                ".month-name { fill: %s; font-family: Helvetica, Arial, sans-serif;"
+                        + " font-size: 20px; font-weight: bold; }%n",
+                config.monthColor != null ? config.monthColor : theme.monthHeader));
+        svg.append(String.format(
+                ".day-text { fill: %s; font-family: Helvetica, Arial, sans-serif;" + " font-size: 12px; }%n",
+                config.dayTextColor != null ? config.dayTextColor : theme.text));
+        svg.append(String.format(".day-name { fill: %s; font-family: Arial, sans-serif; font-size: 8px; }%n",
+                config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader));
+        svg.append(String.format(".grid-line { stroke: %s; stroke-width: 1; fill: none; }%n", config.gridLineColor));
 
-        String weekendBg =
-                config.weekendBgColor != null && !config.weekendBgColor.isEmpty()
-                        ? config.weekendBgColor
-                        : (theme.weekendBackground != null ? theme.weekendBackground : "none");
+        String weekendBg = config.weekendBgColor != null && !config.weekendBgColor.isEmpty() ? config.weekendBgColor
+                : (theme.weekendBackground != null ? theme.weekendBackground : "none");
         svg.append(String.format(".weekend-bg { fill: %s; }%n", weekendBg));
-        svg.append(
-                String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
+        svg.append(String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
         svg.append(String.format(".custom-date { fill: %s; }%n", config.customDateColor));
         svg.append("</style>").append(System.lineSeparator());
     }
 
-    private void renderEmptyCell(
-            StringBuilder svg, int x, int y, int width, int height, CalendarConfig config) {
+    private void renderEmptyCell(StringBuilder svg, int x, int y, int width, int height, CalendarConfig config) {
         if (config.showGrid) {
             String pdfSafeColor = convertColorForPDF("rgba(255, 255, 255, 0)");
-            svg.append(
-                    String.format(
-                            "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\""
-                                    + " stroke=\"%s\" stroke-width=\"1\"/>%n",
-                            x, y, width, height, pdfSafeColor, config.gridLineColor));
+            svg.append(String.format(
+                    "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"%s\""
+                            + " stroke=\"%s\" stroke-width=\"1\"/>%n",
+                    x, y, width, height, pdfSafeColor, config.gridLineColor));
         }
     }
 
@@ -1418,7 +1190,8 @@ public class CalendarRenderingService {
 
         // Calculate phase as a fraction (0 = new moon, 0.5 = full moon)
         double phase = (daysSince % synodicMonth) / synodicMonth;
-        if (phase < 0) phase += 1.0;
+        if (phase < 0)
+            phase += 1.0;
 
         return phase;
     }
@@ -1430,37 +1203,30 @@ public class CalendarRenderingService {
 
     private String getMoonPhaseSymbol(MoonPhase phase) {
         switch (phase) {
-            case NEW_MOON:
+            case NEW_MOON :
                 return "🌑";
-            case WAXING_CRESCENT:
+            case WAXING_CRESCENT :
                 return "🌒";
-            case FIRST_QUARTER:
+            case FIRST_QUARTER :
                 return "🌓";
-            case WAXING_GIBBOUS:
+            case WAXING_GIBBOUS :
                 return "🌔";
-            case FULL_MOON:
+            case FULL_MOON :
                 return "🌕";
-            case WANING_GIBBOUS:
+            case WANING_GIBBOUS :
                 return "🌖";
-            case LAST_QUARTER:
+            case LAST_QUARTER :
                 return "🌗";
-            case WANING_CRESCENT:
+            case WANING_CRESCENT :
                 return "🌘";
-            default:
+            default :
                 return "";
         }
     }
 
     // Moon phase calculation using synodic month
     private enum MoonPhase {
-        NEW_MOON,
-        WAXING_CRESCENT,
-        FIRST_QUARTER,
-        WAXING_GIBBOUS,
-        FULL_MOON,
-        WANING_GIBBOUS,
-        LAST_QUARTER,
-        WANING_CRESCENT
+        NEW_MOON, WAXING_CRESCENT, FIRST_QUARTER, WAXING_GIBBOUS, FULL_MOON, WANING_GIBBOUS, LAST_QUARTER, WANING_CRESCENT
     }
 
     private MoonPhase calculateMoonPhase(LocalDate date) {
@@ -1583,15 +1349,13 @@ public class CalendarRenderingService {
     }
 
     /**
-     * Wraps the generated SVG with an outer SVG that adds margins for print layout. The inner SVG
-     * is scaled to fit within the printable area (page size minus margins) and centered on the
-     * page.
+     * Wraps the generated SVG with an outer SVG that adds margins for print layout. The inner SVG is scaled to fit
+     * within the printable area (page size minus margins) and centered on the page.
      */
     private String wrapSvgWithMargins(String innerSvg) {
         // Extract the viewBox from the inner SVG to get its dimensions
-        java.util.regex.Pattern viewBoxPattern =
-                java.util.regex.Pattern.compile(
-                        "viewBox=\"([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\"");
+        java.util.regex.Pattern viewBoxPattern = java.util.regex.Pattern
+                .compile("viewBox=\"([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\"");
         java.util.regex.Matcher matcher = viewBoxPattern.matcher(innerSvg);
 
         if (!matcher.find()) {
@@ -1629,30 +1393,23 @@ public class CalendarRenderingService {
         // Build the wrapper SVG
         StringBuilder wrapper = new StringBuilder();
         wrapper.append(String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?>%n"));
-        wrapper.append(
-                String.format(
-                        "<svg xmlns=\"http://www.w3.org/2000/svg\""
-                                + " xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%.0f\""
-                                + " height=\"%.0f\" viewBox=\"0 0 %.0f %.0f\">%n",
-                        pageWidth, pageHeight, pageWidth, pageHeight));
+        wrapper.append(String.format(
+                "<svg xmlns=\"http://www.w3.org/2000/svg\""
+                        + " xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%.0f\""
+                        + " height=\"%.0f\" viewBox=\"0 0 %.0f %.0f\">%n",
+                pageWidth, pageHeight, pageWidth, pageHeight));
 
         // Add a white background for the full page
         wrapper.append(
-                String.format(
-                        "  <rect width=\"%.0f\" height=\"%.0f\" fill=\"white\"/>%n",
-                        pageWidth, pageHeight));
+                String.format("  <rect width=\"%.0f\" height=\"%.0f\" fill=\"white\"/>%n", pageWidth, pageHeight));
 
         // Position and scale the inner SVG content within the margins
         wrapper.append(
-                String.format(
-                        "  <g transform=\"translate(%.2f, %.2f) scale(%.6f)\">%n",
-                        offsetX, offsetY, scale));
+                String.format("  <g transform=\"translate(%.2f, %.2f) scale(%.6f)\">%n", offsetX, offsetY, scale));
 
         // Insert the inner SVG content (strip the outer <svg> tags)
-        String innerContent =
-                cleanedInnerSvg
-                        .replaceFirst("<svg[^>]*>", "") // Remove opening <svg> tag
-                        .replaceFirst("</svg>\\s*$", ""); // Remove closing </svg> tag
+        String innerContent = cleanedInnerSvg.replaceFirst("<svg[^>]*>", "") // Remove opening <svg> tag
+                .replaceFirst("</svg>\\s*$", ""); // Remove closing </svg> tag
 
         wrapper.append(innerContent);
         wrapper.append(String.format("%n  </g>%n"));
@@ -1662,21 +1419,20 @@ public class CalendarRenderingService {
     }
 
     /**
-     * Wraps the generated SVG with a white background and margins for preview/thumbnail rendering.
-     * Uses the same page aspect ratio (35:23) as the print layout to match the artboard. This is a
-     * public method for use by StaticContentResource for PNG generation.
+     * Wraps the generated SVG with a white background and margins for preview/thumbnail rendering. Uses the same page
+     * aspect ratio (35:23) as the print layout to match the artboard. This is a public method for use by
+     * StaticContentResource for PNG generation.
      */
     public String wrapSvgForPreview(String innerSvg) {
         // Extract the viewBox from the inner SVG to get its dimensions
-        java.util.regex.Pattern viewBoxPattern =
-                java.util.regex.Pattern.compile(
-                        "viewBox=\"([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\"");
+        java.util.regex.Pattern viewBoxPattern = java.util.regex.Pattern
+                .compile("viewBox=\"([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\"");
         java.util.regex.Matcher matcher = viewBoxPattern.matcher(innerSvg);
 
         if (!matcher.find()) {
             // If no viewBox, return original SVG with just a white background added
-            return innerSvg.replaceFirst(
-                    "<svg([^>]*)>", "<svg$1><rect width=\"100%\" height=\"100%\" fill=\"white\"/>");
+            return innerSvg.replaceFirst("<svg([^>]*)>",
+                    "<svg$1><rect width=\"100%\" height=\"100%\" fill=\"white\"/>");
         }
 
         float innerWidth = Float.parseFloat(matcher.group(3));
@@ -1709,30 +1465,23 @@ public class CalendarRenderingService {
         // Build the wrapper SVG
         StringBuilder wrapper = new StringBuilder();
         wrapper.append(String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?>%n"));
-        wrapper.append(
-                String.format(
-                        "<svg xmlns=\"http://www.w3.org/2000/svg\""
-                                + " xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%.0f\""
-                                + " height=\"%.0f\" viewBox=\"0 0 %.0f %.0f\">%n",
-                        pageWidth, pageHeight, pageWidth, pageHeight));
+        wrapper.append(String.format(
+                "<svg xmlns=\"http://www.w3.org/2000/svg\""
+                        + " xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"%.0f\""
+                        + " height=\"%.0f\" viewBox=\"0 0 %.0f %.0f\">%n",
+                pageWidth, pageHeight, pageWidth, pageHeight));
 
         // Add a white background for the full page
         wrapper.append(
-                String.format(
-                        "  <rect width=\"%.0f\" height=\"%.0f\" fill=\"white\"/>%n",
-                        pageWidth, pageHeight));
+                String.format("  <rect width=\"%.0f\" height=\"%.0f\" fill=\"white\"/>%n", pageWidth, pageHeight));
 
         // Position and scale the inner SVG content within the margins
         wrapper.append(
-                String.format(
-                        "  <g transform=\"translate(%.2f, %.2f) scale(%.6f)\">%n",
-                        offsetX, offsetY, scale));
+                String.format("  <g transform=\"translate(%.2f, %.2f) scale(%.6f)\">%n", offsetX, offsetY, scale));
 
         // Insert the inner SVG content (strip the outer <svg> tags)
-        String innerContent =
-                cleanedInnerSvg
-                        .replaceFirst("<svg[^>]*>", "") // Remove opening <svg> tag
-                        .replaceFirst("</svg>\\s*$", ""); // Remove closing </svg> tag
+        String innerContent = cleanedInnerSvg.replaceFirst("<svg[^>]*>", "") // Remove opening <svg> tag
+                .replaceFirst("</svg>\\s*$", ""); // Remove closing </svg> tag
 
         wrapper.append(innerContent);
         wrapper.append(String.format("%n  </g>%n"));
@@ -1742,12 +1491,7 @@ public class CalendarRenderingService {
     }
 
     // Generate SVG for moon illumination visualization
-    public String generateMoonIlluminationSVG(
-            LocalDate date,
-            int x,
-            int y,
-            double latitude,
-            double longitude,
+    public String generateMoonIlluminationSVG(LocalDate date, int x, int y, double latitude, double longitude,
             CalendarConfig config) {
         StringBuilder svg = new StringBuilder();
 
@@ -1772,9 +1516,7 @@ public class CalendarRenderingService {
         int radius = config.moonSize;
 
         // Create a group for the moon with rotation
-        svg.append(
-                String.format(
-                        "<g transform=\"translate(%d, %d) rotate(%.1f)\">%n", x, y, rotationAngle));
+        svg.append(String.format("<g transform=\"translate(%d, %d) rotate(%.1f)\">%n", x, y, rotationAngle));
 
         // Background circle (dark side)
         svg.append(String.format("<circle r=\"%d\" fill=\"%s\"/>%n", radius, config.moonDarkColor));
@@ -1800,53 +1542,26 @@ public class CalendarRenderingService {
             String path;
             if (phase < 0.25 || phase > 0.75) {
                 // Crescent moon
-                path =
-                        String.format(
-                                "M 0,-%d A %d,%d 0 %s,%s 0,%d A %.1f,%d 0 %s,%s 0,-%d",
-                                radius,
-                                radius,
-                                radius,
-                                largeArcFlag,
-                                isRightSideLit ? "1" : "0",
-                                radius,
-                                ellipseWidth,
-                                radius,
-                                largeArcFlag,
-                                isRightSideLit ? "0" : "1",
-                                radius);
+                path = String.format("M 0,-%d A %d,%d 0 %s,%s 0,%d A %.1f,%d 0 %s,%s 0,-%d", radius, radius, radius,
+                        largeArcFlag, isRightSideLit ? "1" : "0", radius, ellipseWidth, radius, largeArcFlag,
+                        isRightSideLit ? "0" : "1", radius);
             } else {
                 // Gibbous moon
-                path =
-                        String.format(
-                                "M 0,-%d A %d,%d 0 %s,%s 0,%d A %.1f,%d 0 %s,%s 0,-%d",
-                                radius,
-                                radius,
-                                radius,
-                                "1",
-                                isRightSideLit ? "1" : "0",
-                                radius,
-                                ellipseWidth,
-                                radius,
-                                "0",
-                                isRightSideLit ? "1" : "0",
-                                radius);
+                path = String.format("M 0,-%d A %d,%d 0 %s,%s 0,%d A %.1f,%d 0 %s,%s 0,-%d", radius, radius, radius,
+                        "1", isRightSideLit ? "1" : "0", radius, ellipseWidth, radius, "0", isRightSideLit ? "1" : "0",
+                        radius);
             }
 
-            svg.append(
-                    String.format("<path d=\"%s\" fill=\"%s\"/>%n", path, config.moonLightColor));
+            svg.append(String.format("<path d=\"%s\" fill=\"%s\"/>%n", path, config.moonLightColor));
         } else if (illuminatedFraction >= 1) {
             // Full moon
-            svg.append(
-                    String.format(
-                            "<circle r=\"%d\" fill=\"%s\"/>%n", radius, config.moonLightColor));
+            svg.append(String.format("<circle r=\"%d\" fill=\"%s\"/>%n", radius, config.moonLightColor));
         }
         // New moon is just the dark circle
 
         // Border with configurable color and width
-        svg.append(
-                String.format(
-                        "<circle r=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"%.1f\"/>%n",
-                        radius, config.moonBorderColor, config.moonBorderWidth));
+        svg.append(String.format("<circle r=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"%.1f\"/>%n", radius,
+                config.moonBorderColor, config.moonBorderWidth));
 
         svg.append("</g>").append(System.lineSeparator());
 
@@ -1909,32 +1624,27 @@ public class CalendarRenderingService {
         long daysSinceJ2000 = java.time.temporal.ChronoUnit.DAYS.between(j2000, date);
         double synodicMonth = 29.53058867;
         double moonAge = (daysSinceJ2000 - 5.5) % synodicMonth;
-        if (moonAge < 0) moonAge += synodicMonth;
+        if (moonAge < 0)
+            moonAge += synodicMonth;
 
         // Calculate approximate moon declination
         // Moon's orbit is inclined about 5.14° to ecliptic, ecliptic is inclined 23.44° to equator
         // This gives moon declination range of approximately ±28.6°
         double moonOrbitPhase = (moonAge / synodicMonth) * 2 * Math.PI;
-        double moonDeclination =
-                Math.toRadians(
-                        28.6 * Math.sin(moonOrbitPhase + date.getDayOfYear() * Math.PI / 182.625));
+        double moonDeclination = Math
+                .toRadians(28.6 * Math.sin(moonOrbitPhase + date.getDayOfYear() * Math.PI / 182.625));
 
         // Calculate hour angle based on time and longitude
         // This is simplified - actual calculation would need precise time
         double hourAngle = (date.getDayOfMonth() / 30.0) * 2 * Math.PI + lng;
 
         // Calculate altitude
-        double altitude =
-                Math.asin(
-                        Math.sin(lat) * Math.sin(moonDeclination)
-                                + Math.cos(lat) * Math.cos(moonDeclination) * Math.cos(hourAngle));
+        double altitude = Math.asin(Math.sin(lat) * Math.sin(moonDeclination)
+                + Math.cos(lat) * Math.cos(moonDeclination) * Math.cos(hourAngle));
 
         // Calculate azimuth
-        double azimuth =
-                Math.atan2(
-                        -Math.sin(hourAngle),
-                        Math.tan(moonDeclination) * Math.cos(lat)
-                                - Math.sin(lat) * Math.cos(hourAngle));
+        double azimuth = Math.atan2(-Math.sin(hourAngle),
+                Math.tan(moonDeclination) * Math.cos(lat) - Math.sin(lat) * Math.cos(hourAngle));
 
         // Calculate parallactic angle - the rotation of the moon from observer's viewpoint
         // This is the key to showing different moon orientations by hemisphere
@@ -1947,12 +1657,8 @@ public class CalendarRenderingService {
         } else {
             // Calculate standard parallactic angle
             double sinPA = Math.sin(hourAngle) * Math.cos(moonDeclination) / Math.cos(altitude);
-            double cosPA =
-                    (Math.sin(moonDeclination) * Math.cos(lat)
-                                    - Math.cos(moonDeclination)
-                                            * Math.sin(lat)
-                                            * Math.cos(hourAngle))
-                            / Math.cos(altitude);
+            double cosPA = (Math.sin(moonDeclination) * Math.cos(lat)
+                    - Math.cos(moonDeclination) * Math.sin(lat) * Math.cos(hourAngle)) / Math.cos(altitude);
             parallacticAngle = Math.atan2(sinPA, cosPA);
 
             // Hemisphere adjustments
@@ -2012,32 +1718,32 @@ public class CalendarRenderingService {
                     float b;
                     int hueSegment = (int) (hue * 6);
                     switch (hueSegment) {
-                        case 0:
+                        case 0 :
                             r = c;
                             g = x;
                             b = 0;
                             break;
-                        case 1:
+                        case 1 :
                             r = x;
                             g = c;
                             b = 0;
                             break;
-                        case 2:
+                        case 2 :
                             r = 0;
                             g = c;
                             b = x;
                             break;
-                        case 3:
+                        case 3 :
                             r = 0;
                             g = x;
                             b = c;
                             break;
-                        case 4:
+                        case 4 :
                             r = x;
                             g = 0;
                             b = c;
                             break;
-                        default:
+                        default :
                             r = c;
                             g = 0;
                             b = x;
@@ -2060,13 +1766,8 @@ public class CalendarRenderingService {
         return color;
     }
 
-    public static String getCellBackgroundColor(
-            CalendarConfig config,
-            LocalDate date,
-            int monthNum,
-            int dayNum,
-            boolean isWeekend,
-            int weekendIndex) {
+    public static String getCellBackgroundColor(CalendarConfig config, LocalDate date, int monthNum, int dayNum,
+            boolean isWeekend, int weekendIndex) {
         String theme = config.theme;
 
         // Rainbow days themes
@@ -2089,18 +1790,12 @@ public class CalendarRenderingService {
                 hue = (int) ((dayNum / 30.0) * 360);
                 // Calculate distance from corner (Dec 31)
                 double monthWeight = 3;
-                double distance =
-                        Math.sqrt(
-                                Math.pow(12 - monthNum * monthWeight, 2)
-                                        + Math.pow(31d - dayNum, 2));
+                double distance = Math.sqrt(Math.pow(12 - monthNum * monthWeight, 2) + Math.pow(31d - dayNum, 2));
                 double maxDistance = Math.sqrt(Math.pow(12 * monthWeight, 2) + Math.pow(31, 2));
                 double normalizedDistance = distance / maxDistance;
                 int lightnessMin = 80;
                 int lightnessMax = 90;
-                lightness =
-                        (int)
-                                (lightnessMin
-                                        + (1 - normalizedDistance) * (lightnessMax - lightnessMin));
+                lightness = (int) (lightnessMin + (1 - normalizedDistance) * (lightnessMax - lightnessMin));
             } else {
                 // Default rainbow days
                 hue = (int) ((dayNum / 30.0) * 360);
@@ -2139,8 +1834,8 @@ public class CalendarRenderingService {
     }
 
     /**
-     * Gets the weekend color for themed weekends (vermont, lakeshore, sunset, forest). Returns null
-     * if the theme is not a weekend theme.
+     * Gets the weekend color for themed weekends (vermont, lakeshore, sunset, forest). Returns null if the theme is not
+     * a weekend theme.
      */
     private static String getWeekendThemeColor(String theme, int monthNum, int weekendIndex) {
         Object colorData = WEEKEND_THEME_COLORS.get(theme);
@@ -2165,11 +1860,9 @@ public class CalendarRenderingService {
 
     /** Escapes special XML characters in a string. */
     private String escapeXml(String text) {
-        if (text == null) return "";
-        return text.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
+        if (text == null)
+            return "";
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'",
+                "&apos;");
     }
 }

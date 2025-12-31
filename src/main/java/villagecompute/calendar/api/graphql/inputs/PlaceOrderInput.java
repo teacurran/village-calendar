@@ -8,8 +8,7 @@ import org.eclipse.microprofile.graphql.Input;
 import villagecompute.calendar.data.models.enums.ProductType;
 
 /**
- * Input type for placing a new order. Alternative to createOrder mutation with more explicit input
- * structure.
+ * Input type for placing a new order. Alternative to createOrder mutation with more explicit input structure.
  */
 @Input("PlaceOrderInput")
 public class PlaceOrderInput {

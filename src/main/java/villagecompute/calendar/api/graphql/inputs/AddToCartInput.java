@@ -21,15 +21,11 @@ public class AddToCartInput {
     public String productCode; // Product code (e.g., "print", "pdf") - price looked up from backend
     public String configuration; // JSON configuration for the generator
 
-    public AddToCartInput() {}
+    public AddToCartInput() {
+    }
 
-    public AddToCartInput(
-            String generatorType,
-            String description,
-            Integer quantity,
-            String productCode,
-            String configuration,
-            List<AssetInput> assets) {
+    public AddToCartInput(String generatorType, String description, Integer quantity, String productCode,
+            String configuration, List<AssetInput> assets) {
         this.generatorType = generatorType;
         this.description = description;
         this.quantity = quantity;

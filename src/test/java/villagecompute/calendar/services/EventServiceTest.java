@@ -23,19 +23,23 @@ import villagecompute.calendar.data.repositories.EventRepository;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * Comprehensive unit tests for EventService. Tests all CRUD operations, validation logic,
- * authorization, bulk imports, and edge cases.
+ * Comprehensive unit tests for EventService. Tests all CRUD operations, validation logic, authorization, bulk imports,
+ * and edge cases.
  */
 @QuarkusTest
 class EventServiceTest {
 
-    @Inject EventService eventService;
+    @Inject
+    EventService eventService;
 
-    @Inject CalendarService calendarService;
+    @Inject
+    CalendarService calendarService;
 
-    @Inject EventRepository eventRepository;
+    @Inject
+    EventRepository eventRepository;
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
     private CalendarUser testUser;
     private CalendarUser adminUser;
@@ -71,9 +75,7 @@ class EventServiceTest {
         otherUser.persist();
 
         // Create test calendar
-        testCalendar =
-                calendarService.createCalendar(
-                        "Test Calendar 2025", 2025, null, null, true, testUser, null);
+        testCalendar = calendarService.createCalendar("Test Calendar 2025", 2025, null, null, true, testUser, null);
     }
 
     @AfterEach
@@ -98,9 +100,7 @@ class EventServiceTest {
         String color = "#FF5733";
 
         // When
-        Event event =
-                eventService.addEvent(
-                        testCalendar.id, eventDate, eventText, emoji, color, testUser);
+        Event event = eventService.addEvent(testCalendar.id, eventDate, eventText, emoji, color, testUser);
 
         // Then
         assertNotNull(event);
@@ -136,12 +136,8 @@ class EventServiceTest {
         LocalDate eventDate = LocalDate.of(2024, 12, 31); // Calendar is for 2025
 
         // When & Then
-        IllegalArgumentException ex =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                eventService.addEvent(
-                                        testCalendar.id, eventDate, "Test", null, null, testUser));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> eventService.addEvent(testCalendar.id, eventDate, "Test", null, null, testUser));
 
         assertTrue(ex.getMessage().contains("Event date must be within calendar year 2025"));
     }
@@ -154,17 +150,8 @@ class EventServiceTest {
         LocalDate eventDate = LocalDate.of(2025, 3, 15);
 
         // When & Then
-        IllegalArgumentException ex =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                eventService.addEvent(
-                                        testCalendar.id,
-                                        eventDate,
-                                        longText,
-                                        null,
-                                        null,
-                                        testUser));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> eventService.addEvent(testCalendar.id, eventDate, longText, null, null, testUser));
 
         assertTrue(ex.getMessage().contains("Event text must be 500 characters or less"));
     }
@@ -177,8 +164,7 @@ class EventServiceTest {
         LocalDate eventDate = LocalDate.of(2025, 7, 4);
 
         // When
-        Event event =
-                eventService.addEvent(testCalendar.id, eventDate, text500, null, null, testUser);
+        Event event = eventService.addEvent(testCalendar.id, eventDate, text500, null, null, testUser);
 
         // Then
         assertNotNull(event);
@@ -193,17 +179,8 @@ class EventServiceTest {
         LocalDate eventDate = LocalDate.of(2025, 5, 1);
 
         // When & Then
-        IllegalArgumentException ex =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                eventService.addEvent(
-                                        testCalendar.id,
-                                        eventDate,
-                                        "Test",
-                                        invalidEmoji,
-                                        null,
-                                        testUser));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> eventService.addEvent(testCalendar.id, eventDate, "Test", invalidEmoji, null, testUser));
 
         assertTrue(ex.getMessage().contains("Invalid emoji"));
     }
@@ -212,19 +189,16 @@ class EventServiceTest {
     @Transactional
     void testAddEvent_ValidEmojis_Success() {
         // Test various valid emoji formats
-        String[] validEmojis = {
-            "🎉", // Single emoji
-            "❤️", // Emoji with variation selector
-            "👨‍👩‍👧‍👦", // Family emoji with ZWJ
-            "🇺🇸", // Flag emoji
-            "🎄🎅", // Multiple emojis
+        String[] validEmojis = {"🎉", // Single emoji
+                "❤️", // Emoji with variation selector
+                "👨‍👩‍👧‍👦", // Family emoji with ZWJ
+                "🇺🇸", // Flag emoji
+                "🎄🎅", // Multiple emojis
         };
 
         for (String emoji : validEmojis) {
             LocalDate eventDate = LocalDate.of(2025, 1, 1).plusDays(validEmojis.length);
-            Event event =
-                    eventService.addEvent(
-                            testCalendar.id, eventDate, "Test", emoji, null, testUser);
+            Event event = eventService.addEvent(testCalendar.id, eventDate, "Test", emoji, null, testUser);
             assertNotNull(event);
             assertEquals(emoji, event.emoji);
         }
@@ -238,17 +212,8 @@ class EventServiceTest {
         LocalDate eventDate = LocalDate.of(2025, 8, 15);
 
         // When & Then
-        IllegalArgumentException ex =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                eventService.addEvent(
-                                        testCalendar.id,
-                                        eventDate,
-                                        "Test",
-                                        null,
-                                        invalidColor,
-                                        testUser));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> eventService.addEvent(testCalendar.id, eventDate, "Test", null, invalidColor, testUser));
 
         assertTrue(ex.getMessage().contains("Invalid color"));
     }
@@ -257,18 +222,15 @@ class EventServiceTest {
     @Transactional
     void testAddEvent_ValidColors_Success() {
         // Test various valid color formats
-        String[] validColors = {
-            "#FF5733", // 6-digit hex
-            "#ABC", // 3-digit hex
-            "#000000", // Black
-            "#FFFFFF", // White
+        String[] validColors = {"#FF5733", // 6-digit hex
+                "#ABC", // 3-digit hex
+                "#000000", // Black
+                "#FFFFFF", // White
         };
 
         for (String color : validColors) {
             LocalDate eventDate = LocalDate.of(2025, 2, 1).plusDays(validColors.length);
-            Event event =
-                    eventService.addEvent(
-                            testCalendar.id, eventDate, "Test", null, color, testUser);
+            Event event = eventService.addEvent(testCalendar.id, eventDate, "Test", null, color, testUser);
             assertNotNull(event);
             assertEquals(color, event.color);
         }
@@ -281,11 +243,8 @@ class EventServiceTest {
         LocalDate eventDate = LocalDate.of(2025, 9, 1);
 
         // When & Then
-        assertThrows(
-                SecurityException.class,
-                () ->
-                        eventService.addEvent(
-                                testCalendar.id, eventDate, "Hacked", null, null, otherUser));
+        assertThrows(SecurityException.class,
+                () -> eventService.addEvent(testCalendar.id, eventDate, "Hacked", null, null, otherUser));
     }
 
     @Test
@@ -295,9 +254,7 @@ class EventServiceTest {
         LocalDate eventDate = LocalDate.of(2025, 10, 31);
 
         // When
-        Event event =
-                eventService.addEvent(
-                        testCalendar.id, eventDate, "Admin Event", null, null, adminUser);
+        Event event = eventService.addEvent(testCalendar.id, eventDate, "Admin Event", null, null, adminUser);
 
         // Then
         assertNotNull(event);
@@ -310,26 +267,21 @@ class EventServiceTest {
         LocalDate eventDate = LocalDate.of(2025, 11, 1);
 
         // When & Then
-        assertThrows(
-                SecurityException.class,
+        assertThrows(SecurityException.class,
                 () -> eventService.addEvent(testCalendar.id, eventDate, "Test", null, null, null));
     }
 
     @Test
     void testAddEvent_NullCalendarId_ThrowsException() {
         // When & Then
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        eventService.addEvent(
-                                null, LocalDate.of(2025, 1, 1), "Test", null, null, testUser));
+        assertThrows(IllegalArgumentException.class,
+                () -> eventService.addEvent(null, LocalDate.of(2025, 1, 1), "Test", null, null, testUser));
     }
 
     @Test
     void testAddEvent_NullEventDate_ThrowsException() {
         // When & Then
-        assertThrows(
-                IllegalArgumentException.class,
+        assertThrows(IllegalArgumentException.class,
                 () -> eventService.addEvent(testCalendar.id, null, "Test", null, null, testUser));
     }
 
@@ -339,18 +291,11 @@ class EventServiceTest {
     @Transactional
     void testUpdateEvent_Success() {
         // Given
-        Event event =
-                eventService.addEvent(
-                        testCalendar.id,
-                        LocalDate.of(2025, 3, 1),
-                        "Original",
-                        "🎉",
-                        "#FF0000",
-                        testUser);
+        Event event = eventService.addEvent(testCalendar.id, LocalDate.of(2025, 3, 1), "Original", "🎉", "#FF0000",
+                testUser);
 
         // When
-        Event updated =
-                eventService.updateEvent(event.id, "Updated Text", "🎊", "#00FF00", testUser);
+        Event updated = eventService.updateEvent(event.id, "Updated Text", "🎊", "#00FF00", testUser);
 
         // Then
         assertEquals("Updated Text", updated.eventText);
@@ -363,14 +308,8 @@ class EventServiceTest {
     @Transactional
     void testUpdateEvent_PartialUpdate_Success() {
         // Given
-        Event event =
-                eventService.addEvent(
-                        testCalendar.id,
-                        LocalDate.of(2025, 4, 1),
-                        "Original",
-                        "🎉",
-                        "#FF0000",
-                        testUser);
+        Event event = eventService.addEvent(testCalendar.id, LocalDate.of(2025, 4, 1), "Original", "🎉", "#FF0000",
+                testUser);
 
         // When - Update only text
         Event updated = eventService.updateEvent(event.id, "New Text", null, null, testUser);
@@ -388,8 +327,7 @@ class EventServiceTest {
         java.util.UUID nonExistentId = java.util.UUID.randomUUID();
 
         // When & Then
-        assertThrows(
-                IllegalArgumentException.class,
+        assertThrows(IllegalArgumentException.class,
                 () -> eventService.updateEvent(nonExistentId, "Test", null, null, testUser));
     }
 
@@ -397,13 +335,10 @@ class EventServiceTest {
     @Transactional
     void testUpdateEvent_UnauthorizedUser_ThrowsException() {
         // Given
-        Event event =
-                eventService.addEvent(
-                        testCalendar.id, LocalDate.of(2025, 5, 1), "Test", null, null, testUser);
+        Event event = eventService.addEvent(testCalendar.id, LocalDate.of(2025, 5, 1), "Test", null, null, testUser);
 
         // When & Then
-        assertThrows(
-                SecurityException.class,
+        assertThrows(SecurityException.class,
                 () -> eventService.updateEvent(event.id, "Hacked", null, null, otherUser));
     }
 
@@ -411,23 +346,18 @@ class EventServiceTest {
     @Transactional
     void testUpdateEvent_InvalidData_ThrowsException() {
         // Given
-        Event event =
-                eventService.addEvent(
-                        testCalendar.id, LocalDate.of(2025, 6, 1), "Test", null, null, testUser);
+        Event event = eventService.addEvent(testCalendar.id, LocalDate.of(2025, 6, 1), "Test", null, null, testUser);
 
         // When & Then - Invalid text length
-        assertThrows(
-                IllegalArgumentException.class,
+        assertThrows(IllegalArgumentException.class,
                 () -> eventService.updateEvent(event.id, "a".repeat(501), null, null, testUser));
 
         // When & Then - Invalid emoji
-        assertThrows(
-                IllegalArgumentException.class,
+        assertThrows(IllegalArgumentException.class,
                 () -> eventService.updateEvent(event.id, null, "invalid", null, testUser));
 
         // When & Then - Invalid color
-        assertThrows(
-                IllegalArgumentException.class,
+        assertThrows(IllegalArgumentException.class,
                 () -> eventService.updateEvent(event.id, null, null, "blue", testUser));
     }
 
@@ -437,14 +367,8 @@ class EventServiceTest {
     @Transactional
     void testDeleteEvent_Success() {
         // Given
-        Event event =
-                eventService.addEvent(
-                        testCalendar.id,
-                        LocalDate.of(2025, 7, 1),
-                        "To Delete",
-                        null,
-                        null,
-                        testUser);
+        Event event = eventService.addEvent(testCalendar.id, LocalDate.of(2025, 7, 1), "To Delete", null, null,
+                testUser);
 
         // When
         boolean deleted = eventService.deleteEvent(event.id, testUser);
@@ -461,18 +385,14 @@ class EventServiceTest {
         java.util.UUID nonExistentId = java.util.UUID.randomUUID();
 
         // When & Then
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> eventService.deleteEvent(nonExistentId, testUser));
+        assertThrows(IllegalArgumentException.class, () -> eventService.deleteEvent(nonExistentId, testUser));
     }
 
     @Test
     @Transactional
     void testDeleteEvent_UnauthorizedUser_ThrowsException() {
         // Given
-        Event event =
-                eventService.addEvent(
-                        testCalendar.id, LocalDate.of(2025, 8, 1), "Test", null, null, testUser);
+        Event event = eventService.addEvent(testCalendar.id, LocalDate.of(2025, 8, 1), "Test", null, null, testUser);
 
         // When & Then
         assertThrows(SecurityException.class, () -> eventService.deleteEvent(event.id, otherUser));
@@ -482,9 +402,7 @@ class EventServiceTest {
     @Transactional
     void testDeleteEvent_AdminCanDelete_Success() {
         // Given
-        Event event =
-                eventService.addEvent(
-                        testCalendar.id, LocalDate.of(2025, 9, 1), "Test", null, null, testUser);
+        Event event = eventService.addEvent(testCalendar.id, LocalDate.of(2025, 9, 1), "Test", null, null, testUser);
 
         // When
         boolean deleted = eventService.deleteEvent(event.id, adminUser);
@@ -499,12 +417,9 @@ class EventServiceTest {
     @Transactional
     void testListEvents_AllEvents_Success() {
         // Given
-        eventService.addEvent(
-                testCalendar.id, LocalDate.of(2025, 1, 1), "Event 1", null, null, testUser);
-        eventService.addEvent(
-                testCalendar.id, LocalDate.of(2025, 6, 15), "Event 2", null, null, testUser);
-        eventService.addEvent(
-                testCalendar.id, LocalDate.of(2025, 12, 31), "Event 3", null, null, testUser);
+        eventService.addEvent(testCalendar.id, LocalDate.of(2025, 1, 1), "Event 1", null, null, testUser);
+        eventService.addEvent(testCalendar.id, LocalDate.of(2025, 6, 15), "Event 2", null, null, testUser);
+        eventService.addEvent(testCalendar.id, LocalDate.of(2025, 12, 31), "Event 3", null, null, testUser);
 
         // When
         List<Event> events = eventService.listEvents(testCalendar.id, null, null, testUser);
@@ -521,20 +436,13 @@ class EventServiceTest {
     @Transactional
     void testListEvents_WithDateRange_Success() {
         // Given
-        eventService.addEvent(
-                testCalendar.id, LocalDate.of(2025, 1, 1), "Event 1", null, null, testUser);
-        eventService.addEvent(
-                testCalendar.id, LocalDate.of(2025, 6, 15), "Event 2", null, null, testUser);
-        eventService.addEvent(
-                testCalendar.id, LocalDate.of(2025, 12, 31), "Event 3", null, null, testUser);
+        eventService.addEvent(testCalendar.id, LocalDate.of(2025, 1, 1), "Event 1", null, null, testUser);
+        eventService.addEvent(testCalendar.id, LocalDate.of(2025, 6, 15), "Event 2", null, null, testUser);
+        eventService.addEvent(testCalendar.id, LocalDate.of(2025, 12, 31), "Event 3", null, null, testUser);
 
         // When - Query for events in summer
-        List<Event> events =
-                eventService.listEvents(
-                        testCalendar.id,
-                        LocalDate.of(2025, 6, 1),
-                        LocalDate.of(2025, 8, 31),
-                        testUser);
+        List<Event> events = eventService.listEvents(testCalendar.id, LocalDate.of(2025, 6, 1),
+                LocalDate.of(2025, 8, 31), testUser);
 
         // Then
         assertEquals(1, events.size());
@@ -545,22 +453,15 @@ class EventServiceTest {
     @Transactional
     void testListEvents_InvalidDateRange_ThrowsException() {
         // When & Then
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        eventService.listEvents(
-                                testCalendar.id,
-                                LocalDate.of(2025, 12, 1),
-                                LocalDate.of(2025, 1, 1),
-                                testUser));
+        assertThrows(IllegalArgumentException.class, () -> eventService.listEvents(testCalendar.id,
+                LocalDate.of(2025, 12, 1), LocalDate.of(2025, 1, 1), testUser));
     }
 
     @Test
     @Transactional
     void testListEvents_PublicCalendar_AnyoneCanRead() {
         // Given
-        eventService.addEvent(
-                testCalendar.id, LocalDate.of(2025, 1, 1), "Public Event", null, null, testUser);
+        eventService.addEvent(testCalendar.id, LocalDate.of(2025, 1, 1), "Public Event", null, null, testUser);
 
         // When - Other user reads public calendar
         List<Event> events = eventService.listEvents(testCalendar.id, null, null, otherUser);
@@ -573,14 +474,11 @@ class EventServiceTest {
     @Transactional
     void testListEvents_PrivateCalendar_UnauthorizedThrowsException() {
         // Given - Private calendar
-        UserCalendar privateCalendar =
-                calendarService.createCalendar(
-                        "Private Calendar", 2025, null, null, false, testUser, null);
+        UserCalendar privateCalendar = calendarService.createCalendar("Private Calendar", 2025, null, null, false,
+                testUser, null);
 
         // When & Then
-        assertThrows(
-                SecurityException.class,
-                () -> eventService.listEvents(privateCalendar.id, null, null, otherUser));
+        assertThrows(SecurityException.class, () -> eventService.listEvents(privateCalendar.id, null, null, otherUser));
     }
 
     // ========== GET EVENT TESTS ==========
@@ -589,14 +487,8 @@ class EventServiceTest {
     @Transactional
     void testGetEvent_Success() {
         // Given
-        Event event =
-                eventService.addEvent(
-                        testCalendar.id,
-                        LocalDate.of(2025, 2, 14),
-                        "Valentine's Day",
-                        "❤️",
-                        null,
-                        testUser);
+        Event event = eventService.addEvent(testCalendar.id, LocalDate.of(2025, 2, 14), "Valentine's Day", "❤️", null,
+                testUser);
 
         // When
         Event fetched = eventService.getEvent(event.id, testUser);
@@ -613,23 +505,15 @@ class EventServiceTest {
         java.util.UUID nonExistentId = java.util.UUID.randomUUID();
 
         // When & Then
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> eventService.getEvent(nonExistentId, testUser));
+        assertThrows(IllegalArgumentException.class, () -> eventService.getEvent(nonExistentId, testUser));
     }
 
     @Test
     @Transactional
     void testGetEvent_PublicCalendar_AnyoneCanRead() {
         // Given
-        Event event =
-                eventService.addEvent(
-                        testCalendar.id,
-                        LocalDate.of(2025, 3, 17),
-                        "St. Patrick's Day",
-                        "☘️",
-                        null,
-                        testUser);
+        Event event = eventService.addEvent(testCalendar.id, LocalDate.of(2025, 3, 17), "St. Patrick's Day", "☘️", null,
+                testUser);
 
         // When
         Event fetched = eventService.getEvent(event.id, otherUser);
@@ -644,14 +528,13 @@ class EventServiceTest {
     @Transactional
     void testImportEventsFromJson_Success() throws Exception {
         // Given
-        String json =
-                """
-            [
-                {"date": "2025-01-01", "text": "New Year", "emoji": "🎉", "color": "#FF5733"},
-                {"date": "2025-07-04", "text": "Independence Day", "emoji": "🇺🇸", "color": "#0000FF"},
-                {"date": "2025-12-25", "text": "Christmas", "emoji": "🎄", "color": "#00FF00"}
-            ]
-            """;
+        String json = """
+                [
+                    {"date": "2025-01-01", "text": "New Year", "emoji": "🎉", "color": "#FF5733"},
+                    {"date": "2025-07-04", "text": "Independence Day", "emoji": "🇺🇸", "color": "#0000FF"},
+                    {"date": "2025-12-25", "text": "Christmas", "emoji": "🎄", "color": "#00FF00"}
+                ]
+                """;
 
         // When
         List<Event> events = eventService.importEventsFromJson(testCalendar.id, json, testUser);
@@ -670,8 +553,7 @@ class EventServiceTest {
         String invalidJson = "not valid json";
 
         // When & Then
-        assertThrows(
-                IllegalArgumentException.class,
+        assertThrows(IllegalArgumentException.class,
                 () -> eventService.importEventsFromJson(testCalendar.id, invalidJson, testUser));
     }
 
@@ -682,12 +564,8 @@ class EventServiceTest {
         String notArray = "{\"date\": \"2025-01-01\", \"text\": \"Test\"}";
 
         // When & Then
-        IllegalArgumentException ex =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                eventService.importEventsFromJson(
-                                        testCalendar.id, notArray, testUser));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> eventService.importEventsFromJson(testCalendar.id, notArray, testUser));
 
         assertTrue(ex.getMessage().contains("JSON must be an array"));
     }
@@ -696,14 +574,13 @@ class EventServiceTest {
     @Transactional
     void testImportEventsFromJson_SkipInvalidEntries() throws Exception {
         // Given - Array with missing date in second entry
-        String json =
-                """
-            [
-                {"date": "2025-01-01", "text": "Valid Event"},
-                {"text": "Missing Date"},
-                {"date": "2025-12-25", "text": "Another Valid Event"}
-            ]
-            """;
+        String json = """
+                [
+                    {"date": "2025-01-01", "text": "Valid Event"},
+                    {"text": "Missing Date"},
+                    {"date": "2025-12-25", "text": "Another Valid Event"}
+                ]
+                """;
 
         // When
         List<Event> events = eventService.importEventsFromJson(testCalendar.id, json, testUser);
@@ -719,8 +596,7 @@ class EventServiceTest {
         String json = "[{\"date\": \"2025-01-01\", \"text\": \"Test\"}]";
 
         // When & Then
-        assertThrows(
-                SecurityException.class,
+        assertThrows(SecurityException.class,
                 () -> eventService.importEventsFromJson(testCalendar.id, json, otherUser));
     }
 
@@ -730,13 +606,12 @@ class EventServiceTest {
     @Transactional
     void testImportEventsFromCsv_Success() {
         // Given
-        String csv =
-                """
-            date,text,emoji,color
-            2025-01-01,New Year,🎉,#FF5733
-            2025-07-04,Independence Day,🇺🇸,#0000FF
-            2025-12-25,Christmas,🎄,#00FF00
-            """;
+        String csv = """
+                date,text,emoji,color
+                2025-01-01,New Year,🎉,#FF5733
+                2025-07-04,Independence Day,🇺🇸,#0000FF
+                2025-12-25,Christmas,🎄,#00FF00
+                """;
 
         // When
         List<Event> events = eventService.importEventsFromCsv(testCalendar.id, csv, testUser);
@@ -752,12 +627,11 @@ class EventServiceTest {
     @Transactional
     void testImportEventsFromCsv_MinimalData_Success() {
         // Given - Only dates
-        String csv =
-                """
-            date,text,emoji,color
-            2025-01-01,,,
-            2025-12-25,,,
-            """;
+        String csv = """
+                date,text,emoji,color
+                2025-01-01,,,
+                2025-12-25,,,
+                """;
 
         // When
         List<Event> events = eventService.importEventsFromCsv(testCalendar.id, csv, testUser);
@@ -772,15 +646,13 @@ class EventServiceTest {
     @Transactional
     void testImportEventsFromCsv_InvalidDateFormat_ThrowsException() {
         // Given
-        String csv =
-                """
-            date,text,emoji,color
-            01/01/2025,New Year,,
-            """;
+        String csv = """
+                date,text,emoji,color
+                01/01/2025,New Year,,
+                """;
 
         // When & Then
-        assertThrows(
-                IllegalArgumentException.class,
+        assertThrows(IllegalArgumentException.class,
                 () -> eventService.importEventsFromCsv(testCalendar.id, csv, testUser));
     }
 
@@ -788,13 +660,12 @@ class EventServiceTest {
     @Transactional
     void testImportEventsFromCsv_SkipEmptyLines() {
         // Given
-        String csv =
-                """
-            date,text,emoji,color
-            2025-01-01,Event 1,,
+        String csv = """
+                date,text,emoji,color
+                2025-01-01,Event 1,,
 
-            2025-12-25,Event 2,,
-            """;
+                2025-12-25,Event 2,,
+                """;
 
         // When
         List<Event> events = eventService.importEventsFromCsv(testCalendar.id, csv, testUser);
@@ -810,9 +681,7 @@ class EventServiceTest {
         String csv = "date,text,emoji,color\n2025-01-01,Test,,";
 
         // When & Then
-        assertThrows(
-                SecurityException.class,
-                () -> eventService.importEventsFromCsv(testCalendar.id, csv, otherUser));
+        assertThrows(SecurityException.class, () -> eventService.importEventsFromCsv(testCalendar.id, csv, otherUser));
     }
 
     // ========== EDGE CASES ==========
@@ -824,10 +693,8 @@ class EventServiceTest {
         LocalDate date = LocalDate.of(2025, 1, 1);
 
         // When
-        Event event1 =
-                eventService.addEvent(testCalendar.id, date, "Event 1", null, null, testUser);
-        Event event2 =
-                eventService.addEvent(testCalendar.id, date, "Event 2", null, null, testUser);
+        Event event1 = eventService.addEvent(testCalendar.id, date, "Event 1", null, null, testUser);
+        Event event2 = eventService.addEvent(testCalendar.id, date, "Event 2", null, null, testUser);
 
         // Then
         assertNotNull(event1);
@@ -844,19 +711,12 @@ class EventServiceTest {
     @Transactional
     void testLeapYearDate_Success() {
         // Given - 2024 is a leap year
-        UserCalendar calendar2024 =
-                calendarService.createCalendar(
-                        "Calendar 2024", 2024, null, null, true, testUser, null);
+        UserCalendar calendar2024 = calendarService.createCalendar("Calendar 2024", 2024, null, null, true, testUser,
+                null);
 
         // When
-        Event event =
-                eventService.addEvent(
-                        calendar2024.id,
-                        LocalDate.of(2024, 2, 29),
-                        "Leap Day",
-                        null,
-                        null,
-                        testUser);
+        Event event = eventService.addEvent(calendar2024.id, LocalDate.of(2024, 2, 29), "Leap Day", null, null,
+                testUser);
 
         // Then
         assertNotNull(event);

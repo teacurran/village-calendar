@@ -1,21 +1,23 @@
 package villagecompute.calendar.services.jobs;
 
 /**
- * Interface for DelayedJob handlers. Implementations should be annotated with @ApplicationScoped
- * and @DelayedJobConfig. They are automatically discovered and registered at startup.
+ * Interface for DelayedJob handlers. Implementations should be annotated with @ApplicationScoped and @DelayedJobConfig.
+ * They are automatically discovered and registered at startup.
  */
 public interface DelayedJobHandler {
     /**
      * Execute the job.
      *
-     * @param actorId ID of the entity to process
-     * @throws Exception if job execution fails
+     * @param actorId
+     *            ID of the entity to process
+     * @throws Exception
+     *             if job execution fails
      */
     void run(String actorId) throws Exception;
 
     /**
-     * Get the queue name for this handler. Default implementation uses the class simple name.
-     * Override to customize the queue name.
+     * Get the queue name for this handler. Default implementation uses the class simple name. Override to customize the
+     * queue name.
      *
      * @return Queue identifier string
      */

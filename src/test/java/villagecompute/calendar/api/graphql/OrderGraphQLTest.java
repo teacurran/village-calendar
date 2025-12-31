@@ -27,20 +27,23 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 
 /**
- * Tests for OrderGraphQL mutations and queries. Focuses on: - GraphQL schema validation for
- * ProductType enum - Service layer integration for placeOrder/cancelOrder logic - Input validation
- * and error handling
+ * Tests for OrderGraphQL mutations and queries. Focuses on: - GraphQL schema validation for ProductType enum - Service
+ * layer integration for placeOrder/cancelOrder logic - Input validation and error handling
  *
- * <p>Note: Full authenticated mutation tests require JWT token configuration. These tests focus on
- * schema validation, service logic, and unauthenticated rejection.
+ * <p>
+ * Note: Full authenticated mutation tests require JWT token configuration. These tests focus on schema validation,
+ * service logic, and unauthenticated rejection.
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class OrderGraphQLTest {
 
-    @Inject OrderService orderService;
-    @Inject ProductService productService;
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    OrderService orderService;
+    @Inject
+    ProductService productService;
+    @Inject
+    ObjectMapper objectMapper;
 
     private CalendarUser testUser;
     private CalendarTemplate testTemplate;
@@ -91,65 +94,50 @@ class OrderGraphQLTest {
     @Test
     @Order(1)
     void testGraphQL_ProductTypeEnumExists() {
-        String query =
-                """
-            query {
-                __type(name: "ProductType") {
-                    name
-                    kind
-                    enumValues {
+        String query = """
+                query {
+                    __type(name: "ProductType") {
                         name
+                        kind
+                        enumValues {
+                            name
+                        }
                     }
                 }
-            }
-            """;
+                """;
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("data.__type.name", equalTo("ProductType"))
-                .body("data.__type.kind", equalTo("ENUM"))
-                .body("data.__type.enumValues.name", hasItems("PRINT", "PDF"))
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.__type.name", equalTo("ProductType"))
+                .body("data.__type.kind", equalTo("ENUM")).body("data.__type.enumValues.name", hasItems("PRINT", "PDF"))
                 .body("data.__type.enumValues.name", not(hasItems("WALL_CALENDAR")))
                 .body("data.__type.enumValues.name", not(hasItems("DESK_CALENDAR")))
-                .body("data.__type.enumValues.name", not(hasItems("POSTER")))
-                .body("errors", nullValue());
+                .body("data.__type.enumValues.name", not(hasItems("POSTER"))).body("errors", nullValue());
     }
 
     @Test
     @Order(2)
     void testGraphQL_PlaceOrderInputType() {
-        String query =
-                """
-            query {
-                __type(name: "PlaceOrderInput") {
-                    name
-                    inputFields {
+        String query = """
+                query {
+                    __type(name: "PlaceOrderInput") {
                         name
-                        type {
+                        inputFields {
                             name
-                            kind
-                            ofType {
+                            type {
                                 name
+                                kind
+                                ofType {
+                                    name
+                                }
                             }
                         }
                     }
                 }
-            }
-            """;
+                """;
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("data.__type.name", equalTo("PlaceOrderInput"))
-                .body(
-                        "data.__type.inputFields.name",
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.__type.name", equalTo("PlaceOrderInput"))
+                .body("data.__type.inputFields.name",
                         hasItems("calendarId", "productType", "quantity", "shippingAddress"))
                 .body("errors", nullValue());
     }
@@ -157,27 +145,20 @@ class OrderGraphQLTest {
     @Test
     @Order(3)
     void testGraphQL_CreateOrderResponseType() {
-        String query =
-                """
-            query {
-                __type(name: "CreateOrderResponse") {
-                    name
-                    fields {
+        String query = """
+                query {
+                    __type(name: "CreateOrderResponse") {
                         name
+                        fields {
+                            name
+                        }
                     }
                 }
-            }
-            """;
+                """;
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("data.__type.name", equalTo("CreateOrderResponse"))
-                .body("data.__type.fields.name", hasItems("order", "clientSecret"))
-                .body("errors", nullValue());
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.__type.name", equalTo("CreateOrderResponse"))
+                .body("data.__type.fields.name", hasItems("order", "clientSecret")).body("errors", nullValue());
     }
 
     // ==================================================================
@@ -206,9 +187,7 @@ class OrderGraphQLTest {
         for (ProductType type : ProductType.values()) {
             String productCode = type.getProductCode();
             assertNotNull(productCode);
-            assertTrue(
-                    productService.isValidProductCode(productCode),
-                    "Invalid product code for " + type);
+            assertTrue(productService.isValidProductCode(productCode), "Invalid product code for " + type);
         }
     }
 
@@ -222,17 +201,10 @@ class OrderGraphQLTest {
     void testOrderService_CreateOrderWithPrintProduct() throws Exception {
         BigDecimal printPrice = productService.getPrice(ProductType.PRINT.getProductCode());
 
-        JsonNode shippingAddress =
-                objectMapper
-                        .createObjectNode()
-                        .put("street", "123 Print St")
-                        .put("city", "Nashville")
-                        .put("state", "TN")
-                        .put("postalCode", "37201")
-                        .put("country", "US");
+        JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "123 Print St")
+                .put("city", "Nashville").put("state", "TN").put("postalCode", "37201").put("country", "US");
 
-        CalendarOrder order =
-                orderService.createOrder(testUser, testCalendar, 2, printPrice, shippingAddress);
+        CalendarOrder order = orderService.createOrder(testUser, testCalendar, 2, printPrice, shippingAddress);
 
         assertNotNull(order);
         assertEquals(CalendarOrder.STATUS_PENDING, order.status);
@@ -247,17 +219,10 @@ class OrderGraphQLTest {
     void testOrderService_CreateOrderWithPdfProduct() throws Exception {
         BigDecimal pdfPrice = productService.getPrice(ProductType.PDF.getProductCode());
 
-        JsonNode shippingAddress =
-                objectMapper
-                        .createObjectNode()
-                        .put("street", "456 PDF Ave")
-                        .put("city", "Memphis")
-                        .put("state", "TN")
-                        .put("postalCode", "38101")
-                        .put("country", "US");
+        JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "456 PDF Ave").put("city", "Memphis")
+                .put("state", "TN").put("postalCode", "38101").put("country", "US");
 
-        CalendarOrder order =
-                orderService.createOrder(testUser, testCalendar, 1, pdfPrice, shippingAddress);
+        CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, pdfPrice, shippingAddress);
 
         assertNotNull(order);
         assertEquals(CalendarOrder.STATUS_PENDING, order.status);
@@ -274,28 +239,16 @@ class OrderGraphQLTest {
     @Transactional
     void testOrderService_CancelPendingOrder() throws Exception {
         // Create order
-        JsonNode shippingAddress =
-                objectMapper
-                        .createObjectNode()
-                        .put("street", "789 Cancel St")
-                        .put("city", "Knoxville")
-                        .put("state", "TN")
-                        .put("postalCode", "37902")
-                        .put("country", "US");
+        JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "789 Cancel St")
+                .put("city", "Knoxville").put("state", "TN").put("postalCode", "37902").put("country", "US");
 
-        CalendarOrder order =
-                orderService.createOrder(
-                        testUser,
-                        testCalendar,
-                        1,
-                        productService.getPrice("print"),
-                        shippingAddress);
+        CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, productService.getPrice("print"),
+                shippingAddress);
 
         assertEquals(CalendarOrder.STATUS_PENDING, order.status);
 
         // Cancel the order
-        CalendarOrder cancelledOrder =
-                orderService.cancelOrder(order.id, testUser.id, false, "Changed my mind");
+        CalendarOrder cancelledOrder = orderService.cancelOrder(order.id, testUser.id, false, "Changed my mind");
 
         assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status);
         assertNotNull(cancelledOrder.cancelledAt);
@@ -306,22 +259,11 @@ class OrderGraphQLTest {
     @Order(31)
     @Transactional
     void testOrderService_CancelPaidOrder() throws Exception {
-        JsonNode shippingAddress =
-                objectMapper
-                        .createObjectNode()
-                        .put("street", "101 Paid St")
-                        .put("city", "Nashville")
-                        .put("state", "TN")
-                        .put("postalCode", "37201")
-                        .put("country", "US");
+        JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "101 Paid St").put("city", "Nashville")
+                .put("state", "TN").put("postalCode", "37201").put("country", "US");
 
-        CalendarOrder order =
-                orderService.createOrder(
-                        testUser,
-                        testCalendar,
-                        1,
-                        productService.getPrice("print"),
-                        shippingAddress);
+        CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, productService.getPrice("print"),
+                shippingAddress);
 
         // Simulate payment
         order.status = CalendarOrder.STATUS_PAID;
@@ -330,8 +272,7 @@ class OrderGraphQLTest {
         order.persist();
 
         // Cancel the paid order
-        CalendarOrder cancelledOrder =
-                orderService.cancelOrder(order.id, testUser.id, false, "No longer needed");
+        CalendarOrder cancelledOrder = orderService.cancelOrder(order.id, testUser.id, false, "No longer needed");
 
         assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status);
         assertTrue(cancelledOrder.notes.contains("No longer needed"));
@@ -342,30 +283,18 @@ class OrderGraphQLTest {
     @Order(32)
     @Transactional
     void testOrderService_CannotCancelDeliveredOrder() throws Exception {
-        JsonNode shippingAddress =
-                objectMapper
-                        .createObjectNode()
-                        .put("street", "202 Delivered St")
-                        .put("city", "Memphis")
-                        .put("state", "TN")
-                        .put("postalCode", "38101")
-                        .put("country", "US");
+        JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "202 Delivered St")
+                .put("city", "Memphis").put("state", "TN").put("postalCode", "38101").put("country", "US");
 
-        CalendarOrder order =
-                orderService.createOrder(
-                        testUser,
-                        testCalendar,
-                        1,
-                        productService.getPrice("print"),
-                        shippingAddress);
+        CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, productService.getPrice("print"),
+                shippingAddress);
 
         // Simulate delivery
         order.status = CalendarOrder.STATUS_DELIVERED;
         order.persist();
 
         // Attempt to cancel should fail
-        assertThrows(
-                IllegalStateException.class,
+        assertThrows(IllegalStateException.class,
                 () -> orderService.cancelOrder(order.id, testUser.id, false, "Too late"));
     }
 
@@ -382,26 +311,14 @@ class OrderGraphQLTest {
         otherUser.isAdmin = false;
         otherUser.persist();
 
-        JsonNode shippingAddress =
-                objectMapper
-                        .createObjectNode()
-                        .put("street", "303 Owner St")
-                        .put("city", "Knoxville")
-                        .put("state", "TN")
-                        .put("postalCode", "37902")
-                        .put("country", "US");
+        JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "303 Owner St")
+                .put("city", "Knoxville").put("state", "TN").put("postalCode", "37902").put("country", "US");
 
-        CalendarOrder order =
-                orderService.createOrder(
-                        testUser,
-                        testCalendar,
-                        1,
-                        productService.getPrice("print"),
-                        shippingAddress);
+        CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, productService.getPrice("print"),
+                shippingAddress);
 
         // Other user should not be able to cancel
-        assertThrows(
-                SecurityException.class,
+        assertThrows(SecurityException.class,
                 () -> orderService.cancelOrder(order.id, otherUser.id, false, "Trying to cancel"));
     }
 
@@ -418,26 +335,14 @@ class OrderGraphQLTest {
         adminUser.isAdmin = true;
         adminUser.persist();
 
-        JsonNode shippingAddress =
-                objectMapper
-                        .createObjectNode()
-                        .put("street", "404 Admin St")
-                        .put("city", "Nashville")
-                        .put("state", "TN")
-                        .put("postalCode", "37201")
-                        .put("country", "US");
+        JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "404 Admin St")
+                .put("city", "Nashville").put("state", "TN").put("postalCode", "37201").put("country", "US");
 
-        CalendarOrder order =
-                orderService.createOrder(
-                        testUser,
-                        testCalendar,
-                        1,
-                        productService.getPrice("print"),
-                        shippingAddress);
+        CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, productService.getPrice("print"),
+                shippingAddress);
 
         // Admin should be able to cancel
-        CalendarOrder cancelledOrder =
-                orderService.cancelOrder(order.id, adminUser.id, true, "Admin override");
+        CalendarOrder cancelledOrder = orderService.cancelOrder(order.id, adminUser.id, true, "Admin override");
 
         assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status);
         assertTrue(cancelledOrder.notes.contains("Admin override"));
@@ -450,76 +355,60 @@ class OrderGraphQLTest {
     @Test
     @Order(40)
     void testPlaceOrder_UnauthenticatedWithPrint() {
-        String mutation =
-                String.format(
-                        """
-            mutation {
-                placeOrder(input: {
-                    calendarId: "%s"
-                    productType: PRINT
-                    quantity: 1
-                    shippingAddress: {
-                        street: "123 Test St"
-                        city: "Nashville"
-                        state: "TN"
-                        postalCode: "37201"
-                        country: "US"
+        String mutation = String.format("""
+                mutation {
+                    placeOrder(input: {
+                        calendarId: "%s"
+                        productType: PRINT
+                        quantity: 1
+                        shippingAddress: {
+                            street: "123 Test St"
+                            city: "Nashville"
+                            state: "TN"
+                            postalCode: "37201"
+                            country: "US"
+                        }
+                    }) {
+                        order {
+                            id
+                            status
+                        }
+                        clientSecret
                     }
-                }) {
-                    order {
-                        id
-                        status
-                    }
-                    clientSecret
                 }
-            }
-            """,
-                        testCalendar.id);
+                """, testCalendar.id);
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", mutation))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("errors", notNullValue()); // Requires authentication
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue()); // Requires authentication
     }
 
     @Test
     @Order(41)
     void testPlaceOrder_UnauthenticatedWithPdf() {
-        String mutation =
-                String.format(
-                        """
-            mutation {
-                placeOrder(input: {
-                    calendarId: "%s"
-                    productType: PDF
-                    quantity: 1
-                    shippingAddress: {
-                        street: "123 Test St"
-                        city: "Nashville"
-                        state: "TN"
-                        postalCode: "37201"
-                        country: "US"
+        String mutation = String.format("""
+                mutation {
+                    placeOrder(input: {
+                        calendarId: "%s"
+                        productType: PDF
+                        quantity: 1
+                        shippingAddress: {
+                            street: "123 Test St"
+                            city: "Nashville"
+                            state: "TN"
+                            postalCode: "37201"
+                            country: "US"
+                        }
+                    }) {
+                        order {
+                            id
+                        }
+                        clientSecret
                     }
-                }) {
-                    order {
-                        id
-                    }
-                    clientSecret
                 }
-            }
-            """,
-                        testCalendar.id);
+                """, testCalendar.id);
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", mutation))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("errors", notNullValue()); // Requires authentication
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue()); // Requires authentication
     }
 
     @Test
@@ -527,32 +416,19 @@ class OrderGraphQLTest {
     @Transactional
     void testCancelOrder_Unauthenticated() throws Exception {
         JsonNode shippingAddress = objectMapper.createObjectNode().put("country", "US");
-        CalendarOrder order =
-                orderService.createOrder(
-                        testUser,
-                        testCalendar,
-                        1,
-                        productService.getPrice("print"),
-                        shippingAddress);
+        CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, productService.getPrice("print"),
+                shippingAddress);
 
-        String mutation =
-                String.format(
-                        """
-            mutation {
-                cancelOrder(orderId: "%s", reason: "Test cancellation") {
-                    id
-                    status
+        String mutation = String.format("""
+                mutation {
+                    cancelOrder(orderId: "%s", reason: "Test cancellation") {
+                        id
+                        status
+                    }
                 }
-            }
-            """,
-                        order.id);
+                """, order.id);
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", mutation))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("errors", notNullValue()); // Requires authentication
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue()); // Requires authentication
     }
 }

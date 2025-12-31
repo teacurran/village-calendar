@@ -12,8 +12,7 @@ import villagecompute.calendar.data.models.CalendarOrder;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 
 /**
- * Repository for CalendarOrder entities. Provides custom query methods for order management and
- * e-commerce operations.
+ * Repository for CalendarOrder entities. Provides custom query methods for order management and e-commerce operations.
  */
 @ApplicationScoped
 public class CalendarOrderRepository implements PanacheRepository<CalendarOrder> {
@@ -21,7 +20,8 @@ public class CalendarOrderRepository implements PanacheRepository<CalendarOrder>
     /**
      * Find order by ID.
      *
-     * @param id Order ID
+     * @param id
+     *            Order ID
      * @return Optional containing the order if found
      */
     public Optional<CalendarOrder> findById(UUID id) {
@@ -29,10 +29,11 @@ public class CalendarOrderRepository implements PanacheRepository<CalendarOrder>
     }
 
     /**
-     * Find orders by status, ordered by creation date descending. This is the required custom query
-     * method from the task specification.
+     * Find orders by status, ordered by creation date descending. This is the required custom query method from the
+     * task specification.
      *
-     * @param status Order status
+     * @param status
+     *            Order status
      * @return List of orders with the specified status
      */
     public List<CalendarOrder> findByStatusOrderByCreatedDesc(String status) {
@@ -42,7 +43,8 @@ public class CalendarOrderRepository implements PanacheRepository<CalendarOrder>
     /**
      * Find all orders for a specific user, ordered by creation date descending.
      *
-     * @param userId User ID
+     * @param userId
+     *            User ID
      * @return List of user's orders
      */
     public List<CalendarOrder> findByUser(UUID userId) {
@@ -52,7 +54,8 @@ public class CalendarOrderRepository implements PanacheRepository<CalendarOrder>
     /**
      * Find all orders for a specific calendar.
      *
-     * @param calendarId Calendar ID
+     * @param calendarId
+     *            Calendar ID
      * @return List of orders for the calendar
      */
     public List<CalendarOrder> findByCalendar(UUID calendarId) {
@@ -62,7 +65,8 @@ public class CalendarOrderRepository implements PanacheRepository<CalendarOrder>
     /**
      * Find orders by Stripe Payment Intent ID.
      *
-     * @param paymentIntentId Stripe Payment Intent ID
+     * @param paymentIntentId
+     *            Stripe Payment Intent ID
      * @return Optional containing the order if found
      */
     public Optional<CalendarOrder> findByStripePaymentIntent(String paymentIntentId) {
@@ -72,7 +76,8 @@ public class CalendarOrderRepository implements PanacheRepository<CalendarOrder>
     /**
      * Find recent orders within a time range.
      *
-     * @param since Start time
+     * @param since
+     *            Start time
      * @return List of recent orders
      */
     public List<CalendarOrder> findRecentOrders(Instant since) {
@@ -100,8 +105,10 @@ public class CalendarOrderRepository implements PanacheRepository<CalendarOrder>
     /**
      * Find orders by user and status.
      *
-     * @param userId User ID
-     * @param status Order status
+     * @param userId
+     *            User ID
+     * @param status
+     *            Order status
      * @return List of matching orders
      */
     public List<CalendarOrder> findByUserAndStatus(UUID userId, String status) {

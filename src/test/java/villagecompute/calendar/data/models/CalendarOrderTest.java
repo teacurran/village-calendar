@@ -29,19 +29,26 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class CalendarOrderTest {
 
-    @Inject Validator validator;
+    @Inject
+    Validator validator;
 
-    @Inject TestDataCleaner testDataCleaner;
+    @Inject
+    TestDataCleaner testDataCleaner;
 
-    @Inject CalendarUserRepository calendarUserRepository;
+    @Inject
+    CalendarUserRepository calendarUserRepository;
 
-    @Inject CalendarTemplateRepository templateRepository;
+    @Inject
+    CalendarTemplateRepository templateRepository;
 
-    @Inject CalendarOrderRepository orderRepository;
+    @Inject
+    CalendarOrderRepository orderRepository;
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
-    @Inject jakarta.persistence.EntityManager entityManager;
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
 
     private CalendarUser testUser;
     private UserCalendar testCalendar;
@@ -274,8 +281,7 @@ class CalendarOrderTest {
         entityManager.flush();
 
         // When
-        List<CalendarOrder> pendingOrders =
-                orderRepository.findByStatusOrderByCreatedDesc("PENDING");
+        List<CalendarOrder> pendingOrders = orderRepository.findByStatusOrderByCreatedDesc("PENDING");
 
         // Then
         assertEquals(2, pendingOrders.size());
@@ -332,11 +338,8 @@ class CalendarOrderTest {
         entityManager.flush(); // Flush to persist first
 
         // Manually set old created date using native SQL
-        entityManager
-                .createNativeQuery(
-                        "UPDATE calendar_orders SET created = :newCreated WHERE id = :id")
-                .setParameter("newCreated", yesterday.minus(1, ChronoUnit.DAYS))
-                .setParameter("id", oldOrder.id)
+        entityManager.createNativeQuery("UPDATE calendar_orders SET created = :newCreated WHERE id = :id")
+                .setParameter("newCreated", yesterday.minus(1, ChronoUnit.DAYS)).setParameter("id", oldOrder.id)
                 .executeUpdate();
         entityManager.flush();
         entityManager.clear(); // Clear persistence context to force reload
@@ -726,8 +729,7 @@ class CalendarOrderTest {
 
         // Then
         assertTrue(violations.size() >= 1);
-        boolean hasViolation =
-                violations.stream().anyMatch(v -> "status".equals(v.getPropertyPath().toString()));
+        boolean hasViolation = violations.stream().anyMatch(v -> "status".equals(v.getPropertyPath().toString()));
         assertTrue(hasViolation);
     }
 
@@ -742,12 +744,8 @@ class CalendarOrderTest {
 
         // Then
         assertTrue(violations.size() >= 1);
-        boolean hasViolation =
-                violations.stream()
-                        .anyMatch(
-                                v ->
-                                        "stripePaymentIntentId"
-                                                .equals(v.getPropertyPath().toString()));
+        boolean hasViolation = violations.stream()
+                .anyMatch(v -> "stripePaymentIntentId".equals(v.getPropertyPath().toString()));
         assertTrue(hasViolation);
     }
 
@@ -762,9 +760,8 @@ class CalendarOrderTest {
 
         // Then
         assertTrue(violations.size() >= 1);
-        boolean hasViolation =
-                violations.stream()
-                        .anyMatch(v -> "stripeChargeId".equals(v.getPropertyPath().toString()));
+        boolean hasViolation = violations.stream()
+                .anyMatch(v -> "stripeChargeId".equals(v.getPropertyPath().toString()));
         assertTrue(hasViolation);
     }
 
@@ -773,8 +770,7 @@ class CalendarOrderTest {
     void testNotes_LongText() {
         // Given - TEXT column should support long text
         CalendarOrder order = createValidOrder();
-        String longNotes =
-                "Customer notes: " + "This is important delivery information. ".repeat(100);
+        String longNotes = "Customer notes: " + "This is important delivery information. ".repeat(100);
         order.notes = longNotes;
         orderRepository.persist(order);
         entityManager.flush();

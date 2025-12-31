@@ -42,16 +42,16 @@ public class MazeGrid {
 
     public void generate() {
         switch (type) {
-            case ORTHOGONAL:
+            case ORTHOGONAL :
                 generateOrthogonal();
                 break;
-            case DELTA:
+            case DELTA :
                 generateDelta();
                 break;
-            case SIGMA:
+            case SIGMA :
                 generateSigma();
                 break;
-            case THETA:
+            case THETA :
                 generateTheta();
                 break;
         }
@@ -85,8 +85,7 @@ public class MazeGrid {
     }
 
     /**
-     * Generate delta (triangular) maze. For now, using a modified orthogonal approach with
-     * different neighbor logic.
+     * Generate delta (triangular) maze. For now, using a modified orthogonal approach with different neighbor logic.
      */
     private void generateDelta() {
         // Delta mazes use triangular cells - simplified version for now
@@ -116,47 +115,50 @@ public class MazeGrid {
         int x = cell.x;
         int y = cell.y;
 
-        if (x > 0 && !cells[x - 1][y].visited) neighbors.add(cells[x - 1][y]);
-        if (x < width - 1 && !cells[x + 1][y].visited) neighbors.add(cells[x + 1][y]);
-        if (y > 0 && !cells[x][y - 1].visited) neighbors.add(cells[x][y - 1]);
-        if (y < height - 1 && !cells[x][y + 1].visited) neighbors.add(cells[x][y + 1]);
+        if (x > 0 && !cells[x - 1][y].visited)
+            neighbors.add(cells[x - 1][y]);
+        if (x < width - 1 && !cells[x + 1][y].visited)
+            neighbors.add(cells[x + 1][y]);
+        if (y > 0 && !cells[x][y - 1].visited)
+            neighbors.add(cells[x][y - 1]);
+        if (y < height - 1 && !cells[x][y + 1].visited)
+            neighbors.add(cells[x][y + 1]);
 
         return neighbors;
     }
 
     /**
-     * Apply difficulty-based modifications to the maze. Difficulty 1-5: 1 = Very easy (many
-     * shortcuts - about 25% of cells get extra openings) 2 = Easy (some shortcuts - about 12.5% of
-     * cells get extra openings) 3 = Medium (few shortcuts - about 5% of cells get extra openings) 4
-     * = Hard (minimal shortcuts - about 2% of cells get extra openings) 5 = Very hard (pure perfect
-     * maze - no shortcuts, single solution path)
+     * Apply difficulty-based modifications to the maze. Difficulty 1-5: 1 = Very easy (many shortcuts - about 25% of
+     * cells get extra openings) 2 = Easy (some shortcuts - about 12.5% of cells get extra openings) 3 = Medium (few
+     * shortcuts - about 5% of cells get extra openings) 4 = Hard (minimal shortcuts - about 2% of cells get extra
+     * openings) 5 = Very hard (pure perfect maze - no shortcuts, single solution path)
      *
-     * <p>The recursive backtracker creates a "perfect" maze with exactly one path between any two
-     * points. Adding shortcuts (removing walls) creates alternative routes that can make the
-     * solution shorter and easier to find.
+     * <p>
+     * The recursive backtracker creates a "perfect" maze with exactly one path between any two points. Adding shortcuts
+     * (removing walls) creates alternative routes that can make the solution shorter and easier to find.
      */
     private void applyDifficultyModifications() {
         int totalCells = width * height;
 
         switch (difficulty) {
-            case 1:
+            case 1 :
                 // Very easy: Remove many walls to create multiple shortcuts
                 removeWallsForShortcuts(totalCells / 4);
                 break;
-            case 2:
+            case 2 :
                 // Easy: Remove some walls
                 removeWallsForShortcuts(totalCells / 8);
                 break;
-            case 3:
+            case 3 :
                 // Medium: Remove few walls
                 removeWallsForShortcuts(totalCells / 20);
                 break;
-            case 4:
+            case 4 :
                 // Hard: Remove very few walls
                 removeWallsForShortcuts(totalCells / 50);
                 break;
-            case 5:
-            default:
+            case 5 :
+            default :
                 // Very hard: Pure perfect maze, no modifications
                 // The recursive backtracker already creates the hardest possible maze
                 break;
@@ -184,10 +186,14 @@ public class MazeGrid {
         int x = cell.x;
         int y = cell.y;
 
-        if (x > 0 && !cell.westWall) neighbors.add(cells[x - 1][y]);
-        if (x < width - 1 && !cell.eastWall) neighbors.add(cells[x + 1][y]);
-        if (y > 0 && !cell.northWall) neighbors.add(cells[x][y - 1]);
-        if (y < height - 1 && !cell.southWall) neighbors.add(cells[x][y + 1]);
+        if (x > 0 && !cell.westWall)
+            neighbors.add(cells[x - 1][y]);
+        if (x < width - 1 && !cell.eastWall)
+            neighbors.add(cells[x + 1][y]);
+        if (y > 0 && !cell.northWall)
+            neighbors.add(cells[x][y - 1]);
+        if (y < height - 1 && !cell.southWall)
+            neighbors.add(cells[x][y + 1]);
 
         return neighbors;
     }
@@ -197,10 +203,14 @@ public class MazeGrid {
         int x = cell.x;
         int y = cell.y;
 
-        if (x > 0 && cell.westWall) neighbors.add(cells[x - 1][y]);
-        if (x < width - 1 && cell.eastWall) neighbors.add(cells[x + 1][y]);
-        if (y > 0 && cell.northWall) neighbors.add(cells[x][y - 1]);
-        if (y < height - 1 && cell.southWall) neighbors.add(cells[x][y + 1]);
+        if (x > 0 && cell.westWall)
+            neighbors.add(cells[x - 1][y]);
+        if (x < width - 1 && cell.eastWall)
+            neighbors.add(cells[x + 1][y]);
+        if (y > 0 && cell.northWall)
+            neighbors.add(cells[x][y - 1]);
+        if (y < height - 1 && cell.southWall)
+            neighbors.add(cells[x][y + 1]);
 
         return neighbors;
     }
@@ -229,7 +239,7 @@ public class MazeGrid {
                 MazeCell pathCell = current;
                 while (pathCell != null) {
                     pathCell.onSolutionPath = true;
-                    solutionPath.add(0, new int[] {pathCell.x, pathCell.y});
+                    solutionPath.add(0, new int[]{pathCell.x, pathCell.y});
                     pathCell = pathCell.parent;
                 }
                 return;
@@ -246,8 +256,8 @@ public class MazeGrid {
     }
 
     /**
-     * Mark all cells that are not on the solution path as dead ends. Also calculates the depth of
-     * each dead end (how far from the solution path).
+     * Mark all cells that are not on the solution path as dead ends. Also calculates the depth of each dead end (how
+     * far from the solution path).
      */
     private void markDeadEnds() {
         // First pass: mark all non-solution cells as dead ends

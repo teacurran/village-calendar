@@ -7,8 +7,8 @@ import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Input;
 
 /**
- * Input type for shipping address. Matches AddressInput type defined in GraphQL schema. Will be
- * stored as JSONB in the database.
+ * Input type for shipping address. Matches AddressInput type defined in GraphQL schema. Will be stored as JSONB in the
+ * database.
  */
 @Input("AddressInput")
 @Description("Shipping address for order delivery")

@@ -21,7 +21,8 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class CartServiceTest {
 
-    @Inject CartService cartService;
+    @Inject
+    CartService cartService;
 
     private String testSessionId;
 

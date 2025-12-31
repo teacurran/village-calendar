@@ -17,24 +17,17 @@ import org.hibernate.type.SqlTypes;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * Entity representing a line item within an order. Supports multiple generator types (calendar,
- * maze, etc.) with frozen SVG assets.
+ * Entity representing a line item within an order. Supports multiple generator types (calendar, maze, etc.) with frozen
+ * SVG assets.
  */
 @Entity
-@Table(
-        name = "calendar_order_items",
-        indexes = {
-            @Index(name = "idx_order_items_order", columnList = "order_id"),
-            @Index(name = "idx_order_items_calendar", columnList = "calendar_id"),
-            @Index(name = "idx_order_items_shipment", columnList = "shipment_id")
-        })
+@Table(name = "calendar_order_items", indexes = {@Index(name = "idx_order_items_order", columnList = "order_id"),
+        @Index(name = "idx_order_items_calendar", columnList = "calendar_id"),
+        @Index(name = "idx_order_items_shipment", columnList = "shipment_id")})
 public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
 
     @NotNull @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "order_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_order_items_order"))
+    @JoinColumn(name = "order_id", nullable = false, foreignKey = @ForeignKey(name = "fk_order_items_order"))
     @Ignore
     public CalendarOrder order;
 
@@ -49,8 +42,8 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     public String description;
 
     /**
-     * @deprecated since 1.0, use generatorType instead. Kept for backward compatibility. The
-     *     calendar design for this line item (optional - may be null for non-calendar products)
+     * @deprecated since 1.0, use generatorType instead. Kept for backward compatibility. The calendar design for this
+     *             line item (optional - may be null for non-calendar products)
      */
     @Deprecated(since = "1.0", forRemoval = false)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -64,8 +57,8 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     public String productType = TYPE_PRINT;
 
     /**
-     * @deprecated since 1.0, use description instead. Kept for backward compatibility. Product
-     *     name/description for display
+     * @deprecated since 1.0, use description instead. Kept for backward compatibility. Product name/description for
+     *             display
      */
     @Deprecated(since = "1.0", forRemoval = false)
     @Size(max = 255)
@@ -73,8 +66,8 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     public String productName;
 
     /**
-     * @deprecated since 1.0, use configuration JSON instead. Kept for backward compatibility.
-     *     Calendar year (for calendar products)
+     * @deprecated since 1.0, use configuration JSON instead. Kept for backward compatibility. Calendar year (for
+     *             calendar products)
      */
     @Deprecated(since = "1.0", forRemoval = false)
     @Column(name = "calendar_year")
@@ -95,16 +88,12 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     /** Configuration/customization details as JSON */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    @io.smallrye.graphql.api.AdaptWith(
-            villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
+    @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
     public JsonNode configuration;
 
     /** Assets (SVGs) associated with this order item. */
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    @JoinTable(
-            name = "order_item_assets",
-            joinColumns = @JoinColumn(name = "order_item_id"),
-            inverseJoinColumns = @JoinColumn(name = "asset_id"))
+    @JoinTable(name = "order_item_assets", joinColumns = @JoinColumn(name = "order_item_id"), inverseJoinColumns = @JoinColumn(name = "asset_id"))
     @Ignore
     public Set<ItemAsset> assets = new HashSet<>();
 
@@ -115,8 +104,8 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     public Shipment shipment;
 
     /**
-     * Status of this specific item (for partial fulfillment) PENDING, PROCESSING, SHIPPED,
-     * DELIVERED, CANCELLED, REFUNDED
+     * Status of this specific item (for partial fulfillment) PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED,
+     * REFUNDED
      */
     @Size(max = 50)
     @Column(name = "item_status", length = 50)
@@ -190,18 +179,18 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Set the year in configuration JSON. Also sets deprecated calendarYear field for backward
-     * compatibility with older code.
+     * Set the year in configuration JSON. Also sets deprecated calendarYear field for backward compatibility with older
+     * code.
      *
-     * @param year The year to set
+     * @param year
+     *            The year to set
      */
     @SuppressWarnings("deprecation")
     public void setYear(int year) {
         // Set in configuration JSON (preferred)
         if (configuration == null) {
             try {
-                configuration =
-                        new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode();
+                configuration = new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode();
             } catch (Exception e) {
                 // Fallback - shouldn't happen
             }

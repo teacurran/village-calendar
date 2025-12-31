@@ -13,15 +13,19 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @MappedSuperclass
 public abstract class DefaultPanacheEntityWithTimestamps extends PanacheEntityBase {
 
-    @Id @GeneratedValue public UUID id;
+    @Id
+    @GeneratedValue
+    public UUID id;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     public Instant created;
 
-    @UpdateTimestamp public Instant updated;
+    @UpdateTimestamp
+    public Instant updated;
 
-    @Version public Long version;
+    @Version
+    public Long version;
 
     public String toString() {
         String var10000 = this.getClass().getSimpleName();

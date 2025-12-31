@@ -20,8 +20,8 @@ import io.quarkus.qute.CheckedTemplate;
 import io.quarkus.qute.TemplateInstance;
 
 /**
- * DelayedJob handler for sending order cancellation emails. Renders HTML email templates using Qute
- * and sends via EmailService.
+ * DelayedJob handler for sending order cancellation emails. Renders HTML email templates using Qute and sends via
+ * EmailService.
  */
 @ApplicationScoped
 @DelayedJobConfig(priority = 5, description = "Order cancellation email sender")
@@ -29,11 +29,10 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
 
     private static final Logger LOG = Logger.getLogger(OrderCancellationJobHandler.class);
 
-    @Inject EmailService emailService;
+    @Inject
+    EmailService emailService;
 
-    @ConfigProperty(
-            name = "email.order.from",
-            defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
+    @ConfigProperty(name = "email.order.from", defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
     String orderFromEmail;
 
     @ConfigProperty(name = "app.base-url", defaultValue = "https://calendar.villagecompute.com")
@@ -45,13 +44,16 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
         /**
          * Order cancellation email template.
          *
-         * @param order Calendar order
-         * @param stylesheet CSS stylesheet
-         * @param includeRefundNote Whether to include refund processing note
+         * @param order
+         *            Calendar order
+         * @param stylesheet
+         *            CSS stylesheet
+         * @param includeRefundNote
+         *            Whether to include refund processing note
          * @return Template instance
          */
-        public static native TemplateInstance orderCancellation(
-                CalendarOrder order, String stylesheet, boolean includeRefundNote);
+        public static native TemplateInstance orderCancellation(CalendarOrder order, String stylesheet,
+                boolean includeRefundNote);
     }
 
     @Override
@@ -88,8 +90,7 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
 
             // Render the cancellation email template
             String subject = "Order Cancelled - Village Compute Calendar";
-            String htmlContent =
-                    Templates.orderCancellation(order, css, includeRefundNote).render();
+            String htmlContent = Templates.orderCancellation(order, css, includeRefundNote).render();
 
             // Send the email
             emailService.sendHtmlEmail(orderFromEmail, order.user.email, subject, htmlContent);
@@ -109,13 +110,14 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
     /**
      * Load a resource file as a string.
      *
-     * @param resourcePath Resource path
+     * @param resourcePath
+     *            Resource path
      * @return File contents
-     * @throws IOException if resource cannot be loaded
+     * @throws IOException
+     *             if resource cannot be loaded
      */
     private String loadResourceAsString(String resourcePath) throws IOException {
-        try (var inputStream =
-                Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
+        try (var inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
             if (inputStream == null) {
                 throw new IOException("Resource not found: " + resourcePath);
             }

@@ -3,7 +3,8 @@ package villagecompute.calendar.data.models.enums;
 /**
  * Calendar generation status tracking. The calendar service generates PDF files asynchronously.
  *
- * <p>Status flow:
+ * <p>
+ * Status flow:
  *
  * <pre>
  * DRAFT -> GENERATING -> READY

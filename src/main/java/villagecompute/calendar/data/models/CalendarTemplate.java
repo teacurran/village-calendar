@@ -14,17 +14,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 
 @Entity
-@Table(
-        name = "calendar_templates",
-        indexes = {
-            @Index(name = "idx_calendar_templates_name", columnList = "name"),
-            @Index(
-                    name = "idx_calendar_templates_active",
-                    columnList = "is_active, display_order, name"),
-            @Index(
-                    name = "idx_calendar_templates_featured",
-                    columnList = "is_featured, is_active, display_order")
-        })
+@Table(name = "calendar_templates", indexes = {@Index(name = "idx_calendar_templates_name", columnList = "name"),
+        @Index(name = "idx_calendar_templates_active", columnList = "is_active, display_order, name"),
+        @Index(name = "idx_calendar_templates_featured", columnList = "is_featured, is_active, display_order")})
 public class CalendarTemplate extends DefaultPanacheEntityWithTimestamps {
 
     @NotNull @Size(max = 255)
@@ -92,7 +84,8 @@ public class CalendarTemplate extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find a template by name.
      *
-     * @param name Template name
+     * @param name
+     *            Template name
      * @return Template if found, null otherwise
      */
     public static CalendarTemplate findByName(String name) {
@@ -100,8 +93,8 @@ public class CalendarTemplate extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Find all active templates ordered by display order. This is the required custom query method
-     * from the task specification.
+     * Find all active templates ordered by display order. This is the required custom query method from the task
+     * specification.
      *
      * @return List of active templates
      */
@@ -139,7 +132,8 @@ public class CalendarTemplate extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find a template by its slug.
      *
-     * @param slug URL-friendly slug
+     * @param slug
+     *            URL-friendly slug
      * @return Template if found, null otherwise
      */
     public static CalendarTemplate findBySlug(String slug) {

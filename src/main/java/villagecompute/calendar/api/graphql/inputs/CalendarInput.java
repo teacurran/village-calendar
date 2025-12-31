@@ -26,23 +26,18 @@ public class CalendarInput {
     public String templateId;
 
     @Description("User customization overrides (JSONB)")
-    @io.smallrye.graphql.api.AdaptWith(
-            villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
+    @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
     public JsonNode configuration;
 
     @Description("Whether calendar is publicly visible")
     public Boolean isPublic;
 
     // Default constructor required by SmallRye GraphQL
-    public CalendarInput() {}
+    public CalendarInput() {
+    }
 
     // Constructor for testing
-    public CalendarInput(
-            String name,
-            Integer year,
-            String templateId,
-            JsonNode configuration,
-            Boolean isPublic) {
+    public CalendarInput(String name, Integer year, String templateId, JsonNode configuration, Boolean isPublic) {
         this.name = name;
         this.year = year;
         this.templateId = templateId;

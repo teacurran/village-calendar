@@ -17,18 +17,11 @@ public class CartItem {
     public String productCode;
     public String configuration;
 
-    public CartItem() {}
+    public CartItem() {
+    }
 
-    public CartItem(
-            String id,
-            String generatorType,
-            String description,
-            Integer quantity,
-            Double unitPrice,
-            Double lineTotal,
-            String productCode,
-            String configuration,
-            List<Asset> assets) {
+    public CartItem(String id, String generatorType, String description, Integer quantity, Double unitPrice,
+            Double lineTotal, String productCode, String configuration, List<Asset> assets) {
         this.id = id;
         this.generatorType = generatorType;
         this.description = description;
@@ -42,7 +35,8 @@ public class CartItem {
 
     /** Create a CartItem from the entity. */
     public static CartItem fromEntity(villagecompute.calendar.data.models.CartItem entity) {
-        if (entity == null) return null;
+        if (entity == null)
+            return null;
 
         CartItem item = new CartItem();
         item.id = entity.id.toString();

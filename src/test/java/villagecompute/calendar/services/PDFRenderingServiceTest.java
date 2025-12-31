@@ -11,29 +11,31 @@ import org.junit.jupiter.api.Test;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * Tests for PDFRenderingService. Verifies SVG-to-PDF conversion works correctly with various SVG
- * features, including xlink:href references which require proper namespace handling.
+ * Tests for PDFRenderingService. Verifies SVG-to-PDF conversion works correctly with various SVG features, including
+ * xlink:href references which require proper namespace handling.
  */
 @QuarkusTest
 public class PDFRenderingServiceTest {
 
-    @Inject PDFRenderingService pdfRenderingService;
+    @Inject
+    PDFRenderingService pdfRenderingService;
 
-    @Inject CalendarRenderingService calendarRenderingService;
+    @Inject
+    CalendarRenderingService calendarRenderingService;
 
-    @Inject EmojiSvgService emojiSvgService;
+    @Inject
+    EmojiSvgService emojiSvgService;
 
     @Test
     public void testBasicSvgToPdf() {
         // Basic SVG without xlink references
-        String basicSvg =
-                """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100" viewBox="0 0 100 100">
-                <rect x="10" y="10" width="80" height="80" fill="blue"/>
-                <text x="50" y="55" text-anchor="middle" fill="white">Test</text>
-            </svg>
-            """;
+        String basicSvg = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100" viewBox="0 0 100 100">
+                    <rect x="10" y="10" width="80" height="80" fill="blue"/>
+                    <text x="50" y="55" text-anchor="middle" fill="white">Test</text>
+                </svg>
+                """;
 
         byte[] pdf = pdfRenderingService.renderSVGToPDF(basicSvg, 2025);
         assertNotNull(pdf, "PDF output should not be null");
@@ -46,23 +48,22 @@ public class PDFRenderingServiceTest {
     public void testSvgWithXlinkHref() {
         // SVG with xlink:href references (similar to what some Noto emojis use)
         // Uses a symbol element that can be referenced via <use>
-        String svgWithXlink =
-                """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="128" height="128" viewBox="0 0 128 128">
-                <defs>
-                    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:rgb(255,255,0);stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:rgb(255,0,0);stop-opacity:1" />
-                    </linearGradient>
-                    <symbol id="myCircle" viewBox="0 0 128 128">
-                        <circle cx="64" cy="64" r="30" fill="blue"/>
-                    </symbol>
-                </defs>
-                <circle cx="64" cy="64" r="60" fill="url(#grad1)"/>
-                <use xlink:href="#myCircle" x="0" y="0" width="128" height="128"/>
-            </svg>
-            """;
+        String svgWithXlink = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="128" height="128" viewBox="0 0 128 128">
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:rgb(255,255,0);stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:rgb(255,0,0);stop-opacity:1" />
+                        </linearGradient>
+                        <symbol id="myCircle" viewBox="0 0 128 128">
+                            <circle cx="64" cy="64" r="30" fill="blue"/>
+                        </symbol>
+                    </defs>
+                    <circle cx="64" cy="64" r="60" fill="url(#grad1)"/>
+                    <use xlink:href="#myCircle" x="0" y="0" width="128" height="128"/>
+                </svg>
+                """;
 
         byte[] pdf = pdfRenderingService.renderSVGToPDF(svgWithXlink, 2025);
         assertNotNull(pdf, "PDF output should not be null for SVG with xlink:href");
@@ -73,8 +74,7 @@ public class PDFRenderingServiceTest {
     @Test
     public void testCalendarWithSecularHolidays() {
         // Generate a calendar with secular holidays (which may use emojis with xlink:href)
-        CalendarRenderingService.CalendarConfig config =
-                new CalendarRenderingService.CalendarConfig();
+        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
         config.year = 2025;
         config.theme = "default";
         config.layoutStyle = "grid";
@@ -100,8 +100,7 @@ public class PDFRenderingServiceTest {
         // Test specific emojis that use xlink:href (like the dancing woman emoji)
         // emoji_u1f483.svg is known to use xlink:href
         if (emojiSvgService.hasEmojiSvg("💃")) {
-            CalendarRenderingService.CalendarConfig config =
-                    new CalendarRenderingService.CalendarConfig();
+            CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
             config.year = 2025;
             config.theme = "default";
             config.layoutStyle = "grid";
@@ -127,8 +126,7 @@ public class PDFRenderingServiceTest {
 
         for (String emoji : emojisWithXlink) {
             if (emojiSvgService.hasEmojiSvg(emoji)) {
-                CalendarRenderingService.CalendarConfig config =
-                        new CalendarRenderingService.CalendarConfig();
+                CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
                 config.year = 2025;
                 config.theme = "default";
                 config.layoutStyle = "grid";
@@ -152,8 +150,7 @@ public class PDFRenderingServiceTest {
     @Test
     public void testMonochromeCalendarWithSecularHolidays() {
         // Test monochrome mode with secular holidays
-        CalendarRenderingService.CalendarConfig config =
-                new CalendarRenderingService.CalendarConfig();
+        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
         config.year = 2025;
         config.theme = "default";
         config.layoutStyle = "grid";
@@ -176,8 +173,7 @@ public class PDFRenderingServiceTest {
     @Test
     public void testComplexCalendarWithAllFeatures() {
         // Test a complex calendar with all features that could cause CSS URI reference issues
-        CalendarRenderingService.CalendarConfig config =
-                new CalendarRenderingService.CalendarConfig();
+        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
         config.year = 2025;
         config.theme = "rainbowWeekends";
         config.layoutStyle = "grid";
@@ -211,9 +207,7 @@ public class PDFRenderingServiceTest {
             // Extract a sample for analysis
             int urlIndex = svg.indexOf("url(#");
             if (urlIndex != -1) {
-                String sample =
-                        svg.substring(
-                                Math.max(0, urlIndex - 50), Math.min(svg.length(), urlIndex + 100));
+                String sample = svg.substring(Math.max(0, urlIndex - 50), Math.min(svg.length(), urlIndex + 100));
                 System.out.println("Sample: " + sample);
             }
         }
@@ -231,8 +225,7 @@ public class PDFRenderingServiceTest {
     public void testEmojiFontConsistency() {
         // Test that emoji font setting is properly applied in both SVG generation and PDF
         // conversion
-        CalendarRenderingService.CalendarConfig config =
-                new CalendarRenderingService.CalendarConfig();
+        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
         config.year = 2025;
         config.theme = "default";
         config.emojiFont = "noto-mono"; // Explicitly set to monochrome

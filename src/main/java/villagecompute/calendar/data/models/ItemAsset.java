@@ -11,8 +11,8 @@ import jakarta.validation.constraints.Size;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
- * Stores generated SVG content for cart items and orders. Supports multiple assets per item (e.g.,
- * main SVG and answer key for mazes).
+ * Stores generated SVG content for cart items and orders. Supports multiple assets per item (e.g., main SVG and answer
+ * key for mazes).
  */
 @Entity
 @Table(name = "item_assets")
@@ -62,8 +62,8 @@ public class ItemAsset extends PanacheEntityBase {
     }
 
     /** Creates a new ItemAsset with dimensions. */
-    public static ItemAsset create(
-            String assetKey, String svgContent, BigDecimal widthInches, BigDecimal heightInches) {
+    public static ItemAsset create(String assetKey, String svgContent, BigDecimal widthInches,
+            BigDecimal heightInches) {
         ItemAsset asset = create(assetKey, svgContent);
         asset.widthInches = widthInches;
         asset.heightInches = heightInches;

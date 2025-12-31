@@ -16,17 +16,11 @@ public class Product {
     public String badge;
     public Integer displayOrder;
 
-    public Product() {}
+    public Product() {
+    }
 
-    public Product(
-            String code,
-            String name,
-            String description,
-            Double price,
-            List<String> features,
-            String icon,
-            String badge,
-            Integer displayOrder) {
+    public Product(String code, String name, String description, Double price, List<String> features, String icon,
+            String badge, Integer displayOrder) {
         this.code = code;
         this.name = name;
         this.description = description;

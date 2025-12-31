@@ -21,7 +21,7 @@ class ProductTypeTest {
     void testEnumValues() {
         ProductType[] values = ProductType.values();
         assertEquals(2, values.length);
-        assertArrayEquals(new ProductType[] {ProductType.PRINT, ProductType.PDF}, values);
+        assertArrayEquals(new ProductType[]{ProductType.PRINT, ProductType.PDF}, values);
     }
 
     @Test

@@ -22,25 +22,26 @@ public class CartService {
 
     private static final Logger LOG = Logger.getLogger(CartService.class);
 
-    @Inject ProductService productService;
+    @Inject
+    ProductService productService;
 
     /** Get or create cart for session */
     @Transactional
     public Cart getCart(String sessionId) {
-        villagecompute.calendar.data.models.Cart cartEntity =
-                villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
+        villagecompute.calendar.data.models.Cart cartEntity = villagecompute.calendar.data.models.Cart
+                .getOrCreateForSession(sessionId);
 
         return toGraphQLCart(cartEntity);
     }
 
     /**
-     * Add item to cart. Supports both new generator-based items (with generatorType and assets) and
-     * legacy calendar items.
+     * Add item to cart. Supports both new generator-based items (with generatorType and assets) and legacy calendar
+     * items.
      */
     @Transactional
     public Cart addToCart(String sessionId, AddToCartInput input) {
-        villagecompute.calendar.data.models.Cart cartEntity =
-                villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
+        villagecompute.calendar.data.models.Cart cartEntity = villagecompute.calendar.data.models.Cart
+                .getOrCreateForSession(sessionId);
 
         // Get price from product catalog
         BigDecimal unitPrice;
@@ -61,30 +62,18 @@ public class CartService {
         String generatorType = input.generatorType;
         String description = input.description;
 
-        LOG.infof(
-                "Adding item: type=%s, description=%s, quantity=%d",
-                generatorType, description, quantity);
+        LOG.infof("Adding item: type=%s, description=%s, quantity=%d", generatorType, description, quantity);
 
         // Create new cart item
-        cartItem =
-                cartEntity.addItem(
-                        generatorType,
-                        description,
-                        quantity,
-                        unitPrice,
-                        input.configuration,
-                        productCode);
+        cartItem = cartEntity.addItem(generatorType, description, quantity, unitPrice, input.configuration,
+                productCode);
         cartItem.persist();
 
         // Create and attach asset records if provided
         if (input.assets != null && !input.assets.isEmpty()) {
             for (AssetInput assetInput : input.assets) {
-                ItemAsset asset =
-                        ItemAsset.create(
-                                assetInput.assetKey,
-                                assetInput.svgContent,
-                                assetInput.widthInches,
-                                assetInput.heightInches);
+                ItemAsset asset = ItemAsset.create(assetInput.assetKey, assetInput.svgContent, assetInput.widthInches,
+                        assetInput.heightInches);
                 asset.persist();
                 cartItem.addAsset(asset);
                 LOG.infof("Added asset '%s' to cart item", assetInput.assetKey);
@@ -97,11 +86,11 @@ public class CartService {
     /** Update item quantity */
     @Transactional
     public Cart updateQuantity(String sessionId, UUID itemId, Integer quantity) {
-        villagecompute.calendar.data.models.Cart cartEntity =
-                villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
+        villagecompute.calendar.data.models.Cart cartEntity = villagecompute.calendar.data.models.Cart
+                .getOrCreateForSession(sessionId);
 
-        villagecompute.calendar.data.models.CartItem item =
-                villagecompute.calendar.data.models.CartItem.findById(itemId);
+        villagecompute.calendar.data.models.CartItem item = villagecompute.calendar.data.models.CartItem
+                .findById(itemId);
 
         if (item != null && item.cart.id.equals(cartEntity.id)) {
             if (quantity <= 0) {
@@ -118,11 +107,11 @@ public class CartService {
     /** Remove item from cart */
     @Transactional
     public Cart removeItem(String sessionId, UUID itemId) {
-        villagecompute.calendar.data.models.Cart cartEntity =
-                villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
+        villagecompute.calendar.data.models.Cart cartEntity = villagecompute.calendar.data.models.Cart
+                .getOrCreateForSession(sessionId);
 
-        villagecompute.calendar.data.models.CartItem item =
-                villagecompute.calendar.data.models.CartItem.findById(itemId);
+        villagecompute.calendar.data.models.CartItem item = villagecompute.calendar.data.models.CartItem
+                .findById(itemId);
 
         if (item != null && item.cart.id.equals(cartEntity.id)) {
             cartEntity.removeItem(item);
@@ -134,8 +123,8 @@ public class CartService {
     /** Clear cart */
     @Transactional
     public Cart clearCart(String sessionId) {
-        villagecompute.calendar.data.models.Cart cartEntity =
-                villagecompute.calendar.data.models.Cart.getOrCreateForSession(sessionId);
+        villagecompute.calendar.data.models.Cart cartEntity = villagecompute.calendar.data.models.Cart
+                .getOrCreateForSession(sessionId);
 
         cartEntity.clearItems();
 
@@ -150,8 +139,7 @@ public class CartService {
         cart.taxAmount = 0.0; // TODO: Calculate tax
         cart.totalAmount = cart.subtotal + cart.taxAmount;
         cart.itemCount = cartEntity.getItemCount();
-        cart.items =
-                cartEntity.items.stream().map(this::toGraphQLCartItem).collect(Collectors.toList());
+        cart.items = cartEntity.items.stream().map(this::toGraphQLCartItem).collect(Collectors.toList());
 
         return cart;
     }

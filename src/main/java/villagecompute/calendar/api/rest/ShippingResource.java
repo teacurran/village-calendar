@@ -38,27 +38,21 @@ public class ShippingResource {
     @POST
     @Path("/calculate-calendar")
     public Response calculateCalendarShipping(ShippingRequest request) {
-        LOG.infof(
-                "Calculating shipping for country: %s, state: %s", request.country, request.state);
+        LOG.infof("Calculating shipping for country: %s, state: %s", request.country, request.state);
 
         if (request.country == null || request.country.isBlank()) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("Country is required")
-                    .build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("Country is required").build();
         }
 
         String country = request.country.trim().toUpperCase();
 
         // Check if we ship to this country
         if (!US_COUNTRY_CODE.equals(country)) {
-            String message =
-                    switch (country) {
-                        case CA_COUNTRY_CODE ->
-                                "Shipping to Canada is coming soon. Please check back later.";
-                        case MX_COUNTRY_CODE ->
-                                "Shipping to Mexico is coming soon. Please check back later.";
-                        default -> "We currently only ship within the United States.";
-                    };
+            String message = switch (country) {
+                case CA_COUNTRY_CODE -> "Shipping to Canada is coming soon. Please check back later.";
+                case MX_COUNTRY_CODE -> "Shipping to Mexico is coming soon. Please check back later.";
+                default -> "We currently only ship within the United States.";
+            };
             return Response.status(Response.Status.BAD_REQUEST).entity(message).build();
         }
 

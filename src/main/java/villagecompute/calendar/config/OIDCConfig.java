@@ -9,8 +9,8 @@ import org.jboss.logging.Logger;
 import io.quarkus.runtime.StartupEvent;
 
 /**
- * Configuration for OIDC (OpenID Connect) OAuth2 providers. Logs configuration status at startup
- * for debugging purposes.
+ * Configuration for OIDC (OpenID Connect) OAuth2 providers. Logs configuration status at startup for debugging
+ * purposes.
  */
 @ApplicationScoped
 public class OIDCConfig {
@@ -37,17 +37,11 @@ public class OIDCConfig {
 
     void onStart(@Observes StartupEvent event) {
         LOG.info("=== OIDC Configuration ===");
-        LOG.infof(
-                "Google OAuth: %s (Client ID: %s)",
-                googleEnabled ? "ENABLED" : "DISABLED",
+        LOG.infof("Google OAuth: %s (Client ID: %s)", googleEnabled ? "ENABLED" : "DISABLED",
                 googleClientId.equals("placeholder") ? "NOT CONFIGURED" : "configured");
-        LOG.infof(
-                "Facebook OAuth: %s (Client ID: %s)",
-                facebookEnabled ? "ENABLED" : "DISABLED",
+        LOG.infof("Facebook OAuth: %s (Client ID: %s)", facebookEnabled ? "ENABLED" : "DISABLED",
                 facebookClientId.equals("placeholder") ? "NOT CONFIGURED" : "configured");
-        LOG.infof(
-                "Apple OAuth: %s (Client ID: %s)",
-                appleEnabled ? "ENABLED" : "DISABLED",
+        LOG.infof("Apple OAuth: %s (Client ID: %s)", appleEnabled ? "ENABLED" : "DISABLED",
                 appleClientId.equals("placeholder") ? "NOT CONFIGURED" : "configured");
         LOG.info("==========================");
     }

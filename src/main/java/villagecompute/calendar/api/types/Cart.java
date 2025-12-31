@@ -24,12 +24,7 @@ public class Cart {
         this.items = new ArrayList<>();
     }
 
-    public Cart(
-            String id,
-            Double subtotal,
-            Double taxAmount,
-            Double totalAmount,
-            Integer itemCount,
+    public Cart(String id, Double subtotal, Double taxAmount, Double totalAmount, Integer itemCount,
             List<CartItem> items) {
         this.id = id;
         this.subtotal = subtotal;

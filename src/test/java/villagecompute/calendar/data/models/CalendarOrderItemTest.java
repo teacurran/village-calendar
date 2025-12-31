@@ -11,8 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
- * Unit tests for CalendarOrderItem. Tests the year getter/setter methods that work with
- * configuration JSON.
+ * Unit tests for CalendarOrderItem. Tests the year getter/setter methods that work with configuration JSON.
  */
 class CalendarOrderItemTest {
 

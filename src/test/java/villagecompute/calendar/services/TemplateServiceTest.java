@@ -25,15 +25,17 @@ import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * Unit tests for TemplateService. Tests template CRUD operations, validation logic, and preview
- * image uploads. Uses real database for templates and mocked storage service.
+ * Unit tests for TemplateService. Tests template CRUD operations, validation logic, and preview image uploads. Uses
+ * real database for templates and mocked storage service.
  */
 @QuarkusTest
 class TemplateServiceTest {
 
-    @Inject TemplateService templateService;
+    @Inject
+    TemplateService templateService;
 
-    @InjectMock StorageService storageService;
+    @InjectMock
+    StorageService storageService;
 
     private ObjectMapper objectMapper;
     private String validConfiguration;
@@ -44,10 +46,9 @@ class TemplateServiceTest {
         objectMapper = new ObjectMapper();
 
         // Create valid template configuration as JSON string
-        validConfiguration =
-                """
-            {"layout": "grid", "fonts": "Arial", "colors": "#000000"}
-            """;
+        validConfiguration = """
+                {"layout": "grid", "fonts": "Arial", "colors": "#000000"}
+                """;
 
         // Also create as JsonNode for entity-level tests
         try {
@@ -90,16 +91,8 @@ class TemplateServiceTest {
     @Transactional
     void testCreateTemplate_Success() {
         // Given: Valid input
-        TemplateInput input =
-                new TemplateInput(
-                        "Modern Calendar",
-                        "A modern calendar design",
-                        validConfiguration,
-                        null,
-                        true,
-                        false,
-                        0,
-                        null);
+        TemplateInput input = new TemplateInput("Modern Calendar", "A modern calendar design", validConfiguration, null,
+                true, false, 0, null);
 
         // When: Create template
         CalendarTemplate result = templateService.createTemplate(input);
@@ -120,16 +113,12 @@ class TemplateServiceTest {
     @Transactional
     void testCreateTemplate_DefaultValues() {
         // Given: Input with minimal fields
-        TemplateInput input =
-                new TemplateInput(
-                        "Minimal Template",
-                        null,
-                        validConfiguration,
-                        null,
-                        null, // isActive not specified
-                        null, // isFeatured not specified
-                        null, // displayOrder not specified
-                        null);
+        TemplateInput input = new TemplateInput("Minimal Template", null, validConfiguration, null, null, // isActive
+                                                                                                          // not
+                                                                                                          // specified
+                null, // isFeatured not specified
+                null, // displayOrder not specified
+                null);
 
         // When: Create template
         CalendarTemplate result = templateService.createTemplate(input);
@@ -150,24 +139,13 @@ class TemplateServiceTest {
         existing.configuration = validConfigurationNode;
         existing.persist();
 
-        TemplateInput input =
-                new TemplateInput(
-                        "Existing Template",
-                        "Description",
-                        validConfiguration,
-                        null,
-                        true,
-                        false,
-                        0,
-                        null);
+        TemplateInput input = new TemplateInput("Existing Template", "Description", validConfiguration, null, true,
+                false, 0, null);
 
         // When/Then: Should throw exception
-        IllegalArgumentException exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> {
-                            templateService.createTemplate(input);
-                        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            templateService.createTemplate(input);
+        });
 
         assertTrue(exception.getMessage().contains("already exists"));
     }
@@ -176,24 +154,13 @@ class TemplateServiceTest {
     @Transactional
     void testCreateTemplate_InvalidConfiguration_Null() {
         // Given: Input with null configuration
-        TemplateInput input =
-                new TemplateInput(
-                        "Test Template",
-                        "Description",
-                        null, // Invalid: null configuration
-                        null,
-                        true,
-                        false,
-                        0,
-                        null);
+        TemplateInput input = new TemplateInput("Test Template", "Description", null, // Invalid: null configuration
+                null, true, false, 0, null);
 
         // When/Then: Should throw exception
-        IllegalArgumentException exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> {
-                            templateService.createTemplate(input);
-                        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            templateService.createTemplate(input);
+        });
 
         assertTrue(exception.getMessage().toLowerCase().contains("configuration"));
     }
@@ -204,17 +171,13 @@ class TemplateServiceTest {
         // Given: Configuration with invalid JSON
         String invalidJson = "{ this is not valid json }";
 
-        TemplateInput input =
-                new TemplateInput(
-                        "Test Template", "Description", invalidJson, null, true, false, 0, null);
+        TemplateInput input = new TemplateInput("Test Template", "Description", invalidJson, null, true, false, 0,
+                null);
 
         // When/Then: Should throw exception
-        IllegalArgumentException exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> {
-                            templateService.createTemplate(input);
-                        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            templateService.createTemplate(input);
+        });
 
         assertTrue(exception.getMessage().toLowerCase().contains("invalid json"));
     }
@@ -225,17 +188,13 @@ class TemplateServiceTest {
         // Given: Configuration is a JSON array, not an object
         String arrayConfig = "[1, 2, 3]";
 
-        TemplateInput input =
-                new TemplateInput(
-                        "Test Template", "Description", arrayConfig, null, true, false, 0, null);
+        TemplateInput input = new TemplateInput("Test Template", "Description", arrayConfig, null, true, false, 0,
+                null);
 
         // When/Then: Should throw exception
-        IllegalArgumentException exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> {
-                            templateService.createTemplate(input);
-                        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            templateService.createTemplate(input);
+        });
 
         assertTrue(exception.getMessage().toLowerCase().contains("json object"));
     }
@@ -260,16 +219,8 @@ class TemplateServiceTest {
         UUID templateId = existingTemplate.id;
 
         // When: Update template
-        TemplateInput input =
-                new TemplateInput(
-                        "Updated Name",
-                        "Updated Description",
-                        validConfiguration,
-                        null,
-                        false,
-                        true,
-                        5,
-                        null);
+        TemplateInput input = new TemplateInput("Updated Name", "Updated Description", validConfiguration, null, false,
+                true, 5, null);
 
         CalendarTemplate result = templateService.updateTemplate(templateId, input);
 
@@ -322,17 +273,12 @@ class TemplateServiceTest {
         // Given: Non-existent template ID
         UUID templateId = UUID.randomUUID();
 
-        TemplateInput input =
-                new TemplateInput(
-                        "Test", "Description", validConfiguration, null, true, false, 0, null);
+        TemplateInput input = new TemplateInput("Test", "Description", validConfiguration, null, true, false, 0, null);
 
         // When/Then: Should throw exception
-        IllegalArgumentException exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> {
-                            templateService.updateTemplate(templateId, input);
-                        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            templateService.updateTemplate(templateId, input);
+        });
 
         assertTrue(exception.getMessage().contains("not found"));
     }
@@ -352,24 +298,13 @@ class TemplateServiceTest {
         template2.persist();
 
         // When: Try to update template1 with template2's name
-        TemplateInput input =
-                new TemplateInput(
-                        "Conflicting Name",
-                        "Description",
-                        validConfiguration,
-                        null,
-                        true,
-                        false,
-                        0,
-                        null);
+        TemplateInput input = new TemplateInput("Conflicting Name", "Description", validConfiguration, null, true,
+                false, 0, null);
 
         // Then: Should throw exception
-        IllegalArgumentException exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> {
-                            templateService.updateTemplate(template1.id, input);
-                        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            templateService.updateTemplate(template1.id, input);
+        });
 
         assertTrue(exception.getMessage().contains("already exists"));
     }
@@ -384,16 +319,8 @@ class TemplateServiceTest {
         template.persist();
 
         // When: Update with same name
-        TemplateInput input =
-                new TemplateInput(
-                        "Same Name",
-                        "Updated Description",
-                        validConfiguration,
-                        null,
-                        true,
-                        false,
-                        0,
-                        null);
+        TemplateInput input = new TemplateInput("Same Name", "Updated Description", validConfiguration, null, true,
+                false, 0, null);
 
         // Then: Should succeed
         CalendarTemplate result = templateService.updateTemplate(template.id, input);
@@ -419,10 +346,9 @@ class TemplateServiceTest {
         UUID templateId = template.id;
 
         // When: Delete template (soft delete)
-        assertDoesNotThrow(
-                () -> {
-                    templateService.deleteTemplate(templateId);
-                });
+        assertDoesNotThrow(() -> {
+            templateService.deleteTemplate(templateId);
+        });
 
         // Then: Template should still exist but be marked as inactive
         CalendarTemplate found = CalendarTemplate.findById(templateId);
@@ -438,12 +364,9 @@ class TemplateServiceTest {
         UUID templateId = UUID.randomUUID();
 
         // When/Then: Should throw exception
-        IllegalArgumentException exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> {
-                            templateService.deleteTemplate(templateId);
-                        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            templateService.deleteTemplate(templateId);
+        });
 
         assertTrue(exception.getMessage().contains("not found"));
     }
@@ -469,10 +392,9 @@ class TemplateServiceTest {
         UUID templateId = template.id;
 
         // When: Soft delete template (should succeed even with existing calendars)
-        assertDoesNotThrow(
-                () -> {
-                    templateService.deleteTemplate(templateId);
-                });
+        assertDoesNotThrow(() -> {
+            templateService.deleteTemplate(templateId);
+        });
 
         // Then: Template should be soft-deleted (isActive=false)
         CalendarTemplate softDeleted = CalendarTemplate.findById(templateId);
@@ -498,12 +420,11 @@ class TemplateServiceTest {
         template.configuration = validConfigurationNode;
         template.persist();
 
-        byte[] imageBytes = new byte[] {1, 2, 3, 4, 5};
+        byte[] imageBytes = new byte[]{1, 2, 3, 4, 5};
         String contentType = "image/png";
         String expectedUrl = "https://r2.example.com/template.png";
 
-        when(storageService.uploadFile(anyString(), eq(imageBytes), eq(contentType)))
-                .thenReturn(expectedUrl);
+        when(storageService.uploadFile(anyString(), eq(imageBytes), eq(contentType))).thenReturn(expectedUrl);
 
         // When: Upload preview image
         String resultUrl = templateService.uploadPreviewImage(template.id, imageBytes, contentType);
@@ -524,16 +445,13 @@ class TemplateServiceTest {
     void testUploadPreviewImage_TemplateNotFound() {
         // Given: Non-existent template ID
         UUID templateId = UUID.randomUUID();
-        byte[] imageBytes = new byte[] {1, 2, 3, 4, 5};
+        byte[] imageBytes = new byte[]{1, 2, 3, 4, 5};
         String contentType = "image/png";
 
         // When/Then: Should throw exception
-        IllegalArgumentException exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> {
-                            templateService.uploadPreviewImage(templateId, imageBytes, contentType);
-                        });
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            templateService.uploadPreviewImage(templateId, imageBytes, contentType);
+        });
 
         assertTrue(exception.getMessage().contains("not found"));
 
@@ -550,7 +468,7 @@ class TemplateServiceTest {
         template.configuration = validConfigurationNode;
         template.persist();
 
-        byte[] imageBytes = new byte[] {1, 2, 3, 4, 5};
+        byte[] imageBytes = new byte[]{1, 2, 3, 4, 5};
         String contentType = "image/jpeg";
 
         when(storageService.uploadFile(anyString(), eq(imageBytes), eq(contentType)))
@@ -560,11 +478,8 @@ class TemplateServiceTest {
         templateService.uploadPreviewImage(template.id, imageBytes, contentType);
 
         // Then: Verify filename contains .jpg extension
-        verify(storageService)
-                .uploadFile(
-                        argThat(filename -> filename.endsWith(".jpg")),
-                        eq(imageBytes),
-                        eq(contentType));
+        verify(storageService).uploadFile(argThat(filename -> filename.endsWith(".jpg")), eq(imageBytes),
+                eq(contentType));
     }
 
     // ============================================================================
@@ -602,13 +517,11 @@ class TemplateServiceTest {
         }
 
         // Verify inactive template is excluded
-        boolean inactiveIncluded =
-                activeTemplates.stream().anyMatch(t -> t.id.equals(inactiveTemplate.id));
+        boolean inactiveIncluded = activeTemplates.stream().anyMatch(t -> t.id.equals(inactiveTemplate.id));
         assertFalse(inactiveIncluded, "Inactive template should not be in results");
 
         // Verify active template is included
-        boolean activeIncluded =
-                activeTemplates.stream().anyMatch(t -> t.id.equals(activeTemplate.id));
+        boolean activeIncluded = activeTemplates.stream().anyMatch(t -> t.id.equals(activeTemplate.id));
         assertTrue(activeIncluded, "Active template should be in results");
     }
 
@@ -636,8 +549,7 @@ class TemplateServiceTest {
         // Then: Should be excluded from active templates
         var afterDelete = CalendarTemplate.findActiveTemplates();
         boolean includedAfter = afterDelete.stream().anyMatch(t -> t.id.equals(templateId));
-        assertFalse(
-                includedAfter, "Soft-deleted template should be excluded from active templates");
+        assertFalse(includedAfter, "Soft-deleted template should be excluded from active templates");
 
         // And: Template should still exist in database
         CalendarTemplate persisted = CalendarTemplate.findById(templateId);
@@ -654,34 +566,32 @@ class TemplateServiceTest {
     void testTemplateCloning_PreservesAllConfigFields() throws Exception {
         // Given: A template with complex nested configuration
         ObjectMapper mapper = new ObjectMapper();
-        JsonNode complexConfig =
-                mapper.readTree(
-                        """
-            {
-                "layout": "modern",
-                "fonts": {
-                    "header": "Montserrat",
-                    "body": "Open Sans",
-                    "size": 12
-                },
-                "colors": {
-                    "primary": "#FF5733",
-                    "secondary": "#C70039",
-                    "accent": "#900C3F"
-                },
-                "showMoonPhases": true,
-                "showWeekNumbers": false,
-                "compactMode": true,
-                "holidays": ["US", "CA", "UK"],
-                "astronomy": {
-                    "moonPhases": true,
-                    "solarTerms": false,
-                    "customData": {
-                        "nested": "value"
+        JsonNode complexConfig = mapper.readTree("""
+                {
+                    "layout": "modern",
+                    "fonts": {
+                        "header": "Montserrat",
+                        "body": "Open Sans",
+                        "size": 12
+                    },
+                    "colors": {
+                        "primary": "#FF5733",
+                        "secondary": "#C70039",
+                        "accent": "#900C3F"
+                    },
+                    "showMoonPhases": true,
+                    "showWeekNumbers": false,
+                    "compactMode": true,
+                    "holidays": ["US", "CA", "UK"],
+                    "astronomy": {
+                        "moonPhases": true,
+                        "solarTerms": false,
+                        "customData": {
+                            "nested": "value"
+                        }
                     }
                 }
-            }
-            """);
+                """);
 
         CalendarTemplate sourceTemplate = new CalendarTemplate();
         sourceTemplate.name = "Source Template " + System.currentTimeMillis();
@@ -771,15 +681,9 @@ class TemplateServiceTest {
         calendar2.persist();
 
         // Then: Both calendars should have the same configuration values
-        assertEquals(
-                calendar1.configuration.get("layout").asText(),
-                calendar2.configuration.get("layout").asText());
-        assertEquals(
-                calendar1.configuration.get("fonts").asText(),
-                calendar2.configuration.get("fonts").asText());
-        assertEquals(
-                calendar1.configuration.get("colors").asText(),
-                calendar2.configuration.get("colors").asText());
+        assertEquals(calendar1.configuration.get("layout").asText(), calendar2.configuration.get("layout").asText());
+        assertEquals(calendar1.configuration.get("fonts").asText(), calendar2.configuration.get("fonts").asText());
+        assertEquals(calendar1.configuration.get("colors").asText(), calendar2.configuration.get("colors").asText());
 
         // And: Both should reference the same template
         assertEquals(sourceTemplate.id, calendar1.template.id);

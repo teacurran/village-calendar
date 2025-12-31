@@ -25,8 +25,8 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * Serves dynamically rendered calendar product pages using Qute templates. These pages are rendered
- * at runtime from the database, making development easier.
+ * Serves dynamically rendered calendar product pages using Qute templates. These pages are rendered at runtime from the
+ * database, making development easier.
  */
 @RouteBase(path = "/calendars", produces = "text/html")
 public class CalendarsPageResource {
@@ -36,13 +36,17 @@ public class CalendarsPageResource {
     private static final String TEXT_HTML = "text/html";
     private static final String ASSET_NOT_FOUND = "Asset not found";
 
-    @Inject Template calendarsIndex;
+    @Inject
+    Template calendarsIndex;
 
-    @Inject Template calendarsProduct;
+    @Inject
+    Template calendarsProduct;
 
-    @Inject CalendarRenderingService calendarRenderingService;
+    @Inject
+    CalendarRenderingService calendarRenderingService;
 
-    @Inject PDFRenderingService pdfRenderingService;
+    @Inject
+    PDFRenderingService pdfRenderingService;
 
     /** Redirect /calendars to /calendars/ for consistency */
     @Route(path = "", methods = Route.HttpMethod.GET)
@@ -56,23 +60,18 @@ public class CalendarsPageResource {
     public void index(RoutingContext rc) {
         List<CalendarTemplate> calendars = CalendarTemplate.findActiveWithSlug();
 
-        String html =
-                calendarsIndex
-                        .data("title", "Pre-Designed Calendars")
-                        .data(
-                                "description",
-                                "Browse our collection of beautiful, customizable calendars."
-                                        + " Premium prints shipped to your door.")
-                        .data("calendars", calendars.stream().map(this::toProductView).toList())
-                        .data("currentYear", java.time.Year.now().getValue())
-                        .render();
+        String html = calendarsIndex.data("title", "Pre-Designed Calendars")
+                .data("description",
+                        "Browse our collection of beautiful, customizable calendars."
+                                + " Premium prints shipped to your door.")
+                .data("calendars", calendars.stream().map(this::toProductView).toList())
+                .data("currentYear", java.time.Year.now().getValue()).render();
 
         rc.response().putHeader(HEADER_CONTENT_TYPE, TEXT_HTML).end(html);
     }
 
     // SPA routes under /calendars that should be served by the Vue SPA
-    private static final java.util.Set<String> SPA_ROUTES =
-            java.util.Set.of("generator", "new", "edit");
+    private static final java.util.Set<String> SPA_ROUTES = java.util.Set.of("generator", "new", "edit");
 
     /** Individual calendar product page at /calendars/{slug} */
     @Route(path = "/:slug", methods = Route.HttpMethod.GET)
@@ -95,13 +94,10 @@ public class CalendarsPageResource {
         CalendarTemplate calendar = CalendarTemplate.findBySlug(slug);
 
         if (calendar == null) {
-            rc.response()
-                    .setStatusCode(404)
-                    .putHeader(HEADER_CONTENT_TYPE, TEXT_HTML)
-                    .end(
-                            "<html><body><h1>Calendar Not Found</h1><p>The calendar you're looking"
-                                    + " for doesn't exist.</p><p><a href=\"/calendars/\">Browse all"
-                                    + " calendars</a></p></body></html>");
+            rc.response().setStatusCode(404).putHeader(HEADER_CONTENT_TYPE, TEXT_HTML)
+                    .end("<html><body><h1>Calendar Not Found</h1><p>The calendar you're looking"
+                            + " for doesn't exist.</p><p><a href=\"/calendars/\">Browse all"
+                            + " calendars</a></p></body></html>");
             return;
         }
 
@@ -110,13 +106,9 @@ public class CalendarsPageResource {
 
         CalendarProductView view = toProductView(calendar);
 
-        String html =
-                calendarsProduct
-                        .data("calendar", view)
-                        .data("svgContent", svgContent)
-                        .data("configuration", calendar.getConfigurationJson())
-                        .data("currentYear", java.time.Year.now().getValue())
-                        .render();
+        String html = calendarsProduct.data("calendar", view).data("svgContent", svgContent)
+                .data("configuration", calendar.getConfigurationJson())
+                .data("currentYear", java.time.Year.now().getValue()).render();
 
         rc.response().putHeader(HEADER_CONTENT_TYPE, TEXT_HTML).end(html);
     }
@@ -144,10 +136,8 @@ public class CalendarsPageResource {
 
             String svgContent = generateSvgForTemplate(calendar);
 
-            rc.response()
-                    .putHeader(HEADER_CONTENT_TYPE, "image/svg+xml")
-                    .putHeader("Cache-Control", "public, max-age=3600")
-                    .end(svgContent);
+            rc.response().putHeader(HEADER_CONTENT_TYPE, "image/svg+xml")
+                    .putHeader("Cache-Control", "public, max-age=3600").end(svgContent);
             return;
         }
 
@@ -174,10 +164,8 @@ public class CalendarsPageResource {
                 // Generate PNG thumbnail (1200px width for good quality on index page)
                 byte[] pngBytes = pdfRenderingService.renderSVGToPNG(wrappedSvg, 1200);
 
-                rc.response()
-                        .putHeader(HEADER_CONTENT_TYPE, "image/png")
-                        .putHeader("Cache-Control", "public, max-age=3600")
-                        .end(Buffer.buffer(pngBytes));
+                rc.response().putHeader(HEADER_CONTENT_TYPE, "image/png")
+                        .putHeader("Cache-Control", "public, max-age=3600").end(Buffer.buffer(pngBytes));
             } catch (Exception e) {
                 LOG.errorf(e, "Failed to generate PNG for calendar: %s", slug);
                 rc.response().setStatusCode(500).end("Failed to generate PNG");
@@ -197,10 +185,8 @@ public class CalendarsPageResource {
     }
 
     /** Build CalendarConfig from a template's JSON configuration. */
-    private CalendarRenderingService.CalendarConfig buildConfigFromTemplate(
-            CalendarTemplate template, int year) {
-        CalendarRenderingService.CalendarConfig config =
-                new CalendarRenderingService.CalendarConfig();
+    private CalendarRenderingService.CalendarConfig buildConfigFromTemplate(CalendarTemplate template, int year) {
+        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
         config.year = year;
 
         if (template.configuration != null) {
@@ -214,9 +200,8 @@ public class CalendarsPageResource {
 
     private CalendarProductView toProductView(CalendarTemplate template) {
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(Locale.US);
-        String priceFormatted =
-                currencyFormat.format(
-                        (template.priceCents != null ? template.priceCents : 2999) / 100.0);
+        String priceFormatted = currencyFormat
+                .format((template.priceCents != null ? template.priceCents : 2999) / 100.0);
 
         // Extract year from configuration if available, otherwise use next year
         int year = LocalDate.now().getYear() + 1;
@@ -224,33 +209,19 @@ public class CalendarsPageResource {
             year = template.configuration.get("year").asInt(year);
         }
 
-        return new CalendarProductView(
-                template.id.toString(),
-                template.slug,
-                template.name,
-                template.name + " " + year + " Calendar",
-                template.description,
-                template.ogDescription,
-                template.metaKeywords,
-                priceFormatted,
-                year);
+        return new CalendarProductView(template.id.toString(), template.slug, template.name,
+                template.name + " " + year + " Calendar", template.description, template.ogDescription,
+                template.metaKeywords, priceFormatted, year);
     }
 
     /** View model for calendar product data in templates. */
-    public record CalendarProductView(
-            String templateId,
-            String slug,
-            String name,
-            String title,
-            String description,
-            String ogDescription,
-            String keywords,
-            String priceFormatted,
-            int year) {}
+    public record CalendarProductView(String templateId, String slug, String name, String title, String description,
+            String ogDescription, String keywords, String priceFormatted, int year) {
+    }
 
     /**
-     * Serve the SPA index.html for Vue Router routes. In production, serves from
-     * META-INF/resources/index.html. In dev mode, fetches from the Vite dev server.
+     * Serve the SPA index.html for Vue Router routes. In production, serves from META-INF/resources/index.html. In dev
+     * mode, fetches from the Vite dev server.
      */
     private void serveSpaIndex(RoutingContext rc) {
         // Try to read the SPA index.html from the classpath (production build)
@@ -265,21 +236,12 @@ public class CalendarsPageResource {
         }
 
         // In dev mode, fetch index.html from Vite dev server
-        rc.vertx()
-                .createHttpClient()
-                .request(io.vertx.core.http.HttpMethod.GET, 5176, "localhost", "/index.html")
-                .compose(req -> req.send())
-                .compose(resp -> resp.body())
-                .onSuccess(
-                        body -> {
-                            rc.response().putHeader(HEADER_CONTENT_TYPE, TEXT_HTML).end(body);
-                        })
-                .onFailure(
-                        err -> {
-                            LOG.error("Failed to fetch SPA index.html from Vite dev server", err);
-                            rc.response()
-                                    .setStatusCode(503)
-                                    .end("SPA not available. Is the Vite dev server running?");
-                        });
+        rc.vertx().createHttpClient().request(io.vertx.core.http.HttpMethod.GET, 5176, "localhost", "/index.html")
+                .compose(req -> req.send()).compose(resp -> resp.body()).onSuccess(body -> {
+                    rc.response().putHeader(HEADER_CONTENT_TYPE, TEXT_HTML).end(body);
+                }).onFailure(err -> {
+                    LOG.error("Failed to fetch SPA index.html from Vite dev server", err);
+                    rc.response().setStatusCode(503).end("SPA not available. Is the Vite dev server running?");
+                });
     }
 }

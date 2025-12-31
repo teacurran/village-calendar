@@ -22,43 +22,24 @@ import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.panache.common.Parameters;
 
 /**
- * Entity representing an e-commerce order for printed calendars. Integrates with Stripe for payment
- * processing.
+ * Entity representing an e-commerce order for printed calendars. Integrates with Stripe for payment processing.
  */
 @Entity
 @NamedQueries({
-    @NamedQuery(
-            name = CalendarOrder.QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS,
-            query =
-                    "SELECT DISTINCT o FROM CalendarOrder o "
-                            + "LEFT JOIN FETCH o.items i "
-                            + "LEFT JOIN FETCH i.calendar "
-                            + "WHERE o.orderNumber = :orderNumber")
-})
-@Table(
-        name = "calendar_orders",
-        indexes = {
-            @Index(name = "idx_calendar_orders_user", columnList = "user_id, created DESC"),
-            @Index(name = "idx_calendar_orders_status", columnList = "status, created DESC"),
-            @Index(name = "idx_calendar_orders_calendar", columnList = "calendar_id"),
-            @Index(
-                    name = "idx_calendar_orders_stripe_payment",
-                    columnList = "stripe_payment_intent_id"),
-            @Index(
-                    name = "idx_calendar_orders_order_number",
-                    columnList = "order_number",
-                    unique = true)
-        })
+        @NamedQuery(name = CalendarOrder.QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS, query = "SELECT DISTINCT o FROM CalendarOrder o "
+                + "LEFT JOIN FETCH o.items i " + "LEFT JOIN FETCH i.calendar " + "WHERE o.orderNumber = :orderNumber")})
+@Table(name = "calendar_orders", indexes = {
+        @Index(name = "idx_calendar_orders_user", columnList = "user_id, created DESC"),
+        @Index(name = "idx_calendar_orders_status", columnList = "status, created DESC"),
+        @Index(name = "idx_calendar_orders_calendar", columnList = "calendar_id"),
+        @Index(name = "idx_calendar_orders_stripe_payment", columnList = "stripe_payment_intent_id"),
+        @Index(name = "idx_calendar_orders_order_number", columnList = "order_number", unique = true)})
 public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
 
-    public static final String QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS =
-            "CalendarOrder.findByOrderNumberWithItems";
+    public static final String QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS = "CalendarOrder.findByOrderNumberWithItems";
 
     @ManyToOne(optional = true)
-    @JoinColumn(
-            name = "user_id",
-            nullable = true,
-            foreignKey = @ForeignKey(name = "fk_calendar_orders_user"))
+    @JoinColumn(name = "user_id", nullable = true, foreignKey = @ForeignKey(name = "fk_calendar_orders_user"))
     @Ignore // GraphQL field resolver provided by OrderResolver.batchLoadUsers()
     public CalendarUser user; // Nullable for guest checkout
 
@@ -70,19 +51,11 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
     // ==================== Order Items ====================
 
     /** Line items in this order */
-    @OneToMany(
-            mappedBy = "order",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true,
-            fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     public List<CalendarOrderItem> items = new ArrayList<>();
 
     /** Shipments for this order */
-    @OneToMany(
-            mappedBy = "order",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true,
-            fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     public List<Shipment> shipments = new ArrayList<>();
 
     // ==================== Legacy Single-Item Fields (for backwards compatibility)
@@ -93,9 +66,7 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
      */
     @Deprecated
     @ManyToOne(optional = true)
-    @JoinColumn(
-            name = "calendar_id",
-            foreignKey = @ForeignKey(name = "fk_calendar_orders_calendar"))
+    @JoinColumn(name = "calendar_id", foreignKey = @ForeignKey(name = "fk_calendar_orders_calendar"))
     @Ignore
     public UserCalendar calendar;
 
@@ -142,14 +113,12 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "shipping_address", columnDefinition = "jsonb")
-    @io.smallrye.graphql.api.AdaptWith(
-            villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
+    @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
     public JsonNode shippingAddress;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "billing_address", columnDefinition = "jsonb")
-    @io.smallrye.graphql.api.AdaptWith(
-            villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
+    @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
     public JsonNode billingAddress;
 
     @Size(max = 255)
@@ -194,7 +163,8 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find all orders for a specific user, ordered by creation date descending.
      *
-     * @param userId User ID
+     * @param userId
+     *            User ID
      * @return Query of orders
      */
     public static PanacheQuery<CalendarOrder> findByUser(UUID userId) {
@@ -202,10 +172,11 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Find orders by status, ordered by creation date descending. This is the required custom query
-     * method from the task specification.
+     * Find orders by status, ordered by creation date descending. This is the required custom query method from the
+     * task specification.
      *
-     * @param status Order status
+     * @param status
+     *            Order status
      * @return List of orders with the specified status
      */
     public static List<CalendarOrder> findByStatusOrderByCreatedDesc(String status) {
@@ -215,7 +186,8 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find all orders for a specific calendar.
      *
-     * @param calendarId Calendar ID
+     * @param calendarId
+     *            Calendar ID
      * @return Query of orders
      */
     public static PanacheQuery<CalendarOrder> findByCalendar(UUID calendarId) {
@@ -225,7 +197,8 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find orders by Stripe Payment Intent ID.
      *
-     * @param paymentIntentId Stripe Payment Intent ID
+     * @param paymentIntentId
+     *            Stripe Payment Intent ID
      * @return Query of orders
      */
     public static PanacheQuery<CalendarOrder> findByStripePaymentIntent(String paymentIntentId) {
@@ -235,7 +208,8 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find recent orders within a time range.
      *
-     * @param since Start time
+     * @param since
+     *            Start time
      * @return Query of recent orders
      */
     public static PanacheQuery<CalendarOrder> findRecentOrders(Instant since) {
@@ -245,7 +219,8 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find order by order number (unique display number).
      *
-     * @param orderNumber Order number (e.g., "VC-2025-00001")
+     * @param orderNumber
+     *            Order number (e.g., "VC-2025-00001")
      * @return Query of orders
      */
     public static PanacheQuery<CalendarOrder> findByOrderNumber(String orderNumber) {
@@ -253,23 +228,23 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Find order by order number with items and calendars eagerly loaded. Uses a single query with
-     * JOIN FETCH to avoid N+1 queries.
+     * Find order by order number with items and calendars eagerly loaded. Uses a single query with JOIN FETCH to avoid
+     * N+1 queries.
      *
-     * @param orderNumber Order number (e.g., "VC-2025-00001")
+     * @param orderNumber
+     *            Order number (e.g., "VC-2025-00001")
      * @return Optional containing the order with items loaded, or empty if not found
      */
     public static java.util.Optional<CalendarOrder> findByOrderNumberWithItems(String orderNumber) {
-        return find(
-                        "#" + QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS,
-                        Parameters.with("orderNumber", orderNumber))
+        return find("#" + QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS, Parameters.with("orderNumber", orderNumber))
                 .firstResultOptional();
     }
 
     /**
      * Count orders created in a specific year.
      *
-     * @param year Year to count orders for
+     * @param year
+     *            Year to count orders for
      * @return Count of orders created in the specified year
      */
     public static long countOrdersByYear(int year) {
@@ -329,9 +304,7 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
 
     /** Get items that haven't been assigned to a shipment yet */
     public List<CalendarOrderItem> getUnshippedItems() {
-        return items.stream()
-                .filter(item -> item.requiresShipping() && item.shipment == null)
-                .toList();
+        return items.stream().filter(item -> item.requiresShipping() && item.shipment == null).toList();
     }
 
     /** Check if all items have been shipped or are digital */
@@ -346,8 +319,7 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
 
     /** Calculate and update subtotal from items */
     public void calculateSubtotal() {
-        this.subtotal =
-                items.stream().map(item -> item.lineTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+        this.subtotal = items.stream().map(item -> item.lineTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /** Calculate and update total price from subtotal, shipping, and tax */

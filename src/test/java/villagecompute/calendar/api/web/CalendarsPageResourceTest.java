@@ -20,7 +20,8 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class CalendarsPageResourceTest {
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
     private CalendarTemplate testTemplate;
 
@@ -52,13 +53,8 @@ class CalendarsPageResourceTest {
     @Test
     void testIndexRedirect_ReturnsRedirectToTrailingSlash() {
         // When/Then: GET /calendars redirects to /calendars/
-        given().redirects()
-                .follow(false)
-                .when()
-                .get("/calendars")
-                .then()
-                .statusCode(301)
-                .header("Location", equalTo("/calendars/"));
+        given().redirects().follow(false).when().get("/calendars").then().statusCode(301).header("Location",
+                equalTo("/calendars/"));
     }
 
     // ============================================================================
@@ -68,22 +64,14 @@ class CalendarsPageResourceTest {
     @Test
     void testIndex_ReturnsHtmlWithCalendarList() {
         // When/Then: GET /calendars/ returns HTML with calendar list
-        given().when()
-                .get("/calendars/")
-                .then()
-                .statusCode(200)
-                .contentType(containsString("text/html"))
+        given().when().get("/calendars/").then().statusCode(200).contentType(containsString("text/html"))
                 .body(containsString("Pre-Designed Calendars"));
     }
 
     @Test
     void testIndex_IncludesActiveCalendarsWithSlugs() {
         // When/Then: The test template should appear in the list
-        given().when()
-                .get("/calendars/")
-                .then()
-                .statusCode(200)
-                .body(containsString("Test Calendar Template"));
+        given().when().get("/calendars/").then().statusCode(200).body(containsString("Test Calendar Template"));
     }
 
     // ============================================================================
@@ -93,21 +81,14 @@ class CalendarsPageResourceTest {
     @Test
     void testProduct_ReturnsProductPageForValidSlug() {
         // When/Then: GET /calendars/test-calendar-template returns product page
-        given().when()
-                .get("/calendars/test-calendar-template")
-                .then()
-                .statusCode(200)
-                .contentType(containsString("text/html"))
-                .body(containsString("Test Calendar Template"));
+        given().when().get("/calendars/test-calendar-template").then().statusCode(200)
+                .contentType(containsString("text/html")).body(containsString("Test Calendar Template"));
     }
 
     @Test
     void testProduct_Returns404ForInvalidSlug() {
         // When/Then: GET /calendars/nonexistent returns 404
-        given().when()
-                .get("/calendars/nonexistent-calendar-slug")
-                .then()
-                .statusCode(404)
+        given().when().get("/calendars/nonexistent-calendar-slug").then().statusCode(404)
                 .body(containsString("Calendar Not Found"));
     }
 
@@ -126,32 +107,22 @@ class CalendarsPageResourceTest {
     @Test
     void testAsset_ReturnsSvgForValidSlug() {
         // When/Then: GET /calendars/test-calendar-template/test-calendar-template.svg returns SVG
-        given().when()
-                .get("/calendars/test-calendar-template/test-calendar-template.svg")
-                .then()
-                .statusCode(200)
+        given().when().get("/calendars/test-calendar-template/test-calendar-template.svg").then().statusCode(200)
                 .contentType(containsString("image/svg+xml"))
-                .header(HEADER_CACHE_CONTROL, containsString("max-age=3600"))
-                .body(containsString("<svg"));
+                .header(HEADER_CACHE_CONTROL, containsString("max-age=3600")).body(containsString("<svg"));
     }
 
     @Test
     void testAsset_Returns404ForMismatchedSvgFilename() {
         // When/Then: GET /calendars/test-calendar-template/wrong-name.svg returns 404
-        given().when()
-                .get("/calendars/test-calendar-template/wrong-name.svg")
-                .then()
-                .statusCode(404)
+        given().when().get("/calendars/test-calendar-template/wrong-name.svg").then().statusCode(404)
                 .body(containsString("Asset not found"));
     }
 
     @Test
     void testAsset_Returns404ForSvgWithNonexistentSlug() {
         // When/Then: GET /calendars/nonexistent/nonexistent.svg returns 404
-        given().when()
-                .get("/calendars/nonexistent/nonexistent.svg")
-                .then()
-                .statusCode(404)
+        given().when().get("/calendars/nonexistent/nonexistent.svg").then().statusCode(404)
                 .body(containsString("Calendar not found"));
     }
 
@@ -162,31 +133,21 @@ class CalendarsPageResourceTest {
     @Test
     void testAsset_ReturnsPngForValidSlug() {
         // When/Then: GET /calendars/test-calendar-template/test-calendar-template.png returns PNG
-        given().when()
-                .get("/calendars/test-calendar-template/test-calendar-template.png")
-                .then()
-                .statusCode(200)
-                .contentType(containsString("image/png"))
-                .header(HEADER_CACHE_CONTROL, containsString("max-age=3600"));
+        given().when().get("/calendars/test-calendar-template/test-calendar-template.png").then().statusCode(200)
+                .contentType(containsString("image/png")).header(HEADER_CACHE_CONTROL, containsString("max-age=3600"));
     }
 
     @Test
     void testAsset_Returns404ForMismatchedPngFilename() {
         // When/Then: GET /calendars/test-calendar-template/wrong-name.png returns 404
-        given().when()
-                .get("/calendars/test-calendar-template/wrong-name.png")
-                .then()
-                .statusCode(404)
+        given().when().get("/calendars/test-calendar-template/wrong-name.png").then().statusCode(404)
                 .body(containsString("Asset not found"));
     }
 
     @Test
     void testAsset_Returns404ForPngWithNonexistentSlug() {
         // When/Then: GET /calendars/nonexistent/nonexistent.png returns 404
-        given().when()
-                .get("/calendars/nonexistent/nonexistent.png")
-                .then()
-                .statusCode(404)
+        given().when().get("/calendars/nonexistent/nonexistent.png").then().statusCode(404)
                 .body(containsString("Calendar not found"));
     }
 
@@ -197,20 +158,14 @@ class CalendarsPageResourceTest {
     @Test
     void testAsset_Returns404ForUnknownAssetType() {
         // When/Then: GET /calendars/test-calendar-template/test-calendar-template.pdf returns 404
-        given().when()
-                .get("/calendars/test-calendar-template/test-calendar-template.pdf")
-                .then()
-                .statusCode(404)
+        given().when().get("/calendars/test-calendar-template/test-calendar-template.pdf").then().statusCode(404)
                 .body(containsString("Asset not found"));
     }
 
     @Test
     void testAsset_Returns404ForFilenameWithoutExtension() {
         // When/Then: GET /calendars/test-calendar-template/somefile returns 404
-        given().when()
-                .get("/calendars/test-calendar-template/somefile")
-                .then()
-                .statusCode(404)
+        given().when().get("/calendars/test-calendar-template/somefile").then().statusCode(404)
                 .body(containsString("Asset not found"));
     }
 }

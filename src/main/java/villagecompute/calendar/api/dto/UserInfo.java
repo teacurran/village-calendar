@@ -9,16 +9,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import villagecompute.calendar.data.models.CalendarUser;
 
 /**
- * Data transfer object containing basic user information. Returned to the frontend after successful
- * authentication.
+ * Data transfer object containing basic user information. Returned to the frontend after successful authentication.
  */
 @Schema(description = "User information")
 public class UserInfo {
 
     @JsonProperty("id")
-    @Schema(
-            description = "Unique user identifier (UUID)",
-            example = "550e8400-e29b-41d4-a716-446655440000")
+    @Schema(description = "Unique user identifier (UUID)", example = "550e8400-e29b-41d4-a716-446655440000")
     public UUID id;
 
     @JsonProperty("email")
@@ -33,7 +30,8 @@ public class UserInfo {
     @Schema(description = "URL to user's profile image", example = "https://example.com/avatar.jpg")
     public String profileImageUrl;
 
-    public UserInfo() {}
+    public UserInfo() {
+    }
 
     public UserInfo(UUID id, String email, String displayName, String profileImageUrl) {
         this.id = id;
@@ -45,7 +43,8 @@ public class UserInfo {
     /**
      * Create a UserInfo DTO from a CalendarUser entity.
      *
-     * @param user The calendar user entity
+     * @param user
+     *            The calendar user entity
      * @return UserInfo DTO
      */
     public static UserInfo fromEntity(CalendarUser user) {

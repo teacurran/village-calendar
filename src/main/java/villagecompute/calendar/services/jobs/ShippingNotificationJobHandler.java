@@ -20,8 +20,8 @@ import io.quarkus.qute.CheckedTemplate;
 import io.quarkus.qute.TemplateInstance;
 
 /**
- * DelayedJob handler for sending shipping notification emails. Renders HTML email templates using
- * Qute and sends via EmailService.
+ * DelayedJob handler for sending shipping notification emails. Renders HTML email templates using Qute and sends via
+ * EmailService.
  */
 @ApplicationScoped
 @DelayedJobConfig(priority = 10, description = "Shipping notification email sender")
@@ -29,11 +29,10 @@ public class ShippingNotificationJobHandler implements DelayedJobHandler {
 
     private static final Logger LOG = Logger.getLogger(ShippingNotificationJobHandler.class);
 
-    @Inject EmailService emailService;
+    @Inject
+    EmailService emailService;
 
-    @ConfigProperty(
-            name = "email.order.from",
-            defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
+    @ConfigProperty(name = "email.order.from", defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
     String orderFromEmail;
 
     @ConfigProperty(name = "app.base-url", defaultValue = "https://calendar.villagecompute.com")
@@ -45,12 +44,13 @@ public class ShippingNotificationJobHandler implements DelayedJobHandler {
         /**
          * Shipping notification email template.
          *
-         * @param order Calendar order
-         * @param stylesheet CSS stylesheet
+         * @param order
+         *            Calendar order
+         * @param stylesheet
+         *            CSS stylesheet
          * @return Template instance
          */
-        public static native TemplateInstance shippingNotification(
-                CalendarOrder order, String stylesheet);
+        public static native TemplateInstance shippingNotification(CalendarOrder order, String stylesheet);
     }
 
     @Override
@@ -105,13 +105,14 @@ public class ShippingNotificationJobHandler implements DelayedJobHandler {
     /**
      * Load a resource file as a string.
      *
-     * @param resourcePath Resource path
+     * @param resourcePath
+     *            Resource path
      * @return File contents
-     * @throws IOException if resource cannot be loaded
+     * @throws IOException
+     *             if resource cannot be loaded
      */
     private String loadResourceAsString(String resourcePath) throws IOException {
-        try (var inputStream =
-                Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
+        try (var inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
             if (inputStream == null) {
                 throw new IOException("Resource not found: " + resourcePath);
             }

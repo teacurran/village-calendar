@@ -12,8 +12,7 @@ import villagecompute.calendar.data.models.ItemAsset;
 import villagecompute.calendar.util.MimeTypes;
 
 /**
- * REST resource for accessing asset content (SVGs stored in item_assets table) and cart item
- * thumbnails.
+ * REST resource for accessing asset content (SVGs stored in item_assets table) and cart item thumbnails.
  */
 @Path("/api")
 public class AssetResource {
@@ -37,30 +36,23 @@ public class AssetResource {
             }
 
             return Response.ok(asset.svgContent)
-                    .header(
-                            MimeTypes.HEADER_CONTENT_TYPE,
+                    .header(MimeTypes.HEADER_CONTENT_TYPE,
                             asset.contentType != null ? asset.contentType : MimeTypes.IMAGE_SVG)
-                    .header(
-                            MimeTypes.HEADER_CACHE_CONTROL,
-                            SVG_CACHE_CONTROL) // Cache for 1 year (assets are immutable)
+                    .header(MimeTypes.HEADER_CACHE_CONTROL, SVG_CACHE_CONTROL) // Cache for 1 year (assets are
+                                                                               // immutable)
                     .build();
 
         } catch (IllegalArgumentException e) {
             LOG.warnf("Invalid asset ID format: %s", assetId);
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("Invalid asset ID format")
-                    .build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("Invalid asset ID format").build();
         } catch (Exception e) {
             LOG.errorf(e, "Error fetching asset %s", assetId);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity("Error fetching asset")
-                    .build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Error fetching asset").build();
         }
     }
 
     /**
-     * Get thumbnail SVG for a cart item. Works uniformly for both calendars (with stored SVG) and
-     * mazes (with assets).
+     * Get thumbnail SVG for a cart item. Works uniformly for both calendars (with stored SVG) and mazes (with assets).
      */
     @GET
     @Path("/cart-items/{itemId}/thumbnail.svg")
@@ -72,19 +64,15 @@ public class AssetResource {
 
             if (cartItem == null) {
                 LOG.warnf("Cart item not found: %s", itemId);
-                return Response.status(Response.Status.NOT_FOUND)
-                        .entity("Cart item not found")
-                        .build();
+                return Response.status(Response.Status.NOT_FOUND).entity("Cart item not found").build();
             }
 
             // Priority 1: Check for assets (mazes and new-style items)
             if (cartItem.assets != null && !cartItem.assets.isEmpty()) {
                 ItemAsset mainAsset = cartItem.getMainAsset();
                 if (mainAsset != null && mainAsset.svgContent != null) {
-                    return Response.ok(mainAsset.svgContent)
-                            .header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.IMAGE_SVG)
-                            .header(MimeTypes.HEADER_CACHE_CONTROL, SVG_CACHE_CONTROL)
-                            .build();
+                    return Response.ok(mainAsset.svgContent).header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.IMAGE_SVG)
+                            .header(MimeTypes.HEADER_CACHE_CONTROL, SVG_CACHE_CONTROL).build();
                 }
             }
 
@@ -103,15 +91,10 @@ public class AssetResource {
                             end = config.indexOf("\"", end + 1);
                         }
                         if (end > start) {
-                            String svg =
-                                    config.substring(start, end)
-                                            .replace("\\\"", "\"")
-                                            .replace("\\n", "\n")
-                                            .replace("\\\\", "\\");
-                            return Response.ok(svg)
-                                    .header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.IMAGE_SVG)
-                                    .header(MimeTypes.HEADER_CACHE_CONTROL, SVG_CACHE_CONTROL)
-                                    .build();
+                            String svg = config.substring(start, end).replace("\\\"", "\"").replace("\\n", "\n")
+                                    .replace("\\\\", "\\");
+                            return Response.ok(svg).header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.IMAGE_SVG)
+                                    .header(MimeTypes.HEADER_CACHE_CONTROL, SVG_CACHE_CONTROL).build();
                         }
                     }
                 }
@@ -119,20 +102,15 @@ public class AssetResource {
 
             // No SVG available
             LOG.warnf("No SVG content available for cart item: %s", itemId);
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity("No thumbnail available for this cart item")
+            return Response.status(Response.Status.NOT_FOUND).entity("No thumbnail available for this cart item")
                     .build();
 
         } catch (IllegalArgumentException e) {
             LOG.warnf("Invalid cart item ID format: %s", itemId);
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("Invalid cart item ID format")
-                    .build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("Invalid cart item ID format").build();
         } catch (Exception e) {
             LOG.errorf(e, "Error fetching cart item thumbnail %s", itemId);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity("Error fetching thumbnail")
-                    .build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Error fetching thumbnail").build();
         }
     }
 }

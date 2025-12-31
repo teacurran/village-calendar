@@ -23,17 +23,23 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class UserCalendarRepositoryTest {
 
-    @Inject TestDataCleaner testDataCleaner;
+    @Inject
+    TestDataCleaner testDataCleaner;
 
-    @Inject UserCalendarRepository userCalendarRepository;
+    @Inject
+    UserCalendarRepository userCalendarRepository;
 
-    @Inject CalendarUserRepository calendarUserRepository;
+    @Inject
+    CalendarUserRepository calendarUserRepository;
 
-    @Inject CalendarTemplateRepository templateRepository;
+    @Inject
+    CalendarTemplateRepository templateRepository;
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
-    @Inject jakarta.persistence.EntityManager entityManager;
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
 
     private CalendarUser testUser;
     private CalendarTemplate testTemplate;

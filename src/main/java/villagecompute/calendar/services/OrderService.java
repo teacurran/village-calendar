@@ -39,31 +39,31 @@ public class OrderService {
 
     private static final Logger LOG = Logger.getLogger(OrderService.class);
 
-    @Inject ShippingService shippingService;
+    @Inject
+    ShippingService shippingService;
 
-    @Inject DelayedJobService delayedJobService;
+    @Inject
+    DelayedJobService delayedJobService;
 
     /**
-     * Create a new order for a calendar. The order is created in PENDING status and needs payment
-     * confirmation.
+     * Create a new order for a calendar. The order is created in PENDING status and needs payment confirmation.
      *
-     * @param user User placing the order
-     * @param calendar Calendar being ordered
-     * @param quantity Number of calendars
-     * @param unitPrice Price per calendar
-     * @param shippingAddress Shipping address (JSON)
+     * @param user
+     *            User placing the order
+     * @param calendar
+     *            Calendar being ordered
+     * @param quantity
+     *            Number of calendars
+     * @param unitPrice
+     *            Price per calendar
+     * @param shippingAddress
+     *            Shipping address (JSON)
      * @return Created order
      */
     @Transactional
-    public CalendarOrder createOrder(
-            CalendarUser user,
-            UserCalendar calendar,
-            Integer quantity,
-            BigDecimal unitPrice,
+    public CalendarOrder createOrder(CalendarUser user, UserCalendar calendar, Integer quantity, BigDecimal unitPrice,
             com.fasterxml.jackson.databind.JsonNode shippingAddress) {
-        LOG.infof(
-                "Creating order for user %s, calendar %s, quantity %d",
-                user.email, calendar.id, quantity);
+        LOG.infof("Creating order for user %s, calendar %s, quantity %d", user.email, calendar.id, quantity);
 
         // Validate inputs
         if (quantity < 1) {
@@ -104,28 +104,27 @@ public class OrderService {
         // Generate unique order number
         int currentYear = Year.now().getValue();
         long orderCountThisYear = CalendarOrder.countOrdersByYear(currentYear);
-        String orderNumber =
-                OrderNumberGenerator.generateOrderNumber(currentYear, orderCountThisYear);
+        String orderNumber = OrderNumberGenerator.generateOrderNumber(currentYear, orderCountThisYear);
         order.orderNumber = orderNumber;
 
         // Persist the order
         order.persist();
 
-        LOG.infof(
-                "Created order %s (number: %s) with total price $%.2f (subtotal: $%.2f, tax: $%.2f,"
-                        + " shipping: $%.2f)",
-                order.id, orderNumber, totalPrice, subtotal, tax, shipping);
+        LOG.infof("Created order %s (number: %s) with total price $%.2f (subtotal: $%.2f, tax: $%.2f,"
+                + " shipping: $%.2f)", order.id, orderNumber, totalPrice, subtotal, tax, shipping);
 
         return order;
     }
 
     /**
-     * Update order status (admin only). This method should only be called by authorized admin
-     * users.
+     * Update order status (admin only). This method should only be called by authorized admin users.
      *
-     * @param orderId Order ID
-     * @param newStatus New status
-     * @param notes Optional notes about the status change
+     * @param orderId
+     *            Order ID
+     * @param newStatus
+     *            New status
+     * @param notes
+     *            Optional notes about the status change
      * @return Updated order
      */
     @Transactional
@@ -171,10 +170,8 @@ public class OrderService {
         // Append notes
         if (notes != null && !notes.isBlank()) {
             String timestamp = Instant.now().toString();
-            String noteEntry =
-                    String.format(
-                            "[%s] Status changed from %s to %s: %s%n",
-                            timestamp, oldStatus, newStatus, notes);
+            String noteEntry = String.format("[%s] Status changed from %s to %s: %s%n", timestamp, oldStatus, newStatus,
+                    notes);
             order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
         }
 
@@ -188,7 +185,8 @@ public class OrderService {
     /**
      * Get orders by status.
      *
-     * @param status Order status
+     * @param status
+     *            Order status
      * @return List of orders with the specified status
      */
     public List<CalendarOrder> getOrdersByStatus(String status) {
@@ -199,7 +197,8 @@ public class OrderService {
     /**
      * Get all orders for a specific user.
      *
-     * @param userId User ID
+     * @param userId
+     *            User ID
      * @return List of user's orders
      */
     public List<CalendarOrder> getUserOrders(UUID userId) {
@@ -210,7 +209,8 @@ public class OrderService {
     /**
      * Get a single order by ID.
      *
-     * @param orderId Order ID
+     * @param orderId
+     *            Order ID
      * @return Order if found
      */
     public Optional<CalendarOrder> getOrderById(UUID orderId) {
@@ -220,7 +220,8 @@ public class OrderService {
     /**
      * Find an order by Stripe Payment Intent ID.
      *
-     * @param paymentIntentId Stripe Payment Intent ID
+     * @param paymentIntentId
+     *            Stripe Payment Intent ID
      * @return Order if found
      */
     public Optional<CalendarOrder> findByStripePaymentIntent(String paymentIntentId) {
@@ -228,23 +229,28 @@ public class OrderService {
     }
 
     /**
-     * Cancel an order. Only allows cancellation of orders that are not yet in terminal states. For
-     * paid orders, a refund may need to be processed separately via PaymentService (I3.T3).
+     * Cancel an order. Only allows cancellation of orders that are not yet in terminal states. For paid orders, a
+     * refund may need to be processed separately via PaymentService (I3.T3).
      *
-     * @param orderId Order ID to cancel
-     * @param userId User requesting cancellation (for authorization)
-     * @param isAdmin Whether the requesting user is an admin
-     * @param cancellationReason Reason for cancellation
+     * @param orderId
+     *            Order ID to cancel
+     * @param userId
+     *            User requesting cancellation (for authorization)
+     * @param isAdmin
+     *            Whether the requesting user is an admin
+     * @param cancellationReason
+     *            Reason for cancellation
      * @return Cancelled order
-     * @throws IllegalArgumentException if order not found
-     * @throws SecurityException if user is not authorized to cancel the order
-     * @throws IllegalStateException if order cannot be cancelled (already terminal)
+     * @throws IllegalArgumentException
+     *             if order not found
+     * @throws SecurityException
+     *             if user is not authorized to cancel the order
+     * @throws IllegalStateException
+     *             if order cannot be cancelled (already terminal)
      */
     @Transactional
-    public CalendarOrder cancelOrder(
-            UUID orderId, UUID userId, boolean isAdmin, String cancellationReason) {
-        LOG.infof(
-                "Cancelling order %s, requested by user %s (admin: %b)", orderId, userId, isAdmin);
+    public CalendarOrder cancelOrder(UUID orderId, UUID userId, boolean isAdmin, String cancellationReason) {
+        LOG.infof("Cancelling order %s, requested by user %s (admin: %b)", orderId, userId, isAdmin);
 
         // Find the order
         Optional<CalendarOrder> orderOpt = CalendarOrder.<CalendarOrder>findByIdOptional(orderId);
@@ -257,17 +263,14 @@ public class OrderService {
 
         // Authorization check: user must own the order or be an admin
         if (!isAdmin && !order.user.id.equals(userId)) {
-            LOG.errorf(
-                    "User %s attempted to cancel order %s owned by user %s",
-                    userId, orderId, order.user.id);
+            LOG.errorf("User %s attempted to cancel order %s owned by user %s", userId, orderId, order.user.id);
             throw new SecurityException("You are not authorized to cancel this order");
         }
 
         // Validate that the order can be cancelled
         if (order.isTerminal()) {
             LOG.errorf("Cannot cancel terminal order %s (status: %s)", orderId, order.status);
-            throw new IllegalStateException(
-                    String.format("Cannot cancel order in %s status", order.status));
+            throw new IllegalStateException(String.format("Cannot cancel order in %s status", order.status));
         }
 
         // Validate status transition to CANCELLED
@@ -282,20 +285,14 @@ public class OrderService {
 
         // Add cancellation note
         String timestamp = Instant.now().toString();
-        String noteEntry =
-                String.format(
-                        "[%s] Order cancelled from status %s. Reason: %s%n",
-                        timestamp,
-                        oldStatus,
-                        cancellationReason != null ? cancellationReason : "No reason provided");
+        String noteEntry = String.format("[%s] Order cancelled from status %s. Reason: %s%n", timestamp, oldStatus,
+                cancellationReason != null ? cancellationReason : "No reason provided");
         order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
 
         // Note: Actual Stripe refund processing will be handled by PaymentService in I3.T3
         if (CalendarOrder.STATUS_PAID.equals(oldStatus) && order.stripePaymentIntentId != null) {
-            String refundNote =
-                    String.format(
-                            "[%s] TODO: Process refund via PaymentService for payment intent %s%n",
-                            timestamp, order.stripePaymentIntentId);
+            String refundNote = String.format("[%s] TODO: Process refund via PaymentService for payment intent %s%n",
+                    timestamp, order.stripePaymentIntentId);
             order.notes += refundNote;
         }
 
@@ -309,18 +306,18 @@ public class OrderService {
     // ==================== Item Shipping Methods ====================
 
     /**
-     * Mark a single order item as shipped. For PDF items, this can be done immediately without a
-     * physical shipment. For print items, this typically happens as part of a shipment.
+     * Mark a single order item as shipped. For PDF items, this can be done immediately without a physical shipment. For
+     * print items, this typically happens as part of a shipment.
      *
-     * @param itemId Order item ID
+     * @param itemId
+     *            Order item ID
      * @return Updated order item
      */
     @Transactional
     public CalendarOrderItem markItemAsShipped(UUID itemId) {
         LOG.infof("Marking order item %s as shipped", itemId);
 
-        Optional<CalendarOrderItem> itemOpt =
-                CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
+        Optional<CalendarOrderItem> itemOpt = CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
         if (itemOpt.isEmpty()) {
             throw new IllegalArgumentException("Order item not found: " + itemId);
         }
@@ -339,15 +336,15 @@ public class OrderService {
     /**
      * Mark a single order item as delivered.
      *
-     * @param itemId Order item ID
+     * @param itemId
+     *            Order item ID
      * @return Updated order item
      */
     @Transactional
     public CalendarOrderItem markItemAsDelivered(UUID itemId) {
         LOG.infof("Marking order item %s as delivered", itemId);
 
-        Optional<CalendarOrderItem> itemOpt =
-                CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
+        Optional<CalendarOrderItem> itemOpt = CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
         if (itemOpt.isEmpty()) {
             throw new IllegalArgumentException("Order item not found: " + itemId);
         }
@@ -366,15 +363,18 @@ public class OrderService {
     /**
      * Create a shipment for selected items in an order.
      *
-     * @param orderId Order ID
-     * @param itemIds List of item IDs to include in the shipment
-     * @param carrier Shipping carrier (USPS, UPS, FEDEX)
-     * @param trackingNumber Tracking number
+     * @param orderId
+     *            Order ID
+     * @param itemIds
+     *            List of item IDs to include in the shipment
+     * @param carrier
+     *            Shipping carrier (USPS, UPS, FEDEX)
+     * @param trackingNumber
+     *            Tracking number
      * @return Created shipment
      */
     @Transactional
-    public Shipment createShipment(
-            UUID orderId, List<UUID> itemIds, String carrier, String trackingNumber) {
+    public Shipment createShipment(UUID orderId, List<UUID> itemIds, String carrier, String trackingNumber) {
         LOG.infof("Creating shipment for order %s with %d items", orderId, itemIds.size());
 
         Optional<CalendarOrder> orderOpt = CalendarOrder.<CalendarOrder>findByIdOptional(orderId);
@@ -396,8 +396,7 @@ public class OrderService {
 
         // Add items to the shipment
         for (UUID itemId : itemIds) {
-            Optional<CalendarOrderItem> itemOpt =
-                    CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
+            Optional<CalendarOrderItem> itemOpt = CalendarOrderItem.<CalendarOrderItem>findByIdOptional(itemId);
             if (itemOpt.isPresent()) {
                 CalendarOrderItem item = itemOpt.get();
                 if (item.order.id.equals(orderId)) {
@@ -408,9 +407,7 @@ public class OrderService {
             }
         }
 
-        LOG.infof(
-                "Created shipment %s with %d items for order %s",
-                shipment.id, shipment.items.size(), orderId);
+        LOG.infof("Created shipment %s with %d items for order %s", shipment.id, shipment.items.size(), orderId);
 
         return shipment;
     }
@@ -418,7 +415,8 @@ public class OrderService {
     /**
      * Mark a shipment as shipped (package handed to carrier).
      *
-     * @param shipmentId Shipment ID
+     * @param shipmentId
+     *            Shipment ID
      * @return Updated shipment
      */
     @Transactional
@@ -444,10 +442,11 @@ public class OrderService {
     }
 
     /**
-     * Auto-ship all digital (PDF) items in an order. Call this when an order is paid to immediately
-     * mark PDF items as shipped.
+     * Auto-ship all digital (PDF) items in an order. Call this when an order is paid to immediately mark PDF items as
+     * shipped.
      *
-     * @param orderId Order ID
+     * @param orderId
+     *            Order ID
      * @return Number of items auto-shipped
      */
     @Transactional
@@ -481,8 +480,7 @@ public class OrderService {
     }
 
     /**
-     * Update order status based on item shipping status. If all items are shipped, mark order as
-     * shipped.
+     * Update order status based on item shipping status. If all items are shipped, mark order as shipped.
      */
     private void updateOrderShippingStatus(CalendarOrder order) {
         // Refresh order to get current items
@@ -513,8 +511,7 @@ public class OrderService {
     }
 
     /**
-     * Update order status based on item delivery status. If all items are delivered, mark order as
-     * delivered.
+     * Update order status based on item delivery status. If all items are delivered, mark order as delivered.
      */
     private void updateOrderDeliveryStatus(CalendarOrder order) {
         // Refresh order to get current items
@@ -538,10 +535,11 @@ public class OrderService {
     }
 
     /**
-     * Calculate tax for an order. TODO: Integrate with Stripe Tax API for automated tax
-     * calculation. For MVP, returns zero as a placeholder.
+     * Calculate tax for an order. TODO: Integrate with Stripe Tax API for automated tax calculation. For MVP, returns
+     * zero as a placeholder.
      *
-     * @param order Order to calculate tax for
+     * @param order
+     *            Order to calculate tax for
      * @return Tax amount (currently always zero)
      */
     private BigDecimal calculateTax(CalendarOrder order) {
@@ -555,10 +553,10 @@ public class OrderService {
     }
 
     /**
-     * Calculate shipping cost for an order. Delegates to ShippingService for actual rate
-     * calculation.
+     * Calculate shipping cost for an order. Delegates to ShippingService for actual rate calculation.
      *
-     * @param order Order to calculate shipping for
+     * @param order
+     *            Order to calculate shipping for
      * @return Shipping cost
      */
     private BigDecimal calculateShipping(CalendarOrder order) {
@@ -566,14 +564,14 @@ public class OrderService {
     }
 
     /**
-     * Enqueue an email job for the specified order. The job will be processed asynchronously by the
-     * DelayedJob worker.
+     * Enqueue an email job for the specified order. The job will be processed asynchronously by the DelayedJob worker.
      *
-     * @param order Order to send email for
-     * @param handlerClass The handler class to execute
+     * @param order
+     *            Order to send email for
+     * @param handlerClass
+     *            The handler class to execute
      */
-    private void enqueueEmailJob(
-            CalendarOrder order, Class<? extends DelayedJobHandler> handlerClass) {
+    private void enqueueEmailJob(CalendarOrder order, Class<? extends DelayedJobHandler> handlerClass) {
         try {
             delayedJobService.enqueue(handlerClass, order.id.toString());
             LOG.infof("Enqueued %s email job for order %s", handlerClass.getSimpleName(), order.id);
@@ -587,41 +585,36 @@ public class OrderService {
     /**
      * Validate that a status transition is allowed.
      *
-     * @param currentStatus Current order status
-     * @param newStatus New order status
-     * @throws IllegalStateException if transition is not allowed
+     * @param currentStatus
+     *            Current order status
+     * @param newStatus
+     *            New order status
+     * @throws IllegalStateException
+     *             if transition is not allowed
      */
     private void validateStatusTransition(String currentStatus, String newStatus) {
         // Define allowed transitions
         // Flow: PENDING -> PAID -> PROCESSING -> PRINTED -> SHIPPED -> DELIVERED
-        boolean isValid =
-                switch (currentStatus) {
-                    case CalendarOrder.STATUS_PENDING ->
-                            newStatus.equals(CalendarOrder.STATUS_PAID)
-                                    || newStatus.equals(CalendarOrder.STATUS_CANCELLED);
-                    case CalendarOrder.STATUS_PAID ->
-                            newStatus.equals(CalendarOrder.STATUS_PROCESSING)
-                                    || newStatus.equals(CalendarOrder.STATUS_PRINTED)
-                                    || newStatus.equals(CalendarOrder.STATUS_SHIPPED)
-                                    || newStatus.equals(CalendarOrder.STATUS_CANCELLED);
-                    case CalendarOrder.STATUS_PROCESSING ->
-                            newStatus.equals(CalendarOrder.STATUS_PRINTED)
-                                    || newStatus.equals(CalendarOrder.STATUS_SHIPPED)
-                                    || newStatus.equals(CalendarOrder.STATUS_CANCELLED);
-                    case CalendarOrder.STATUS_PRINTED ->
-                            newStatus.equals(CalendarOrder.STATUS_SHIPPED)
-                                    || newStatus.equals(CalendarOrder.STATUS_CANCELLED);
-                    case CalendarOrder.STATUS_SHIPPED ->
-                            newStatus.equals(CalendarOrder.STATUS_DELIVERED);
-                    case CalendarOrder.STATUS_DELIVERED, CalendarOrder.STATUS_CANCELLED ->
-                            false; // Terminal states - no transitions allowed
-                    default -> false;
-                };
+        boolean isValid = switch (currentStatus) {
+            case CalendarOrder.STATUS_PENDING ->
+                newStatus.equals(CalendarOrder.STATUS_PAID) || newStatus.equals(CalendarOrder.STATUS_CANCELLED);
+            case CalendarOrder.STATUS_PAID -> newStatus.equals(CalendarOrder.STATUS_PROCESSING)
+                    || newStatus.equals(CalendarOrder.STATUS_PRINTED) || newStatus.equals(CalendarOrder.STATUS_SHIPPED)
+                    || newStatus.equals(CalendarOrder.STATUS_CANCELLED);
+            case CalendarOrder.STATUS_PROCESSING ->
+                newStatus.equals(CalendarOrder.STATUS_PRINTED) || newStatus.equals(CalendarOrder.STATUS_SHIPPED)
+                        || newStatus.equals(CalendarOrder.STATUS_CANCELLED);
+            case CalendarOrder.STATUS_PRINTED ->
+                newStatus.equals(CalendarOrder.STATUS_SHIPPED) || newStatus.equals(CalendarOrder.STATUS_CANCELLED);
+            case CalendarOrder.STATUS_SHIPPED -> newStatus.equals(CalendarOrder.STATUS_DELIVERED);
+            case CalendarOrder.STATUS_DELIVERED, CalendarOrder.STATUS_CANCELLED -> false; // Terminal states - no
+                                                                                          // transitions allowed
+            default -> false;
+        };
 
         if (!isValid) {
             throw new IllegalStateException(
-                    String.format(
-                            "Invalid status transition from %s to %s", currentStatus, newStatus));
+                    String.format("Invalid status transition from %s to %s", currentStatus, newStatus));
         }
     }
 
@@ -630,34 +623,35 @@ public class OrderService {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Process a completed checkout and create a single order with multiple items. This is called
-     * after Stripe payment is confirmed.
+     * Process a completed checkout and create a single order with multiple items. This is called after Stripe payment
+     * is confirmed.
      *
-     * @param paymentIntentId Stripe PaymentIntent ID
-     * @param email Customer email
-     * @param shippingAddress Shipping address map
-     * @param billingAddress Billing address map (optional)
-     * @param items Cart items (list of maps with item details)
-     * @param subtotal Order subtotal
-     * @param shippingCost Shipping cost
-     * @param taxAmount Tax amount
-     * @param totalAmount Total amount charged
+     * @param paymentIntentId
+     *            Stripe PaymentIntent ID
+     * @param email
+     *            Customer email
+     * @param shippingAddress
+     *            Shipping address map
+     * @param billingAddress
+     *            Billing address map (optional)
+     * @param items
+     *            Cart items (list of maps with item details)
+     * @param subtotal
+     *            Order subtotal
+     * @param shippingCost
+     *            Shipping cost
+     * @param taxAmount
+     *            Tax amount
+     * @param totalAmount
+     *            Total amount charged
      * @return The order number
      */
     @Transactional
-    public String processCheckout(
-            String paymentIntentId,
-            String email,
-            Map<String, Object> shippingAddress,
-            Map<String, Object> billingAddress,
-            List<Map<String, Object>> items,
-            Double subtotal,
-            Double shippingCost,
-            Double taxAmount,
-            Double totalAmount) {
-        LOG.infof(
-                "Processing checkout for email %s with %d items, PaymentIntent: %s",
-                email, items != null ? items.size() : 0, paymentIntentId);
+    public String processCheckout(String paymentIntentId, String email, Map<String, Object> shippingAddress,
+            Map<String, Object> billingAddress, List<Map<String, Object>> items, Double subtotal, Double shippingCost,
+            Double taxAmount, Double totalAmount) {
+        LOG.infof("Processing checkout for email %s with %d items, PaymentIntent: %s", email,
+                items != null ? items.size() : 0, paymentIntentId);
 
         // Find or create user (guest user if not found)
         CalendarUser user = findOrCreateGuestUser(email, shippingAddress);
@@ -665,13 +659,11 @@ public class OrderService {
         // Generate order number
         int currentYear = Year.now().getValue();
         long orderCountThisYear = CalendarOrder.countOrdersByYear(currentYear);
-        String orderNumber =
-                OrderNumberGenerator.generateOrderNumber(currentYear, orderCountThisYear);
+        String orderNumber = OrderNumberGenerator.generateOrderNumber(currentYear, orderCountThisYear);
 
         // Convert addresses to JsonNode
         JsonNode shippingAddressJson = objectMapper.valueToTree(shippingAddress);
-        JsonNode billingAddressJson =
-                billingAddress != null ? objectMapper.valueToTree(billingAddress) : null;
+        JsonNode billingAddressJson = billingAddress != null ? objectMapper.valueToTree(billingAddress) : null;
 
         // Create the order
         CalendarOrder order = new CalendarOrder();
@@ -682,8 +674,7 @@ public class OrderService {
         order.billingAddress = billingAddressJson;
         order.stripePaymentIntentId = paymentIntentId;
         order.subtotal = subtotal != null ? BigDecimal.valueOf(subtotal) : BigDecimal.ZERO;
-        order.shippingCost =
-                shippingCost != null ? BigDecimal.valueOf(shippingCost) : BigDecimal.ZERO;
+        order.shippingCost = shippingCost != null ? BigDecimal.valueOf(shippingCost) : BigDecimal.ZERO;
         order.taxAmount = taxAmount != null ? BigDecimal.valueOf(taxAmount) : BigDecimal.ZERO;
         order.totalPrice = totalAmount != null ? BigDecimal.valueOf(totalAmount) : BigDecimal.ZERO;
         order.status = CalendarOrder.STATUS_PAID;
@@ -699,9 +690,8 @@ public class OrderService {
             }
         }
 
-        LOG.infof(
-                "Created order %s with %d items for PaymentIntent %s",
-                orderNumber, order.items.size(), paymentIntentId);
+        LOG.infof("Created order %s with %d items for PaymentIntent %s", orderNumber, order.items.size(),
+                paymentIntentId);
 
         // Enqueue confirmation email
         enqueueEmailJob(order, OrderEmailJobHandler.class);
@@ -711,24 +701,10 @@ public class OrderService {
 
     /** Overload for backwards compatibility (without billingAddress) */
     @Transactional
-    public String processCheckout(
-            String paymentIntentId,
-            String email,
-            Map<String, Object> shippingAddress,
-            List<Map<String, Object>> items,
-            Double subtotal,
-            Double shippingCost,
-            Double taxAmount,
+    public String processCheckout(String paymentIntentId, String email, Map<String, Object> shippingAddress,
+            List<Map<String, Object>> items, Double subtotal, Double shippingCost, Double taxAmount,
             Double totalAmount) {
-        return processCheckout(
-                paymentIntentId,
-                email,
-                shippingAddress,
-                null,
-                items,
-                subtotal,
-                shippingCost,
-                taxAmount,
+        return processCheckout(paymentIntentId, email, shippingAddress, null, items, subtotal, shippingCost, taxAmount,
                 totalAmount);
     }
 
@@ -751,18 +727,11 @@ public class OrderService {
                 LOG.warnf("Could not parse configuration for year: %s", e.getMessage());
             }
         }
-        Integer quantity =
-                cartItem.get("quantity") != null
-                        ? ((Number) cartItem.get("quantity")).intValue()
-                        : 1;
-        Double unitPrice =
-                cartItem.get("unitPrice") != null
-                        ? ((Number) cartItem.get("unitPrice")).doubleValue()
-                        : 29.99;
-        Double lineTotal =
-                cartItem.get("lineTotal") != null
-                        ? ((Number) cartItem.get("lineTotal")).doubleValue()
-                        : unitPrice * quantity;
+        Integer quantity = cartItem.get("quantity") != null ? ((Number) cartItem.get("quantity")).intValue() : 1;
+        Double unitPrice = cartItem.get("unitPrice") != null ? ((Number) cartItem.get("unitPrice")).doubleValue()
+                : 29.99;
+        Double lineTotal = cartItem.get("lineTotal") != null ? ((Number) cartItem.get("lineTotal")).doubleValue()
+                : unitPrice * quantity;
 
         // Determine product type from configuration or description
         String productType = CalendarOrderItem.TYPE_PRINT;
@@ -784,8 +753,7 @@ public class OrderService {
         }
 
         // Create a UserCalendar to store the calendar configuration
-        UserCalendar calendar =
-                createCalendarFromConfig(order.user, description, year, configurationStr);
+        UserCalendar calendar = createCalendarFromConfig(order.user, description, year, configurationStr);
 
         // Create the order item
         CalendarOrderItem item = new CalendarOrderItem();
@@ -810,9 +778,8 @@ public class OrderService {
 
         item.persist();
 
-        LOG.infof(
-                "Created order item: %s (%s) x%d @ $%.2f = $%.2f",
-                description, productType, quantity, unitPrice, lineTotal);
+        LOG.infof("Created order item: %s (%s) x%d @ $%.2f = $%.2f", description, productType, quantity, unitPrice,
+                lineTotal);
 
         return item;
     }
@@ -839,11 +806,8 @@ public class OrderService {
             String firstName = (String) addressInfo.get("firstName");
             String lastName = (String) addressInfo.get("lastName");
             if (firstName != null || lastName != null) {
-                guestUser.displayName =
-                        ((firstName != null ? firstName : "")
-                                        + " "
-                                        + (lastName != null ? lastName : ""))
-                                .trim();
+                guestUser.displayName = ((firstName != null ? firstName : "") + " "
+                        + (lastName != null ? lastName : "")).trim();
             }
         }
 
@@ -854,8 +818,8 @@ public class OrderService {
     }
 
     /** Create a UserCalendar from cart item configuration. */
-    private UserCalendar createCalendarFromConfig(
-            CalendarUser user, String name, Integer year, String configurationStr) {
+    private UserCalendar createCalendarFromConfig(CalendarUser user, String name, Integer year,
+            String configurationStr) {
         UserCalendar calendar = new UserCalendar();
         calendar.user = user;
         calendar.name = name != null ? name : "Calendar " + year;
@@ -890,7 +854,8 @@ public class OrderService {
     /**
      * Find order by order number with items loaded. Used for secure PDF downloads and order lookup.
      *
-     * @param orderNumber The order number to search for
+     * @param orderNumber
+     *            The order number to search for
      * @return CalendarOrder if found with items loaded, null otherwise
      */
     @Transactional
@@ -901,8 +866,7 @@ public class OrderService {
 
         try {
             // Find order with items and calendars eagerly loaded in a single query
-            Optional<CalendarOrder> orderOpt =
-                    CalendarOrder.findByOrderNumberWithItems(orderNumber.trim());
+            Optional<CalendarOrder> orderOpt = CalendarOrder.findByOrderNumberWithItems(orderNumber.trim());
 
             if (orderOpt.isPresent()) {
                 CalendarOrder order = orderOpt.get();

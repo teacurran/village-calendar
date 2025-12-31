@@ -13,20 +13,14 @@ import jakarta.validation.constraints.Size;
 import org.eclipse.microprofile.graphql.Ignore;
 
 /**
- * Item in a shopping cart. Supports multiple generator types (calendar, maze, etc.) with frozen SVG
- * assets.
+ * Item in a shopping cart. Supports multiple generator types (calendar, maze, etc.) with frozen SVG assets.
  */
 @Entity
-@Table(
-        name = "cart_items",
-        indexes = {@Index(name = "idx_cart_items_cart", columnList = "cart_id")})
+@Table(name = "cart_items", indexes = {@Index(name = "idx_cart_items_cart", columnList = "cart_id")})
 public class CartItem extends DefaultPanacheEntityWithTimestamps {
 
     @NotNull @ManyToOne(optional = false)
-    @JoinColumn(
-            name = "cart_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_cart_items_cart"))
+    @JoinColumn(name = "cart_id", nullable = false, foreignKey = @ForeignKey(name = "fk_cart_items_cart"))
     @Ignore
     public Cart cart;
 
@@ -54,18 +48,14 @@ public class CartItem extends DefaultPanacheEntityWithTimestamps {
     public String productCode;
 
     /**
-     * JSON configuration for the generator (includes year for calendars, size/difficulty for mazes,
-     * etc.)
+     * JSON configuration for the generator (includes year for calendars, size/difficulty for mazes, etc.)
      */
     @Column(name = "configuration", columnDefinition = "TEXT")
     public String configuration;
 
     /** Assets (SVGs) associated with this cart item. */
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    @JoinTable(
-            name = "cart_item_assets",
-            joinColumns = @JoinColumn(name = "cart_item_id"),
-            inverseJoinColumns = @JoinColumn(name = "asset_id"))
+    @JoinTable(name = "cart_item_assets", joinColumns = @JoinColumn(name = "cart_item_id"), inverseJoinColumns = @JoinColumn(name = "asset_id"))
     @Ignore
     public Set<ItemAsset> assets = new HashSet<>();
 

@@ -21,9 +21,11 @@ public class CartGraphQL {
 
     private static final Logger LOG = Logger.getLogger(CartGraphQL.class);
 
-    @Inject CartService cartService;
+    @Inject
+    CartService cartService;
 
-    @Inject SessionService sessionService;
+    @Inject
+    SessionService sessionService;
 
     /** Get the current user/session cart */
     @Query("cart")
@@ -35,8 +37,8 @@ public class CartGraphQL {
     }
 
     /**
-     * Add an item to the cart. Supports both new generator-based items (with generatorType and
-     * assets) and legacy calendar items.
+     * Add an item to the cart. Supports both new generator-based items (with generatorType and assets) and legacy
+     * calendar items.
      */
     @Mutation("addToCart")
     @Description("Add an item to the shopping cart")
@@ -45,15 +47,9 @@ public class CartGraphQL {
         String sessionId = sessionService.getCurrentSessionId();
 
         int assetCount = input.assets != null ? input.assets.size() : 0;
-        LOG.info(
-                String.format(
-                        "Adding to cart for session %s: generatorType=%s, description=%s,"
-                                + " quantity=%d, assets=%d",
-                        sessionId,
-                        input.generatorType,
-                        input.description,
-                        input.quantity,
-                        assetCount));
+        LOG.info(String.format(
+                "Adding to cart for session %s: generatorType=%s, description=%s," + " quantity=%d, assets=%d",
+                sessionId, input.generatorType, input.description, input.quantity, assetCount));
 
         return cartService.addToCart(sessionId, input);
     }
@@ -62,13 +58,9 @@ public class CartGraphQL {
     @Mutation("updateCartItemQuantity")
     @Description("Update the quantity of an item in the cart")
     @Transactional
-    public Cart updateCartItemQuantity(
-            @Name("itemId") String itemId, @Name("quantity") Integer quantity) {
+    public Cart updateCartItemQuantity(@Name("itemId") String itemId, @Name("quantity") Integer quantity) {
         String sessionId = sessionService.getCurrentSessionId();
-        LOG.info(
-                String.format(
-                        "Updating cart item %s to quantity %d for session %s",
-                        itemId, quantity, sessionId));
+        LOG.info(String.format("Updating cart item %s to quantity %d for session %s", itemId, quantity, sessionId));
 
         return cartService.updateQuantity(sessionId, UUID.fromString(itemId), quantity);
     }

@@ -22,8 +22,8 @@ import villagecompute.calendar.util.Roles;
 import io.quarkus.security.identity.SecurityIdentity;
 
 /**
- * GraphQL resolver for calendar template queries and admin mutations. Provides public access to
- * browse available calendar templates and admin-only mutations for template management.
+ * GraphQL resolver for calendar template queries and admin mutations. Provides public access to browse available
+ * calendar templates and admin-only mutations for template management.
  */
 @GraphQLApi
 @ApplicationScoped
@@ -31,27 +31,28 @@ public class TemplateGraphQL {
 
     private static final Logger LOG = Logger.getLogger(TemplateGraphQL.class);
 
-    @Inject CalendarTemplateRepository templateRepository;
+    @Inject
+    CalendarTemplateRepository templateRepository;
 
-    @Inject TemplateService templateService;
+    @Inject
+    TemplateService templateService;
 
-    @Inject SecurityIdentity securityIdentity;
+    @Inject
+    SecurityIdentity securityIdentity;
 
     /**
-     * Get all calendar templates with optional filtering. This is a public query - no
-     * authentication required.
+     * Get all calendar templates with optional filtering. This is a public query - no authentication required.
      *
-     * @param isActive Filter by active status (default: true shows only active templates)
-     * @param isFeatured Filter by featured status (optional)
+     * @param isActive
+     *            Filter by active status (default: true shows only active templates)
+     * @param isFeatured
+     *            Filter by featured status (optional)
      * @return List of calendar templates
      */
     @Query("templates")
     @Description("Get all calendar templates.")
     public List<CalendarTemplate> templates(
-            @DefaultValue("true")
-                    @Description(
-                            "Filter by active status (default: true shows only active templates)")
-                    Boolean isActive,
+            @DefaultValue("true") @Description("Filter by active status (default: true shows only active templates)") Boolean isActive,
             @Description("Filter by featured status (optional)") Boolean isFeatured) {
         LOG.infof("Querying templates: isActive=%s, isFeatured=%s", isActive, isFeatured);
 
@@ -80,23 +81,21 @@ public class TemplateGraphQL {
     }
 
     /**
-     * Get a single template by ID. Returns null if template not found or inactive (unless user is
-     * admin).
+     * Get a single template by ID. Returns null if template not found or inactive (unless user is admin).
      *
-     * @param id Template ID
+     * @param id
+     *            Template ID
      * @return Calendar template or null if not found
      */
     @Query("template")
-    @Description(
-            "Get a single template by ID. Returns null if template not found or inactive (unless"
-                    + " user is admin).")
+    @Description("Get a single template by ID. Returns null if template not found or inactive (unless"
+            + " user is admin).")
     public CalendarTemplate template(@Name("id") @Description("Template ID") @NotNull String id) {
         LOG.infof("Querying template by ID: %s", id);
 
         try {
             UUID templateId = UUID.fromString(id);
-            CalendarTemplate template =
-                    CalendarTemplate.<CalendarTemplate>findByIdOptional(templateId).orElse(null);
+            CalendarTemplate template = CalendarTemplate.<CalendarTemplate>findByIdOptional(templateId).orElse(null);
 
             if (template == null) {
                 LOG.warnf("Template not found: %s", id);
@@ -126,7 +125,8 @@ public class TemplateGraphQL {
     /**
      * Create a new calendar template (admin only). Requires ADMIN role in JWT claims.
      *
-     * @param input Template creation data
+     * @param input
+     *            Template creation data
      * @return Created template
      */
     @Mutation("createTemplate")
@@ -134,8 +134,7 @@ public class TemplateGraphQL {
     @RolesAllowed(Roles.ADMIN)
     @Transactional
     public CalendarTemplate createTemplate(
-            @Name("input") @Description("Template creation data") @NotNull @Valid
-                    TemplateInput input) {
+            @Name("input") @Description("Template creation data") @NotNull @Valid TemplateInput input) {
         LOG.infof("Mutation: createTemplate(name=%s)", input.name);
 
         try {
@@ -155,13 +154,14 @@ public class TemplateGraphQL {
     /**
      * Update an existing calendar template (admin only). Requires ADMIN role in JWT claims.
      *
-     * @param id Template ID
-     * @param input Template update data
+     * @param id
+     *            Template ID
+     * @param input
+     *            Template update data
      * @return Updated template
      */
     /**
-     * Debug query to check current user's security identity and roles. Temporary - remove after
-     * debugging.
+     * Debug query to check current user's security identity and roles. Temporary - remove after debugging.
      */
     @Query("debugSecurityIdentity")
     @Description("Debug: Show current security identity and roles")
@@ -170,41 +170,26 @@ public class TemplateGraphQL {
             return "SecurityIdentity is null";
         }
         StringBuilder sb = new StringBuilder();
-        sb.append("Anonymous: ")
-                .append(securityIdentity.isAnonymous())
-                .append(System.lineSeparator());
+        sb.append("Anonymous: ").append(securityIdentity.isAnonymous()).append(System.lineSeparator());
         sb.append("Principal: ")
-                .append(
-                        securityIdentity.getPrincipal() != null
-                                ? securityIdentity.getPrincipal().getName()
-                                : "null")
+                .append(securityIdentity.getPrincipal() != null ? securityIdentity.getPrincipal().getName() : "null")
                 .append(System.lineSeparator());
         sb.append("Roles: ").append(securityIdentity.getRoles()).append(System.lineSeparator());
-        sb.append("Has ADMIN: ")
-                .append(securityIdentity.hasRole("ADMIN"))
-                .append(System.lineSeparator());
-        sb.append("Has USER: ")
-                .append(securityIdentity.hasRole("USER"))
-                .append(System.lineSeparator());
-        sb.append("Attributes: ")
-                .append(securityIdentity.getAttributes())
-                .append(System.lineSeparator());
+        sb.append("Has ADMIN: ").append(securityIdentity.hasRole("ADMIN")).append(System.lineSeparator());
+        sb.append("Has USER: ").append(securityIdentity.hasRole("USER")).append(System.lineSeparator());
+        sb.append("Attributes: ").append(securityIdentity.getAttributes()).append(System.lineSeparator());
         LOG.info("Debug security identity: " + sb.toString());
         return sb.toString();
     }
 
     @Mutation("updateTemplate")
-    @Description(
-            "Update an existing calendar template (admin only). Requires ADMIN role in JWT claims.")
+    @Description("Update an existing calendar template (admin only). Requires ADMIN role in JWT claims.")
     @RolesAllowed(Roles.ADMIN)
     @Transactional
-    public CalendarTemplate updateTemplate(
-            @Name("id") @Description("Template ID to update") @NotNull String id,
-            @Name("input") @Description("Template update data") @NotNull @Valid
-                    TemplateInput input) {
-        LOG.infof(
-                "Mutation: updateTemplate(id=%s), user roles: %s",
-                id, securityIdentity != null ? securityIdentity.getRoles() : "null");
+    public CalendarTemplate updateTemplate(@Name("id") @Description("Template ID to update") @NotNull String id,
+            @Name("input") @Description("Template update data") @NotNull @Valid TemplateInput input) {
+        LOG.infof("Mutation: updateTemplate(id=%s), user roles: %s", id,
+                securityIdentity != null ? securityIdentity.getRoles() : "null");
 
         try {
             UUID templateId = UUID.fromString(id);
@@ -222,21 +207,20 @@ public class TemplateGraphQL {
     }
 
     /**
-     * Delete a calendar template using soft delete (admin only). Requires ADMIN role in JWT claims.
-     * Sets isActive=false instead of permanently removing the template. Allows soft-deleting
-     * templates with existing calendars to preserve data integrity.
+     * Delete a calendar template using soft delete (admin only). Requires ADMIN role in JWT claims. Sets isActive=false
+     * instead of permanently removing the template. Allows soft-deleting templates with existing calendars to preserve
+     * data integrity.
      *
-     * @param id Template ID
+     * @param id
+     *            Template ID
      * @return true if soft-deleted successfully
      */
     @Mutation("deleteTemplate")
-    @Description(
-            "Soft-delete a calendar template (admin only). Requires ADMIN role in JWT claims. Sets"
-                    + " isActive=false instead of permanently removing the template.")
+    @Description("Soft-delete a calendar template (admin only). Requires ADMIN role in JWT claims. Sets"
+            + " isActive=false instead of permanently removing the template.")
     @RolesAllowed(Roles.ADMIN)
     @Transactional
-    public Boolean deleteTemplate(
-            @Name("id") @Description("Template ID to soft-delete") @NotNull String id) {
+    public Boolean deleteTemplate(@Name("id") @Description("Template ID to soft-delete") @NotNull String id) {
         LOG.infof("Mutation: deleteTemplate(id=%s) - soft delete", id);
 
         try {

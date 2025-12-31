@@ -7,8 +7,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a DelayedJobHandler and configures its job properties. Handlers annotated with this are
- * automatically discovered and registered.
+ * Marks a DelayedJobHandler and configures its job properties. Handlers annotated with this are automatically
+ * discovered and registered.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})

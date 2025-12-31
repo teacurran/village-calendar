@@ -23,26 +23,27 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 
 /**
- * Integration tests for authentication flow. Tests OAuth2 callback handling, JWT issuance, and
- * GraphQL endpoint authentication.
+ * Integration tests for authentication flow. Tests OAuth2 callback handling, JWT issuance, and GraphQL endpoint
+ * authentication.
  *
- * <p>This test suite validates: 1. OAuth callback creates/updates CalendarUser correctly 2. JWT
- * tokens are generated with valid format 3. GraphQL endpoints handle unauthenticated requests
- * correctly
+ * <p>
+ * This test suite validates: 1. OAuth callback creates/updates CalendarUser correctly 2. JWT tokens are generated with
+ * valid format 3. GraphQL endpoints handle unauthenticated requests correctly
  *
- * <p>Note: Full end-to-end JWT authentication testing (including JWT validation) requires running
- * the application with real OAuth providers or manual testing in the Docker Compose environment.
- * These tests focus on the OAuth callback and JWT generation logic.
+ * <p>
+ * Note: Full end-to-end JWT authentication testing (including JWT validation) requires running the application with
+ * real OAuth providers or manual testing in the Docker Compose environment. These tests focus on the OAuth callback and
+ * JWT generation logic.
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class AuthenticationIntegrationTest {
 
-    @Inject AuthenticationService authService;
+    @Inject
+    AuthenticationService authService;
 
     private static final String TEST_PROVIDER = "GOOGLE";
-    private static final String TEST_OAUTH_SUBJECT =
-            "auth-int-test-subject-" + System.currentTimeMillis();
+    private static final String TEST_OAUTH_SUBJECT = "auth-int-test-subject-" + System.currentTimeMillis();
     private static final String TEST_EMAIL = "auth-integration@example.com";
     private static final String TEST_NAME = "Auth Integration Test User";
     private static final String TEST_PICTURE = "https://example.com/picture.jpg";
@@ -68,13 +69,11 @@ class AuthenticationIntegrationTest {
     @Transactional
     void testOAuthCallback_CreatesNewUser() {
         // Given: No existing user with this OAuth subject
-        Optional<CalendarUser> existingUser =
-                CalendarUser.findByOAuthSubject(TEST_PROVIDER, TEST_OAUTH_SUBJECT);
+        Optional<CalendarUser> existingUser = CalendarUser.findByOAuthSubject(TEST_PROVIDER, TEST_OAUTH_SUBJECT);
         assertFalse(existingUser.isPresent(), "User should not exist before OAuth callback");
 
         // When: Handle OAuth callback with mock identity
-        SecurityIdentity identity =
-                createMockIdentity(TEST_OAUTH_SUBJECT, TEST_EMAIL, TEST_NAME, TEST_PICTURE);
+        SecurityIdentity identity = createMockIdentity(TEST_OAUTH_SUBJECT, TEST_EMAIL, TEST_NAME, TEST_PICTURE);
         CalendarUser user = authService.handleOAuthCallback("google", identity, null);
 
         // Then: User is created with correct information
@@ -88,8 +87,7 @@ class AuthenticationIntegrationTest {
         assertNotNull(user.lastLoginAt, "Last login should be set");
 
         // Verify user is persisted in database
-        Optional<CalendarUser> persistedUser =
-                CalendarUser.findByOAuthSubject(TEST_PROVIDER, TEST_OAUTH_SUBJECT);
+        Optional<CalendarUser> persistedUser = CalendarUser.findByOAuthSubject(TEST_PROVIDER, TEST_OAUTH_SUBJECT);
         assertTrue(persistedUser.isPresent(), "User should be persisted");
         assertEquals(user.id, persistedUser.get().id, "Persisted user ID should match");
 
@@ -116,8 +114,7 @@ class AuthenticationIntegrationTest {
         String newEmail = "new-email@example.com";
         String newName = "New Name";
         String newPicture = "https://example.com/new-picture.jpg";
-        SecurityIdentity identity =
-                createMockIdentity(existingUser.oauthSubject, newEmail, newName, newPicture);
+        SecurityIdentity identity = createMockIdentity(existingUser.oauthSubject, newEmail, newName, newPicture);
         CalendarUser user = authService.handleOAuthCallback("google", identity, null);
 
         // Then: User is updated with new information
@@ -129,11 +126,8 @@ class AuthenticationIntegrationTest {
         assertTrue(user.lastLoginAt.isAfter(oldLastLogin), "Last login should be updated");
 
         // Verify only one user exists in database
-        long userCount =
-                CalendarUser.count(
-                        "oauthProvider = ?1 AND oauthSubject = ?2",
-                        TEST_PROVIDER,
-                        existingUser.oauthSubject);
+        long userCount = CalendarUser.count("oauthProvider = ?1 AND oauthSubject = ?2", TEST_PROVIDER,
+                existingUser.oauthSubject);
         assertEquals(1, userCount, "Should still have only one user record");
 
         testUser = user;
@@ -144,16 +138,12 @@ class AuthenticationIntegrationTest {
     @Transactional
     void testOAuthCallback_RequiresEmail() {
         // Given: OAuth identity without email
-        SecurityIdentity identity =
-                createMockIdentity("no-email-subject", null, TEST_NAME, TEST_PICTURE);
+        SecurityIdentity identity = createMockIdentity("no-email-subject", null, TEST_NAME, TEST_PICTURE);
 
         // When/Then: Should throw exception
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> {
-                    authService.handleOAuthCallback("google", identity, null);
-                },
-                "Should throw exception when email is missing");
+        assertThrows(IllegalArgumentException.class, () -> {
+            authService.handleOAuthCallback("google", identity, null);
+        }, "Should throw exception when email is missing");
     }
 
     // ============================================================================
@@ -231,82 +221,59 @@ class AuthenticationIntegrationTest {
     @Order(20)
     void testGraphQL_MeQuery_WithoutAuthentication() {
         // When: Query 'me' endpoint without authentication
-        String query =
-                """
-            query {
-                me {
-                    id
-                    email
+        String query = """
+                query {
+                    me {
+                        id
+                        email
+                    }
                 }
-            }
-            """;
+                """;
 
         // Then: Should return null (no authenticated user)
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("data.me", nullValue())
-                .body("errors", nullValue());
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.me", nullValue()).body("errors", nullValue());
     }
 
     @Test
     @Order(21)
     void testGraphQL_MyCalendars_WithoutAuthentication() {
         // When: Query 'myCalendars' endpoint without authentication
-        String query =
-                """
-            query {
-                myCalendars {
-                    id
-                    name
+        String query = """
+                query {
+                    myCalendars {
+                        id
+                        name
+                    }
                 }
-            }
-            """;
+                """;
 
         // Then: Should return authorization error
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("errors", notNullValue())
-                .body(
-                        "errors[0].message",
-                        anyOf(containsString("Unauthorized"), containsString("System error")));
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue())
+                .body("errors[0].message", anyOf(containsString("Unauthorized"), containsString("System error")));
     }
 
     @Test
     @Order(22)
     void testGraphQL_CreateCalendar_WithoutAuthentication() {
         // When: Try to create calendar without authentication
-        String mutation =
-                """
-            mutation {
-                createCalendar(input: {
-                    name: "Unauthorized Calendar"
-                    year: 2025
-                    templateId: "00000000-0000-0000-0000-000000000001"
-                }) {
-                    id
+        String mutation = """
+                mutation {
+                    createCalendar(input: {
+                        name: "Unauthorized Calendar"
+                        year: 2025
+                        templateId: "00000000-0000-0000-0000-000000000001"
+                    }) {
+                        id
+                    }
                 }
-            }
-            """;
+                """;
 
         // Then: Should return authorization error
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", mutation))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("errors", notNullValue())
-                .body(
-                        "errors[0].message",
-                        anyOf(containsString("Unauthorized"), containsString("System error")));
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue())
+                .body("errors[0].message", anyOf(containsString("Unauthorized"), containsString("System error")));
     }
 
     // ============================================================================
@@ -320,12 +287,8 @@ class AuthenticationIntegrationTest {
         // Test the complete authentication workflow from OAuth callback to JWT issuance
 
         // Step 1: Simulate OAuth callback
-        SecurityIdentity identity =
-                createMockIdentity(
-                        "complete-flow-subject-" + System.currentTimeMillis(),
-                        "complete-flow@example.com",
-                        "Complete Flow Test",
-                        "https://example.com/avatar.jpg");
+        SecurityIdentity identity = createMockIdentity("complete-flow-subject-" + System.currentTimeMillis(),
+                "complete-flow@example.com", "Complete Flow Test", "https://example.com/avatar.jpg");
         CalendarUser user = authService.handleOAuthCallback("google", identity, null);
 
         assertNotNull(user, "User should be created");
@@ -339,8 +302,8 @@ class AuthenticationIntegrationTest {
         assertTrue(jwt.split("\\.").length == 3, "JWT should be valid format");
 
         // Step 3: Verify user can be retrieved from database
-        Optional<CalendarUser> retrievedUser =
-                CalendarUser.findByOAuthSubject("GOOGLE", identity.getPrincipal().getName());
+        Optional<CalendarUser> retrievedUser = CalendarUser.findByOAuthSubject("GOOGLE",
+                identity.getPrincipal().getName());
         assertTrue(retrievedUser.isPresent(), "User should be retrievable from database");
         assertEquals(user.id, retrievedUser.get().id, "Retrieved user should match created user");
 
@@ -356,11 +319,10 @@ class AuthenticationIntegrationTest {
     // ============================================================================
 
     /**
-     * Helper method to create a mock SecurityIdentity for testing OAuth callbacks. This simulates
-     * the SecurityIdentity object that would be provided by OIDC providers.
+     * Helper method to create a mock SecurityIdentity for testing OAuth callbacks. This simulates the SecurityIdentity
+     * object that would be provided by OIDC providers.
      */
-    private SecurityIdentity createMockIdentity(
-            String subject, String email, String name, String picture) {
+    private SecurityIdentity createMockIdentity(String subject, String email, String name, String picture) {
 
         return new SecurityIdentity() {
             @Override
@@ -396,15 +358,12 @@ class AuthenticationIntegrationTest {
 
             @Override
             public Map<String, Object> getAttributes() {
-                return Map.of(
-                        "email", email != null ? email : "",
-                        "name", name != null ? name : "",
-                        "picture", picture != null ? picture : "");
+                return Map.of("email", email != null ? email : "", "name", name != null ? name : "", "picture",
+                        picture != null ? picture : "");
             }
 
             @Override
-            public <T extends io.quarkus.security.credential.Credential> T getCredential(
-                    Class<T> aClass) {
+            public <T extends io.quarkus.security.credential.Credential> T getCredential(Class<T> aClass) {
                 return null;
             }
 
@@ -413,13 +372,11 @@ class AuthenticationIntegrationTest {
                 return Set.of();
             }
 
-            public <T extends io.quarkus.security.credential.Credential> Set<T> getCredentials(
-                    Class<T> aClass) {
+            public <T extends io.quarkus.security.credential.Credential> Set<T> getCredentials(Class<T> aClass) {
                 return Set.of();
             }
 
-            public io.smallrye.mutiny.Uni<Boolean> checkPermission(
-                    java.security.Permission permission) {
+            public io.smallrye.mutiny.Uni<Boolean> checkPermission(java.security.Permission permission) {
                 return io.smallrye.mutiny.Uni.createFrom().item(true);
             }
         };

@@ -10,15 +10,15 @@ import org.jboss.logging.Logger;
 import io.quarkus.security.identity.SecurityIdentity;
 
 /**
- * Security configuration for the calendar service. Handles JWT-based authentication for GraphQL API
- * and REST endpoints.
+ * Security configuration for the calendar service. Handles JWT-based authentication for GraphQL API and REST endpoints.
  */
 @ApplicationScoped
 public class SecurityConfig {
 
     private static final Logger LOG = Logger.getLogger(SecurityConfig.class);
 
-    @Inject SecurityIdentity securityIdentity;
+    @Inject
+    SecurityIdentity securityIdentity;
 
     /**
      * Check if the current request is authenticated.
@@ -32,7 +32,8 @@ public class SecurityConfig {
     /**
      * Check if the current user has a specific role.
      *
-     * @param role Role name to check (e.g., "USER", "ADMIN")
+     * @param role
+     *            Role name to check (e.g., "USER", "ADMIN")
      * @return true if the user has the role
      */
     public boolean hasRole(String role) {
@@ -53,9 +54,7 @@ public class SecurityConfig {
             String subject = securityIdentity.getPrincipal().getName();
             return UUID.fromString(subject);
         } catch (IllegalArgumentException e) {
-            LOG.errorf(
-                    "Invalid user ID in security principal: %s",
-                    securityIdentity.getPrincipal().getName());
+            LOG.errorf("Invalid user ID in security principal: %s", securityIdentity.getPrincipal().getName());
             return null;
         }
     }

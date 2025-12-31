@@ -35,8 +35,7 @@ import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PaymentService;
 
 /**
- * REST resource for handling Stripe webhooks. Validates webhook signatures and processes payment
- * events.
+ * REST resource for handling Stripe webhooks. Validates webhook signatures and processes payment events.
  */
 @Path("/webhooks")
 @ApplicationScoped
@@ -50,129 +49,77 @@ public class WebhookResource {
 
     public static final String STRIPE_OBJECT_PROPERTY = "object";
 
-    @Inject PaymentService paymentService;
+    @Inject
+    PaymentService paymentService;
 
-    @Inject OrderService orderService;
+    @Inject
+    OrderService orderService;
 
     /**
      * Handle Stripe webhook events. Validates signature and processes payment intent events.
      *
-     * @param payload Raw webhook payload
-     * @param signatureHeader Stripe-Signature header value
+     * @param payload
+     *            Raw webhook payload
+     * @param signatureHeader
+     *            Stripe-Signature header value
      * @return Response indicating success or failure
      */
     @POST
     @Path("/stripe")
     @PermitAll
     @Transactional
-    @Operation(
-            summary = "Handle Stripe webhook events",
-            description =
-                    "Processes Stripe payment webhook events with signature verification. This"
-                            + " endpoint is called by Stripe when payment events occur. Supported event"
-                            + " types: checkout.session.completed, payment_intent.succeeded,"
-                            + " payment_intent.payment_failed, charge.refunded.")
+    @Operation(summary = "Handle Stripe webhook events", description = "Processes Stripe payment webhook events with signature verification. This"
+            + " endpoint is called by Stripe when payment events occur. Supported event"
+            + " types: checkout.session.completed, payment_intent.succeeded,"
+            + " payment_intent.payment_failed, charge.refunded.")
     @APIResponses({
-        @APIResponse(
-                responseCode = "200",
-                description = "Webhook processed successfully",
-                content =
-                        @Content(
-                                mediaType = MediaType.APPLICATION_JSON,
-                                schema = @Schema(implementation = WebhookSuccessResponse.class),
-                                examples = @ExampleObject(value = "{\"status\": \"success\"}"))),
-        @APIResponse(
-                responseCode = "400",
-                description = "Invalid signature or malformed payload",
-                content =
-                        @Content(
-                                mediaType = MediaType.APPLICATION_JSON,
-                                schema = @Schema(implementation = WebhookErrorResponse.class),
-                                examples =
-                                        @ExampleObject(
-                                                value = "{\"error\": \"Invalid signature\"}"))),
-        @APIResponse(
-                responseCode = "500",
-                description = "Internal server error processing webhook",
-                content =
-                        @Content(
-                                mediaType = MediaType.APPLICATION_JSON,
-                                schema = @Schema(implementation = WebhookErrorResponse.class),
-                                examples =
-                                        @ExampleObject(
-                                                value =
-                                                        "{\"error\": \"Failed to process"
-                                                                + " event\"}")))
-    })
+            @APIResponse(responseCode = "200", description = "Webhook processed successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = WebhookSuccessResponse.class), examples = @ExampleObject(value = "{\"status\": \"success\"}"))),
+            @APIResponse(responseCode = "400", description = "Invalid signature or malformed payload", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = WebhookErrorResponse.class), examples = @ExampleObject(value = "{\"error\": \"Invalid signature\"}"))),
+            @APIResponse(responseCode = "500", description = "Internal server error processing webhook", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = WebhookErrorResponse.class), examples = @ExampleObject(value = "{\"error\": \"Failed to process"
+                    + " event\"}")))})
     public Response handleStripeWebhook(
-            @Parameter(
-                            description = "Raw JSON payload from Stripe webhook event",
-                            required = true,
-                            example =
-                                    "{\"id\": \"evt_...\", \"type\": \"payment_intent.succeeded\","
-                                            + " \"data\": {...}}")
-                    String payload,
-            @HeaderParam("Stripe-Signature")
-                    @Parameter(
-                            description =
-                                    "HMAC-SHA256 signature generated by Stripe using the webhook"
-                                            + " secret. Required for webhook signature verification to"
-                                            + " prevent replay attacks.",
-                            required = true,
-                            example = "t=1234567890,v1=abc123...")
-                    String signatureHeader) {
+            @Parameter(description = "Raw JSON payload from Stripe webhook event", required = true, example = "{\"id\": \"evt_...\", \"type\": \"payment_intent.succeeded\","
+                    + " \"data\": {...}}") String payload,
+            @HeaderParam("Stripe-Signature") @Parameter(description = "HMAC-SHA256 signature generated by Stripe using the webhook"
+                    + " secret. Required for webhook signature verification to"
+                    + " prevent replay attacks.", required = true, example = "t=1234567890,v1=abc123...") String signatureHeader) {
         LOG.infof("Received Stripe webhook");
 
         // Validate signature
         if (signatureHeader == null || signatureHeader.isBlank()) {
             LOG.error("Missing Stripe-Signature header");
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(ErrorResponse.of("Missing signature header"))
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of("Missing signature header"))
                     .build();
         }
 
         Event event;
         try {
-            String webhookSecret =
-                    paymentService.getWebhookSecret() != null
-                            ? paymentService.getWebhookSecret()
-                            : "";
+            String webhookSecret = paymentService.getWebhookSecret() != null ? paymentService.getWebhookSecret() : "";
 
             // Debug logging for webhook secret configuration
             if (webhookSecret == null || webhookSecret.isEmpty()) {
                 LOG.error("WEBHOOK SECRET IS NOT CONFIGURED - webhook secret is null or empty");
             } else if (webhookSecret.equals("whsec_placeholder")) {
-                LOG.error(
-                        "WEBHOOK SECRET IS PLACEHOLDER - environment variable STRIPE_WEBHOOK_SECRET"
-                                + " not set");
+                LOG.error("WEBHOOK SECRET IS PLACEHOLDER - environment variable STRIPE_WEBHOOK_SECRET" + " not set");
             } else {
-                LOG.infof(
-                        "Webhook secret configured (length: %d, prefix: %s...)",
-                        webhookSecret.length(),
+                LOG.infof("Webhook secret configured (length: %d, prefix: %s...)", webhookSecret.length(),
                         webhookSecret.substring(0, Math.min(10, webhookSecret.length())));
             }
 
             // Log signature header info
-            LOG.infof(
-                    "Stripe-Signature header length: %d, prefix: %s...",
-                    signatureHeader.length(),
+            LOG.infof("Stripe-Signature header length: %d, prefix: %s...", signatureHeader.length(),
                     signatureHeader.substring(0, Math.min(30, signatureHeader.length())));
 
             event = Webhook.constructEvent(payload, signatureHeader, webhookSecret);
             LOG.infof("Webhook signature validated successfully. Event type: %s", event.getType());
         } catch (SignatureVerificationException e) {
             LOG.errorf("Invalid webhook signature: %s", e.getMessage());
-            LOG.errorf(
-                    "SignatureVerificationException details - sigHeader length: %d, payload length:"
-                            + " %d",
+            LOG.errorf("SignatureVerificationException details - sigHeader length: %d, payload length:" + " %d",
                     signatureHeader.length(), payload != null ? payload.length() : 0);
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(ErrorResponse.of("Invalid signature"))
-                    .build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of("Invalid signature")).build();
         } catch (Exception e) {
             LOG.errorf(e, "Failed to construct webhook event");
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(ErrorResponse.of("Invalid webhook payload"))
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of("Invalid webhook payload"))
                     .build();
         }
 
@@ -183,44 +130,44 @@ public class WebhookResource {
         } catch (Exception e) {
             LOG.errorf(e, "Failed to process webhook event");
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(ErrorResponse.of("Failed to process event"))
-                    .build();
+                    .entity(ErrorResponse.of("Failed to process event")).build();
         }
     }
 
     /**
      * Process different webhook event types.
      *
-     * @param event Stripe event
+     * @param event
+     *            Stripe event
      */
     private void processWebhookEvent(Event event) {
         String eventType = event.getType();
         LOG.infof("Processing webhook event: %s (ID: %s)", eventType, event.getId());
 
         switch (eventType) {
-            case "checkout.session.completed":
+            case "checkout.session.completed" :
                 handleCheckoutSessionCompleted(event);
                 break;
-            case "payment_intent.succeeded":
+            case "payment_intent.succeeded" :
                 handlePaymentIntentSucceeded(event);
                 break;
-            case "payment_intent.payment_failed":
+            case "payment_intent.payment_failed" :
                 handlePaymentIntentFailed(event);
                 break;
-            case "charge.refunded":
+            case "charge.refunded" :
                 handleChargeRefunded(event);
                 break;
-            default:
+            default :
                 LOG.debugf("Unhandled webhook event type: %s", eventType);
         }
     }
 
     /**
-     * Handle Stripe Checkout Session completed event. This is the primary payment success event for
-     * embedded checkout flow. Delegates to PaymentService which handles order updates and shipping
-     * info extraction.
+     * Handle Stripe Checkout Session completed event. This is the primary payment success event for embedded checkout
+     * flow. Delegates to PaymentService which handles order updates and shipping info extraction.
      *
-     * @param event Stripe event
+     * @param event
+     *            Stripe event
      */
     private void handleCheckoutSessionCompleted(Event event) {
         // Deserialize the Session object from the event data
@@ -244,21 +191,15 @@ public class WebhookResource {
                 session.setId(sessionId);
 
                 // Set payment intent if present
-                if (sessionData.has("payment_intent")
-                        && !sessionData.get("payment_intent").isNull()) {
+                if (sessionData.has("payment_intent") && !sessionData.get("payment_intent").isNull()) {
                     session.setPaymentIntent(sessionData.get("payment_intent").asText());
                 }
 
                 // Set metadata if present
                 if (sessionData.has("metadata") && !sessionData.get("metadata").isNull()) {
                     java.util.Map<String, String> metadata = new java.util.HashMap<>();
-                    sessionData
-                            .get("metadata")
-                            .fields()
-                            .forEachRemaining(
-                                    field ->
-                                            metadata.put(
-                                                    field.getKey(), field.getValue().asText()));
+                    sessionData.get("metadata").fields()
+                            .forEachRemaining(field -> metadata.put(field.getKey(), field.getValue().asText()));
                     session.setMetadata(metadata);
                 }
             }
@@ -267,9 +208,7 @@ public class WebhookResource {
             throw new IllegalStateException("Failed to parse checkout session data", e);
         }
 
-        LOG.infof(
-                "Checkout session completed: %s (PaymentIntent: %s)",
-                session.getId(), session.getPaymentIntent());
+        LOG.infof("Checkout session completed: %s (PaymentIntent: %s)", session.getId(), session.getPaymentIntent());
 
         if (session.getId() == null || session.getId().isEmpty()) {
             LOG.errorf("Checkout session has no ID");
@@ -281,10 +220,11 @@ public class WebhookResource {
     }
 
     /**
-     * Handle successful payment (direct PaymentIntent flow). This event is for direct PaymentIntent
-     * integration (not Checkout Sessions). Delegates to PaymentService for processing.
+     * Handle successful payment (direct PaymentIntent flow). This event is for direct PaymentIntent integration (not
+     * Checkout Sessions). Delegates to PaymentService for processing.
      *
-     * @param event Stripe event
+     * @param event
+     *            Stripe event
      */
     private void handlePaymentIntentSucceeded(Event event) {
         // Parse payment intent data from JSON - works in both test and production
@@ -300,8 +240,7 @@ public class WebhookResource {
         JsonNode chargeNode = paymentIntentData.get("latest_charge");
         String chargeId = chargeNode != null ? chargeNode.asText() : null;
 
-        LOG.infof(
-                "Payment succeeded for PaymentIntent: %s (Charge: %s)", paymentIntentId, chargeId);
+        LOG.infof("Payment succeeded for PaymentIntent: %s (Charge: %s)", paymentIntentId, chargeId);
 
         if (paymentIntentId == null || paymentIntentId.isEmpty()) {
             LOG.errorf("Payment intent has no ID");
@@ -315,7 +254,8 @@ public class WebhookResource {
     /**
      * Handle failed payment. Logs the failure and updates order notes.
      *
-     * @param event Stripe event
+     * @param event
+     *            Stripe event
      */
     private void handlePaymentIntentFailed(Event event) {
         // Parse payment intent data from JSON - works in both test and production
@@ -346,10 +286,8 @@ public class WebhookResource {
 
         // Add failure note - extract error message from last_payment_error
         JsonNode errorNode = paymentIntentData.get("last_payment_error");
-        String failureMessage =
-                (errorNode != null && errorNode.has("message"))
-                        ? errorNode.get("message").asText()
-                        : "Unknown error";
+        String failureMessage = (errorNode != null && errorNode.has("message")) ? errorNode.get("message").asText()
+                : "Unknown error";
 
         String timestamp = Instant.now().toString();
         String noteEntry = String.format("[%s] Payment failed: %s%n", timestamp, failureMessage);
@@ -360,10 +298,11 @@ public class WebhookResource {
     }
 
     /**
-     * Handle charge refunded event. Updates order notes with refund information. Delegates to
-     * PaymentService for idempotent processing.
+     * Handle charge refunded event. Updates order notes with refund information. Delegates to PaymentService for
+     * idempotent processing.
      *
-     * @param event Stripe event
+     * @param event
+     *            Stripe event
      */
     private void handleChargeRefunded(Event event) {
         // Parse charge data from JSON - works in both test and production
@@ -400,9 +339,7 @@ public class WebhookResource {
             return;
         }
 
-        LOG.infof(
-                "Processing refund %s for charge %s, amount: %d cents",
-                refundId, chargeId, amountRefunded);
+        LOG.infof("Processing refund %s for charge %s, amount: %d cents", refundId, chargeId, amountRefunded);
 
         // Delegate to PaymentService for idempotent processing
         paymentService.processRefundWebhook(chargeId, refundId, amountRefunded);
@@ -418,9 +355,7 @@ public class WebhookResource {
     /** Schema for webhook error response. */
     @Schema(description = "Webhook error response")
     public static class WebhookErrorResponse {
-        @Schema(
-                description = "Error message describing what went wrong",
-                example = "Invalid signature")
+        @Schema(description = "Error message describing what went wrong", example = "Invalid signature")
         public String error;
     }
 }

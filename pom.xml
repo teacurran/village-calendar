@@ -302,13 +302,11 @@
         <version>2.43.0</version>
         <configuration>
           <java>
-            <!-- Google Java Format for consistent style -->
-            <!-- Note: Google Java Format uses fixed 100-char line length, not configurable -->
-            <googleJavaFormat>
-              <version>1.19.2</version>
-              <style>AOSP</style>
-              <reflowLongStrings>false</reflowLongStrings>
-            </googleJavaFormat>
+            <!-- Eclipse JDT Formatter - configurable line length (120 chars) -->
+            <eclipse>
+              <version>4.29</version>
+              <file>${project.basedir}/eclipse-formatter.xml</file>
+            </eclipse>
             <!-- Import ordering and cleanup -->
             <removeUnusedImports/>
             <importOrder>

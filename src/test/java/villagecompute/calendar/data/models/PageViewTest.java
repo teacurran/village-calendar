@@ -23,13 +23,17 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class PageViewTest {
 
-    @Inject Validator validator;
+    @Inject
+    Validator validator;
 
-    @Inject TestDataCleaner testDataCleaner;
+    @Inject
+    TestDataCleaner testDataCleaner;
 
-    @Inject CalendarUserRepository calendarUserRepository;
+    @Inject
+    CalendarUserRepository calendarUserRepository;
 
-    @Inject jakarta.persistence.EntityManager entityManager;
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
 
     private CalendarUser testUser;
 
@@ -182,8 +186,7 @@ class PageViewTest {
 
         // Then
         assertEquals(2, userViews.size());
-        assertTrue(
-                userViews.stream().allMatch(v -> v.user != null && v.user.id.equals(testUser.id)));
+        assertTrue(userViews.stream().allMatch(v -> v.user != null && v.user.id.equals(testUser.id)));
     }
 
     @Test
@@ -223,10 +226,8 @@ class PageViewTest {
         entityManager.flush(); // Flush to persist first
 
         // Manually set created date using native SQL
-        entityManager
-                .createNativeQuery("UPDATE page_views SET created = :newCreated WHERE id = :id")
-                .setParameter("newCreated", yesterday.minus(1, ChronoUnit.DAYS))
-                .setParameter("id", oldView.id)
+        entityManager.createNativeQuery("UPDATE page_views SET created = :newCreated WHERE id = :id")
+                .setParameter("newCreated", yesterday.minus(1, ChronoUnit.DAYS)).setParameter("id", oldView.id)
                 .executeUpdate();
         entityManager.flush();
         entityManager.clear(); // Clear persistence context to force reload
@@ -242,10 +243,7 @@ class PageViewTest {
 
         // Then
         assertEquals(2, recentViews.size());
-        assertTrue(
-                recentViews.stream()
-                        .allMatch(
-                                v -> v.created.isAfter(yesterday) && v.created.isBefore(tomorrow)));
+        assertTrue(recentViews.stream().allMatch(v -> v.created.isAfter(yesterday) && v.created.isBefore(tomorrow)));
     }
 
     @Test
@@ -298,10 +296,8 @@ class PageViewTest {
         entityManager.flush(); // Flush to persist first
 
         // Manually set old created date using native SQL
-        entityManager
-                .createNativeQuery("UPDATE page_views SET created = :newCreated WHERE id = :id")
-                .setParameter("newCreated", yesterday.minus(2, ChronoUnit.DAYS))
-                .setParameter("id", oldView.id)
+        entityManager.createNativeQuery("UPDATE page_views SET created = :newCreated WHERE id = :id")
+                .setParameter("newCreated", yesterday.minus(2, ChronoUnit.DAYS)).setParameter("id", oldView.id)
                 .executeUpdate();
         entityManager.flush();
         entityManager.clear(); // Clear persistence context to force reload
@@ -388,8 +384,7 @@ class PageViewTest {
         assertEquals(testUser.id, found.user.id);
         assertEquals("/calendar/123/edit", found.path);
         assertEquals("https://reddit.com/r/productivity", found.referrer);
-        assertEquals(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", found.userAgent);
+        assertEquals("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", found.userAgent);
         assertNotNull(found.created);
         assertNotNull(found.updated);
         assertEquals(0L, found.version);
@@ -482,9 +477,7 @@ class PageViewTest {
 
         // Then
         assertTrue(violations.size() >= 1);
-        boolean hasViolation =
-                violations.stream()
-                        .anyMatch(v -> "referrer".equals(v.getPropertyPath().toString()));
+        boolean hasViolation = violations.stream().anyMatch(v -> "referrer".equals(v.getPropertyPath().toString()));
         assertTrue(hasViolation);
     }
 
@@ -499,9 +492,7 @@ class PageViewTest {
 
         // Then
         assertTrue(violations.size() >= 1);
-        boolean hasViolation =
-                violations.stream()
-                        .anyMatch(v -> "userAgent".equals(v.getPropertyPath().toString()));
+        boolean hasViolation = violations.stream().anyMatch(v -> "userAgent".equals(v.getPropertyPath().toString()));
         assertTrue(hasViolation);
     }
 
