@@ -339,7 +339,7 @@ class OrderResolverTest {
             mutation {
                 placeOrder(input: {
                     calendarId: "%s"
-                    productType: WALL_CALENDAR
+                    productType: PRINT
                     quantity: 1
                     shippingAddress: {
                         street: "123 Test St"
@@ -349,7 +349,10 @@ class OrderResolverTest {
                         country: "US"
                     }
                 }) {
-                    id
+                    order {
+                        id
+                    }
+                    clientSecret
                 }
             }
             """,
@@ -401,7 +404,7 @@ class OrderResolverTest {
             mutation {
                 placeOrder(input: {
                     calendarId: "not-a-uuid"
-                    productType: WALL_CALENDAR
+                    productType: PRINT
                     quantity: 1
                     shippingAddress: {
                         name: "Test User"
@@ -412,7 +415,10 @@ class OrderResolverTest {
                         country: "US"
                     }
                 }) {
-                    id
+                    order {
+                        id
+                    }
+                    clientSecret
                 }
             }
             """;
@@ -436,7 +442,7 @@ class OrderResolverTest {
             mutation {
                 placeOrder(input: {
                     calendarId: "%s"
-                    productType: WALL_CALENDAR
+                    productType: PRINT
                     quantity: 0
                     shippingAddress: {
                         street: "123 Test St"
@@ -446,7 +452,10 @@ class OrderResolverTest {
                         country: "US"
                     }
                 }) {
-                    id
+                    order {
+                        id
+                    }
+                    clientSecret
                 }
             }
             """,

@@ -5,9 +5,11 @@ import java.io.StringReader;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import org.apache.batik.transcoder.SVGAbstractTranscoder;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
+import org.apache.fop.svg.AbstractFOPTranscoder;
 import org.apache.fop.svg.PDFTranscoder;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
@@ -52,11 +54,11 @@ public class PDFRenderingService {
             PDFTranscoder transcoder = new PDFTranscoder();
 
             // Set PDF page size
-            transcoder.addTranscodingHint(PDFTranscoder.KEY_WIDTH, PDF_WIDTH_POINTS);
-            transcoder.addTranscodingHint(PDFTranscoder.KEY_HEIGHT, PDF_HEIGHT_POINTS);
+            transcoder.addTranscodingHint(SVGAbstractTranscoder.KEY_WIDTH, PDF_WIDTH_POINTS);
+            transcoder.addTranscodingHint(SVGAbstractTranscoder.KEY_HEIGHT, PDF_HEIGHT_POINTS);
 
             // Enable auto-font detection to use system fonts (Noto Emoji, DejaVu Sans, etc.)
-            transcoder.addTranscodingHint(PDFTranscoder.KEY_AUTO_FONTS, Boolean.TRUE);
+            transcoder.addTranscodingHint(AbstractFOPTranscoder.KEY_AUTO_FONTS, Boolean.TRUE);
 
             // Create input and output
             StringReader reader = new StringReader(svgContent);
