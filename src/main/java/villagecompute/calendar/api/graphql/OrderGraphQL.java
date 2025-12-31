@@ -28,6 +28,7 @@ import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
+import villagecompute.calendar.exceptions.PaymentException;
 import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PaymentService;
@@ -453,7 +454,7 @@ public class OrderGraphQL {
 
         } catch (StripeException e) {
             LOG.errorf(e, "Failed to create PaymentIntent for order %s", order.id);
-            throw new RuntimeException("Failed to create payment intent: " + e.getMessage());
+            throw new PaymentException("Failed to create payment intent: " + e.getMessage(), e);
         }
     }
 
@@ -533,7 +534,7 @@ public class OrderGraphQL {
 
         } catch (StripeException e) {
             LOG.errorf(e, "Failed to create PaymentIntent for order %s", order.id);
-            throw new RuntimeException("Failed to create payment intent: " + e.getMessage());
+            throw new PaymentException("Failed to create payment intent: " + e.getMessage(), e);
         }
     }
 
@@ -766,7 +767,7 @@ public class OrderGraphQL {
 
         } catch (StripeException e) {
             LOG.errorf(e, "Failed to create checkout session");
-            throw new RuntimeException("Failed to create checkout session: " + e.getMessage());
+            throw new PaymentException("Failed to create checkout session: " + e.getMessage(), e);
         }
     }
 

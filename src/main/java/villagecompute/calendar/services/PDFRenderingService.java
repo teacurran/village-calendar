@@ -15,6 +15,8 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.jboss.logging.Logger;
 
+import villagecompute.calendar.exceptions.RenderingException;
+
 /**
  * Service for rendering SVG content to PDF using Apache Batik. Also handles PDF metadata cleaning to remove technology
  * fingerprints.
@@ -38,7 +40,7 @@ public class PDFRenderingService {
      * @param year
      *            The calendar year (for PDF metadata)
      * @return PDF bytes
-     * @throws RuntimeException
+     * @throws RenderingException
      *             if rendering fails
      */
     public byte[] renderSVGToPDF(String svgContent, int year) {
@@ -88,7 +90,7 @@ public class PDFRenderingService {
 
         } catch (Exception e) {
             LOG.errorf(e, "Error rendering SVG to PDF");
-            throw new RuntimeException("PDF rendering failed: " + e.getMessage(), e);
+            throw new RenderingException("PDF rendering failed: " + e.getMessage(), e);
         }
     }
 
@@ -100,7 +102,7 @@ public class PDFRenderingService {
      * @param width
      *            Target width in pixels (height calculated to maintain aspect ratio)
      * @return PNG bytes
-     * @throws RuntimeException
+     * @throws RenderingException
      *             if rendering fails
      */
     public byte[] renderSVGToPNG(String svgContent, int width) {
@@ -142,7 +144,7 @@ public class PDFRenderingService {
 
         } catch (Exception e) {
             LOG.errorf(e, "Error rendering SVG to PNG");
-            throw new RuntimeException("PNG rendering failed: " + e.getMessage(), e);
+            throw new RenderingException("PNG rendering failed: " + e.getMessage(), e);
         }
     }
 
@@ -154,7 +156,7 @@ public class PDFRenderingService {
      * @param width
      *            Target width in pixels
      * @return Base64 data URI string (e.g., "data:image/png;base64,...")
-     * @throws RuntimeException
+     * @throws RenderingException
      *             if rendering fails
      */
     public String renderSVGToPNGDataUri(String svgContent, int width) {

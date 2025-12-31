@@ -9,6 +9,8 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
+import villagecompute.calendar.exceptions.EmailException;
+
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
@@ -170,7 +172,7 @@ public class EmailService {
             LOG.infof("[EMAIL SENT] '%s' from %s to %s", prefixedSubject, from, to);
         } catch (Exception e) {
             LOG.errorf(e, "[EMAIL FAILED] Failed to send '%s' to %s", subject, to);
-            throw new RuntimeException("Failed to send email", e);
+            throw new EmailException("Failed to send email", e);
         }
     }
 
@@ -220,7 +222,7 @@ public class EmailService {
             LOG.infof("[EMAIL SENT] '%s' from %s to %s", prefixedSubject, from, to);
         } catch (Exception e) {
             LOG.errorf(e, "[EMAIL FAILED] Failed to send '%s' to %s", subject, to);
-            throw new RuntimeException("Failed to send email", e);
+            throw new EmailException("Failed to send email", e);
         }
     }
 }

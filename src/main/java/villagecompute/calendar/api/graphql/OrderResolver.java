@@ -35,6 +35,7 @@ import villagecompute.calendar.api.types.PaymentIntentResponse;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
+import villagecompute.calendar.exceptions.PaymentException;
 import villagecompute.calendar.integration.stripe.StripeService;
 import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.OrderService;
@@ -318,7 +319,7 @@ public class OrderResolver {
                     checkoutSuccessUrl + "?session_id={CHECKOUT_SESSION_ID}", checkoutCancelUrl);
         } catch (StripeException e) {
             LOG.errorf(e, "Failed to create Stripe Checkout Session for order %s", order.id);
-            throw new RuntimeException("Failed to create payment session: " + e.getMessage());
+            throw new PaymentException("Failed to create payment session: " + e.getMessage(), e);
         }
 
         // Store Stripe session ID in order for tracking
