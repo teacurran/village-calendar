@@ -3,6 +3,7 @@ package villagecompute.calendar.api.rest;
 import java.time.Instant;
 import java.util.Optional;
 
+import com.stripe.model.StripeObject;
 import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -27,6 +28,8 @@ import com.stripe.exception.SignatureVerificationException;
 import com.stripe.model.Event;
 import com.stripe.net.Webhook;
 
+import villagecompute.calendar.api.types.ErrorResponse;
+import villagecompute.calendar.api.types.SuccessResponse;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PaymentService;
@@ -44,6 +47,8 @@ public class WebhookResource {
 
     private static final Logger LOG = Logger.getLogger(WebhookResource.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    public static final String STRIPE_OBJECT_PROPERTY = "object";
 
     @Inject PaymentService paymentService;
 
@@ -122,7 +127,7 @@ public class WebhookResource {
         if (signatureHeader == null || signatureHeader.isBlank()) {
             LOG.error("Missing Stripe-Signature header");
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("error", "Missing signature header"))
+                    .entity(ErrorResponse.of("Missing signature header"))
                     .build();
         }
 
@@ -162,23 +167,23 @@ public class WebhookResource {
                             + " %d",
                     signatureHeader.length(), payload != null ? payload.length() : 0);
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("error", "Invalid signature"))
+                    .entity(ErrorResponse.of("Invalid signature"))
                     .build();
         } catch (Exception e) {
             LOG.errorf(e, "Failed to construct webhook event");
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("error", "Invalid webhook payload"))
+                    .entity(ErrorResponse.of("Invalid webhook payload"))
                     .build();
         }
 
         // Process the event
         try {
             processWebhookEvent(event);
-            return Response.ok(Map.of("status", "success")).build();
+            return Response.ok(SuccessResponse.ok()).build();
         } catch (Exception e) {
             LOG.errorf(e, "Failed to process webhook event");
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(Map.of("error", "Failed to process event"))
+                    .entity(ErrorResponse.of("Failed to process event"))
                     .build();
         }
     }
@@ -223,8 +228,9 @@ public class WebhookResource {
         try {
             // Try to deserialize directly from the event
             var deserializer = event.getDataObjectDeserializer();
-            if (deserializer.getObject().isPresent()) {
-                session = (com.stripe.model.checkout.Session) deserializer.getObject().get();
+            Optional<StripeObject> stripeObj = deserializer.getObject();
+            if (stripeObj.isPresent()) {
+                session = (com.stripe.model.checkout.Session) stripeObj.get();
             } else {
                 // Fallback: parse from JSON manually for test compatibility
                 String dataJson = event.getData().toJson();
@@ -285,7 +291,7 @@ public class WebhookResource {
         JsonNode paymentIntentData;
         try {
             String dataJson = event.getData().toJson();
-            paymentIntentData = MAPPER.readTree(dataJson).get("object");
+            paymentIntentData = MAPPER.readTree(dataJson).get(STRIPE_OBJECT_PROPERTY);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to parse payment intent data", e);
         }
@@ -316,7 +322,7 @@ public class WebhookResource {
         JsonNode paymentIntentData;
         try {
             String dataJson = event.getData().toJson();
-            paymentIntentData = MAPPER.readTree(dataJson).get("object");
+            paymentIntentData = MAPPER.readTree(dataJson).get(STRIPE_OBJECT_PROPERTY);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to parse payment intent data", e);
         }
@@ -364,7 +370,7 @@ public class WebhookResource {
         JsonNode chargeData;
         try {
             String dataJson = event.getData().toJson();
-            chargeData = MAPPER.readTree(dataJson).get("object");
+            chargeData = MAPPER.readTree(dataJson).get(STRIPE_OBJECT_PROPERTY);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to parse charge data", e);
         }
@@ -389,7 +395,7 @@ public class WebhookResource {
         String refundId = refundNode.get("id").asText();
         Long amountRefunded = refundNode.get("amount").asLong();
 
-        if (refundId == null || refundId.isEmpty() || amountRefunded == null) {
+        if (refundId == null || refundId.isEmpty()) {
             LOG.warnf("Charge %s refunded but missing refund ID or amount", chargeId);
             return;
         }
@@ -400,13 +406,6 @@ public class WebhookResource {
 
         // Delegate to PaymentService for idempotent processing
         paymentService.processRefundWebhook(chargeId, refundId, amountRefunded);
-    }
-
-    /** Helper class for error responses. */
-    private static class Map {
-        static java.util.Map<String, String> of(String key, String value) {
-            return java.util.Collections.singletonMap(key, value);
-        }
     }
 
     /** Schema for successful webhook response. */

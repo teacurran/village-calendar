@@ -15,6 +15,7 @@ import org.jboss.logging.Logger;
 
 import com.stripe.exception.StripeException;
 
+import villagecompute.calendar.api.types.ErrorResponse;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PaymentService;
 
@@ -81,12 +82,12 @@ public class PaymentResource {
         } catch (StripeException e) {
             LOG.errorf("Stripe error creating payment intent: %s", e.getMessage());
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("error", e.getMessage()))
+                    .entity(ErrorResponse.of(e.getMessage()))
                     .build();
         } catch (Exception e) {
             LOG.errorf("Error creating payment intent: %s", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(Map.of("error", "Failed to create payment intent"))
+                    .entity(ErrorResponse.of("Failed to create payment intent"))
                     .build();
         }
     }
@@ -107,7 +108,7 @@ public class PaymentResource {
                         "PaymentIntent %s has status %s, expected 'succeeded'",
                         request.paymentIntentId, paymentIntent.getStatus());
                 return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(Map.of("error", "Payment not completed"))
+                        .entity(ErrorResponse.of("Payment not completed"))
                         .build();
             }
 
@@ -122,7 +123,7 @@ public class PaymentResource {
             String email = (String) orderDetails.get("email");
             if (email == null || email.isEmpty()) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(Map.of("error", "Email is required"))
+                        .entity(ErrorResponse.of("Email is required"))
                         .build();
             }
 
@@ -171,12 +172,12 @@ public class PaymentResource {
         } catch (StripeException e) {
             LOG.errorf("Stripe error confirming payment: %s", e.getMessage());
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("error", e.getMessage()))
+                    .entity(ErrorResponse.of(e.getMessage()))
                     .build();
         } catch (Exception e) {
             LOG.errorf(e, "Error confirming payment: %s", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(Map.of("error", "Failed to confirm payment: " + e.getMessage()))
+                    .entity(ErrorResponse.of("Failed to confirm payment: " + e.getMessage()))
                     .build();
         }
     }

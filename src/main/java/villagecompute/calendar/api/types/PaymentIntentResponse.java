@@ -1,4 +1,4 @@
-package villagecompute.calendar.api.graphql.types;
+package villagecompute.calendar.api.types;
 
 import java.util.UUID;
 
@@ -6,9 +6,10 @@ import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Type;
 
 /**
- * GraphQL response type for Stripe PaymentIntent. Returned by placeOrder mutation to initiate
+ * API response type for Stripe PaymentIntent. Returned by placeOrder mutation to initiate
  * payment on client. The client uses the clientSecret to complete payment via Stripe.js. The order
  * entity is created by webhook after payment succeeds.
+ * Used by both REST and GraphQL endpoints.
  */
 @Type("PaymentIntent")
 @Description(

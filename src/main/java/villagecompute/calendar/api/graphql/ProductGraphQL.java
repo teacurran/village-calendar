@@ -7,7 +7,7 @@ import jakarta.inject.Inject;
 
 import org.eclipse.microprofile.graphql.*;
 
-import villagecompute.calendar.api.graphql.types.Product;
+import villagecompute.calendar.api.types.Product;
 import villagecompute.calendar.services.ProductService;
 
 /** GraphQL API for product catalog */

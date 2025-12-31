@@ -17,6 +17,8 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import villagecompute.calendar.api.types.ErrorResponse;
+import villagecompute.calendar.api.types.SuccessResponse;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
@@ -114,14 +116,14 @@ public class UserCalendarResource {
             calendar = UserCalendar.findById(request.id);
             if (calendar == null) {
                 return Response.status(Response.Status.NOT_FOUND)
-                        .entity(Map.of("error", "Calendar not found"))
+                        .entity(ErrorResponse.of("Calendar not found"))
                         .build();
             }
 
             // Verify ownership
             if (!calendar.user.id.equals(user.id)) {
                 return Response.status(Response.Status.FORBIDDEN)
-                        .entity(Map.of("error", "Not authorized to update this calendar"))
+                        .entity(ErrorResponse.of("Not authorized to update this calendar"))
                         .build();
             }
         } else {
@@ -194,20 +196,20 @@ public class UserCalendarResource {
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
             return Response.status(Response.Status.NOT_FOUND)
-                    .entity(Map.of("error", "Calendar not found"))
+                    .entity(ErrorResponse.of("Calendar not found"))
                     .build();
         }
 
         // Verify ownership
         if (!calendar.user.id.equals(user.id)) {
             return Response.status(Response.Status.FORBIDDEN)
-                    .entity(Map.of("error", "Not authorized to view this calendar"))
+                    .entity(ErrorResponse.of("Not authorized to view this calendar"))
                     .build();
         }
 
         if (calendar.generatedSvg == null) {
             return Response.status(Response.Status.NOT_FOUND)
-                    .entity(Map.of("error", "No preview available"))
+                    .entity(ErrorResponse.of("No preview available"))
                     .build();
         }
 
@@ -231,19 +233,19 @@ public class UserCalendarResource {
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
             return Response.status(Response.Status.NOT_FOUND)
-                    .entity(Map.of("error", "Calendar not found"))
+                    .entity(ErrorResponse.of("Calendar not found"))
                     .build();
         }
 
         // Verify ownership
         if (!calendar.user.id.equals(user.id)) {
             return Response.status(Response.Status.FORBIDDEN)
-                    .entity(Map.of("error", "Not authorized to delete this calendar"))
+                    .entity(ErrorResponse.of("Not authorized to delete this calendar"))
                     .build();
         }
 
         calendar.delete();
 
-        return Response.ok(Map.of("success", true)).build();
+        return Response.ok(SuccessResponse.ok()).build();
     }
 }

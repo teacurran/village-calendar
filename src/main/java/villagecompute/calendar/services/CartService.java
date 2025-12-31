@@ -12,8 +12,8 @@ import org.jboss.logging.Logger;
 
 import villagecompute.calendar.api.graphql.inputs.AddToCartInput;
 import villagecompute.calendar.api.graphql.inputs.AssetInput;
-import villagecompute.calendar.api.graphql.types.Cart;
-import villagecompute.calendar.api.graphql.types.CartItem;
+import villagecompute.calendar.api.types.Cart;
+import villagecompute.calendar.api.types.CartItem;
 import villagecompute.calendar.data.models.ItemAsset;
 
 /** Service for cart operations Handles cart persistence and business logic */
@@ -58,19 +58,46 @@ public class CartService {
         int quantity = input.quantity != null ? input.quantity : 1;
         villagecompute.calendar.data.models.CartItem cartItem;
 
+        // Handle both new and legacy field formats
+        String generatorType = input.generatorType;
+        String description = input.description;
+
+        // If using legacy fields, convert them to new format
+        if (generatorType == null && input.templateId != null) {
+            generatorType = "calendar";
+        }
+        if (description == null && input.templateName != null) {
+            description = input.templateName;
+            if (input.year != null) {
+                description = input.templateName + " (" + input.year + ")";
+            }
+        }
+
         LOG.infof(
                 "Adding item: type=%s, description=%s, quantity=%d",
-                input.generatorType, input.description, quantity);
+                generatorType, description, quantity);
 
         // Create new cart item
         cartItem =
                 cartEntity.addItem(
-                        input.generatorType,
-                        input.description,
+                        generatorType,
+                        description,
                         quantity,
                         unitPrice,
                         input.configuration,
                         productCode);
+
+        // Store legacy fields on the cart item for backwards compatibility
+        if (input.templateId != null) {
+            cartItem.templateId = input.templateId;
+        }
+        if (input.templateName != null) {
+            cartItem.templateName = input.templateName;
+        }
+        if (input.year != null) {
+            cartItem.year = input.year;
+        }
+        cartItem.persist();
 
         // Create and attach asset records if provided
         if (input.assets != null && !input.assets.isEmpty()) {

@@ -1,12 +1,12 @@
-package villagecompute.calendar.api.graphql.types;
+package villagecompute.calendar.api.types;
 
 import java.util.List;
 
 import org.eclipse.microprofile.graphql.Type;
 
 /**
- * GraphQL type representing a cart item. Supports both legacy calendar-specific fields and new
- * generic generator fields.
+ * API type representing a cart item. Supports both legacy calendar-specific fields and new
+ * generic generator fields. Used by both REST and GraphQL endpoints.
  */
 @Type("CartItem")
 public class CartItem {

@@ -21,6 +21,17 @@ public class AddToCartInput {
     /** SVG assets to store with this cart item (main, answer_key, etc.) */
     public List<AssetInput> assets;
 
+    // --- Legacy fields (for backwards compatibility) ---
+
+    /** @deprecated Use generatorType and configuration instead */
+    public String templateId;
+
+    /** @deprecated Use description instead */
+    public String templateName;
+
+    /** @deprecated Include year in configuration JSON instead */
+    public Integer year;
+
     // --- Common fields ---
 
     public Integer quantity;

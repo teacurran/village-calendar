@@ -1,10 +1,13 @@
-package villagecompute.calendar.api.graphql.types;
+package villagecompute.calendar.api.types;
 
 import java.math.BigDecimal;
 
 import org.eclipse.microprofile.graphql.Type;
 
-/** GraphQL type representing an asset (SVG) associated with a cart or order item */
+/**
+ * API type representing an asset (SVG) associated with a cart or order item.
+ * Used by both REST and GraphQL endpoints.
+ */
 @Type("Asset")
 public class Asset {
     public String id;
@@ -13,7 +16,7 @@ public class Asset {
     public BigDecimal widthInches;
     public BigDecimal heightInches;
 
-    // Note: svgContent is intentionally not exposed in GraphQL responses to avoid large payloads
+    // Note: svgContent is intentionally not exposed in API responses to avoid large payloads
     // Use a dedicated query/mutation if SVG content is needed
 
     public Asset() {}

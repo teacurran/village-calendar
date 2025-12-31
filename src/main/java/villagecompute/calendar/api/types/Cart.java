@@ -1,4 +1,4 @@
-package villagecompute.calendar.api.graphql.types;
+package villagecompute.calendar.api.types;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,7 +6,8 @@ import java.util.List;
 import org.eclipse.microprofile.graphql.Type;
 
 /**
- * GraphQL type representing a shopping cart Stub implementation for future e-commerce functionality
+ * API type representing a shopping cart.
+ * Used by both REST and GraphQL endpoints.
  */
 @Type("Cart")
 public class Cart {
