@@ -169,14 +169,7 @@ public class SessionResolver {
             @Name("sessionId") @Description("Guest session ID to convert") @NotNull final String sessionId) {
         LOG.infof("Mutation: convertGuestSession(sessionId=%s)", sessionId);
 
-        // Get current user
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            LOG.error("User not found despite passing @RolesAllowed check");
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser user = currentUser.get();
+        CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Convert session calendars to user calendars
         int convertedCount = sessionService.convertSessionToUser(sessionId, user);

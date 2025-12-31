@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import io.quarkus.panache.common.Parameters;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -25,6 +26,15 @@ import io.quarkus.hibernate.orm.panache.PanacheQuery;
  * processing.
  */
 @Entity
+@NamedQueries({
+    @NamedQuery(
+            name = CalendarOrder.QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS,
+            query =
+                    "SELECT DISTINCT o FROM CalendarOrder o "
+                            + "LEFT JOIN FETCH o.items i "
+                            + "LEFT JOIN FETCH i.calendar "
+                            + "WHERE o.orderNumber = :orderNumber")
+})
 @Table(
         name = "calendar_orders",
         indexes = {
@@ -40,6 +50,9 @@ import io.quarkus.hibernate.orm.panache.PanacheQuery;
                     unique = true)
         })
 public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
+
+    public static final String QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS =
+            "CalendarOrder.findByOrderNumberWithItems";
 
     @ManyToOne(optional = true)
     @JoinColumn(
@@ -237,6 +250,17 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
      */
     public static PanacheQuery<CalendarOrder> findByOrderNumber(String orderNumber) {
         return find("orderNumber", orderNumber);
+    }
+
+    /**
+     * Find order by order number with items and calendars eagerly loaded. Uses a single query with
+     * JOIN FETCH to avoid N+1 queries.
+     *
+     * @param orderNumber Order number (e.g., "VC-2025-00001")
+     * @return Optional containing the order with items loaded, or empty if not found
+     */
+    public static java.util.Optional<CalendarOrder> findByOrderNumberWithItems(String orderNumber) {
+      return find("#" + QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS, Parameters.with("orderNumber", orderNumber)).firstResultOptional();
     }
 
     /**

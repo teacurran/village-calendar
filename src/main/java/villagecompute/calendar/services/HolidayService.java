@@ -1523,7 +1523,7 @@ public class HolidayService {
             firstWeekday = firstWeekday.plusDays(1);
         }
 
-        return firstWeekday.plusWeeks(n - 1);
+        return firstWeekday.plusWeeks(n - 1L);
     }
 
     /** Get the last weekday of a month (e.g., last Monday of May) */

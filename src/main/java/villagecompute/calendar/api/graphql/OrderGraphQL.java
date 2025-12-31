@@ -121,7 +121,7 @@ public class OrderGraphQL {
         UUID targetUserId;
         if (userId != null && !userId.isEmpty()) {
             // Admin access requested - verify admin role
-            boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains(ROLE_ADMIN);
+            boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains(Roles.ADMIN);
             if (!isAdmin) {
                 LOG.errorf(
                         "Non-admin user %s attempted to access orders for userId=%s",
@@ -195,7 +195,7 @@ public class OrderGraphQL {
 
         // Check authorization (user must own the order or be admin)
         boolean isOwner = order.user != null && order.user.id.equals(user.id);
-        boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains(ROLE_ADMIN);
+        boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains(Roles.ADMIN);
 
         if (!isOwner && !isAdmin) {
             LOG.warnf("User %s attempted to access order %s owned by another user", user.email, id);
@@ -596,7 +596,7 @@ public class OrderGraphQL {
 
         // Check authorization (user must own the order or be admin)
         boolean isOwner = order.user != null && order.user.id.equals(user.id);
-        boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains(ROLE_ADMIN);
+        boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains(Roles.ADMIN);
 
         if (!isOwner && !isAdmin) {
             LOG.warnf(

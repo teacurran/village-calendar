@@ -900,32 +900,18 @@ public class OrderService {
         }
 
         try {
-            LOG.infof("Looking for order with orderNumber: %s", orderNumber.trim());
+            // Find order with items and calendars eagerly loaded in a single query
+            Optional<CalendarOrder> orderOpt =
+                    CalendarOrder.findByOrderNumberWithItems(orderNumber.trim());
 
-            // Find order with items eagerly loaded
-            CalendarOrder order =
-                    CalendarOrder.find("orderNumber", orderNumber.trim()).firstResult();
-
-            if (order != null) {
-                // Force load the items to avoid lazy loading issues
-                order.items.size(); // This triggers the lazy loading
+            if (orderOpt.isPresent()) {
+                CalendarOrder order = orderOpt.get();
                 LOG.infof("Found order %s with %d items", orderNumber, order.items.size());
-
-                // Also load calendar relationships for items
-                for (CalendarOrderItem item : order.items) {
-                    if (item.calendar != null) {
-                        // Force load calendar.generatedSvg
-                        String svg = item.calendar.generatedSvg;
-                        LOG.debugf(
-                                "Item %s has calendar with SVG: %s",
-                                item.id, svg != null ? "yes (" + svg.length() + " chars)" : "no");
-                    }
-                }
+                return order;
             } else {
                 LOG.warnf("No order found with orderNumber: %s", orderNumber);
+                return null;
             }
-
-            return order;
         } catch (Exception e) {
             LOG.errorf(e, "Error finding order by number %s: %s", orderNumber, e.getMessage());
             return null;
