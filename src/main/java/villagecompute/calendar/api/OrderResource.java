@@ -21,6 +21,8 @@ import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PDFRenderingService;
 
+import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
+
 /** REST endpoint for secure order-related operations */
 @Path("/orders")
 public class OrderResource {
@@ -143,7 +145,7 @@ public class OrderResource {
 
             return Response.ok(pdf)
                     .type("application/pdf")
-                    .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+                    .header(HEADER_CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                     .header("X-Order-Number", orderNumber)
                     .header("X-Item-Id", itemId.toString())
                     .build();

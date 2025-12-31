@@ -3,6 +3,7 @@ package villagecompute.calendar.api.rest;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static villagecompute.calendar.util.MimeTypes.HEADER_X_SESSION_ID;
 
 import java.util.UUID;
 
@@ -74,7 +75,7 @@ class SessionCalendarResourceTest {
     @Test
     void testGetCurrentCalendar_WithEmptySession_ReturnsBadRequest() {
         given().accept(ContentType.JSON)
-                .header("X-Session-ID", "")
+                .header(HEADER_X_SESSION_ID, "")
                 .when()
                 .get("/api/session-calendar/current")
                 .then()
@@ -85,7 +86,7 @@ class SessionCalendarResourceTest {
     @Test
     void testGetCurrentCalendar_WithNoExistingCalendar_ReturnsNotFound() {
         given().accept(ContentType.JSON)
-                .header("X-Session-ID", testSessionId)
+                .header(HEADER_X_SESSION_ID, testSessionId)
                 .when()
                 .get("/api/session-calendar/current")
                 .then()
@@ -112,7 +113,7 @@ class SessionCalendarResourceTest {
                                 });
 
         given().accept(ContentType.JSON)
-                .header("X-Session-ID", testSessionId)
+                .header(HEADER_X_SESSION_ID, testSessionId)
                 .when()
                 .get("/api/session-calendar/current")
                 .then()
@@ -144,7 +145,7 @@ class SessionCalendarResourceTest {
                 "configuration",
                 objectMapper.createObjectNode().put("theme", "modern").put("year", 2025));
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .body(request.toString())
                 .when()
@@ -183,7 +184,7 @@ class SessionCalendarResourceTest {
         ObjectNode request = objectMapper.createObjectNode().put("name", "Updated Name");
         request.set("configuration", objectMapper.createObjectNode().put("year", 2025));
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .body(request.toString())
                 .when()
@@ -207,7 +208,7 @@ class SessionCalendarResourceTest {
         ObjectNode request = objectMapper.createObjectNode().put("name", "Calendar Without Config");
         // No configuration set
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .body(request.toString())
                 .when()
@@ -231,7 +232,7 @@ class SessionCalendarResourceTest {
         request.set("configuration", objectMapper.createObjectNode().put("year", 2025));
         // No name set
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .body(request.toString())
                 .when()
@@ -265,7 +266,7 @@ class SessionCalendarResourceTest {
 
     @Test
     void testCreateFromTemplate_WithInvalidTemplateId_ReturnsNotFound() {
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .when()
                 .post("/api/session-calendar/from-template/" + UUID.randomUUID())
@@ -292,7 +293,7 @@ class SessionCalendarResourceTest {
                                     return template.id;
                                 });
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .when()
                 .post("/api/session-calendar/from-template/" + inactiveTemplateId)
@@ -305,7 +306,7 @@ class SessionCalendarResourceTest {
     void testCreateFromTemplate_CreatesCalendarFromTemplate() {
         UUID templateId = QuarkusTransaction.requiringNew().call(() -> testTemplate.id);
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .when()
                 .post("/api/session-calendar/from-template/" + templateId)
@@ -344,7 +345,7 @@ class SessionCalendarResourceTest {
                                     return template.id;
                                 });
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .when()
                 .post("/api/session-calendar/from-template/" + templateId)
@@ -368,7 +369,7 @@ class SessionCalendarResourceTest {
     @Test
     void testGetCalendar_WithNonexistentId_ReturnsNotFound() {
         given().accept(ContentType.JSON)
-                .header("X-Session-ID", testSessionId)
+                .header(HEADER_X_SESSION_ID, testSessionId)
                 .when()
                 .get("/api/session-calendar/" + UUID.randomUUID())
                 .then()
@@ -392,7 +393,7 @@ class SessionCalendarResourceTest {
                                 });
 
         given().accept(ContentType.JSON)
-                .header("X-Session-ID", testSessionId)
+                .header(HEADER_X_SESSION_ID, testSessionId)
                 .when()
                 .get("/api/session-calendar/" + calendarId)
                 .then()
@@ -419,7 +420,7 @@ class SessionCalendarResourceTest {
                                 });
 
         given().accept(ContentType.JSON)
-                .header("X-Session-ID", testSessionId)
+                .header(HEADER_X_SESSION_ID, testSessionId)
                 .when()
                 .get("/api/session-calendar/" + calendarId)
                 .then()
@@ -445,7 +446,7 @@ class SessionCalendarResourceTest {
                                 });
 
         given().accept(ContentType.JSON)
-                .header("X-Session-ID", testSessionId)
+                .header(HEADER_X_SESSION_ID, testSessionId)
                 .when()
                 .get("/api/session-calendar/" + calendarId)
                 .then()
@@ -470,7 +471,7 @@ class SessionCalendarResourceTest {
                                 });
 
         given().accept(ContentType.JSON)
-                .header("X-Session-ID", testSessionId)
+                .header(HEADER_X_SESSION_ID, testSessionId)
                 .when()
                 .get("/api/session-calendar/" + calendarId)
                 .then()
@@ -519,7 +520,7 @@ class SessionCalendarResourceTest {
 
     @Test
     void testAutosaveCalendar_WithNonexistentCalendar_ReturnsNotFound() {
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .body("{\"name\": \"Test\"}")
                 .when()
@@ -545,7 +546,7 @@ class SessionCalendarResourceTest {
                                     return calendar.id;
                                 });
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .body("{\"name\": \"Hacked\"}")
                 .when()
@@ -577,7 +578,7 @@ class SessionCalendarResourceTest {
                 "configuration",
                 objectMapper.createObjectNode().put("theme", "new").put("year", 2025));
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .body(request.toString())
                 .when()
@@ -612,7 +613,7 @@ class SessionCalendarResourceTest {
                                     return calendar.id;
                                 });
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .body("{\"name\": \"Test\"}")
                 .when()
@@ -638,7 +639,7 @@ class SessionCalendarResourceTest {
 
     @Test
     void testCreateNewCalendar_CreatesCalendarWithDefaults() {
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .when()
                 .post("/api/session-calendar/new")
@@ -682,7 +683,7 @@ class SessionCalendarResourceTest {
                                     return calendar.id;
                                 });
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .when()
                 .post("/api/session-calendar/new")
@@ -712,7 +713,7 @@ class SessionCalendarResourceTest {
                             defaultTemplate.persist();
                         });
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .when()
                 .post("/api/session-calendar/new")
@@ -740,7 +741,7 @@ class SessionCalendarResourceTest {
                             CalendarTemplate.delete("slug", "default");
                         });
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .when()
                 .post("/api/session-calendar/new")
@@ -782,7 +783,7 @@ class SessionCalendarResourceTest {
                             defaultTemplate.persist();
                         });
 
-        given().header("X-Session-ID", testSessionId)
+        given().header(HEADER_X_SESSION_ID, testSessionId)
                 .contentType(ContentType.JSON)
                 .when()
                 .post("/api/session-calendar/new")
@@ -829,7 +830,7 @@ class SessionCalendarResourceTest {
                                 });
 
         given().accept(ContentType.JSON)
-                .header("X-Session-ID", testSessionId)
+                .header(HEADER_X_SESSION_ID, testSessionId)
                 .when()
                 .get("/api/session-calendar/" + calendarId)
                 .then()
@@ -859,7 +860,7 @@ class SessionCalendarResourceTest {
                                 });
 
         given().accept(ContentType.JSON)
-                .header("X-Session-ID", testSessionId)
+                .header(HEADER_X_SESSION_ID, testSessionId)
                 .when()
                 .get("/api/session-calendar/" + calendarId)
                 .then()

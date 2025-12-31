@@ -2,6 +2,7 @@ package villagecompute.calendar.api.web;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
+import static villagecompute.calendar.util.MimeTypes.HEADER_CACHE_CONTROL;
 
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -130,7 +131,7 @@ class CalendarsPageResourceTest {
                 .then()
                 .statusCode(200)
                 .contentType(containsString("image/svg+xml"))
-                .header("Cache-Control", containsString("max-age=3600"))
+                .header(HEADER_CACHE_CONTROL, containsString("max-age=3600"))
                 .body(containsString("<svg"));
     }
 
@@ -166,7 +167,7 @@ class CalendarsPageResourceTest {
                 .then()
                 .statusCode(200)
                 .contentType(containsString("image/png"))
-                .header("Cache-Control", containsString("max-age=3600"));
+                .header(HEADER_CACHE_CONTROL, containsString("max-age=3600"));
     }
 
     @Test

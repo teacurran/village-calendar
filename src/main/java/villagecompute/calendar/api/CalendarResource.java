@@ -24,6 +24,9 @@ import villagecompute.calendar.util.MimeTypes;
 
 import io.quarkus.logging.Log;
 
+import static villagecompute.calendar.util.MimeTypes.HEADER_CACHE_CONTROL;
+import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
+
 @Path("/calendar")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -215,7 +218,7 @@ public class CalendarResource {
         }
 
         return Response.ok(svg)
-                .header("Cache-Control", "public, max-age=86400") // Cache for 24 hours
+                .header(HEADER_CACHE_CONTROL, "public, max-age=86400") // Cache for 24 hours
                 .build();
     }
 
@@ -255,7 +258,7 @@ public class CalendarResource {
         return Response.ok(pdf)
                 .header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.APPLICATION_PDF)
                 .header(
-                        "Content-Disposition",
+                    HEADER_CONTENT_DISPOSITION,
                         "attachment; filename=\"calendar-" + config.year + ".pdf\"")
                 .build();
     }
@@ -342,7 +345,7 @@ public class CalendarResource {
             return Response.ok(pdf)
                     .type("application/pdf")
                     .header(
-                            "Content-Disposition",
+                            HEADER_CONTENT_DISPOSITION,
                             "attachment; filename=\"calendar-" + year + ".pdf\"")
                     .build();
 

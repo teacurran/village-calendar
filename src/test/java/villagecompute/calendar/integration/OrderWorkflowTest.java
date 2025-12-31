@@ -3,6 +3,7 @@ package villagecompute.calendar.integration;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static villagecompute.calendar.util.MimeTypes.HEADER_STRIPE_SIGNATURE;
 
 import java.math.BigDecimal;
 import java.util.HexFormat;
@@ -256,7 +257,7 @@ class OrderWorkflowTest {
         String signature = generateStripeSignature(webhookPayload);
 
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", signature)
+                .header(HEADER_STRIPE_SIGNATURE, signature)
                 .body(webhookPayload)
                 .when()
                 .post("/api/webhooks/stripe")
@@ -328,7 +329,7 @@ class OrderWorkflowTest {
         String signature = generateStripeSignature(webhookPayload);
 
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", signature)
+                .header(HEADER_STRIPE_SIGNATURE, signature)
                 .body(webhookPayload)
                 .when()
                 .post("/api/webhooks/stripe")
@@ -404,7 +405,7 @@ class OrderWorkflowTest {
 
         // First webhook
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", signature)
+                .header(HEADER_STRIPE_SIGNATURE, signature)
                 .body(webhookPayload)
                 .when()
                 .post("/api/webhooks/stripe")
@@ -413,7 +414,7 @@ class OrderWorkflowTest {
 
         // Second webhook (duplicate)
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", signature)
+                .header(HEADER_STRIPE_SIGNATURE, signature)
                 .body(webhookPayload)
                 .when()
                 .post("/api/webhooks/stripe")

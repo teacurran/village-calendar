@@ -2,7 +2,7 @@ package villagecompute.calendar.api;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -180,10 +180,8 @@ public class OrderResourceTest {
                 .then()
                 .statusCode(200)
                 .contentType("application/pdf")
-                .header("Content-Disposition", containsString("calendar-"))
-                .header(
-                        "Content-Disposition",
-                        containsString("-2027.pdf")); // Year should appear in filename
+                .header(HEADER_CONTENT_DISPOSITION, containsString("calendar-"))
+                .header(HEADER_CONTENT_DISPOSITION, containsString("-2027.pdf")); // Year should appear in filename
     }
 
     @Test

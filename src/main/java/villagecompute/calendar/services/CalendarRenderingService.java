@@ -19,6 +19,7 @@ import java.util.Set;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import org.apache.batik.transcoder.SVGAbstractTranscoder;
 import org.apache.batik.transcoder.Transcoder;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
@@ -1176,7 +1177,8 @@ public class CalendarRenderingService {
 
             for (int day = 1; day <= maxDay; day++) {
                 // Calculate cell position based on layout
-                int cellX, cellY;
+                int cellX;
+                int cellY;
                 if (weekdayAligned) {
                     int col = startCol + day - 1;
                     cellX = cellWidth + col * cellWidth;
@@ -1496,8 +1498,8 @@ public class CalendarRenderingService {
             float pageHeightInPoints = PAGE_HEIGHT_INCHES * POINTS_PER_INCH;
 
             // Set the page/output size
-            transcoder.addTranscodingHint(PDFTranscoder.KEY_WIDTH, pageWidthInPoints);
-            transcoder.addTranscodingHint(PDFTranscoder.KEY_HEIGHT, pageHeightInPoints);
+            transcoder.addTranscodingHint(SVGAbstractTranscoder.KEY_WIDTH, pageWidthInPoints);
+            transcoder.addTranscodingHint(SVGAbstractTranscoder.KEY_HEIGHT, pageHeightInPoints);
 
             // Create input and output
             StringReader reader = new StringReader(wrappedSvg);
@@ -1565,7 +1567,6 @@ public class CalendarRenderingService {
 
         // Calculate the actual size of the scaled content
         float scaledWidth = innerWidth * scale;
-        float scaledHeight = innerHeight * scale;
 
         // Calculate offset - center horizontally, align to top vertically
         float offsetX = marginSize + (printableWidth - scaledWidth) / 2;
@@ -1955,7 +1956,9 @@ public class CalendarRenderingService {
                     float x = c * (1 - Math.abs((hue * 6) % 2 - 1));
                     float m = lightness - c / 2;
 
-                    float r, g, b;
+                    float r;
+                    float g;
+                    float b;
                     int hueSegment = (int) (hue * 6);
                     switch (hueSegment) {
                         case 0:
@@ -2038,7 +2041,7 @@ public class CalendarRenderingService {
                 double distance =
                         Math.sqrt(
                                 Math.pow(12 - monthNum * monthWeight, 2)
-                                        + Math.pow(31 - dayNum, 2));
+                                        + Math.pow(31d - dayNum, 2));
                 double maxDistance = Math.sqrt(Math.pow(12 * monthWeight, 2) + Math.pow(31, 2));
                 double normalizedDistance = distance / maxDistance;
                 int lightnessMin = 80;

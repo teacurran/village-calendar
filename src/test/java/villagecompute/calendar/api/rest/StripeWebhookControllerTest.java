@@ -2,6 +2,7 @@ package villagecompute.calendar.api.rest;
 
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.*;
+import static villagecompute.calendar.util.MimeTypes.HEADER_STRIPE_SIGNATURE;
 
 import java.math.BigDecimal;
 import java.util.HexFormat;
@@ -200,7 +201,7 @@ public class StripeWebhookControllerTest {
             """;
 
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", "invalid_signature")
+                .header(HEADER_STRIPE_SIGNATURE, "invalid_signature")
                 .body(payload)
                 .when()
                 .post("/api/webhooks/stripe")
@@ -272,7 +273,7 @@ public class StripeWebhookControllerTest {
 
         // Send webhook
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", signature)
+                .header(HEADER_STRIPE_SIGNATURE, signature)
                 .body(payload)
                 .when()
                 .post("/api/webhooks/stripe")
@@ -331,7 +332,7 @@ public class StripeWebhookControllerTest {
 
         // Send webhook
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", signature)
+                .header(HEADER_STRIPE_SIGNATURE, signature)
                 .body(payload)
                 .when()
                 .post("/api/webhooks/stripe")
@@ -397,7 +398,7 @@ public class StripeWebhookControllerTest {
 
         // Send webhook first time
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", signature)
+                .header(HEADER_STRIPE_SIGNATURE, signature)
                 .body(payload)
                 .when()
                 .post("/api/webhooks/stripe")
@@ -418,7 +419,7 @@ public class StripeWebhookControllerTest {
 
         // Send SAME webhook again (duplicate delivery)
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", signature)
+                .header(HEADER_STRIPE_SIGNATURE, signature)
                 .body(payload)
                 .when()
                 .post("/api/webhooks/stripe")
@@ -503,7 +504,7 @@ public class StripeWebhookControllerTest {
 
         // Send webhook
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", signature)
+                .header(HEADER_STRIPE_SIGNATURE, signature)
                 .body(payload)
                 .when()
                 .post("/api/webhooks/stripe")
@@ -579,7 +580,7 @@ public class StripeWebhookControllerTest {
 
         // Send webhook
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", signature)
+                .header(HEADER_STRIPE_SIGNATURE, signature)
                 .body(payload)
                 .when()
                 .post("/api/webhooks/stripe")
@@ -644,7 +645,7 @@ public class StripeWebhookControllerTest {
 
         // Send webhook first time
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", signature)
+                .header(HEADER_STRIPE_SIGNATURE, signature)
                 .body(payload)
                 .when()
                 .post("/api/webhooks/stripe")
@@ -661,7 +662,7 @@ public class StripeWebhookControllerTest {
 
         // Send SAME webhook again (duplicate delivery)
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", signature)
+                .header(HEADER_STRIPE_SIGNATURE, signature)
                 .body(payload)
                 .when()
                 .post("/api/webhooks/stripe")
@@ -702,7 +703,7 @@ public class StripeWebhookControllerTest {
 
         // Stripe best practice: return 200 for unknown event types
         given().contentType(ContentType.JSON)
-                .header("Stripe-Signature", signature)
+                .header(HEADER_STRIPE_SIGNATURE, signature)
                 .body(payload)
                 .when()
                 .post("/api/webhooks/stripe")
