@@ -10,7 +10,7 @@ import org.eclipse.microprofile.graphql.*;
 import org.jboss.logging.Logger;
 
 import villagecompute.calendar.api.graphql.inputs.AddToCartInput;
-import villagecompute.calendar.api.graphql.types.Cart;
+import villagecompute.calendar.api.types.Cart;
 import villagecompute.calendar.services.CartService;
 import villagecompute.calendar.services.SessionService;
 

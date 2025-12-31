@@ -12,7 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import villagecompute.calendar.api.graphql.inputs.AddToCartInput;
-import villagecompute.calendar.api.graphql.types.Cart;
+import villagecompute.calendar.api.types.Cart;
 import villagecompute.calendar.data.models.CartItem;
 
 import io.quarkus.test.junit.QuarkusTest;

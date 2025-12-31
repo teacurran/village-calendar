@@ -734,12 +734,23 @@ public class OrderService {
 
     /** Create an order item from cart item data */
     private CalendarOrderItem createOrderItem(CalendarOrder order, Map<String, Object> cartItem) {
-        // Extract cart item details
-        String templateName = (String) cartItem.get("templateName");
-        Integer year =
-                cartItem.get("year") != null
-                        ? ((Number) cartItem.get("year")).intValue()
-                        : Year.now().getValue();
+        // Extract cart item details - use description (new field) or fall back to templateName
+        String description = (String) cartItem.get("description");
+        if (description == null) {
+            description = (String) cartItem.get("templateName"); // Legacy fallback
+        }
+        Integer year = Year.now().getValue();
+        String configurationStr = (String) cartItem.get("configuration");
+        if (configurationStr != null) {
+            try {
+                JsonNode config = objectMapper.readTree(configurationStr);
+                if (config.has("year")) {
+                    year = config.get("year").asInt(year);
+                }
+            } catch (Exception e) {
+                LOG.warnf("Could not parse configuration for year: %s", e.getMessage());
+            }
+        }
         Integer quantity =
                 cartItem.get("quantity") != null
                         ? ((Number) cartItem.get("quantity")).intValue()
@@ -752,9 +763,8 @@ public class OrderService {
                 cartItem.get("lineTotal") != null
                         ? ((Number) cartItem.get("lineTotal")).doubleValue()
                         : unitPrice * quantity;
-        String configurationStr = (String) cartItem.get("configuration");
 
-        // Determine product type from configuration or template name
+        // Determine product type from configuration or description
         String productType = CalendarOrderItem.TYPE_PRINT;
         if (configurationStr != null) {
             try {
@@ -769,20 +779,20 @@ public class OrderService {
                 LOG.warnf("Could not parse configuration for product type: %s", e.getMessage());
             }
         }
-        if (templateName != null && templateName.toLowerCase().contains("pdf")) {
+        if (description != null && description.toLowerCase().contains("pdf")) {
             productType = CalendarOrderItem.TYPE_PDF;
         }
 
         // Create a UserCalendar to store the calendar configuration
         UserCalendar calendar =
-                createCalendarFromConfig(order.user, templateName, year, configurationStr);
+                createCalendarFromConfig(order.user, description, year, configurationStr);
 
         // Create the order item
         CalendarOrderItem item = new CalendarOrderItem();
         item.order = order;
         item.calendar = calendar;
         item.productType = productType;
-        item.productName = templateName;
+        item.productName = description;
         item.setYear(year);
         item.quantity = quantity;
         item.unitPrice = BigDecimal.valueOf(unitPrice);
@@ -802,7 +812,7 @@ public class OrderService {
 
         LOG.infof(
                 "Created order item: %s (%s) x%d @ $%.2f = $%.2f",
-                templateName, productType, quantity, unitPrice, lineTotal);
+                description, productType, quantity, unitPrice, lineTotal);
 
         return item;
     }

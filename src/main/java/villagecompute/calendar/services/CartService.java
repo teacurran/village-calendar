@@ -12,8 +12,8 @@ import org.jboss.logging.Logger;
 
 import villagecompute.calendar.api.graphql.inputs.AddToCartInput;
 import villagecompute.calendar.api.graphql.inputs.AssetInput;
-import villagecompute.calendar.api.graphql.types.Cart;
-import villagecompute.calendar.api.graphql.types.CartItem;
+import villagecompute.calendar.api.types.Cart;
+import villagecompute.calendar.api.types.CartItem;
 import villagecompute.calendar.data.models.ItemAsset;
 
 /** Service for cart operations Handles cart persistence and business logic */
@@ -58,19 +58,23 @@ public class CartService {
         int quantity = input.quantity != null ? input.quantity : 1;
         villagecompute.calendar.data.models.CartItem cartItem;
 
+        String generatorType = input.generatorType;
+        String description = input.description;
+
         LOG.infof(
                 "Adding item: type=%s, description=%s, quantity=%d",
-                input.generatorType, input.description, quantity);
+                generatorType, description, quantity);
 
         // Create new cart item
         cartItem =
                 cartEntity.addItem(
-                        input.generatorType,
-                        input.description,
+                        generatorType,
+                        description,
                         quantity,
                         unitPrice,
                         input.configuration,
                         productCode);
+        cartItem.persist();
 
         // Create and attach asset records if provided
         if (input.assets != null && !input.assets.isEmpty()) {

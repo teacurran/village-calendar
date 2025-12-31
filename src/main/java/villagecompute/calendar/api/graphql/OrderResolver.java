@@ -31,7 +31,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
 
 import villagecompute.calendar.api.graphql.inputs.PlaceOrderInput;
-import villagecompute.calendar.api.graphql.types.PaymentIntentResponse;
+import villagecompute.calendar.api.types.PaymentIntentResponse;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;

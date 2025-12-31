@@ -2670,10 +2670,10 @@ const addToCart = async (productCode: string = "print") => {
 
     // Add to cart using GraphQL (works for both logged-in and anonymous users)
     // Price is determined by backend based on productCode
+    const description = `${calendarData.name} ${calendarData.year}`;
     await cartStore.addToCart(
-      productCode, // templateId - use productCode directly (print or pdf)
-      calendarData.name,
-      calendarData.year,
+      "calendar", // generatorType
+      description, // User-facing description
       1, // quantity
       productCode, // Backend looks up price from product catalog
       { ...calendarData, calendarId: calendarData.calendarId }, // Full configuration including generatedSvg and calendarId

@@ -22,6 +22,9 @@ import io.smallrye.common.annotation.Blocking;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.RoutingContext;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
 /**
  * Serves dynamically rendered calendar product pages using Qute templates. These pages are rendered
  * at runtime from the database, making development easier.
@@ -68,6 +71,10 @@ public class CalendarsPageResource {
         rc.response().putHeader(HEADER_CONTENT_TYPE, TEXT_HTML).end(html);
     }
 
+    // SPA routes under /calendars that should be served by the Vue SPA
+    private static final java.util.Set<String> SPA_ROUTES =
+            java.util.Set.of("generator", "new", "edit");
+
     /** Individual calendar product page at /calendars/{slug} */
     @Route(path = "/:slug", methods = Route.HttpMethod.GET)
     @Blocking
@@ -77,6 +84,12 @@ public class CalendarsPageResource {
         // Don't handle asset requests here (they have file extensions)
         if (slug.contains(".")) {
             rc.next();
+            return;
+        }
+
+        // Serve SPA index.html for SPA routes
+        if (SPA_ROUTES.contains(slug)) {
+            serveSpaIndex(rc);
             return;
         }
 
@@ -235,4 +248,46 @@ public class CalendarsPageResource {
             String keywords,
             String priceFormatted,
             int year) {}
+
+    /**
+     * Serve the SPA index.html for Vue Router routes.
+     * In production, serves from META-INF/resources/index.html.
+     * In dev mode, fetches from the Vite dev server.
+     */
+    private void serveSpaIndex(RoutingContext rc) {
+        // Try to read the SPA index.html from the classpath (production build)
+        try (InputStream is = getClass().getResourceAsStream("/META-INF/resources/index.html")) {
+            if (is != null) {
+                String html = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                rc.response().putHeader(HEADER_CONTENT_TYPE, TEXT_HTML).end(html);
+                return;
+            }
+        } catch (Exception e) {
+            LOG.warn("Failed to read SPA index.html from classpath", e);
+        }
+
+        // In dev mode, fetch index.html from Vite dev server
+        rc.vertx()
+                .createHttpClient()
+                .request(
+                        io.vertx.core.http.HttpMethod.GET,
+                        5176,
+                        "localhost",
+                        "/index.html")
+                .compose(req -> req.send())
+                .compose(resp -> resp.body())
+                .onSuccess(
+                        body -> {
+                            rc.response()
+                                    .putHeader(HEADER_CONTENT_TYPE, TEXT_HTML)
+                                    .end(body);
+                        })
+                .onFailure(
+                        err -> {
+                            LOG.error("Failed to fetch SPA index.html from Vite dev server", err);
+                            rc.response()
+                                    .setStatusCode(503)
+                                    .end("SPA not available. Is the Vite dev server running?");
+                        });
+    }
 }

@@ -15,6 +15,7 @@ import jakarta.ws.rs.core.Response;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import villagecompute.calendar.api.types.ErrorResponse;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.CalendarGenerationService;
@@ -73,7 +74,7 @@ public class SessionCalendarResource {
     public Response getCurrentCalendar(@HeaderParam("X-Session-ID") String sessionId) {
         if (sessionId == null || sessionId.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("error", "No session found"))
+                    .entity(ErrorResponse.of("No session found"))
                     .build();
         }
 
@@ -81,7 +82,7 @@ public class SessionCalendarResource {
 
         if (calendar == null) {
             return Response.status(Response.Status.NOT_FOUND)
-                    .entity(Map.of("error", "No calendar for this session"))
+                    .entity(ErrorResponse.of("No calendar for this session"))
                     .build();
         }
 
@@ -96,7 +97,7 @@ public class SessionCalendarResource {
             @HeaderParam("X-Session-ID") String sessionId, UpdateCalendarRequest request) {
         if (sessionId == null || sessionId.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("error", "No session found"))
+                    .entity(ErrorResponse.of("No session found"))
                     .build();
         }
 
@@ -161,14 +162,14 @@ public class SessionCalendarResource {
             @PathParam("templateId") UUID templateId) {
         if (sessionId == null || sessionId.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("error", "No session found"))
+                    .entity(ErrorResponse.of("No session found"))
                     .build();
         }
 
         CalendarTemplate template = CalendarTemplate.findById(templateId);
         if (template == null || !template.isActive) {
             return Response.status(Response.Status.NOT_FOUND)
-                    .entity(Map.of("error", "Template not found"))
+                    .entity(ErrorResponse.of("Template not found"))
                     .build();
         }
 
@@ -215,7 +216,7 @@ public class SessionCalendarResource {
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
             return Response.status(Response.Status.NOT_FOUND)
-                    .entity(Map.of("error", "Calendar not found"))
+                    .entity(ErrorResponse.of("Calendar not found"))
                     .build();
         }
 
@@ -225,7 +226,7 @@ public class SessionCalendarResource {
         // Only allow viewing if it's public or belongs to the session
         if (!calendar.isPublic && !isOwnCalendar) {
             return Response.status(Response.Status.FORBIDDEN)
-                    .entity(Map.of("error", "Calendar is not public"))
+                    .entity(ErrorResponse.of("Calendar is not public"))
                     .build();
         }
 
@@ -249,7 +250,7 @@ public class SessionCalendarResource {
             UpdateCalendarRequest request) {
         if (sessionId == null || sessionId.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("error", "No session found"))
+                    .entity(ErrorResponse.of("No session found"))
                     .build();
         }
 
@@ -259,14 +260,14 @@ public class SessionCalendarResource {
                         .find(UserCalendar.class, id, LockModeType.PESSIMISTIC_WRITE);
         if (calendar == null) {
             return Response.status(Response.Status.NOT_FOUND)
-                    .entity(Map.of("error", "Calendar not found"))
+                    .entity(ErrorResponse.of("Calendar not found"))
                     .build();
         }
 
         // Verify calendar belongs to current session
         if (calendar.sessionId == null || !calendar.sessionId.equals(sessionId)) {
             return Response.status(Response.Status.FORBIDDEN)
-                    .entity(Map.of("error", "Cannot edit this calendar"))
+                    .entity(ErrorResponse.of("Cannot edit this calendar"))
                     .build();
         }
 
@@ -316,7 +317,7 @@ public class SessionCalendarResource {
     public Response createNewCalendar(@HeaderParam("X-Session-ID") String sessionId) {
         if (sessionId == null || sessionId.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("error", "No session found"))
+                    .entity(ErrorResponse.of("No session found"))
                     .build();
         }
 

@@ -342,7 +342,11 @@
             }
 
             try {
-                // Add directly to cart using template - cart stores template info
+                // Add directly to cart using the new field format
+                const description = templateName + ' ' + year;
+                // Include year in configuration
+                configuration.year = year;
+
                 const response = await fetch('/graphql', {
                     method: 'POST',
                     headers: {
@@ -360,11 +364,11 @@
                         `,
                         variables: {
                             input: {
-                                templateName: templateName,
-                                year: year,
+                                generatorType: 'calendar',
+                                description: description,
                                 quantity: 1,
                                 productCode: 'print',
-                                configuration: configuration
+                                configuration: JSON.stringify(configuration)
                             }
                         }
                     })
