@@ -37,22 +37,26 @@ import io.restassured.http.ContentType;
 /**
  * Integration tests for Stripe webhook handling.
  *
- * <p>Tests cover: - Webhook signature validation (valid and invalid signatures) -
- * checkout.session.completed event processing - payment_intent.succeeded event processing -
- * charge.refunded event processing - Idempotent webhook processing (duplicate delivery handling) -
- * Email job enqueueing on payment success - Order status transitions
+ * <p>
+ * Tests cover: - Webhook signature validation (valid and invalid signatures) - checkout.session.completed event
+ * processing - payment_intent.succeeded event processing - charge.refunded event processing - Idempotent webhook
+ * processing (duplicate delivery handling) - Email job enqueueing on payment success - Order status transitions
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class StripeWebhookControllerTest {
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
-    @Inject CalendarService calendarService;
+    @Inject
+    CalendarService calendarService;
 
-    @Inject OrderService orderService;
+    @Inject
+    OrderService orderService;
 
-    @Inject EntityManager entityManager;
+    @Inject
+    EntityManager entityManager;
 
     @ConfigProperty(name = "stripe.webhook.secret")
     String webhookSecret;
@@ -70,71 +74,51 @@ public class StripeWebhookControllerTest {
     void setup() throws Exception {
         // Wrap in programmatic transaction that commits immediately
         // This ensures test data is visible to HTTP requests made by RestAssured
-        QuarkusTransaction.requiringNew()
-                .run(
-                        () -> {
-                            try {
-                                // Create test user
-                                testUser = new CalendarUser();
-                                testUser.oauthProvider = "GOOGLE";
-                                testUser.oauthSubject =
-                                        "webhook-test-" + System.currentTimeMillis();
-                                testUser.email =
-                                        "webhook-test-"
-                                                + System.currentTimeMillis()
-                                                + "@example.com";
-                                testUser.displayName = "Webhook Test User";
-                                testUser.persist();
+        QuarkusTransaction.requiringNew().run(() -> {
+            try {
+                // Create test user
+                testUser = new CalendarUser();
+                testUser.oauthProvider = "GOOGLE";
+                testUser.oauthSubject = "webhook-test-" + System.currentTimeMillis();
+                testUser.email = "webhook-test-" + System.currentTimeMillis() + "@example.com";
+                testUser.displayName = "Webhook Test User";
+                testUser.persist();
 
-                                // Create test template
-                                testTemplate = new CalendarTemplate();
-                                testTemplate.name = "Webhook Test Template";
-                                testTemplate.description = "Template for webhook testing";
-                                testTemplate.isActive = true;
-                                testTemplate.isFeatured = false;
-                                testTemplate.displayOrder = 1;
-                                testTemplate.configuration = createTestConfiguration();
-                                testTemplate.persist();
+                // Create test template
+                testTemplate = new CalendarTemplate();
+                testTemplate.name = "Webhook Test Template";
+                testTemplate.description = "Template for webhook testing";
+                testTemplate.isActive = true;
+                testTemplate.isFeatured = false;
+                testTemplate.displayOrder = 1;
+                testTemplate.configuration = createTestConfiguration();
+                testTemplate.persist();
 
-                                // Create test calendar
-                                testCalendar =
-                                        calendarService.createCalendar(
-                                                "Test Calendar for Order",
-                                                2025,
-                                                testTemplate.id,
-                                                null,
-                                                true,
-                                                testUser,
-                                                null);
+                // Create test calendar
+                testCalendar = calendarService.createCalendar("Test Calendar for Order", 2025, testTemplate.id, null,
+                        true, testUser, null);
 
-                                // Create test order in PENDING status
-                                JsonNode shippingAddress =
-                                        objectMapper.readTree(
-                                                """
-                    {
-                        "line1": "123 Test St",
-                        "city": "Test City",
-                        "state": "CA",
-                        "postalCode": "12345",
-                        "country": "US"
-                    }
-                    """);
+                // Create test order in PENDING status
+                JsonNode shippingAddress = objectMapper.readTree("""
+                        {
+                            "line1": "123 Test St",
+                            "city": "Test City",
+                            "state": "CA",
+                            "postalCode": "12345",
+                            "country": "US"
+                        }
+                        """);
 
-                                testOrder =
-                                        orderService.createOrder(
-                                                testUser,
-                                                testCalendar,
-                                                1,
-                                                new BigDecimal("19.99"),
-                                                shippingAddress);
+                testOrder = orderService.createOrder(testUser, testCalendar, 1, new BigDecimal("19.99"),
+                        shippingAddress);
 
-                                // Set payment intent ID for webhook correlation
-                                testOrder.stripePaymentIntentId = TEST_PAYMENT_INTENT_ID;
-                                testOrder.persist();
-                            } catch (Exception e) {
-                                throw new RuntimeException(e);
-                            }
-                        });
+                // Set payment intent ID for webhook correlation
+                testOrder.stripePaymentIntentId = TEST_PAYMENT_INTENT_ID;
+                testOrder.persist();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     @AfterEach
@@ -158,13 +142,12 @@ public class StripeWebhookControllerTest {
 
     private JsonNode createTestConfiguration() {
         try {
-            return objectMapper.readTree(
-                    """
-                {
-                    "theme": "modern",
-                    "colorScheme": "blue"
-                }
-                """);
+            return objectMapper.readTree("""
+                    {
+                        "theme": "modern",
+                        "colorScheme": "blue"
+                    }
+                    """);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -191,42 +174,30 @@ public class StripeWebhookControllerTest {
     @Test
     @Order(1)
     void testWebhook_RejectInvalidSignature() {
-        String payload =
-                """
-            {
-                "id": "evt_test_invalid",
-                "type": "checkout.session.completed",
-                "data": {}
-            }
-            """;
+        String payload = """
+                {
+                    "id": "evt_test_invalid",
+                    "type": "checkout.session.completed",
+                    "data": {}
+                }
+                """;
 
-        given().contentType(ContentType.JSON)
-                .header(HEADER_STRIPE_SIGNATURE, "invalid_signature")
-                .body(payload)
-                .when()
-                .post("/api/webhooks/stripe")
-                .then()
-                .statusCode(400);
+        given().contentType(ContentType.JSON).header(HEADER_STRIPE_SIGNATURE, "invalid_signature").body(payload).when()
+                .post("/api/webhooks/stripe").then().statusCode(400);
     }
 
     @Test
     @Order(2)
     void testWebhook_RejectMissingSignature() {
-        String payload =
-                """
-            {
-                "id": "evt_test_missing_sig",
-                "type": "checkout.session.completed",
-                "data": {}
-            }
-            """;
+        String payload = """
+                {
+                    "id": "evt_test_missing_sig",
+                    "type": "checkout.session.completed",
+                    "data": {}
+                }
+                """;
 
-        given().contentType(ContentType.JSON)
-                .body(payload)
-                .when()
-                .post("/api/webhooks/stripe")
-                .then()
-                .statusCode(400);
+        given().contentType(ContentType.JSON).body(payload).when().post("/api/webhooks/stripe").then().statusCode(400);
     }
 
     // ============================================================================
@@ -241,44 +212,34 @@ public class StripeWebhookControllerTest {
         assertEquals(CalendarOrder.STATUS_PENDING, order.status);
 
         // Create webhook payload with proper Stripe event structure including metadata
-        String payload =
-                String.format(
-                        """
-            {
-                "id": "evt_test_checkout_success",
-                "object": "event",
-                "api_version": "2024-11-20.acacia",
-                "created": %d,
-                "type": "checkout.session.completed",
-                "data": {
-                    "object": {
-                        "id": "%s",
-                        "object": "checkout.session",
-                        "payment_intent": "%s",
-                        "payment_status": "paid",
-                        "status": "complete",
-                        "metadata": {
-                            "orderId": "%s"
+        String payload = String.format("""
+                {
+                    "id": "evt_test_checkout_success",
+                    "object": "event",
+                    "api_version": "2024-11-20.acacia",
+                    "created": %d,
+                    "type": "checkout.session.completed",
+                    "data": {
+                        "object": {
+                            "id": "%s",
+                            "object": "checkout.session",
+                            "payment_intent": "%s",
+                            "payment_status": "paid",
+                            "status": "complete",
+                            "metadata": {
+                                "orderId": "%s"
+                            }
                         }
                     }
                 }
-            }
-            """,
-                        System.currentTimeMillis() / 1000,
-                        TEST_SESSION_ID,
-                        TEST_PAYMENT_INTENT_ID,
-                        testOrder.id.toString());
+                """, System.currentTimeMillis() / 1000, TEST_SESSION_ID, TEST_PAYMENT_INTENT_ID,
+                testOrder.id.toString());
 
         String signature = generateStripeSignature(payload);
 
         // Send webhook
-        given().contentType(ContentType.JSON)
-                .header(HEADER_STRIPE_SIGNATURE, signature)
-                .body(payload)
-                .when()
-                .post("/api/webhooks/stripe")
-                .then()
-                .statusCode(200);
+        given().contentType(ContentType.JSON).header(HEADER_STRIPE_SIGNATURE, signature).body(payload).when()
+                .post("/api/webhooks/stripe").then().statusCode(200);
 
         // Clear persistence context to ensure fresh read from database
         entityManager.clear();
@@ -294,50 +255,38 @@ public class StripeWebhookControllerTest {
     @Order(4)
     void testWebhook_CheckoutSessionCompleted_EnqueuesEmailJob() throws Exception {
         // Clear any existing delayed jobs - use programmatic transaction
-        QuarkusTransaction.requiringNew()
-                .run(
-                        () -> {
-                            DelayedJob.delete("actorId", testOrder.id.toString());
-                        });
+        QuarkusTransaction.requiringNew().run(() -> {
+            DelayedJob.delete("actorId", testOrder.id.toString());
+        });
 
-        String payload =
-                String.format(
-                        """
-            {
-                "id": "evt_test_checkout_email",
-                "object": "event",
-                "api_version": "2024-11-20.acacia",
-                "created": %d,
-                "type": "checkout.session.completed",
-                "data": {
-                    "object": {
-                        "id": "%s",
-                        "object": "checkout.session",
-                        "payment_intent": "%s",
-                        "payment_status": "paid",
-                        "status": "complete",
-                        "metadata": {
-                            "orderId": "%s"
+        String payload = String.format("""
+                {
+                    "id": "evt_test_checkout_email",
+                    "object": "event",
+                    "api_version": "2024-11-20.acacia",
+                    "created": %d,
+                    "type": "checkout.session.completed",
+                    "data": {
+                        "object": {
+                            "id": "%s",
+                            "object": "checkout.session",
+                            "payment_intent": "%s",
+                            "payment_status": "paid",
+                            "status": "complete",
+                            "metadata": {
+                                "orderId": "%s"
+                            }
                         }
                     }
                 }
-            }
-            """,
-                        System.currentTimeMillis() / 1000,
-                        TEST_SESSION_ID,
-                        TEST_PAYMENT_INTENT_ID,
-                        testOrder.id.toString());
+                """, System.currentTimeMillis() / 1000, TEST_SESSION_ID, TEST_PAYMENT_INTENT_ID,
+                testOrder.id.toString());
 
         String signature = generateStripeSignature(payload);
 
         // Send webhook
-        given().contentType(ContentType.JSON)
-                .header(HEADER_STRIPE_SIGNATURE, signature)
-                .body(payload)
-                .when()
-                .post("/api/webhooks/stripe")
-                .then()
-                .statusCode(200);
+        given().contentType(ContentType.JSON).header(HEADER_STRIPE_SIGNATURE, signature).body(payload).when()
+                .post("/api/webhooks/stripe").then().statusCode(200);
 
         // Clear persistence context to ensure fresh read from database
         entityManager.clear();
@@ -360,50 +309,38 @@ public class StripeWebhookControllerTest {
     @Order(5)
     void testWebhook_IdempotentProcessing_NoDuplicateUpdates() throws Exception {
         // Clear delayed jobs - use programmatic transaction
-        QuarkusTransaction.requiringNew()
-                .run(
-                        () -> {
-                            DelayedJob.delete("actorId", testOrder.id.toString());
-                        });
+        QuarkusTransaction.requiringNew().run(() -> {
+            DelayedJob.delete("actorId", testOrder.id.toString());
+        });
 
-        String payload =
-                String.format(
-                        """
-            {
-                "id": "evt_test_idempotent",
-                "object": "event",
-                "api_version": "2024-11-20.acacia",
-                "created": %d,
-                "type": "checkout.session.completed",
-                "data": {
-                    "object": {
-                        "id": "%s",
-                        "object": "checkout.session",
-                        "payment_intent": "%s",
-                        "payment_status": "paid",
-                        "status": "complete",
-                        "metadata": {
-                            "orderId": "%s"
+        String payload = String.format("""
+                {
+                    "id": "evt_test_idempotent",
+                    "object": "event",
+                    "api_version": "2024-11-20.acacia",
+                    "created": %d,
+                    "type": "checkout.session.completed",
+                    "data": {
+                        "object": {
+                            "id": "%s",
+                            "object": "checkout.session",
+                            "payment_intent": "%s",
+                            "payment_status": "paid",
+                            "status": "complete",
+                            "metadata": {
+                                "orderId": "%s"
+                            }
                         }
                     }
                 }
-            }
-            """,
-                        System.currentTimeMillis() / 1000,
-                        TEST_SESSION_ID,
-                        TEST_PAYMENT_INTENT_ID,
-                        testOrder.id.toString());
+                """, System.currentTimeMillis() / 1000, TEST_SESSION_ID, TEST_PAYMENT_INTENT_ID,
+                testOrder.id.toString());
 
         String signature = generateStripeSignature(payload);
 
         // Send webhook first time
-        given().contentType(ContentType.JSON)
-                .header(HEADER_STRIPE_SIGNATURE, signature)
-                .body(payload)
-                .when()
-                .post("/api/webhooks/stripe")
-                .then()
-                .statusCode(200);
+        given().contentType(ContentType.JSON).header(HEADER_STRIPE_SIGNATURE, signature).body(payload).when()
+                .post("/api/webhooks/stripe").then().statusCode(200);
 
         // Clear persistence context to ensure fresh read from database
         entityManager.clear();
@@ -413,18 +350,12 @@ public class StripeWebhookControllerTest {
         assertEquals(CalendarOrder.STATUS_PAID, order.status);
 
         // Verify one email job enqueued
-        List<DelayedJob> jobsAfterFirst =
-                DelayedJob.find("actorId", testOrder.id.toString()).list();
+        List<DelayedJob> jobsAfterFirst = DelayedJob.find("actorId", testOrder.id.toString()).list();
         assertEquals(1, jobsAfterFirst.size());
 
         // Send SAME webhook again (duplicate delivery)
-        given().contentType(ContentType.JSON)
-                .header(HEADER_STRIPE_SIGNATURE, signature)
-                .body(payload)
-                .when()
-                .post("/api/webhooks/stripe")
-                .then()
-                .statusCode(200);
+        given().contentType(ContentType.JSON).header(HEADER_STRIPE_SIGNATURE, signature).body(payload).when()
+                .post("/api/webhooks/stripe").then().statusCode(200);
 
         // Clear persistence context to ensure fresh read from database
         entityManager.clear();
@@ -434,8 +365,7 @@ public class StripeWebhookControllerTest {
         assertEquals(CalendarOrder.STATUS_PAID, order.status);
 
         // Verify NO duplicate email job enqueued (still only 1 job)
-        List<DelayedJob> jobsAfterSecond =
-                DelayedJob.find("actorId", testOrder.id.toString()).list();
+        List<DelayedJob> jobsAfterSecond = DelayedJob.find("actorId", testOrder.id.toString()).list();
         assertEquals(1, jobsAfterSecond.size(), "Should NOT create duplicate email job");
     }
 
@@ -448,68 +378,50 @@ public class StripeWebhookControllerTest {
     void testWebhook_PaymentIntentSucceeded_UpdatesOrderStatus() throws Exception {
         // Create new order for this test in a separate transaction
         // Use programmatic transaction to ensure data is committed before HTTP call
-        UUID orderId =
-                QuarkusTransaction.requiringNew()
-                        .call(
-                                () -> {
-                                    try {
-                                        JsonNode testAddress =
-                                                objectMapper.readTree(
-                                                        """
-                    {
-                        "street": "123 Test St",
-                        "city": "Test City",
-                        "state": "CA",
-                        "postalCode": "12345",
-                        "country": "US"
-                    }
-                    """);
-                                        CalendarOrder order =
-                                                orderService.createOrder(
-                                                        testUser,
-                                                        testCalendar,
-                                                        1,
-                                                        new BigDecimal("29.99"),
-                                                        testAddress);
-                                        order.stripePaymentIntentId = "pi_test_direct_flow";
-                                        order.persist();
-                                        return order.id;
-                                    } catch (Exception e) {
-                                        throw new RuntimeException(e);
-                                    }
-                                });
+        UUID orderId = QuarkusTransaction.requiringNew().call(() -> {
+            try {
+                JsonNode testAddress = objectMapper.readTree("""
+                        {
+                            "street": "123 Test St",
+                            "city": "Test City",
+                            "state": "CA",
+                            "postalCode": "12345",
+                            "country": "US"
+                        }
+                        """);
+                CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, new BigDecimal("29.99"),
+                        testAddress);
+                order.stripePaymentIntentId = "pi_test_direct_flow";
+                order.persist();
+                return order.id;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
 
-        String payload =
-                String.format(
-                        """
-            {
-                "id": "evt_test_payment_intent",
-                "object": "event",
-                "api_version": "2024-11-20.acacia",
-                "created": %d,
-                "type": "payment_intent.succeeded",
-                "data": {
-                    "object": {
-                        "id": "pi_test_direct_flow",
-                        "object": "payment_intent",
-                        "latest_charge": "%s",
-                        "status": "succeeded"
+        String payload = String.format("""
+                {
+                    "id": "evt_test_payment_intent",
+                    "object": "event",
+                    "api_version": "2024-11-20.acacia",
+                    "created": %d,
+                    "type": "payment_intent.succeeded",
+                    "data": {
+                        "object": {
+                            "id": "pi_test_direct_flow",
+                            "object": "payment_intent",
+                            "latest_charge": "%s",
+                            "status": "succeeded"
+                        }
                     }
                 }
-            }
-            """,
-                        System.currentTimeMillis() / 1000, TEST_CHARGE_ID);
+                """, System.currentTimeMillis() / 1000, TEST_CHARGE_ID);
 
         String signature = generateStripeSignature(payload);
 
         // Send webhook
-        given().contentType(ContentType.JSON)
-                .header(HEADER_STRIPE_SIGNATURE, signature)
-                .body(payload)
-                .when()
-                .post("/api/webhooks/stripe")
-                .then()
-                .statusCode(200);
+        given().contentType(ContentType.JSON).header(HEADER_STRIPE_SIGNATURE, signature).body(payload).when()
+                .post("/api/webhooks/stripe").then().statusCode(200);
 
         // Clear persistence context to ensure fresh read from database
         entityManager.clear();
@@ -521,12 +433,10 @@ public class StripeWebhookControllerTest {
         assertNotNull(order.paidAt);
 
         // Cleanup
-        QuarkusTransaction.requiringNew()
-                .run(
-                        () -> {
-                            DelayedJob.delete("actorId", orderId.toString());
-                            CalendarOrder.deleteById(orderId);
-                        });
+        QuarkusTransaction.requiringNew().run(() -> {
+            DelayedJob.delete("actorId", orderId.toString());
+            CalendarOrder.deleteById(orderId);
+        });
     }
 
     // ============================================================================
@@ -537,55 +447,45 @@ public class StripeWebhookControllerTest {
     @Order(7)
     void testWebhook_ChargeRefunded_UpdatesOrderNotes() throws Exception {
         // Mark order as PAID first - use programmatic transaction to commit before HTTP call
-        QuarkusTransaction.requiringNew()
-                .run(
-                        () -> {
-                            CalendarOrder order = CalendarOrder.findById(testOrder.id);
-                            order.status = CalendarOrder.STATUS_PAID;
-                            order.stripeChargeId = TEST_CHARGE_ID;
-                            order.persist();
-                        });
+        QuarkusTransaction.requiringNew().run(() -> {
+            CalendarOrder order = CalendarOrder.findById(testOrder.id);
+            order.status = CalendarOrder.STATUS_PAID;
+            order.stripeChargeId = TEST_CHARGE_ID;
+            order.persist();
+        });
 
-        String payload =
-                String.format(
-                        """
-            {
-                "id": "evt_test_refund",
-                "object": "event",
-                "api_version": "2024-11-20.acacia",
-                "created": %d,
-                "type": "charge.refunded",
-                "data": {
-                    "object": {
-                        "id": "%s",
-                        "object": "charge",
-                        "refunds": {
-                            "object": "list",
-                            "data": [
-                                {
-                                    "id": "re_test_123",
-                                    "object": "refund",
-                                    "amount": 1999,
-                                    "status": "succeeded"
-                                }
-                            ]
+        String payload = String.format("""
+                {
+                    "id": "evt_test_refund",
+                    "object": "event",
+                    "api_version": "2024-11-20.acacia",
+                    "created": %d,
+                    "type": "charge.refunded",
+                    "data": {
+                        "object": {
+                            "id": "%s",
+                            "object": "charge",
+                            "refunds": {
+                                "object": "list",
+                                "data": [
+                                    {
+                                        "id": "re_test_123",
+                                        "object": "refund",
+                                        "amount": 1999,
+                                        "status": "succeeded"
+                                    }
+                                ]
+                            }
                         }
                     }
                 }
-            }
-            """,
-                        System.currentTimeMillis() / 1000, TEST_CHARGE_ID);
+                """, System.currentTimeMillis() / 1000, TEST_CHARGE_ID);
 
         String signature = generateStripeSignature(payload);
 
         // Send webhook
-        given().contentType(ContentType.JSON)
-                .header(HEADER_STRIPE_SIGNATURE, signature)
-                .body(payload)
-                .when()
-                .post("/api/webhooks/stripe")
-                .then()
-                .statusCode(200);
+        given().contentType(ContentType.JSON).header(HEADER_STRIPE_SIGNATURE, signature).body(payload).when()
+                .post("/api/webhooks/stripe").then().statusCode(200);
 
         // Clear persistence context to ensure fresh read from database
         entityManager.clear();
@@ -602,55 +502,45 @@ public class StripeWebhookControllerTest {
     @Order(8)
     void testWebhook_ChargeRefunded_IdempotentProcessing() throws Exception {
         // Mark order as PAID - use programmatic transaction to commit before HTTP call
-        QuarkusTransaction.requiringNew()
-                .run(
-                        () -> {
-                            CalendarOrder order = CalendarOrder.findById(testOrder.id);
-                            order.status = CalendarOrder.STATUS_PAID;
-                            order.stripeChargeId = TEST_CHARGE_ID;
-                            order.persist();
-                        });
+        QuarkusTransaction.requiringNew().run(() -> {
+            CalendarOrder order = CalendarOrder.findById(testOrder.id);
+            order.status = CalendarOrder.STATUS_PAID;
+            order.stripeChargeId = TEST_CHARGE_ID;
+            order.persist();
+        });
 
-        String payload =
-                String.format(
-                        """
-            {
-                "id": "evt_test_refund_idempotent",
-                "object": "event",
-                "api_version": "2024-11-20.acacia",
-                "created": %d,
-                "type": "charge.refunded",
-                "data": {
-                    "object": {
-                        "id": "%s",
-                        "object": "charge",
-                        "refunds": {
-                            "object": "list",
-                            "data": [
-                                {
-                                    "id": "re_test_idempotent",
-                                    "object": "refund",
-                                    "amount": 1999,
-                                    "status": "succeeded"
-                                }
-                            ]
+        String payload = String.format("""
+                {
+                    "id": "evt_test_refund_idempotent",
+                    "object": "event",
+                    "api_version": "2024-11-20.acacia",
+                    "created": %d,
+                    "type": "charge.refunded",
+                    "data": {
+                        "object": {
+                            "id": "%s",
+                            "object": "charge",
+                            "refunds": {
+                                "object": "list",
+                                "data": [
+                                    {
+                                        "id": "re_test_idempotent",
+                                        "object": "refund",
+                                        "amount": 1999,
+                                        "status": "succeeded"
+                                    }
+                                ]
+                            }
                         }
                     }
                 }
-            }
-            """,
-                        System.currentTimeMillis() / 1000, TEST_CHARGE_ID);
+                """, System.currentTimeMillis() / 1000, TEST_CHARGE_ID);
 
         String signature = generateStripeSignature(payload);
 
         // Send webhook first time
-        given().contentType(ContentType.JSON)
-                .header(HEADER_STRIPE_SIGNATURE, signature)
-                .body(payload)
-                .when()
-                .post("/api/webhooks/stripe")
-                .then()
-                .statusCode(200);
+        given().contentType(ContentType.JSON).header(HEADER_STRIPE_SIGNATURE, signature).body(payload).when()
+                .post("/api/webhooks/stripe").then().statusCode(200);
 
         // Clear persistence context to ensure fresh read from database
         entityManager.clear();
@@ -661,13 +551,8 @@ public class StripeWebhookControllerTest {
         assertEquals(1, refundCount1, "Refund should be recorded once");
 
         // Send SAME webhook again (duplicate delivery)
-        given().contentType(ContentType.JSON)
-                .header(HEADER_STRIPE_SIGNATURE, signature)
-                .body(payload)
-                .when()
-                .post("/api/webhooks/stripe")
-                .then()
-                .statusCode(200);
+        given().contentType(ContentType.JSON).header(HEADER_STRIPE_SIGNATURE, signature).body(payload).when()
+                .post("/api/webhooks/stripe").then().statusCode(200);
 
         // Clear persistence context to ensure fresh read from database
         entityManager.clear();
@@ -686,29 +571,23 @@ public class StripeWebhookControllerTest {
     @Test
     @Order(9)
     void testWebhook_UnknownEventType_ReturnsSuccess() throws Exception {
-        String payload =
-                """
-            {
-                "id": "evt_test_unknown",
-                "type": "payment_intent.created",
-                "data": {
-                    "object": {
-                        "id": "pi_test_unknown"
+        String payload = """
+                {
+                    "id": "evt_test_unknown",
+                    "type": "payment_intent.created",
+                    "data": {
+                        "object": {
+                            "id": "pi_test_unknown"
+                        }
                     }
                 }
-            }
-            """;
+                """;
 
         String signature = generateStripeSignature(payload);
 
         // Stripe best practice: return 200 for unknown event types
-        given().contentType(ContentType.JSON)
-                .header(HEADER_STRIPE_SIGNATURE, signature)
-                .body(payload)
-                .when()
-                .post("/api/webhooks/stripe")
-                .then()
-                .statusCode(200);
+        given().contentType(ContentType.JSON).header(HEADER_STRIPE_SIGNATURE, signature).body(payload).when()
+                .post("/api/webhooks/stripe").then().statusCode(200);
     }
 
     // ============================================================================

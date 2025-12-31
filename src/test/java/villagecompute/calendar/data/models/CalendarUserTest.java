@@ -26,13 +26,17 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class CalendarUserTest {
 
-    @Inject Validator validator;
+    @Inject
+    Validator validator;
 
-    @Inject TestDataCleaner testDataCleaner;
+    @Inject
+    TestDataCleaner testDataCleaner;
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
-    @Inject jakarta.persistence.EntityManager entityManager;
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
 
     @BeforeEach
     @Transactional
@@ -138,19 +142,15 @@ class CalendarUserTest {
         // Create email with 256 chars (max is 255): 246 chars + "@test.com" (9 chars) + 1 extra =
         // 256
         String localPart = "a".repeat(247); // 247 chars
-        user.email =
-                localPart + "@test.com"; // Total = 247 + 9 = 256 chars (violates @Size max=255)
+        user.email = localPart + "@test.com"; // Total = 247 + 9 = 256 chars (violates @Size max=255)
 
         // When
         Set<ConstraintViolation<CalendarUser>> violations = validator.validate(user);
 
         // Then
-        assertTrue(
-                violations.size()
-                        >= 1); // Should have at least @Size violation, might also have @Email
+        assertTrue(violations.size() >= 1); // Should have at least @Size violation, might also have @Email
         // violation
-        boolean hasSizeViolation =
-                violations.stream().anyMatch(v -> "email".equals(v.getPropertyPath().toString()));
+        boolean hasSizeViolation = violations.stream().anyMatch(v -> "email".equals(v.getPropertyPath().toString()));
         assertTrue(hasSizeViolation);
     }
 
@@ -162,8 +162,7 @@ class CalendarUserTest {
         user.persist();
 
         // When
-        Optional<CalendarUser> found =
-                CalendarUser.findByOAuthSubject("GOOGLE", "test-subject-user@test.com");
+        Optional<CalendarUser> found = CalendarUser.findByOAuthSubject("GOOGLE", "test-subject-user@test.com");
 
         // Then
         assertTrue(found.isPresent());
@@ -546,9 +545,8 @@ class CalendarUserTest {
 
         // Then
         assertTrue(violations.size() >= 1);
-        boolean hasViolation =
-                violations.stream()
-                        .anyMatch(v -> "profileImageUrl".equals(v.getPropertyPath().toString()));
+        boolean hasViolation = violations.stream()
+                .anyMatch(v -> "profileImageUrl".equals(v.getPropertyPath().toString()));
         assertTrue(hasViolation);
     }
 
@@ -563,9 +561,7 @@ class CalendarUserTest {
 
         // Then
         assertTrue(violations.size() >= 1);
-        boolean hasViolation =
-                violations.stream()
-                        .anyMatch(v -> "displayName".equals(v.getPropertyPath().toString()));
+        boolean hasViolation = violations.stream().anyMatch(v -> "displayName".equals(v.getPropertyPath().toString()));
         assertTrue(hasViolation);
     }
 
@@ -580,9 +576,7 @@ class CalendarUserTest {
 
         // Then
         assertTrue(violations.size() >= 1);
-        boolean hasViolation =
-                violations.stream()
-                        .anyMatch(v -> "oauthSubject".equals(v.getPropertyPath().toString()));
+        boolean hasViolation = violations.stream().anyMatch(v -> "oauthSubject".equals(v.getPropertyPath().toString()));
         assertTrue(hasViolation);
     }
 

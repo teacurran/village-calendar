@@ -15,7 +15,8 @@ import villagecompute.calendar.services.ProductService;
 @ApplicationScoped
 public class ProductGraphQL {
 
-    @Inject ProductService productService;
+    @Inject
+    ProductService productService;
 
     /** Get all available products */
     @Query("products")
@@ -39,14 +40,7 @@ public class ProductGraphQL {
     }
 
     private Product toGraphQLProduct(ProductService.Product p) {
-        return new Product(
-                p.code,
-                p.name,
-                p.description,
-                p.price.doubleValue(),
-                p.features,
-                p.icon,
-                p.badge,
+        return new Product(p.code, p.name, p.description, p.price.doubleValue(), p.features, p.icon, p.badge,
                 p.displayOrder);
     }
 }

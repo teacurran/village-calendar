@@ -29,22 +29,27 @@ import io.restassured.http.ContentType;
 /**
  * End-to-end integration tests for critical calendar workflows.
  *
- * <p>Tests: 1. Create calendar from template and verify config cloned 2. Add multiple events to
- * calendar and verify persistence 3. Update calendar configuration and verify changes persisted 4.
- * Query public templates via GraphQL (no authentication required)
+ * <p>
+ * Tests: 1. Create calendar from template and verify config cloned 2. Add multiple events to calendar and verify
+ * persistence 3. Update calendar configuration and verify changes persisted 4. Query public templates via GraphQL (no
+ * authentication required)
  *
- * <p>Note: These tests use service layer for authenticated operations due to JWT authentication
- * complexity in test environment. GraphQL authorization is covered by CalendarGraphQLTest.java.
+ * <p>
+ * Note: These tests use service layer for authenticated operations due to JWT authentication complexity in test
+ * environment. GraphQL authorization is covered by CalendarGraphQLTest.java.
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class CalendarWorkflowTest {
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
-    @Inject AuthenticationService authService;
+    @Inject
+    AuthenticationService authService;
 
-    @Inject CalendarService calendarService;
+    @Inject
+    CalendarService calendarService;
 
     private CalendarUser testUser;
     private CalendarTemplate testTemplate;
@@ -90,16 +95,15 @@ public class CalendarWorkflowTest {
 
     private JsonNode createTestConfiguration() {
         try {
-            return objectMapper.readTree(
-                    """
-                {
-                    "theme": "modern",
-                    "colorScheme": "blue",
-                    "showMoonPhases": false,
-                    "showWeekNumbers": true,
-                    "compactMode": false
-                }
-                """);
+            return objectMapper.readTree("""
+                    {
+                        "theme": "modern",
+                        "colorScheme": "blue",
+                        "showMoonPhases": false,
+                        "showWeekNumbers": true,
+                        "compactMode": false
+                    }
+                    """);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -113,30 +117,21 @@ public class CalendarWorkflowTest {
     @Order(1)
     void testWorkflow_QueryPublicTemplates() {
         // Query templates via GraphQL (public endpoint, no auth required)
-        String templateQuery =
-                """
-            query {
-                templates(isActive: true) {
-                    id
-                    name
-                    description
-                    configuration
+        String templateQuery = """
+                query {
+                    templates(isActive: true) {
+                        id
+                        name
+                        description
+                        configuration
+                    }
                 }
-            }
-            """;
+                """;
 
-        String response =
-                given().contentType(ContentType.JSON)
-                        .body(Map.of("query", templateQuery))
-                        .when()
-                        .post("/graphql")
-                        .then()
-                        .statusCode(200)
-                        .body("data.templates", notNullValue())
-                        .body("data.templates", hasSize(greaterThanOrEqualTo(1)))
-                        .body("errors", nullValue())
-                        .extract()
-                        .asString();
+        String response = given().contentType(ContentType.JSON).body(Map.of("query", templateQuery)).when()
+                .post("/graphql").then().statusCode(200).body("data.templates", notNullValue())
+                .body("data.templates", hasSize(greaterThanOrEqualTo(1))).body("errors", nullValue()).extract()
+                .asString();
 
         assertTrue(response.contains(testTemplate.name), "Template should be in the list");
     }
@@ -150,16 +145,11 @@ public class CalendarWorkflowTest {
     @Transactional
     void testWorkflow_CreateCalendarFromTemplate_VerifyConfigCloned() {
         // Create calendar from template via service layer
-        UserCalendar calendar =
-                calendarService.createCalendar(
-                        "Test Calendar from Template",
-                        2025,
-                        testTemplate.id,
-                        null, // No custom configuration - use template config
-                        true, // Public
-                        testUser,
-                        null // No session ID (authenticated user)
-                        );
+        UserCalendar calendar = calendarService.createCalendar("Test Calendar from Template", 2025, testTemplate.id,
+                null, // No custom configuration - use template config
+                true, // Public
+                testUser, null // No session ID (authenticated user)
+        );
 
         assertNotNull(calendar, "Calendar should be created");
         assertNotNull(calendar.id, "Calendar should have an ID");
@@ -170,19 +160,13 @@ public class CalendarWorkflowTest {
 
         // Verify configuration was cloned from template
         assertNotNull(calendar.configuration, "Calendar configuration should not be null");
-        assertEquals(
-                "modern",
-                calendar.configuration.get("theme").asText(),
+        assertEquals("modern", calendar.configuration.get("theme").asText(),
                 "Configuration should be cloned from template");
-        assertEquals(
-                "blue",
-                calendar.configuration.get("colorScheme").asText(),
+        assertEquals("blue", calendar.configuration.get("colorScheme").asText(),
                 "Configuration should be cloned from template");
-        assertTrue(
-                calendar.configuration.get("showWeekNumbers").asBoolean(),
+        assertTrue(calendar.configuration.get("showWeekNumbers").asBoolean(),
                 "Configuration should be cloned from template");
-        assertFalse(
-                calendar.configuration.get("showMoonPhases").asBoolean(),
+        assertFalse(calendar.configuration.get("showMoonPhases").asBoolean(),
                 "Configuration should be cloned from template");
 
         // Verify in database
@@ -201,15 +185,8 @@ public class CalendarWorkflowTest {
     @Transactional
     void testWorkflow_AddMultipleEventsToCalendar() {
         // Create a calendar first
-        UserCalendar calendar =
-                calendarService.createCalendar(
-                        "Calendar for Events Test",
-                        2025,
-                        testTemplate.id,
-                        null,
-                        true,
-                        testUser,
-                        null);
+        UserCalendar calendar = calendarService.createCalendar("Calendar for Events Test", 2025, testTemplate.id, null,
+                true, testUser, null);
 
         assertNotNull(calendar.id);
 
@@ -287,63 +264,45 @@ public class CalendarWorkflowTest {
     @Transactional
     void testWorkflow_UpdateCalendarConfiguration() {
         // Create a calendar first
-        UserCalendar calendar =
-                calendarService.createCalendar(
-                        "Calendar for Update Test",
-                        2025,
-                        testTemplate.id,
-                        null,
-                        false, // Private
-                        testUser,
-                        null);
+        UserCalendar calendar = calendarService.createCalendar("Calendar for Update Test", 2025, testTemplate.id, null,
+                false, // Private
+                testUser, null);
 
         assertNotNull(calendar.id);
         assertFalse(calendar.isPublic, "Calendar should be private initially");
 
         // Verify initial configuration
-        assertFalse(
-                calendar.configuration.get("showMoonPhases").asBoolean(),
+        assertFalse(calendar.configuration.get("showMoonPhases").asBoolean(),
                 "Moon phases should be disabled initially");
 
         // Create new configuration with moon phases enabled
         JsonNode updatedConfig;
         try {
-            updatedConfig =
-                    objectMapper.readTree(
-                            """
-                {
-                    "theme": "modern",
-                    "colorScheme": "blue",
-                    "showMoonPhases": true,
-                    "showWeekNumbers": false,
-                    "compactMode": true
-                }
-                """);
+            updatedConfig = objectMapper.readTree("""
+                    {
+                        "theme": "modern",
+                        "colorScheme": "blue",
+                        "showMoonPhases": true,
+                        "showWeekNumbers": false,
+                        "compactMode": true
+                    }
+                    """);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
         // Update calendar via service layer
-        UserCalendar updatedCalendar =
-                calendarService.updateCalendar(
-                        calendar.id,
-                        "Updated Calendar Name",
-                        updatedConfig,
-                        true, // Make public
-                        testUser);
+        UserCalendar updatedCalendar = calendarService.updateCalendar(calendar.id, "Updated Calendar Name",
+                updatedConfig, true, // Make public
+                testUser);
 
         // Verify updates
         assertEquals("Updated Calendar Name", updatedCalendar.name);
         assertTrue(updatedCalendar.isPublic, "Calendar should now be public");
         assertNotNull(updatedCalendar.configuration, "Configuration should not be null");
-        assertTrue(
-                updatedCalendar.configuration.get("showMoonPhases").asBoolean(),
-                "Moon phases should be enabled");
-        assertTrue(
-                updatedCalendar.configuration.get("compactMode").asBoolean(),
-                "Compact mode should be enabled");
-        assertFalse(
-                updatedCalendar.configuration.get("showWeekNumbers").asBoolean(),
+        assertTrue(updatedCalendar.configuration.get("showMoonPhases").asBoolean(), "Moon phases should be enabled");
+        assertTrue(updatedCalendar.configuration.get("compactMode").asBoolean(), "Compact mode should be enabled");
+        assertFalse(updatedCalendar.configuration.get("showWeekNumbers").asBoolean(),
                 "Week numbers should be disabled");
 
         // Verify changes persisted in database
@@ -351,11 +310,9 @@ public class CalendarWorkflowTest {
         assertNotNull(dbCalendar, "Calendar should exist in database");
         assertEquals("Updated Calendar Name", dbCalendar.name);
         assertTrue(dbCalendar.isPublic);
-        assertTrue(
-                dbCalendar.configuration.get("showMoonPhases").asBoolean(),
+        assertTrue(dbCalendar.configuration.get("showMoonPhases").asBoolean(),
                 "Database should reflect moon phases enabled");
-        assertTrue(
-                dbCalendar.configuration.get("compactMode").asBoolean(),
+        assertTrue(dbCalendar.configuration.get("compactMode").asBoolean(),
                 "Database should reflect compact mode enabled");
     }
 
@@ -368,43 +325,31 @@ public class CalendarWorkflowTest {
     @Transactional
     void testWorkflow_ListCalendarsForUser() {
         // Create multiple calendars for the test user
-        UserCalendar calendar1 =
-                calendarService.createCalendar(
-                        "My Calendar 2025", 2025, testTemplate.id, null, true, testUser, null);
+        UserCalendar calendar1 = calendarService.createCalendar("My Calendar 2025", 2025, testTemplate.id, null, true,
+                testUser, null);
 
-        UserCalendar calendar2 =
-                calendarService.createCalendar(
-                        "My Calendar 2026", 2026, testTemplate.id, null, false, testUser, null);
+        UserCalendar calendar2 = calendarService.createCalendar("My Calendar 2026", 2026, testTemplate.id, null, false,
+                testUser, null);
 
-        UserCalendar calendar3 =
-                calendarService.createCalendar(
-                        "My Calendar 2025 #2", 2025, testTemplate.id, null, true, testUser, null);
+        UserCalendar calendar3 = calendarService.createCalendar("My Calendar 2025 #2", 2025, testTemplate.id, null,
+                true, testUser, null);
 
         // Query calendars via service layer
-        List<UserCalendar> allCalendars =
-                calendarService.listCalendars(
-                        testUser.id,
-                        null, // No year filter
-                        0, // Page 0
-                        10, // Page size 10
-                        testUser);
+        List<UserCalendar> allCalendars = calendarService.listCalendars(testUser.id, null, // No year filter
+                0, // Page 0
+                10, // Page size 10
+                testUser);
 
         assertEquals(3, allCalendars.size(), "Should have 3 calendars");
 
         // Query calendars for specific year
-        List<UserCalendar> calendars2025 =
-                calendarService.listCalendars(
-                        testUser.id,
-                        2025, // Filter by year 2025
-                        0,
-                        10,
-                        testUser);
+        List<UserCalendar> calendars2025 = calendarService.listCalendars(testUser.id, 2025, // Filter by year 2025
+                0, 10, testUser);
 
         assertEquals(2, calendars2025.size(), "Should have 2 calendars for 2025");
 
         // Query calendars for 2026
-        List<UserCalendar> calendars2026 =
-                calendarService.listCalendars(testUser.id, 2026, 0, 10, testUser);
+        List<UserCalendar> calendars2026 = calendarService.listCalendars(testUser.id, 2026, 0, 10, testUser);
 
         assertEquals(1, calendars2026.size(), "Should have 1 calendar for 2026");
     }

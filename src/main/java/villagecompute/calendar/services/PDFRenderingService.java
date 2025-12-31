@@ -5,17 +5,21 @@ import java.io.StringReader;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import org.apache.batik.transcoder.SVGAbstractTranscoder;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
+import org.apache.fop.svg.AbstractFOPTranscoder;
 import org.apache.fop.svg.PDFTranscoder;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.jboss.logging.Logger;
 
+import villagecompute.calendar.exceptions.RenderingException;
+
 /**
- * Service for rendering SVG content to PDF using Apache Batik. Also handles PDF metadata cleaning
- * to remove technology fingerprints.
+ * Service for rendering SVG content to PDF using Apache Batik. Also handles PDF metadata cleaning to remove technology
+ * fingerprints.
  */
 @ApplicationScoped
 public class PDFRenderingService {
@@ -24,17 +28,20 @@ public class PDFRenderingService {
 
     // PDF page size: 35w x 23h inches (landscape)
     // PDF units are in points (1 inch = 72 points)
-    private static final float PDF_WIDTH_POINTS = 35 * 72; // 2520 points
-    private static final float PDF_HEIGHT_POINTS = 23 * 72; // 1656 points
+    // NOTE: These MUST be float - Batik's LengthKey rejects Integer values
+    private static final float PDF_WIDTH_POINTS = 35 * 72f; // 2520 points
+    private static final float PDF_HEIGHT_POINTS = 23 * 72f; // 1656 points
 
     /**
-     * Render SVG content to PDF format. Uses Apache Batik's PDFTranscoder for SVG to PDF
-     * conversion.
+     * Render SVG content to PDF format. Uses Apache Batik's PDFTranscoder for SVG to PDF conversion.
      *
-     * @param svgContent The SVG content as a string
-     * @param year The calendar year (for PDF metadata)
+     * @param svgContent
+     *            The SVG content as a string
+     * @param year
+     *            The calendar year (for PDF metadata)
      * @return PDF bytes
-     * @throws RuntimeException if rendering fails
+     * @throws RenderingException
+     *             if rendering fails
      */
     public byte[] renderSVGToPDF(String svgContent, int year) {
         if (svgContent == null || svgContent.isEmpty()) {
@@ -51,11 +58,11 @@ public class PDFRenderingService {
             PDFTranscoder transcoder = new PDFTranscoder();
 
             // Set PDF page size
-            transcoder.addTranscodingHint(PDFTranscoder.KEY_WIDTH, PDF_WIDTH_POINTS);
-            transcoder.addTranscodingHint(PDFTranscoder.KEY_HEIGHT, PDF_HEIGHT_POINTS);
+            transcoder.addTranscodingHint(SVGAbstractTranscoder.KEY_WIDTH, PDF_WIDTH_POINTS);
+            transcoder.addTranscodingHint(SVGAbstractTranscoder.KEY_HEIGHT, PDF_HEIGHT_POINTS);
 
             // Enable auto-font detection to use system fonts (Noto Emoji, DejaVu Sans, etc.)
-            transcoder.addTranscodingHint(PDFTranscoder.KEY_AUTO_FONTS, Boolean.TRUE);
+            transcoder.addTranscodingHint(AbstractFOPTranscoder.KEY_AUTO_FONTS, Boolean.TRUE);
 
             // Create input and output
             StringReader reader = new StringReader(svgContent);
@@ -83,18 +90,20 @@ public class PDFRenderingService {
 
         } catch (Exception e) {
             LOG.errorf(e, "Error rendering SVG to PDF");
-            throw new RuntimeException("PDF rendering failed: " + e.getMessage(), e);
+            throw new RenderingException("PDF rendering failed: " + e.getMessage(), e);
         }
     }
 
     /**
-     * Render SVG content to PNG format for email preview. Uses Apache Batik's PNGTranscoder for SVG
-     * to PNG conversion.
+     * Render SVG content to PNG format for email preview. Uses Apache Batik's PNGTranscoder for SVG to PNG conversion.
      *
-     * @param svgContent The SVG content as a string
-     * @param width Target width in pixels (height calculated to maintain aspect ratio)
+     * @param svgContent
+     *            The SVG content as a string
+     * @param width
+     *            Target width in pixels (height calculated to maintain aspect ratio)
      * @return PNG bytes
-     * @throws RuntimeException if rendering fails
+     * @throws RenderingException
+     *             if rendering fails
      */
     public byte[] renderSVGToPNG(String svgContent, int width) {
         if (svgContent == null || svgContent.isEmpty()) {
@@ -102,9 +111,7 @@ public class PDFRenderingService {
         }
 
         try {
-            LOG.debugf(
-                    "Rendering SVG to PNG (SVG length: %d bytes, target width: %d)",
-                    svgContent.length(), width);
+            LOG.debugf("Rendering SVG to PNG (SVG length: %d bytes, target width: %d)", svgContent.length(), width);
 
             // Preprocess SVG to fix various issues
             svgContent = preprocessSVG(svgContent);
@@ -137,18 +144,20 @@ public class PDFRenderingService {
 
         } catch (Exception e) {
             LOG.errorf(e, "Error rendering SVG to PNG");
-            throw new RuntimeException("PNG rendering failed: " + e.getMessage(), e);
+            throw new RenderingException("PNG rendering failed: " + e.getMessage(), e);
         }
     }
 
     /**
-     * Render SVG content to PNG and return as base64-encoded data URI. Suitable for embedding
-     * directly in HTML emails.
+     * Render SVG content to PNG and return as base64-encoded data URI. Suitable for embedding directly in HTML emails.
      *
-     * @param svgContent The SVG content as a string
-     * @param width Target width in pixels
+     * @param svgContent
+     *            The SVG content as a string
+     * @param width
+     *            Target width in pixels
      * @return Base64 data URI string (e.g., "data:image/png;base64,...")
-     * @throws RuntimeException if rendering fails
+     * @throws RenderingException
+     *             if rendering fails
      */
     public String renderSVGToPNGDataUri(String svgContent, int width) {
         byte[] pngBytes = renderSVGToPNG(svgContent, width);
@@ -159,7 +168,8 @@ public class PDFRenderingService {
     /**
      * Preprocess SVG content to fix various issues that cause Batik transcoding problems.
      *
-     * @param svgContent Original SVG content
+     * @param svgContent
+     *            Original SVG content
      * @return Fixed SVG content
      */
     private String preprocessSVG(String svgContent) {
@@ -191,10 +201,11 @@ public class PDFRenderingService {
     }
 
     /**
-     * Fix SVG content that contains xlink:href attributes without proper namespace declaration.
-     * This is required for Batik to properly process SVG with xlink references.
+     * Fix SVG content that contains xlink:href attributes without proper namespace declaration. This is required for
+     * Batik to properly process SVG with xlink references.
      *
-     * @param svgContent Original SVG content
+     * @param svgContent
+     *            Original SVG content
      * @return Fixed SVG content with proper xlink namespace declaration
      */
     private String fixXlinkNamespace(String svgContent) {
@@ -206,11 +217,8 @@ public class PDFRenderingService {
             String xlinkNamespace = "xmlns:xlink=\"http://www.w3.org/1999/xlink\"";
 
             // Use regex to find the svg tag and handle various formats
-            java.util.regex.Pattern svgPattern =
-                    java.util.regex.Pattern.compile(
-                            "(<svg[^>]*?)>",
-                            java.util.regex.Pattern.CASE_INSENSITIVE
-                                    | java.util.regex.Pattern.DOTALL);
+            java.util.regex.Pattern svgPattern = java.util.regex.Pattern.compile("(<svg[^>]*?)>",
+                    java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.DOTALL);
             java.util.regex.Matcher matcher = svgPattern.matcher(svgContent);
 
             if (matcher.find()) {
@@ -237,13 +245,15 @@ public class PDFRenderingService {
     }
 
     /**
-     * Fix CSS URI references that cause "invalid URI" errors in Batik. The main issue is with the
-     * base URI resolution causing problems with internal ID references.
+     * Fix CSS URI references that cause "invalid URI" errors in Batik. The main issue is with the base URI resolution
+     * causing problems with internal ID references.
      *
-     * <p>IMPORTANT: Only clip-path can use bare #id syntax. Other properties like filter, fill,
-     * stroke require the url(#id) syntax and should NOT be modified.
+     * <p>
+     * IMPORTANT: Only clip-path can use bare #id syntax. Other properties like filter, fill, stroke require the
+     * url(#id) syntax and should NOT be modified.
      *
-     * @param svgContent Original SVG content
+     * @param svgContent
+     *            Original SVG content
      * @return Fixed SVG content
      */
     private String fixCSSUriReferences(String svgContent) {
@@ -258,10 +268,8 @@ public class PDFRenderingService {
 
             for (String property : cssProperties) {
                 // Handle attribute form: property="url(#id)"
-                java.util.regex.Pattern attributePattern =
-                        java.util.regex.Pattern.compile(
-                                property + "\\s*=\\s*[\"']url\\(#([^)]+)\\)[\"']",
-                                java.util.regex.Pattern.CASE_INSENSITIVE);
+                java.util.regex.Pattern attributePattern = java.util.regex.Pattern.compile(
+                        property + "\\s*=\\s*[\"']url\\(#([^)]+)\\)[\"']", java.util.regex.Pattern.CASE_INSENSITIVE);
 
                 java.util.regex.Matcher matcher = attributePattern.matcher(svgContent);
                 StringBuffer result = new StringBuffer();
@@ -276,12 +284,9 @@ public class PDFRenderingService {
                 svgContent = result.toString();
 
                 // Handle style form: style="...property:url(#id)..."
-                java.util.regex.Pattern stylePattern =
-                        java.util.regex.Pattern.compile(
-                                "(style\\s*=\\s*[\"'][^\"']*?)"
-                                        + property
-                                        + "\\s*:\\s*url\\(#([^)]+)\\)([^\"']*[\"'])",
-                                java.util.regex.Pattern.CASE_INSENSITIVE);
+                java.util.regex.Pattern stylePattern = java.util.regex.Pattern.compile(
+                        "(style\\s*=\\s*[\"'][^\"']*?)" + property + "\\s*:\\s*url\\(#([^)]+)\\)([^\"']*[\"'])",
+                        java.util.regex.Pattern.CASE_INSENSITIVE);
 
                 matcher = stylePattern.matcher(svgContent);
                 result = new StringBuffer();
@@ -303,11 +308,13 @@ public class PDFRenderingService {
     }
 
     /**
-     * Clean PDF metadata to remove backend technology fingerprints. Replaces Apache FOP producer
-     * strings with custom branding.
+     * Clean PDF metadata to remove backend technology fingerprints. Replaces Apache FOP producer strings with custom
+     * branding.
      *
-     * @param pdfBytes Original PDF bytes
-     * @param year Calendar year for metadata
+     * @param pdfBytes
+     *            Original PDF bytes
+     * @param year
+     *            Calendar year for metadata
      * @return Cleaned PDF bytes
      */
     private byte[] cleanPdfMetadata(byte[] pdfBytes, int year) {

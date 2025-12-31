@@ -19,15 +19,15 @@ public class AssetInput {
     /** Height of the asset in inches (e.g., 23 for poster) */
     public BigDecimal heightInches;
 
-    public AssetInput() {}
+    public AssetInput() {
+    }
 
     public AssetInput(String assetKey, String svgContent) {
         this.assetKey = assetKey;
         this.svgContent = svgContent;
     }
 
-    public AssetInput(
-            String assetKey, String svgContent, BigDecimal widthInches, BigDecimal heightInches) {
+    public AssetInput(String assetKey, String svgContent, BigDecimal widthInches, BigDecimal heightInches) {
         this.assetKey = assetKey;
         this.svgContent = svgContent;
         this.widthInches = widthInches;

@@ -21,20 +21,23 @@ import io.quarkus.test.junit.QuarkusTest;
 /**
  * End-to-end integration tests for template application workflows.
  *
- * <p>Tests: 1. Apply template with moon phases enabled 2. Apply template with Hebrew calendar
- * enabled 3. Apply template with custom holiday configuration 4. Verify configuration is
- * deep-copied (not shallow referenced)
+ * <p>
+ * Tests: 1. Apply template with moon phases enabled 2. Apply template with Hebrew calendar enabled 3. Apply template
+ * with custom holiday configuration 4. Verify configuration is deep-copied (not shallow referenced)
  *
- * <p>All tests use the service layer to verify that JSONB configuration fields are properly
- * deep-copied during template application.
+ * <p>
+ * All tests use the service layer to verify that JSONB configuration fields are properly deep-copied during template
+ * application.
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class TemplateWorkflowTest {
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
-    @Inject CalendarService calendarService;
+    @Inject
+    CalendarService calendarService;
 
     private CalendarUser testUser;
     private CalendarTemplate moonTemplate;
@@ -61,18 +64,16 @@ public class TemplateWorkflowTest {
         moonTemplate.isFeatured = true;
         moonTemplate.displayOrder = 1;
         try {
-            moonTemplate.configuration =
-                    objectMapper.readTree(
-                            """
-                {
-                    "theme": "astronomy",
-                    "colorScheme": "dark",
-                    "showMoonPhases": true,
-                    "showMoonIllumination": true,
-                    "moonSize": 24,
-                    "showWeekNumbers": false
-                }
-                """);
+            moonTemplate.configuration = objectMapper.readTree("""
+                    {
+                        "theme": "astronomy",
+                        "colorScheme": "dark",
+                        "showMoonPhases": true,
+                        "showMoonIllumination": true,
+                        "moonSize": 24,
+                        "showWeekNumbers": false
+                    }
+                    """);
         } catch (Exception e) {
             fail("Failed to create moon template configuration: " + e.getMessage());
         }
@@ -86,18 +87,16 @@ public class TemplateWorkflowTest {
         hebrewTemplate.isFeatured = false;
         hebrewTemplate.displayOrder = 2;
         try {
-            hebrewTemplate.configuration =
-                    objectMapper.readTree(
-                            """
-                {
-                    "theme": "traditional",
-                    "colorScheme": "blue",
-                    "showHebrewDates": true,
-                    "showHebrewHolidays": true,
-                    "hebrewFont": "Taamey Frank CLM",
-                    "showWeekNumbers": true
-                }
-                """);
+            hebrewTemplate.configuration = objectMapper.readTree("""
+                    {
+                        "theme": "traditional",
+                        "colorScheme": "blue",
+                        "showHebrewDates": true,
+                        "showHebrewHolidays": true,
+                        "hebrewFont": "Taamey Frank CLM",
+                        "showWeekNumbers": true
+                    }
+                    """);
         } catch (Exception e) {
             fail("Failed to create Hebrew template configuration: " + e.getMessage());
         }
@@ -111,38 +110,36 @@ public class TemplateWorkflowTest {
         holidayTemplate.isFeatured = true;
         holidayTemplate.displayOrder = 3;
         try {
-            holidayTemplate.configuration =
-                    objectMapper.readTree(
-                            """
-                {
-                    "theme": "festive",
-                    "colorScheme": "red",
-                    "showWeekNumbers": false,
-                    "holidays": {
-                        "country": "US",
-                        "includeNational": true,
-                        "includeReligious": true,
-                        "includeObservances": false,
-                        "customHolidays": [
-                            {
-                                "name": "Company Anniversary",
-                                "date": "2025-03-15",
-                                "color": "#FFD700"
-                            },
-                            {
-                                "name": "Team Building Day",
-                                "date": "2025-06-20",
-                                "color": "#00CED1"
-                            }
-                        ]
-                    },
-                    "holidayStyle": {
-                        "boldText": true,
-                        "fontSize": 14,
-                        "backgroundColor": "#FFF8DC"
+            holidayTemplate.configuration = objectMapper.readTree("""
+                    {
+                        "theme": "festive",
+                        "colorScheme": "red",
+                        "showWeekNumbers": false,
+                        "holidays": {
+                            "country": "US",
+                            "includeNational": true,
+                            "includeReligious": true,
+                            "includeObservances": false,
+                            "customHolidays": [
+                                {
+                                    "name": "Company Anniversary",
+                                    "date": "2025-03-15",
+                                    "color": "#FFD700"
+                                },
+                                {
+                                    "name": "Team Building Day",
+                                    "date": "2025-06-20",
+                                    "color": "#00CED1"
+                                }
+                            ]
+                        },
+                        "holidayStyle": {
+                            "boldText": true,
+                            "fontSize": 14,
+                            "backgroundColor": "#FFF8DC"
+                        }
                     }
-                }
-                """);
+                    """);
         } catch (Exception e) {
             fail("Failed to create holiday template configuration: " + e.getMessage());
         }
@@ -151,26 +148,23 @@ public class TemplateWorkflowTest {
         // Create deep copy test template
         deepCopyTemplate = new CalendarTemplate();
         deepCopyTemplate.name = "Deep Copy Test Template " + System.currentTimeMillis();
-        deepCopyTemplate.description =
-                "Verify configuration is deep copied, not shallow referenced";
+        deepCopyTemplate.description = "Verify configuration is deep copied, not shallow referenced";
         deepCopyTemplate.isActive = true;
         deepCopyTemplate.isFeatured = false;
         deepCopyTemplate.displayOrder = 4;
         try {
-            deepCopyTemplate.configuration =
-                    objectMapper.readTree(
-                            """
-                {
-                    "theme": "original",
-                    "nested": {
-                        "level1": {
-                            "level2": {
-                                "value": "original"
+            deepCopyTemplate.configuration = objectMapper.readTree("""
+                    {
+                        "theme": "original",
+                        "nested": {
+                            "level1": {
+                                "level2": {
+                                    "value": "original"
+                                }
                             }
                         }
                     }
-                }
-                """);
+                    """);
         } catch (Exception e) {
             fail("Failed to create deep copy template configuration: " + e.getMessage());
         }
@@ -211,16 +205,17 @@ public class TemplateWorkflowTest {
     @Transactional
     void testTemplateWorkflow_ApplyTemplateWithMoonPhasesEnabled() {
         // Create calendar from template via service layer (bypasses GraphQL auth)
-        UserCalendar calendar =
-                calendarService.createCalendar(
-                        "My Astronomy Calendar",
-                        2025,
-                        moonTemplate.id,
-                        null, // No custom configuration - use template config
-                        true, // isPublic
-                        testUser, // Authenticated user
-                        null // No session ID
-                        );
+        UserCalendar calendar = calendarService.createCalendar("My Astronomy Calendar", 2025, moonTemplate.id, null, // No
+                                                                                                                     // custom
+                                                                                                                     // configuration
+                                                                                                                     // -
+                                                                                                                     // use
+                                                                                                                     // template
+                                                                                                                     // config
+                true, // isPublic
+                testUser, // Authenticated user
+                null // No session ID
+        );
 
         // Verify calendar was created
         assertNotNull(calendar, "Calendar should be created");
@@ -233,19 +228,13 @@ public class TemplateWorkflowTest {
         UserCalendar retrievedCalendar = UserCalendar.findById(calendar.id);
         assertNotNull(retrievedCalendar, "Calendar should exist in database");
         assertNotNull(retrievedCalendar.configuration, "Configuration should not be null");
-        assertTrue(
-                retrievedCalendar.configuration.get("showMoonPhases").asBoolean(),
+        assertTrue(retrievedCalendar.configuration.get("showMoonPhases").asBoolean(),
                 "Calendar should inherit showMoonPhases=true from template");
-        assertTrue(
-                retrievedCalendar.configuration.get("showMoonIllumination").asBoolean(),
+        assertTrue(retrievedCalendar.configuration.get("showMoonIllumination").asBoolean(),
                 "Calendar should inherit showMoonIllumination=true from template");
-        assertEquals(
-                24,
-                retrievedCalendar.configuration.get("moonSize").asInt(),
+        assertEquals(24, retrievedCalendar.configuration.get("moonSize").asInt(),
                 "Calendar should inherit moonSize=24 from template");
-        assertEquals(
-                "astronomy",
-                retrievedCalendar.configuration.get("theme").asText(),
+        assertEquals("astronomy", retrievedCalendar.configuration.get("theme").asText(),
                 "Calendar should inherit theme from template");
     }
 
@@ -265,16 +254,17 @@ public class TemplateWorkflowTest {
         assertNotNull(hebrewTemplate.id, "Hebrew template should have an ID");
 
         // Create calendar from template via service layer (bypasses GraphQL auth)
-        UserCalendar calendar =
-                calendarService.createCalendar(
-                        "My Hebrew Calendar",
-                        2025,
-                        hebrewTemplate.id,
-                        null, // No custom configuration - use template config
-                        false, // isPublic
-                        testUser, // Authenticated user
-                        null // No session ID
-                        );
+        UserCalendar calendar = calendarService.createCalendar("My Hebrew Calendar", 2025, hebrewTemplate.id, null, // No
+                                                                                                                    // custom
+                                                                                                                    // configuration
+                                                                                                                    // -
+                                                                                                                    // use
+                                                                                                                    // template
+                                                                                                                    // config
+                false, // isPublic
+                testUser, // Authenticated user
+                null // No session ID
+        );
 
         // Verify calendar was created
         assertNotNull(calendar, "Calendar should be created");
@@ -287,15 +277,11 @@ public class TemplateWorkflowTest {
         UserCalendar retrievedCalendar = UserCalendar.findById(calendar.id);
         assertNotNull(retrievedCalendar, "Calendar should exist in database");
         assertNotNull(retrievedCalendar.configuration, "Configuration should not be null");
-        assertTrue(
-                retrievedCalendar.configuration.get("showHebrewDates").asBoolean(),
+        assertTrue(retrievedCalendar.configuration.get("showHebrewDates").asBoolean(),
                 "Calendar should inherit showHebrewDates=true from template");
-        assertTrue(
-                retrievedCalendar.configuration.get("showHebrewHolidays").asBoolean(),
+        assertTrue(retrievedCalendar.configuration.get("showHebrewHolidays").asBoolean(),
                 "Calendar should inherit showHebrewHolidays=true from template");
-        assertEquals(
-                "Taamey Frank CLM",
-                retrievedCalendar.configuration.get("hebrewFont").asText(),
+        assertEquals("Taamey Frank CLM", retrievedCalendar.configuration.get("hebrewFont").asText(),
                 "Calendar should inherit Hebrew font from template");
     }
 
@@ -315,16 +301,17 @@ public class TemplateWorkflowTest {
         assertNotNull(holidayTemplate.id, "Holiday template should have an ID");
 
         // Create calendar from template via service layer (bypasses GraphQL auth)
-        UserCalendar calendar =
-                calendarService.createCalendar(
-                        "My Holiday Calendar",
-                        2025,
-                        holidayTemplate.id,
-                        null, // No custom configuration - use template config
-                        true, // isPublic
-                        testUser, // Authenticated user
-                        null // No session ID
-                        );
+        UserCalendar calendar = calendarService.createCalendar("My Holiday Calendar", 2025, holidayTemplate.id, null, // No
+                                                                                                                      // custom
+                                                                                                                      // configuration
+                                                                                                                      // -
+                                                                                                                      // use
+                                                                                                                      // template
+                                                                                                                      // config
+                true, // isPublic
+                testUser, // Authenticated user
+                null // No session ID
+        );
 
         // Verify calendar was created
         assertNotNull(calendar, "Calendar should be created");
@@ -339,11 +326,8 @@ public class TemplateWorkflowTest {
         assertNotNull(holidays, "Holidays config should be present");
         assertEquals("US", holidays.get("country").asText(), "Country should be cloned");
         assertTrue(holidays.get("includeNational").asBoolean(), "includeNational should be cloned");
-        assertTrue(
-                holidays.get("includeReligious").asBoolean(), "includeReligious should be cloned");
-        assertFalse(
-                holidays.get("includeObservances").asBoolean(),
-                "includeObservances should be cloned");
+        assertTrue(holidays.get("includeReligious").asBoolean(), "includeReligious should be cloned");
+        assertFalse(holidays.get("includeObservances").asBoolean(), "includeObservances should be cloned");
 
         JsonNode customHolidays = holidays.get("customHolidays");
         assertNotNull(customHolidays, "Custom holidays should be present");
@@ -357,10 +341,7 @@ public class TemplateWorkflowTest {
         assertNotNull(holidayStyle, "Holiday style should be present");
         assertTrue(holidayStyle.get("boldText").asBoolean(), "boldText should be cloned");
         assertEquals(14, holidayStyle.get("fontSize").asInt(), "fontSize should be cloned");
-        assertEquals(
-                "#FFF8DC",
-                holidayStyle.get("backgroundColor").asText(),
-                "backgroundColor should be cloned");
+        assertEquals("#FFF8DC", holidayStyle.get("backgroundColor").asText(), "backgroundColor should be cloned");
     }
 
     // ============================================================================
@@ -379,15 +360,10 @@ public class TemplateWorkflowTest {
         assertNotNull(deepCopyTemplate.id, "Deep copy template should have an ID");
 
         // Create calendar 1 from template via service layer
-        UserCalendar calendar1 =
-                calendarService.createCalendar(
-                        "Calendar 1",
-                        2025,
-                        deepCopyTemplate.id,
-                        null, // Use template config
-                        true,
-                        testUser,
-                        null);
+        UserCalendar calendar1 = calendarService.createCalendar("Calendar 1", 2025, deepCopyTemplate.id, null, // Use
+                                                                                                               // template
+                                                                                                               // config
+                true, testUser, null);
 
         assertNotNull(calendar1);
         assertNotNull(calendar1.id);
@@ -395,103 +371,63 @@ public class TemplateWorkflowTest {
         // Verify calendar 1 has original template configuration
         UserCalendar retrieved1 = UserCalendar.findById(calendar1.id);
         assertEquals("original", retrieved1.configuration.get("theme").asText());
-        assertEquals(
-                "original",
-                retrieved1
-                        .configuration
-                        .get("nested")
-                        .get("level1")
-                        .get("level2")
-                        .get("value")
-                        .asText());
+        assertEquals("original",
+                retrieved1.configuration.get("nested").get("level1").get("level2").get("value").asText());
 
         // Update calendar 1's configuration via service layer
         JsonNode modifiedConfig;
         try {
-            modifiedConfig =
-                    objectMapper.readTree(
-                            """
-                {
-                    "theme": "modified",
-                    "nested": {
-                        "level1": {
-                            "level2": {
-                                "value": "modified"
+            modifiedConfig = objectMapper.readTree("""
+                    {
+                        "theme": "modified",
+                        "nested": {
+                            "level1": {
+                                "level2": {
+                                    "value": "modified"
+                                }
                             }
                         }
                     }
-                }
-                """);
+                    """);
         } catch (Exception e) {
             fail("Failed to create modified configuration: " + e.getMessage());
             return; // Never reached but satisfies compiler
         }
 
-        calendarService.updateCalendar(
-                calendar1.id,
-                "Calendar 1",
-                modifiedConfig,
-                null, // Keep same isPublic
+        calendarService.updateCalendar(calendar1.id, "Calendar 1", modifiedConfig, null, // Keep same isPublic
                 testUser);
 
         // Verify calendar 1 was updated
         UserCalendar updatedCalendar1 = UserCalendar.findById(calendar1.id);
         assertEquals("modified", updatedCalendar1.configuration.get("theme").asText());
-        assertEquals(
-                "modified",
-                updatedCalendar1
-                        .configuration
-                        .get("nested")
-                        .get("level1")
-                        .get("level2")
-                        .get("value")
-                        .asText());
+        assertEquals("modified",
+                updatedCalendar1.configuration.get("nested").get("level1").get("level2").get("value").asText());
 
         // Create calendar 2 from the same template
-        UserCalendar calendar2 =
-                calendarService.createCalendar(
-                        "Calendar 2",
-                        2025,
-                        deepCopyTemplate.id,
-                        null, // Use template config (should still be original)
-                        true,
-                        testUser,
-                        null);
+        UserCalendar calendar2 = calendarService.createCalendar("Calendar 2", 2025, deepCopyTemplate.id, null, // Use
+                                                                                                               // template
+                                                                                                               // config
+                                                                                                               // (should
+                                                                                                               // still
+                                                                                                               // be
+                                                                                                               // original)
+                true, testUser, null);
 
         // Verify calendar 2 still has original template configuration (deep copy verification)
         UserCalendar retrieved2 = UserCalendar.findById(calendar2.id);
-        assertEquals(
-                "original",
-                retrieved2.configuration.get("theme").asText(),
-                "Calendar 2 should have original template config (not affected by calendar 1"
-                        + " update)");
-        assertEquals(
-                "original",
-                retrieved2
-                        .configuration
-                        .get("nested")
-                        .get("level1")
-                        .get("level2")
-                        .get("value")
-                        .asText(),
+        assertEquals("original", retrieved2.configuration.get("theme").asText(),
+                "Calendar 2 should have original template config (not affected by calendar 1" + " update)");
+        assertEquals("original",
+                retrieved2.configuration.get("nested").get("level1").get("level2").get("value").asText(),
                 "Calendar 2 nested values should be original");
 
         // Verify template configuration unchanged
         CalendarTemplate refreshedTemplate = CalendarTemplate.findById(deepCopyTemplate.id);
         assertNotNull(refreshedTemplate);
-        assertEquals(
-                "original",
-                refreshedTemplate.configuration.get("theme").asText(),
+        assertEquals("original", refreshedTemplate.configuration.get("theme").asText(),
                 "Template should not be affected by calendar modifications");
-        assertEquals(
-                "original",
-                refreshedTemplate
-                        .configuration
-                        .get("nested")
-                        .get("level1")
-                        .get("level2")
-                        .get("value")
-                        .asText(),
+        assertEquals("original",
+                refreshedTemplate.configuration.get("nested").get("level1").get("level2").get("value").asText(),
                 "Template nested values should not be affected");
     }
 }

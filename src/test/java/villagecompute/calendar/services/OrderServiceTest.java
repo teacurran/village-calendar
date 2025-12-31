@@ -27,9 +27,11 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class OrderServiceTest {
 
-    @Inject OrderService orderService;
+    @Inject
+    OrderService orderService;
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
     private CalendarUser testUser;
     private UserCalendar testCalendar;
@@ -86,9 +88,8 @@ class OrderServiceTest {
         BigDecimal unitPrice = new BigDecimal("29.99");
 
         // When
-        CalendarOrder order =
-                orderService.createOrder(
-                        testUser, testCalendar, quantity, unitPrice, testShippingAddress);
+        CalendarOrder order = orderService.createOrder(testUser, testCalendar, quantity, unitPrice,
+                testShippingAddress);
 
         // Then
         assertNotNull(order);
@@ -103,8 +104,7 @@ class OrderServiceTest {
         assertNotNull(order.shippingAddress);
         assertNull(order.paidAt);
         assertNotNull(order.orderNumber, "Order number should be generated");
-        assertTrue(
-                order.orderNumber.matches("VC-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}"),
+        assertTrue(order.orderNumber.matches("VC-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}"),
                 "Order number should match format VC-XXXX-XXXX");
     }
 
@@ -116,15 +116,8 @@ class OrderServiceTest {
         BigDecimal unitPrice = new BigDecimal("29.99");
 
         // When & Then
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        orderService.createOrder(
-                                testUser,
-                                testCalendar,
-                                invalidQuantity,
-                                unitPrice,
-                                testShippingAddress));
+        assertThrows(IllegalArgumentException.class, () -> orderService.createOrder(testUser, testCalendar,
+                invalidQuantity, unitPrice, testShippingAddress));
     }
 
     @Test
@@ -135,15 +128,8 @@ class OrderServiceTest {
         BigDecimal invalidPrice = new BigDecimal("-10.00");
 
         // When & Then
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        orderService.createOrder(
-                                testUser,
-                                testCalendar,
-                                quantity,
-                                invalidPrice,
-                                testShippingAddress));
+        assertThrows(IllegalArgumentException.class,
+                () -> orderService.createOrder(testUser, testCalendar, quantity, invalidPrice, testShippingAddress));
     }
 
     @Test
@@ -154,8 +140,7 @@ class OrderServiceTest {
         String notes = "Payment confirmed via Stripe";
 
         // When
-        CalendarOrder updatedOrder =
-                orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PAID, notes);
+        CalendarOrder updatedOrder = orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PAID, notes);
 
         // Then
         assertNotNull(updatedOrder);
@@ -173,9 +158,8 @@ class OrderServiceTest {
         orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PAID, "Payment confirmed");
 
         // When
-        CalendarOrder shippedOrder =
-                orderService.updateOrderStatus(
-                        order.id, CalendarOrder.STATUS_SHIPPED, "Shipped via USPS");
+        CalendarOrder shippedOrder = orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_SHIPPED,
+                "Shipped via USPS");
 
         // Then
         assertEquals(CalendarOrder.STATUS_SHIPPED, shippedOrder.status);
@@ -193,11 +177,8 @@ class OrderServiceTest {
         orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_DELIVERED, "Delivered");
 
         // When & Then
-        assertThrows(
-                IllegalStateException.class,
-                () ->
-                        orderService.updateOrderStatus(
-                                order.id, CalendarOrder.STATUS_PROCESSING, "Cannot update"));
+        assertThrows(IllegalStateException.class,
+                () -> orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PROCESSING, "Cannot update"));
     }
 
     @Test
@@ -207,11 +188,8 @@ class OrderServiceTest {
         CalendarOrder order = createTestOrder();
 
         // When & Then - Cannot go from PENDING to SHIPPED directly
-        assertThrows(
-                IllegalStateException.class,
-                () ->
-                        orderService.updateOrderStatus(
-                                order.id, CalendarOrder.STATUS_SHIPPED, "Invalid transition"));
+        assertThrows(IllegalStateException.class,
+                () -> orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_SHIPPED, "Invalid transition"));
     }
 
     @Test
@@ -223,8 +201,7 @@ class OrderServiceTest {
         orderService.updateOrderStatus(paidOrder.id, CalendarOrder.STATUS_PAID, "Paid");
 
         // When
-        List<CalendarOrder> pendingOrders =
-                orderService.getOrdersByStatus(CalendarOrder.STATUS_PENDING);
+        List<CalendarOrder> pendingOrders = orderService.getOrdersByStatus(CalendarOrder.STATUS_PENDING);
         List<CalendarOrder> paidOrders = orderService.getOrdersByStatus(CalendarOrder.STATUS_PAID);
 
         // Then
@@ -286,8 +263,7 @@ class OrderServiceTest {
         order.persist();
 
         // When
-        Optional<CalendarOrder> foundOrder =
-                orderService.findByStripePaymentIntent(paymentIntentId);
+        Optional<CalendarOrder> foundOrder = orderService.findByStripePaymentIntent(paymentIntentId);
 
         // Then
         assertTrue(foundOrder.isPresent());
@@ -305,8 +281,7 @@ class OrderServiceTest {
         order = CalendarOrder.findById(order.id);
         assertEquals(CalendarOrder.STATUS_PAID, order.status);
 
-        orderService.updateOrderStatus(
-                order.id, CalendarOrder.STATUS_PROCESSING, "Order processing");
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PROCESSING, "Order processing");
         order = CalendarOrder.findById(order.id);
         assertEquals(CalendarOrder.STATUS_PROCESSING, order.status);
 
@@ -327,8 +302,7 @@ class OrderServiceTest {
         CalendarOrder order = createTestOrder();
 
         // When - Cancel from PENDING
-        orderService.updateOrderStatus(
-                order.id, CalendarOrder.STATUS_CANCELLED, "Customer requested cancellation");
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_CANCELLED, "Customer requested cancellation");
 
         // Then
         order = CalendarOrder.findById(order.id);
@@ -368,8 +342,7 @@ class OrderServiceTest {
         String orderNumber = order1.orderNumber;
 
         // When - Try to find by order number
-        Optional<CalendarOrder> foundOrder =
-                CalendarOrder.findByOrderNumber(orderNumber).firstResultOptional();
+        Optional<CalendarOrder> foundOrder = CalendarOrder.findByOrderNumber(orderNumber).firstResultOptional();
 
         // Then
         assertTrue(foundOrder.isPresent());
@@ -385,8 +358,7 @@ class OrderServiceTest {
         String cancellationReason = "Customer changed mind";
 
         // When
-        CalendarOrder cancelledOrder =
-                orderService.cancelOrder(order.id, testUser.id, false, cancellationReason);
+        CalendarOrder cancelledOrder = orderService.cancelOrder(order.id, testUser.id, false, cancellationReason);
 
         // Then
         assertNotNull(cancelledOrder);
@@ -407,8 +379,8 @@ class OrderServiceTest {
         order = CalendarOrder.findById(order.id);
 
         // When
-        CalendarOrder cancelledOrder =
-                orderService.cancelOrder(order.id, testUser.id, false, "Customer requested refund");
+        CalendarOrder cancelledOrder = orderService.cancelOrder(order.id, testUser.id, false,
+                "Customer requested refund");
 
         // Then
         assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status);
@@ -426,14 +398,9 @@ class OrderServiceTest {
         UUID unauthorizedUserId = UUID.randomUUID();
 
         // When & Then
-        assertThrows(
-                SecurityException.class,
-                () ->
-                        orderService.cancelOrder(
-                                order.id,
-                                unauthorizedUserId,
-                                false, // Not admin
-                                "Unauthorized attempt"));
+        assertThrows(SecurityException.class, () -> orderService.cancelOrder(order.id, unauthorizedUserId, false, // Not
+                                                                                                                  // admin
+                "Unauthorized attempt"));
     }
 
     @Test
@@ -444,12 +411,8 @@ class OrderServiceTest {
         UUID adminUserId = UUID.randomUUID(); // Different user
 
         // When - Admin can cancel any order
-        CalendarOrder cancelledOrder =
-                orderService.cancelOrder(
-                        order.id,
-                        adminUserId,
-                        true, // Is admin
-                        "Admin cancellation");
+        CalendarOrder cancelledOrder = orderService.cancelOrder(order.id, adminUserId, true, // Is admin
+                "Admin cancellation");
 
         // Then
         assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status);
@@ -465,11 +428,8 @@ class OrderServiceTest {
         orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_DELIVERED, "Delivered");
 
         // When & Then - Cannot cancel delivered order
-        assertThrows(
-                IllegalStateException.class,
-                () ->
-                        orderService.cancelOrder(
-                                order.id, testUser.id, false, "Cannot cancel delivered order"));
+        assertThrows(IllegalStateException.class,
+                () -> orderService.cancelOrder(order.id, testUser.id, false, "Cannot cancel delivered order"));
     }
 
     @Test
@@ -480,11 +440,8 @@ class OrderServiceTest {
         orderService.cancelOrder(order.id, testUser.id, false, "First cancellation");
 
         // When & Then - Cannot cancel already cancelled order
-        assertThrows(
-                IllegalStateException.class,
-                () ->
-                        orderService.cancelOrder(
-                                order.id, testUser.id, false, "Second cancellation"));
+        assertThrows(IllegalStateException.class,
+                () -> orderService.cancelOrder(order.id, testUser.id, false, "Second cancellation"));
     }
 
     @Test
@@ -494,11 +451,8 @@ class OrderServiceTest {
         UUID nonExistentId = UUID.randomUUID();
 
         // When & Then
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        orderService.cancelOrder(
-                                nonExistentId, testUser.id, false, "Cancel non-existent"));
+        assertThrows(IllegalArgumentException.class,
+                () -> orderService.cancelOrder(nonExistentId, testUser.id, false, "Cancel non-existent"));
     }
 
     @Test
@@ -507,12 +461,11 @@ class OrderServiceTest {
         // Given
         CalendarOrder order = createTestOrder();
         orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PAID, "Payment confirmed");
-        orderService.updateOrderStatus(
-                order.id, CalendarOrder.STATUS_PROCESSING, "Order processing");
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PROCESSING, "Order processing");
 
         // When
-        CalendarOrder cancelledOrder =
-                orderService.cancelOrder(order.id, testUser.id, false, "Cancel during processing");
+        CalendarOrder cancelledOrder = orderService.cancelOrder(order.id, testUser.id, false,
+                "Cancel during processing");
 
         // Then
         assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status);
@@ -527,9 +480,8 @@ class OrderServiceTest {
         BigDecimal unitPrice = new BigDecimal("25.00");
 
         // When
-        CalendarOrder order =
-                orderService.createOrder(
-                        testUser, testCalendar, quantity, unitPrice, testShippingAddress);
+        CalendarOrder order = orderService.createOrder(testUser, testCalendar, quantity, unitPrice,
+                testShippingAddress);
 
         // Then - Total should be subtotal + tax (0) + shipping ($5.99)
         BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity)); // $75.00
@@ -548,26 +500,20 @@ class OrderServiceTest {
         }
 
         // Then - All order numbers should be unique
-        java.util.Set<String> orderNumbers =
-                orders.stream()
-                        .map(o -> o.orderNumber)
-                        .collect(java.util.stream.Collectors.toSet());
+        java.util.Set<String> orderNumbers = orders.stream().map(o -> o.orderNumber)
+                .collect(java.util.stream.Collectors.toSet());
 
         assertEquals(10, orderNumbers.size(), "All 10 order numbers should be unique");
 
         // Verify all match the format
-        orders.forEach(
-                order -> {
-                    assertNotNull(order.orderNumber);
-                    assertTrue(
-                            order.orderNumber.matches(
-                                    "VC-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}"));
-                });
+        orders.forEach(order -> {
+            assertNotNull(order.orderNumber);
+            assertTrue(order.orderNumber.matches("VC-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}"));
+        });
     }
 
     // Helper method to create a test order
     private CalendarOrder createTestOrder() {
-        return orderService.createOrder(
-                testUser, testCalendar, 1, new BigDecimal("29.99"), testShippingAddress);
+        return orderService.createOrder(testUser, testCalendar, 1, new BigDecimal("29.99"), testShippingAddress);
     }
 }

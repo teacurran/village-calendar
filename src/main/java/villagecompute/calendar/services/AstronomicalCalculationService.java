@@ -16,28 +16,29 @@ import villagecompute.calendar.util.astronomical.HebrewCalendarConverter;
 import villagecompute.calendar.util.astronomical.MoonPhaseCalculator;
 
 /**
- * Service for astronomical calculations including moon phases, illumination, Hebrew calendar dates,
- * and seasonal events.
+ * Service for astronomical calculations including moon phases, illumination, Hebrew calendar dates, and seasonal
+ * events.
  *
- * <p>This service provides accurate astronomical calculations using the SunCalc library, delegating
- * to utility classes for specific calculation types.
+ * <p>
+ * This service provides accurate astronomical calculations using the SunCalc library, delegating to utility classes for
+ * specific calculation types.
  */
 @ApplicationScoped
 public class AstronomicalCalculationService {
 
-    @Inject HebrewCalendarService hebrewCalendarService;
+    @Inject
+    HebrewCalendarService hebrewCalendarService;
 
     /**
-     * Calculate moon phases for a given year using SunCalc library. Returns a list of dates with
-     * their corresponding moon phase. This is optimized to calculate major phase transitions
-     * directly rather than iterating all days.
+     * Calculate moon phases for a given year using SunCalc library. Returns a list of dates with their corresponding
+     * moon phase. This is optimized to calculate major phase transitions directly rather than iterating all days.
      *
-     * @param year The year to calculate moon phases for
+     * @param year
+     *            The year to calculate moon phases for
      * @return List of MoonPhaseData for each major phase transition day
      */
     public List<MoonPhaseData> getMoonPhases(int year) {
-        List<MoonPhaseCalculator.MoonPhaseData> utilPhases =
-                MoonPhaseCalculator.calculateMoonPhasesForYear(year);
+        List<MoonPhaseCalculator.MoonPhaseData> utilPhases = MoonPhaseCalculator.calculateMoonPhasesForYear(year);
 
         // Convert utility class data to service data class
         List<MoonPhaseData> phases = new ArrayList<>();
@@ -66,7 +67,8 @@ public class AstronomicalCalculationService {
     /**
      * Calculate the moon phase for a specific date using SunCalc.
      *
-     * @param date The date to calculate the moon phase for
+     * @param date
+     *            The date to calculate the moon phase for
      * @return The moon phase enum value
      */
     public MoonPhase calculateMoonPhase(LocalDate date) {
@@ -77,7 +79,8 @@ public class AstronomicalCalculationService {
     /**
      * Calculate moon phase as a fractional value from 0 to 1. 0 = new moon, 0.5 = full moon
      *
-     * @param date The date to calculate
+     * @param date
+     *            The date to calculate
      * @return Moon phase value (0.0 to 1.0)
      */
     public double calculateMoonPhaseValue(LocalDate date) {
@@ -87,34 +90,37 @@ public class AstronomicalCalculationService {
     /**
      * Calculate moon illumination for a given date using SunCalc.
      *
-     * @param date The date to calculate illumination for
+     * @param date
+     *            The date to calculate illumination for
      * @return MoonIllumination data with fraction, phase, and angle
      */
     public MoonIllumination calculateMoonIllumination(LocalDate date) {
-        MoonPhaseCalculator.MoonIlluminationData data =
-                MoonPhaseCalculator.calculateIlluminationData(date);
+        MoonPhaseCalculator.MoonIlluminationData data = MoonPhaseCalculator.calculateIlluminationData(date);
         return new MoonIllumination(data.fraction, data.phase, data.angle);
     }
 
     /**
-     * Calculate moon position for an observer's location using SunCalc. This affects how the moon
-     * appears (rotation) based on hemisphere.
+     * Calculate moon position for an observer's location using SunCalc. This affects how the moon appears (rotation)
+     * based on hemisphere.
      *
-     * @param date The date to calculate
-     * @param latitude Observer's latitude
-     * @param longitude Observer's longitude
+     * @param date
+     *            The date to calculate
+     * @param latitude
+     *            Observer's latitude
+     * @param longitude
+     *            Observer's longitude
      * @return MoonPosition with azimuth, altitude, and parallactic angle
      */
     public MoonPosition calculateMoonPosition(LocalDate date, double latitude, double longitude) {
-        MoonPhaseCalculator.MoonPositionData data =
-                MoonPhaseCalculator.calculatePosition(date, latitude, longitude);
+        MoonPhaseCalculator.MoonPositionData data = MoonPhaseCalculator.calculatePosition(date, latitude, longitude);
         return new MoonPosition(data.azimuth, data.altitude, data.parallacticAngle);
     }
 
     /**
      * Check if a date is a moon phase transition day (new/full/quarter) using SunCalc.
      *
-     * @param date The date to check
+     * @param date
+     *            The date to check
      * @return true if the date is closest to a major moon phase
      */
     public boolean isMoonPhaseDay(LocalDate date) {
@@ -122,10 +128,10 @@ public class AstronomicalCalculationService {
     }
 
     /**
-     * Get Hebrew dates for a Gregorian year. Converts all days in the year to their Hebrew calendar
-     * equivalents.
+     * Get Hebrew dates for a Gregorian year. Converts all days in the year to their Hebrew calendar equivalents.
      *
-     * @param year The Gregorian year
+     * @param year
+     *            The Gregorian year
      * @return List of Hebrew date mappings
      */
     public List<HebrewDateMapping> getHebrewDates(int year) {
@@ -137,24 +143,20 @@ public class AstronomicalCalculationService {
         int hebrewYearEnd = year + 3761;
 
         // Get holidays from HebrewCalendarService
-        Map<String, String> holidays1 =
-                hebrewCalendarService.getHebrewHolidays(hebrewYearStart, "HEBREW_ALL");
-        Map<String, String> holidays2 =
-                hebrewCalendarService.getHebrewHolidays(hebrewYearEnd, "HEBREW_ALL");
+        Map<String, String> holidays1 = hebrewCalendarService.getHebrewHolidays(hebrewYearStart, "HEBREW_ALL");
+        Map<String, String> holidays2 = hebrewCalendarService.getHebrewHolidays(hebrewYearEnd, "HEBREW_ALL");
 
         // Merge holiday maps
         Map<String, String> allHolidays = new java.util.HashMap<>(holidays1);
         allHolidays.putAll(holidays2);
 
         // Generate mappings using HebrewCalendarConverter
-        List<HebrewCalendarConverter.HebrewDateMapping> converterMappings =
-                HebrewCalendarConverter.generateYearMappings(year, allHolidays);
+        List<HebrewCalendarConverter.HebrewDateMapping> converterMappings = HebrewCalendarConverter
+                .generateYearMappings(year, allHolidays);
 
         // Convert to service data class
         for (HebrewCalendarConverter.HebrewDateMapping mapping : converterMappings) {
-            dates.add(
-                    new HebrewDateMapping(
-                            mapping.gregorianDate, mapping.hebrewDate, mapping.holidayName));
+            dates.add(new HebrewDateMapping(mapping.gregorianDate, mapping.hebrewDate, mapping.holidayName));
         }
 
         return dates;
@@ -163,9 +165,12 @@ public class AstronomicalCalculationService {
     /**
      * Calculate sunrise and sunset times for a location and date using SunCalc.
      *
-     * @param date The date
-     * @param latitude Latitude in degrees
-     * @param longitude Longitude in degrees
+     * @param date
+     *            The date
+     * @param latitude
+     *            Latitude in degrees
+     * @param longitude
+     *            Longitude in degrees
      * @return SunriseSunset data with formatted times
      */
     public SunriseSunset getSunriseSunset(LocalDate date, double latitude, double longitude) {
@@ -174,25 +179,22 @@ public class AstronomicalCalculationService {
         SunTimes times = SunTimes.compute().on(zdt).at(latitude, longitude).execute();
 
         // Format times as HH:mm
-        String sunrise =
-                times.getRise() != null
-                        ? String.format(
-                                "%02d:%02d", times.getRise().getHour(), times.getRise().getMinute())
-                        : null;
-        String sunset =
-                times.getSet() != null
-                        ? String.format(
-                                "%02d:%02d", times.getSet().getHour(), times.getSet().getMinute())
-                        : null;
+        String sunrise = times.getRise() != null
+                ? String.format("%02d:%02d", times.getRise().getHour(), times.getRise().getMinute())
+                : null;
+        String sunset = times.getSet() != null
+                ? String.format("%02d:%02d", times.getSet().getHour(), times.getSet().getMinute())
+                : null;
 
         return new SunriseSunset(date, sunrise, sunset);
     }
 
     /**
-     * Calculate seasonal events (equinoxes and solstices) for a given year using SunCalc. Returns
-     * dates for spring equinox, summer solstice, autumn equinox, and winter solstice.
+     * Calculate seasonal events (equinoxes and solstices) for a given year using SunCalc. Returns dates for spring
+     * equinox, summer solstice, autumn equinox, and winter solstice.
      *
-     * @param year The year to calculate seasonal events for
+     * @param year
+     *            The year to calculate seasonal events for
      * @return List of SeasonalEvent objects
      */
     public List<SeasonalEvent> calculateSeasonalEvents(int year) {
@@ -204,45 +206,27 @@ public class AstronomicalCalculationService {
         double refLongitude = 0.0;
 
         // Calculate Spring Equinox (around March 20)
-        LocalDate springEquinoxDate =
-                findEquinoxOrSolstice(year, 3, 19, 22, refLatitude, refLongitude, true);
-        events.add(
-                new SeasonalEvent(
-                        springEquinoxDate, "Spring Equinox", SeasonalEventType.SPRING_EQUINOX));
+        LocalDate springEquinoxDate = findEquinoxOrSolstice(year, 3, 19, 22, refLatitude, refLongitude, true);
+        events.add(new SeasonalEvent(springEquinoxDate, "Spring Equinox", SeasonalEventType.SPRING_EQUINOX));
 
         // Calculate Summer Solstice (around June 21)
-        LocalDate summerSolsticeDate =
-                findSolstice(year, 6, 20, 22, refLatitude, refLongitude, true);
-        events.add(
-                new SeasonalEvent(
-                        summerSolsticeDate, "Summer Solstice", SeasonalEventType.SUMMER_SOLSTICE));
+        LocalDate summerSolsticeDate = findSolstice(year, 6, 20, 22, refLatitude, refLongitude, true);
+        events.add(new SeasonalEvent(summerSolsticeDate, "Summer Solstice", SeasonalEventType.SUMMER_SOLSTICE));
 
         // Calculate Autumn Equinox (around September 22)
-        LocalDate autumnEquinoxDate =
-                findEquinoxOrSolstice(year, 9, 21, 24, refLatitude, refLongitude, false);
-        events.add(
-                new SeasonalEvent(
-                        autumnEquinoxDate, "Autumn Equinox", SeasonalEventType.AUTUMN_EQUINOX));
+        LocalDate autumnEquinoxDate = findEquinoxOrSolstice(year, 9, 21, 24, refLatitude, refLongitude, false);
+        events.add(new SeasonalEvent(autumnEquinoxDate, "Autumn Equinox", SeasonalEventType.AUTUMN_EQUINOX));
 
         // Calculate Winter Solstice (around December 21)
-        LocalDate winterSolsticeDate =
-                findSolstice(year, 12, 20, 23, refLatitude, refLongitude, false);
-        events.add(
-                new SeasonalEvent(
-                        winterSolsticeDate, "Winter Solstice", SeasonalEventType.WINTER_SOLSTICE));
+        LocalDate winterSolsticeDate = findSolstice(year, 12, 20, 23, refLatitude, refLongitude, false);
+        events.add(new SeasonalEvent(winterSolsticeDate, "Winter Solstice", SeasonalEventType.WINTER_SOLSTICE));
 
         return events;
     }
 
     /** Find the exact date of an equinox by searching for equal day/night. */
-    private LocalDate findEquinoxOrSolstice(
-            int year,
-            int month,
-            int startDay,
-            int endDay,
-            double latitude,
-            double longitude,
-            boolean isSpring) {
+    private LocalDate findEquinoxOrSolstice(int year, int month, int startDay, int endDay, double latitude,
+            double longitude, boolean isSpring) {
         // Simple search: find the day with closest to 12 hours of daylight
         LocalDate closestDate = LocalDate.of(year, month, startDay);
         long closestDiff = Long.MAX_VALUE;
@@ -254,8 +238,7 @@ public class AstronomicalCalculationService {
             SunTimes times = SunTimes.compute().on(zdt).at(latitude, longitude).execute();
 
             if (times.getRise() != null && times.getSet() != null) {
-                long daylightMinutes =
-                        java.time.Duration.between(times.getRise(), times.getSet()).toMinutes();
+                long daylightMinutes = java.time.Duration.between(times.getRise(), times.getSet()).toMinutes();
                 long diff = Math.abs(daylightMinutes - 720); // 720 minutes = 12 hours
 
                 if (diff < closestDiff) {
@@ -269,13 +252,7 @@ public class AstronomicalCalculationService {
     }
 
     /** Find the exact date of a solstice by searching for maximum/minimum daylight. */
-    private LocalDate findSolstice(
-            int year,
-            int month,
-            int startDay,
-            int endDay,
-            double latitude,
-            double longitude,
+    private LocalDate findSolstice(int year, int month, int startDay, int endDay, double latitude, double longitude,
             boolean isSummer) {
         LocalDate extremeDate = LocalDate.of(year, month, startDay);
         long extremeDaylight = isSummer ? Long.MIN_VALUE : Long.MAX_VALUE;
@@ -287,8 +264,7 @@ public class AstronomicalCalculationService {
             SunTimes times = SunTimes.compute().on(zdt).at(latitude, longitude).execute();
 
             if (times.getRise() != null && times.getSet() != null) {
-                long daylightMinutes =
-                        java.time.Duration.between(times.getRise(), times.getSet()).toMinutes();
+                long daylightMinutes = java.time.Duration.between(times.getRise(), times.getSet()).toMinutes();
 
                 if ((isSummer && daylightMinutes > extremeDaylight)
                         || (!isSummer && daylightMinutes < extremeDaylight)) {
@@ -316,14 +292,7 @@ public class AstronomicalCalculationService {
     }
 
     public enum MoonPhase {
-        NEW_MOON,
-        WAXING_CRESCENT,
-        FIRST_QUARTER,
-        WAXING_GIBBOUS,
-        FULL_MOON,
-        WANING_GIBBOUS,
-        LAST_QUARTER,
-        WANING_CRESCENT
+        NEW_MOON, WAXING_CRESCENT, FIRST_QUARTER, WAXING_GIBBOUS, FULL_MOON, WANING_GIBBOUS, LAST_QUARTER, WANING_CRESCENT
     }
 
     public static class MoonIllumination {
@@ -387,9 +356,6 @@ public class AstronomicalCalculationService {
     }
 
     public enum SeasonalEventType {
-        SPRING_EQUINOX,
-        SUMMER_SOLSTICE,
-        AUTUMN_EQUINOX,
-        WINTER_SOLSTICE
+        SPRING_EQUINOX, SUMMER_SOLSTICE, AUTUMN_EQUINOX, WINTER_SOLSTICE
     }
 }

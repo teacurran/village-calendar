@@ -26,8 +26,8 @@ import io.quarkus.vertx.ConsumeEvent;
 import io.vertx.core.eventbus.EventBus;
 
 /**
- * Service for processing delayed jobs asynchronously. Uses Vert.x EventBus for immediate processing
- * with a scheduled fallback to catch any jobs that need retry or were missed.
+ * Service for processing delayed jobs asynchronously. Uses Vert.x EventBus for immediate processing with a scheduled
+ * fallback to catch any jobs that need retry or were missed.
  */
 @ApplicationScoped
 @Startup
@@ -37,18 +37,22 @@ public class DelayedJobService {
 
     public static final String DELAYED_JOB_RUN = "delayed-job-run";
 
-    @Inject EventBus eventBus;
+    @Inject
+    EventBus eventBus;
 
-    @Inject DelayedJobHandlerRegistry handlerRegistry;
+    @Inject
+    DelayedJobHandlerRegistry handlerRegistry;
 
     // ============ TYPE-SAFE API ============
 
     /**
-     * Create a job to run immediately using the handler class as the queue identifier. This is the
-     * preferred API - type-safe and self-documenting.
+     * Create a job to run immediately using the handler class as the queue identifier. This is the preferred API -
+     * type-safe and self-documenting.
      *
-     * @param handlerClass The handler class to execute
-     * @param actorId ID of the entity to process
+     * @param handlerClass
+     *            The handler class to execute
+     * @param actorId
+     *            ID of the entity to process
      * @return Created DelayedJob
      */
     @Transactional
@@ -59,33 +63,24 @@ public class DelayedJobService {
     /**
      * Create a job to run at a specific time using the handler class.
      *
-     * @param handlerClass The handler class to execute
-     * @param actorId ID of the entity to process
-     * @param runAt When to run the job
+     * @param handlerClass
+     *            The handler class to execute
+     * @param actorId
+     *            ID of the entity to process
+     * @param runAt
+     *            When to run the job
      * @return Created DelayedJob
      */
     @Transactional
-    public DelayedJob enqueue(
-            Class<? extends DelayedJobHandler> handlerClass, String actorId, Instant runAt) {
-        HandlerMetadata metadata =
-                handlerRegistry
-                        .getMetadata(handlerClass)
-                        .orElseThrow(
-                                () ->
-                                        new IllegalArgumentException(
-                                                "No registered handler for class: "
-                                                        + handlerClass.getName()
-                                                        + ". Ensure the handler is annotated with"
-                                                        + " @ApplicationScoped and"
-                                                        + " @DelayedJobConfig"));
+    public DelayedJob enqueue(Class<? extends DelayedJobHandler> handlerClass, String actorId, Instant runAt) {
+        HandlerMetadata metadata = handlerRegistry.getMetadata(handlerClass)
+                .orElseThrow(() -> new IllegalArgumentException("No registered handler for class: "
+                        + handlerClass.getName() + ". Ensure the handler is annotated with" + " @ApplicationScoped and"
+                        + " @DelayedJobConfig"));
 
-        DelayedJob delayedJob =
-                DelayedJob.createDelayedJob(
-                        actorId, metadata.queueName(), metadata.priority(), runAt);
+        DelayedJob delayedJob = DelayedJob.createDelayedJob(actorId, metadata.queueName(), metadata.priority(), runAt);
 
-        LOG.infof(
-                "Created delayed job %s for queue %s, actor %s",
-                delayedJob.id, metadata.queueName(), actorId);
+        LOG.infof("Created delayed job %s for queue %s, actor %s", delayedJob.id, metadata.queueName(), actorId);
 
         // Immediately fire the event to process it
         eventBus.publish(DELAYED_JOB_RUN, delayedJob.id.toString());
@@ -96,22 +91,26 @@ public class DelayedJobService {
     /**
      * Create a job with a delay duration.
      *
-     * @param handlerClass The handler class to execute
-     * @param actorId ID of the entity to process
-     * @param delay Duration to wait before execution
+     * @param handlerClass
+     *            The handler class to execute
+     * @param actorId
+     *            ID of the entity to process
+     * @param delay
+     *            Duration to wait before execution
      * @return Created DelayedJob
      */
     @Transactional
-    public DelayedJob enqueueWithDelay(
-            Class<? extends DelayedJobHandler> handlerClass, String actorId, Duration delay) {
+    public DelayedJob enqueueWithDelay(Class<? extends DelayedJobHandler> handlerClass, String actorId,
+            Duration delay) {
         return enqueue(handlerClass, actorId, Instant.now().plus(delay));
     }
 
     /**
-     * Event consumer - processes delayed jobs asynchronously. blocking = true ensures this runs on
-     * a worker thread (required for @Transactional)
+     * Event consumer - processes delayed jobs asynchronously. blocking = true ensures this runs on a worker thread
+     * (required for @Transactional)
      *
-     * @param jobId Job ID to process
+     * @param jobId
+     *            Job ID to process
      */
     @ConsumeEvent(value = DELAYED_JOB_RUN, blocking = true)
     @Transactional
@@ -142,9 +141,7 @@ public class DelayedJobService {
             }
 
             // Execute the handler
-            LOG.infof(
-                    "Processing delayed job %s with queue %s, actor %s",
-                    jobId, job.queueName, job.actorId);
+            LOG.infof("Processing delayed job %s with queue %s, actor %s", jobId, job.queueName, job.actorId);
             handler.run(job.actorId);
 
             // Mark as complete
@@ -165,20 +162,18 @@ public class DelayedJobService {
     /**
      * Handle job failure - record error and schedule retry if appropriate.
      *
-     * @param job The failed job
-     * @param e The exception that caused the failure
+     * @param job
+     *            The failed job
+     * @param e
+     *            The exception that caused the failure
      */
     @Transactional
     protected void handleJobFailure(DelayedJob job, Exception e) {
         LOG.errorf(e, "Delayed job %s failed: %s", job.id, e.getMessage());
 
         // Record error details
-        job.lastError =
-                Arrays.stream(e.getStackTrace())
-                        .limit(20)
-                        .map(StackTraceElement::toString)
-                        .reduce((a, b) -> a + "%n" + b)
-                        .orElse("");
+        job.lastError = Arrays.stream(e.getStackTrace()).limit(20).map(StackTraceElement::toString)
+                .reduce((a, b) -> a + "%n" + b).orElse("");
         job.failedAt = Instant.now();
         job.attempts++;
 
@@ -189,9 +184,7 @@ public class DelayedJobService {
                 job.completedAt = Instant.now();
                 job.completedWithFailure = true;
                 job.failureReason = delayedJobException.getMessage();
-                LOG.errorf(
-                        "Delayed job %s failed fatally: %s",
-                        job.id, delayedJobException.getMessage());
+                LOG.errorf("Delayed job %s failed fatally: %s", job.id, delayedJobException.getMessage());
             } else {
                 job.failureReason = delayedJobException.getMessage();
             }
@@ -200,9 +193,7 @@ public class DelayedJobService {
         // Schedule retry if not complete
         if (!job.complete && !job.completedWithFailure) {
             job.runAt = DelayedJobRetryStrategy.calculateNextRetryInterval(job.attempts);
-            LOG.infof(
-                    "Delayed job %s scheduled for retry at %s (attempt %d)",
-                    job.id, job.runAt, job.attempts);
+            LOG.infof("Delayed job %s scheduled for retry at %s (attempt %d)", job.id, job.runAt, job.attempts);
         }
 
         job.unlock();
@@ -212,8 +203,8 @@ public class DelayedJobService {
     }
 
     /**
-     * Scheduled processor - runs every 30 seconds to catch any jobs that need retry or were missed
-     * during immediate processing.
+     * Scheduled processor - runs every 30 seconds to catch any jobs that need retry or were missed during immediate
+     * processing.
      */
     @Scheduled(every = "30s")
     @Transactional
@@ -232,22 +223,19 @@ public class DelayedJobService {
     }
 
     /**
-     * Atomically lock a job for processing. Uses database UPDATE with WHERE clause to prevent race
-     * conditions.
+     * Atomically lock a job for processing. Uses database UPDATE with WHERE clause to prevent race conditions.
      *
-     * @param jobId Job ID to lock
+     * @param jobId
+     *            Job ID to lock
      * @return Locked job, or null if already locked/complete
      */
     @Transactional
     protected DelayedJob getDelayedJobToWorkOn(UUID jobId) {
         // Atomically lock the job using UPDATE with WHERE clause
         // This prevents race conditions when multiple servers try to lock the same job
-        int rowsUpdated =
-                DelayedJob.update(
-                        "locked = true, lockedAt = ?1 WHERE id = ?2 AND locked = false AND complete"
-                                + " = false",
-                        Instant.now(),
-                        jobId);
+        int rowsUpdated = DelayedJob.update(
+                "locked = true, lockedAt = ?1 WHERE id = ?2 AND locked = false AND complete" + " = false",
+                Instant.now(), jobId);
 
         if (rowsUpdated == 0) {
             LOG.debugf("Delayed job %s could not be locked (already locked or complete)", jobId);

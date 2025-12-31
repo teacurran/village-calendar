@@ -29,21 +29,25 @@ import villagecompute.calendar.util.Roles;
 import io.quarkus.logging.Log;
 
 /**
- * REST Resource for user calendar operations Provides REST wrapper around GraphQL calendar
- * operations for backwards compatibility
+ * REST Resource for user calendar operations Provides REST wrapper around GraphQL calendar operations for backwards
+ * compatibility
  */
 @Path("/calendar-templates/user")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class UserCalendarResource {
 
-    @Inject JsonWebToken jwt;
+    @Inject
+    JsonWebToken jwt;
 
-    @Inject AuthenticationService authService;
+    @Inject
+    AuthenticationService authService;
 
-    @Inject CalendarRenderingService calendarRenderingService;
+    @Inject
+    CalendarRenderingService calendarRenderingService;
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
     // DTOs
     public static class SaveCalendarRequest {
@@ -79,16 +83,10 @@ public class UserCalendarResource {
     @Path("/calendars")
     @RolesAllowed(Roles.USER)
     public Response getCalendars() {
-        CalendarUser user =
-                authService
-                        .getCurrentUser(jwt)
-                        .orElseThrow(
-                                () ->
-                                        new WebApplicationException(
-                                                "User not found", Response.Status.UNAUTHORIZED));
+        CalendarUser user = authService.getCurrentUser(jwt)
+                .orElseThrow(() -> new WebApplicationException("User not found", Response.Status.UNAUTHORIZED));
 
-        List<UserCalendar> calendars =
-                UserCalendar.find("user.id = ?1 and sessionId is null", user.id).list();
+        List<UserCalendar> calendars = UserCalendar.find("user.id = ?1 and sessionId is null", user.id).list();
 
         List<CalendarResponse> response = calendars.stream().map(CalendarResponse::from).toList();
 
@@ -101,13 +99,8 @@ public class UserCalendarResource {
     @RolesAllowed(Roles.USER)
     @Transactional
     public Response saveCalendar(SaveCalendarRequest request) {
-        CalendarUser user =
-                authService
-                        .getCurrentUser(jwt)
-                        .orElseThrow(
-                                () ->
-                                        new WebApplicationException(
-                                                "User not found", Response.Status.UNAUTHORIZED));
+        CalendarUser user = authService.getCurrentUser(jwt)
+                .orElseThrow(() -> new WebApplicationException("User not found", Response.Status.UNAUTHORIZED));
 
         UserCalendar calendar;
 
@@ -115,16 +108,14 @@ public class UserCalendarResource {
             // Update existing calendar
             calendar = UserCalendar.findById(request.id);
             if (calendar == null) {
-                return Response.status(Response.Status.NOT_FOUND)
-                        .entity(ErrorResponse.of("Calendar not found"))
+                return Response.status(Response.Status.NOT_FOUND).entity(ErrorResponse.of("Calendar not found"))
                         .build();
             }
 
             // Verify ownership
             if (!calendar.user.id.equals(user.id)) {
                 return Response.status(Response.Status.FORBIDDEN)
-                        .entity(ErrorResponse.of("Not authorized to update this calendar"))
-                        .build();
+                        .entity(ErrorResponse.of("Not authorized to update this calendar")).build();
             }
         } else {
             // Create new calendar
@@ -160,10 +151,8 @@ public class UserCalendarResource {
         // Generate SVG if not provided and we have configuration
         if (calendar.generatedSvg == null && calendar.configuration != null) {
             try {
-                CalendarRenderingService.CalendarConfig config =
-                        objectMapper.treeToValue(
-                                calendar.configuration,
-                                CalendarRenderingService.CalendarConfig.class);
+                CalendarRenderingService.CalendarConfig config = objectMapper.treeToValue(calendar.configuration,
+                        CalendarRenderingService.CalendarConfig.class);
                 calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
             } catch (Exception e) {
                 Log.error("Error generating calendar SVG", e);
@@ -185,32 +174,22 @@ public class UserCalendarResource {
     @Path("/calendars/{id}/preview")
     @RolesAllowed(Roles.USER)
     public Response getCalendarPreview(@PathParam("id") UUID id) {
-        CalendarUser user =
-                authService
-                        .getCurrentUser(jwt)
-                        .orElseThrow(
-                                () ->
-                                        new WebApplicationException(
-                                                "User not found", Response.Status.UNAUTHORIZED));
+        CalendarUser user = authService.getCurrentUser(jwt)
+                .orElseThrow(() -> new WebApplicationException("User not found", Response.Status.UNAUTHORIZED));
 
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity(ErrorResponse.of("Calendar not found"))
-                    .build();
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorResponse.of("Calendar not found")).build();
         }
 
         // Verify ownership
         if (!calendar.user.id.equals(user.id)) {
             return Response.status(Response.Status.FORBIDDEN)
-                    .entity(ErrorResponse.of("Not authorized to view this calendar"))
-                    .build();
+                    .entity(ErrorResponse.of("Not authorized to view this calendar")).build();
         }
 
         if (calendar.generatedSvg == null) {
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity(ErrorResponse.of("No preview available"))
-                    .build();
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorResponse.of("No preview available")).build();
         }
 
         return Response.ok(calendar.generatedSvg).type("image/svg+xml").build();
@@ -222,26 +201,18 @@ public class UserCalendarResource {
     @RolesAllowed(Roles.USER)
     @Transactional
     public Response deleteCalendar(@PathParam("id") UUID id) {
-        CalendarUser user =
-                authService
-                        .getCurrentUser(jwt)
-                        .orElseThrow(
-                                () ->
-                                        new WebApplicationException(
-                                                "User not found", Response.Status.UNAUTHORIZED));
+        CalendarUser user = authService.getCurrentUser(jwt)
+                .orElseThrow(() -> new WebApplicationException("User not found", Response.Status.UNAUTHORIZED));
 
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity(ErrorResponse.of("Calendar not found"))
-                    .build();
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorResponse.of("Calendar not found")).build();
         }
 
         // Verify ownership
         if (!calendar.user.id.equals(user.id)) {
             return Response.status(Response.Status.FORBIDDEN)
-                    .entity(ErrorResponse.of("Not authorized to delete this calendar"))
-                    .build();
+                    .entity(ErrorResponse.of("Not authorized to delete this calendar")).build();
         }
 
         calendar.delete();

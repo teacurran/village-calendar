@@ -14,7 +14,8 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class MazeGenerationServiceTest {
 
-    @Inject MazeGenerationService mazeGenerationService;
+    @Inject
+    MazeGenerationService mazeGenerationService;
 
     // ============================================================================
     // generatePreview() TESTS
@@ -92,17 +93,10 @@ class MazeGenerationServiceTest {
     @Test
     void testGenerateMazeSvg_WithCustomColors_AppliesColors() {
         // When
-        String svg =
-                mazeGenerationService.generateMazeSvg(
-                        MazeType.ORTHOGONAL,
-                        5,
-                        3,
-                        12345L,
-                        false,
-                        "#FF0000", // innerWallColor
-                        "#0000FF", // outerWallColor
-                        "#00FF00" // pathColor
-                        );
+        String svg = mazeGenerationService.generateMazeSvg(MazeType.ORTHOGONAL, 5, 3, 12345L, false, "#FF0000", // innerWallColor
+                "#0000FF", // outerWallColor
+                "#00FF00" // pathColor
+        );
 
         // Then
         assertNotNull(svg);
@@ -112,19 +106,9 @@ class MazeGenerationServiceTest {
     @Test
     void testGenerateMazeSvg_WithDeadEndHighlighting_AppliesDeadEndColor() {
         // When
-        String svg =
-                mazeGenerationService.generateMazeSvg(
-                        MazeType.ORTHOGONAL,
-                        5,
-                        3,
-                        12345L,
-                        false,
-                        "#000000",
-                        "#000000",
-                        "#4CAF50",
-                        true,
-                        "#FFA500" // deadEndColor
-                        );
+        String svg = mazeGenerationService.generateMazeSvg(MazeType.ORTHOGONAL, 5, 3, 12345L, false, "#000000",
+                "#000000", "#4CAF50", true, "#FFA500" // deadEndColor
+        );
 
         // Then
         assertNotNull(svg);
@@ -134,12 +118,10 @@ class MazeGenerationServiceTest {
     @Test
     void testGenerateMazeSvg_SameSeedProducesSameResult() {
         // When
-        String svg1 =
-                mazeGenerationService.generateMazeSvg(
-                        MazeType.ORTHOGONAL, 5, 3, 99999L, false, "#000000", "#000000", "#4CAF50");
-        String svg2 =
-                mazeGenerationService.generateMazeSvg(
-                        MazeType.ORTHOGONAL, 5, 3, 99999L, false, "#000000", "#000000", "#4CAF50");
+        String svg1 = mazeGenerationService.generateMazeSvg(MazeType.ORTHOGONAL, 5, 3, 99999L, false, "#000000",
+                "#000000", "#4CAF50");
+        String svg2 = mazeGenerationService.generateMazeSvg(MazeType.ORTHOGONAL, 5, 3, 99999L, false, "#000000",
+                "#000000", "#4CAF50");
 
         // Then
         assertEquals(svg1, svg2, "Same seed should produce identical mazes");
@@ -148,12 +130,10 @@ class MazeGenerationServiceTest {
     @Test
     void testGenerateMazeSvg_DifferentSeedsProduceDifferentResults() {
         // When
-        String svg1 =
-                mazeGenerationService.generateMazeSvg(
-                        MazeType.ORTHOGONAL, 5, 3, 11111L, false, "#000000", "#000000", "#4CAF50");
-        String svg2 =
-                mazeGenerationService.generateMazeSvg(
-                        MazeType.ORTHOGONAL, 5, 3, 22222L, false, "#000000", "#000000", "#4CAF50");
+        String svg1 = mazeGenerationService.generateMazeSvg(MazeType.ORTHOGONAL, 5, 3, 11111L, false, "#000000",
+                "#000000", "#4CAF50");
+        String svg2 = mazeGenerationService.generateMazeSvg(MazeType.ORTHOGONAL, 5, 3, 22222L, false, "#000000",
+                "#000000", "#4CAF50");
 
         // Then
         assertNotEquals(svg1, svg2, "Different seeds should produce different mazes");

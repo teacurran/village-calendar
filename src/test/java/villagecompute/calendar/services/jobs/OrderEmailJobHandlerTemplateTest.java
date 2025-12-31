@@ -24,13 +24,14 @@ import villagecompute.calendar.data.models.CalendarUser;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * Tests for OrderEmailJobHandler Qute template rendering. Ensures templates render correctly with
- * various combinations of null/present fields.
+ * Tests for OrderEmailJobHandler Qute template rendering. Ensures templates render correctly with various combinations
+ * of null/present fields.
  */
 @QuarkusTest
 class OrderEmailJobHandlerTemplateTest {
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
     private CalendarUser testUser;
     private String testCss;
@@ -65,19 +66,13 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.orderConfirmation(
-                                order,
-                                testCss,
-                                Collections.emptyList(),
-                                "https://calendar.villagecompute.com")
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com")
+                .render();
 
         // Then
         assertNotNull(html);
-        assertTrue(
-                html.contains("Thank You for Your Order"),
-                "Should contain order thank you message");
+        assertTrue(html.contains("Thank You for Your Order"), "Should contain order thank you message");
         assertTrue(html.contains("John Doe"), "Should contain customer name");
         assertTrue(html.contains("123 Main St"), "Should contain address line1");
         assertTrue(html.contains("New York"), "Should contain city");
@@ -96,21 +91,14 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.orderConfirmation(
-                                order,
-                                testCss,
-                                Collections.emptyList(),
-                                "https://calendar.villagecompute.com")
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com")
+                .render();
 
         // Then
         assertNotNull(html);
-        assertTrue(
-                html.contains("Thank You for Your Order"),
-                "Should contain order thank you message");
-        assertTrue(
-                html.contains("Shipping address will be confirmed separately"),
+        assertTrue(html.contains("Thank You for Your Order"), "Should contain order thank you message");
+        assertTrue(html.contains("Shipping address will be confirmed separately"),
                 "Should show placeholder for missing address");
         assertFalse(html.contains("\"null\""), "Should not contain literal 'null' text");
     }
@@ -132,19 +120,13 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.orderConfirmation(
-                                order,
-                                testCss,
-                                Collections.emptyList(),
-                                "https://calendar.villagecompute.com")
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com")
+                .render();
 
         // Then
         assertNotNull(html);
-        assertTrue(
-                html.contains("Thank You for Your Order"),
-                "Should contain order thank you message");
+        assertTrue(html.contains("Thank You for Your Order"), "Should contain order thank you message");
         assertTrue(html.contains("456 Oak Ave"), "Should contain address line1");
         assertTrue(html.contains("Chicago"), "Should contain city");
         assertFalse(html.contains("\"null\""), "Should not contain literal 'null' text");
@@ -167,19 +149,13 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.orderConfirmation(
-                                order,
-                                testCss,
-                                Collections.emptyList(),
-                                "https://calendar.villagecompute.com")
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com")
+                .render();
 
         // Then
         assertNotNull(html);
-        assertTrue(
-                html.contains("Thank You for Your Order"),
-                "Should contain order thank you message");
+        assertTrue(html.contains("Thank You for Your Order"), "Should contain order thank you message");
         assertTrue(html.contains("789 Pine St"), "Should contain address line1");
         assertFalse(html.contains("asText"), "Should not contain template error message");
     }
@@ -194,19 +170,13 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.orderConfirmation(
-                                order,
-                                testCss,
-                                Collections.emptyList(),
-                                "https://calendar.villagecompute.com")
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com")
+                .render();
 
         // Then
         assertNotNull(html);
-        assertTrue(
-                html.contains("Thank You for Your Order"),
-                "Should contain order thank you message");
+        assertTrue(html.contains("Thank You for Your Order"), "Should contain order thank you message");
         assertFalse(html.contains("\"null\""), "Should not contain literal 'null' text");
     }
 
@@ -223,15 +193,12 @@ class OrderEmailJobHandlerTemplateTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.adminOrderNotification(
-                                order, testCss, baseUrl, Collections.emptyList())
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
-        assertTrue(
-                html.contains("New Order Received"), "Should contain admin notification message");
+        assertTrue(html.contains("New Order Received"), "Should contain admin notification message");
         assertTrue(html.contains(order.orderNumber), "Should contain order number");
         assertTrue(html.contains("John Doe"), "Should contain customer name");
         assertTrue(html.contains("123 Main St"), "Should contain address line1");
@@ -251,18 +218,13 @@ class OrderEmailJobHandlerTemplateTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.adminOrderNotification(
-                                order, testCss, baseUrl, Collections.emptyList())
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
-        assertTrue(
-                html.contains("New Order Received"), "Should contain admin notification message");
-        assertTrue(
-                html.contains("No shipping address provided"),
-                "Should show placeholder for missing address");
+        assertTrue(html.contains("New Order Received"), "Should contain admin notification message");
+        assertTrue(html.contains("No shipping address provided"), "Should show placeholder for missing address");
         assertFalse(html.contains("\"null\""), "Should not contain literal 'null' text");
     }
 
@@ -281,10 +243,8 @@ class OrderEmailJobHandlerTemplateTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.adminOrderNotification(
-                                order, testCss, baseUrl, Collections.emptyList())
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
@@ -305,15 +265,12 @@ class OrderEmailJobHandlerTemplateTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.adminOrderNotification(
-                                order, testCss, baseUrl, Collections.emptyList())
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
-        assertTrue(
-                html.contains("New Order Received"), "Should contain admin notification message");
+        assertTrue(html.contains("New Order Received"), "Should contain admin notification message");
         assertFalse(html.contains("\"null\""), "Should not contain literal 'null' text");
     }
 
@@ -335,13 +292,9 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.orderConfirmation(
-                                order,
-                                testCss,
-                                Collections.emptyList(),
-                                "https://calendar.villagecompute.com")
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com")
+                .render();
 
         // Then
         assertNotNull(html);
@@ -368,13 +321,9 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.orderConfirmation(
-                                order,
-                                testCss,
-                                Collections.emptyList(),
-                                "https://calendar.villagecompute.com")
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com")
+                .render();
 
         // Then
         assertNotNull(html);
@@ -396,23 +345,15 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.orderConfirmation(
-                                order,
-                                testCss,
-                                Collections.emptyList(),
-                                "https://calendar.villagecompute.com")
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com")
+                .render();
 
         // Then
         assertNotNull(html);
-        assertTrue(
-                html.contains("Thank You for Your Order"),
-                "Should contain order thank you message");
+        assertTrue(html.contains("Thank You for Your Order"), "Should contain order thank you message");
         assertTrue(html.contains("guest@example.com"), "Should show customer email for guest");
-        assertFalse(
-                html.contains("Property") && html.contains("not found"),
-                "Should not contain template error");
+        assertFalse(html.contains("Property") && html.contains("not found"), "Should not contain template error");
     }
 
     @Test
@@ -429,19 +370,14 @@ class OrderEmailJobHandlerTemplateTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.adminOrderNotification(
-                                order, testCss, baseUrl, Collections.emptyList())
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
-        assertTrue(
-                html.contains("New Order Received"), "Should contain admin notification message");
+        assertTrue(html.contains("New Order Received"), "Should contain admin notification message");
         assertTrue(html.contains("guest@example.com"), "Should show customer email");
-        assertFalse(
-                html.contains("Property") && html.contains("not found"),
-                "Should not contain template error");
+        assertFalse(html.contains("Property") && html.contains("not found"), "Should not contain template error");
     }
 
     @Test
@@ -456,22 +392,14 @@ class OrderEmailJobHandlerTemplateTest {
         order.persist();
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.orderConfirmation(
-                                order,
-                                testCss,
-                                Collections.emptyList(),
-                                "https://calendar.villagecompute.com")
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .orderConfirmation(order, testCss, Collections.emptyList(), "https://calendar.villagecompute.com")
+                .render();
 
         // Then
         assertNotNull(html);
-        assertTrue(
-                html.contains("Thank You for Your Order"),
-                "Should contain order thank you message");
-        assertTrue(
-                html.contains("Valued Customer"),
-                "Should show fallback greeting for missing email");
+        assertTrue(html.contains("Thank You for Your Order"), "Should contain order thank you message");
+        assertTrue(html.contains("Valued Customer"), "Should show fallback greeting for missing email");
     }
 
     @Test
@@ -488,15 +416,12 @@ class OrderEmailJobHandlerTemplateTest {
         String baseUrl = "https://calendar.villagecompute.com";
 
         // When
-        String html =
-                OrderEmailJobHandler.Templates.adminOrderNotification(
-                                order, testCss, baseUrl, Collections.emptyList())
-                        .render();
+        String html = OrderEmailJobHandler.Templates
+                .adminOrderNotification(order, testCss, baseUrl, Collections.emptyList()).render();
 
         // Then
         assertNotNull(html);
-        assertTrue(
-                html.contains("New Order Received"), "Should contain admin notification message");
+        assertTrue(html.contains("New Order Received"), "Should contain admin notification message");
         assertTrue(html.contains("N/A"), "Should show N/A when no email available");
     }
 
@@ -542,8 +467,7 @@ class OrderEmailJobHandlerTemplateTest {
     }
 
     private String loadResourceAsString(String resourcePath) throws IOException {
-        try (var inputStream =
-                Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
+        try (var inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
             if (inputStream == null) {
                 throw new IOException("Resource not found: " + resourcePath);
             }

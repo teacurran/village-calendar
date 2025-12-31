@@ -19,46 +19,50 @@ import villagecompute.calendar.data.repositories.CalendarTemplateRepository;
 import villagecompute.calendar.data.repositories.UserCalendarRepository;
 
 /**
- * Service layer for calendar business logic operations. Handles calendar CRUD operations,
- * authorization, versioning, and session management.
+ * Service layer for calendar business logic operations. Handles calendar CRUD operations, authorization, versioning,
+ * and session management.
  *
- * <p>This service is distinct from CalendarRenderingService which handles SVG/PDF generation.
+ * <p>
+ * This service is distinct from CalendarRenderingService which handles SVG/PDF generation.
  */
 @ApplicationScoped
 public class CalendarService {
 
     private static final Logger LOG = Logger.getLogger(CalendarService.class);
 
-    @Inject UserCalendarRepository calendarRepository;
+    @Inject
+    UserCalendarRepository calendarRepository;
 
-    @Inject CalendarTemplateRepository templateRepository;
+    @Inject
+    CalendarTemplateRepository templateRepository;
 
     /**
      * Create a new calendar from a template or blank.
      *
-     * @param name Calendar name
-     * @param year Calendar year
-     * @param templateId Optional template ID to use
-     * @param configuration Optional custom configuration (merged with template if provided)
-     * @param isPublic Whether the calendar is publicly accessible
-     * @param user Owner of the calendar (null for guest users)
-     * @param sessionId Session ID for guest users (null for authenticated users)
+     * @param name
+     *            Calendar name
+     * @param year
+     *            Calendar year
+     * @param templateId
+     *            Optional template ID to use
+     * @param configuration
+     *            Optional custom configuration (merged with template if provided)
+     * @param isPublic
+     *            Whether the calendar is publicly accessible
+     * @param user
+     *            Owner of the calendar (null for guest users)
+     * @param sessionId
+     *            Session ID for guest users (null for authenticated users)
      * @return Created calendar
-     * @throws IllegalArgumentException if validation fails
+     * @throws IllegalArgumentException
+     *             if validation fails
      */
     @Transactional
-    public UserCalendar createCalendar(
-            String name,
-            Integer year,
-            UUID templateId,
-            JsonNode configuration,
-            Boolean isPublic,
-            CalendarUser user,
-            String sessionId) {
+    public UserCalendar createCalendar(String name, Integer year, UUID templateId, JsonNode configuration,
+            Boolean isPublic, CalendarUser user, String sessionId) {
 
-        LOG.infof(
-                "Creating calendar: name=%s, year=%d, templateId=%s, userId=%s, sessionId=%s",
-                name, year, templateId, user != null ? user.id : null, sessionId);
+        LOG.infof("Creating calendar: name=%s, year=%d, templateId=%s, userId=%s, sessionId=%s", name, year, templateId,
+                user != null ? user.id : null, sessionId);
 
         // Validate input
         validateCalendarInput(name, year, user, sessionId);
@@ -94,9 +98,7 @@ public class CalendarService {
         // Persist
         calendar.persist();
 
-        LOG.infof(
-                "Created calendar: id=%s, name=%s, version=%d",
-                calendar.id, calendar.name, calendar.version);
+        LOG.infof("Created calendar: id=%s, name=%s, version=%d", calendar.id, calendar.name, calendar.version);
 
         return calendar;
     }
@@ -104,27 +106,29 @@ public class CalendarService {
     /**
      * Update an existing calendar. Performs authorization check and handles optimistic locking.
      *
-     * @param id Calendar ID
-     * @param name Optional new name
-     * @param configuration Optional new configuration
-     * @param isPublic Optional new visibility setting
-     * @param currentUser User performing the update
+     * @param id
+     *            Calendar ID
+     * @param name
+     *            Optional new name
+     * @param configuration
+     *            Optional new configuration
+     * @param isPublic
+     *            Optional new visibility setting
+     * @param currentUser
+     *            User performing the update
      * @return Updated calendar
-     * @throws IllegalArgumentException if calendar not found
-     * @throws SecurityException if user is not authorized
-     * @throws OptimisticLockException if version mismatch (concurrent update)
+     * @throws IllegalArgumentException
+     *             if calendar not found
+     * @throws SecurityException
+     *             if user is not authorized
+     * @throws OptimisticLockException
+     *             if version mismatch (concurrent update)
      */
     @Transactional
-    public UserCalendar updateCalendar(
-            UUID id,
-            String name,
-            JsonNode configuration,
-            Boolean isPublic,
+    public UserCalendar updateCalendar(UUID id, String name, JsonNode configuration, Boolean isPublic,
             CalendarUser currentUser) {
 
-        LOG.infof(
-                "Updating calendar: id=%s, userId=%s",
-                id, currentUser != null ? currentUser.id : null);
+        LOG.infof("Updating calendar: id=%s, userId=%s", id, currentUser != null ? currentUser.id : null);
 
         // Find calendar
         UserCalendar calendar = UserCalendar.findById(id);
@@ -159,17 +163,19 @@ public class CalendarService {
     /**
      * Delete a calendar (hard delete). Performs authorization check before deletion.
      *
-     * @param id Calendar ID
-     * @param currentUser User performing the deletion
+     * @param id
+     *            Calendar ID
+     * @param currentUser
+     *            User performing the deletion
      * @return true if deleted successfully
-     * @throws IllegalArgumentException if calendar not found
-     * @throws SecurityException if user is not authorized
+     * @throws IllegalArgumentException
+     *             if calendar not found
+     * @throws SecurityException
+     *             if user is not authorized
      */
     @Transactional
     public boolean deleteCalendar(UUID id, CalendarUser currentUser) {
-        LOG.infof(
-                "Deleting calendar: id=%s, userId=%s",
-                id, currentUser != null ? currentUser.id : null);
+        LOG.infof("Deleting calendar: id=%s, userId=%s", id, currentUser != null ? currentUser.id : null);
 
         // Find calendar
         UserCalendar calendar = UserCalendar.findById(id);
@@ -192,16 +198,18 @@ public class CalendarService {
     /**
      * Get a calendar by ID with authorization check.
      *
-     * @param id Calendar ID
-     * @param currentUser User requesting the calendar (null for public access)
+     * @param id
+     *            Calendar ID
+     * @param currentUser
+     *            User requesting the calendar (null for public access)
      * @return Calendar if found and authorized
-     * @throws IllegalArgumentException if calendar not found
-     * @throws SecurityException if user is not authorized
+     * @throws IllegalArgumentException
+     *             if calendar not found
+     * @throws SecurityException
+     *             if user is not authorized
      */
     public UserCalendar getCalendar(UUID id, CalendarUser currentUser) {
-        LOG.debugf(
-                "Getting calendar: id=%s, userId=%s",
-                id, currentUser != null ? currentUser.id : null);
+        LOG.debugf("Getting calendar: id=%s, userId=%s", id, currentUser != null ? currentUser.id : null);
 
         // Find calendar
         UserCalendar calendar = UserCalendar.findById(id);
@@ -219,29 +227,31 @@ public class CalendarService {
     /**
      * List calendars for a specific user with optional year filter and pagination.
      *
-     * @param userId User ID
-     * @param year Optional year filter
-     * @param pageIndex Page index (0-based)
-     * @param pageSize Page size
-     * @param currentUser User requesting the list
+     * @param userId
+     *            User ID
+     * @param year
+     *            Optional year filter
+     * @param pageIndex
+     *            Page index (0-based)
+     * @param pageSize
+     *            Page size
+     * @param currentUser
+     *            User requesting the list
      * @return List of calendars
-     * @throws SecurityException if currentUser is not authorized to view the user's calendars
+     * @throws SecurityException
+     *             if currentUser is not authorized to view the user's calendars
      */
-    public List<UserCalendar> listCalendars(
-            UUID userId, Integer year, int pageIndex, int pageSize, CalendarUser currentUser) {
+    public List<UserCalendar> listCalendars(UUID userId, Integer year, int pageIndex, int pageSize,
+            CalendarUser currentUser) {
 
-        LOG.debugf(
-                "Listing calendars: userId=%s, year=%s, page=%d, size=%d",
-                userId, year, pageIndex, pageSize);
+        LOG.debugf("Listing calendars: userId=%s, year=%s, page=%d, size=%d", userId, year, pageIndex, pageSize);
 
         // Authorization: User can only list their own calendars unless admin
         if (currentUser == null) {
             throw new SecurityException("Authentication required to list calendars");
         }
         if (!currentUser.id.equals(userId) && !currentUser.isAdmin) {
-            LOG.warnf(
-                    "Unauthorized calendar list access: userId=%s, currentUserId=%s",
-                    userId, currentUser.id);
+            LOG.warnf("Unauthorized calendar list access: userId=%s, currentUserId=%s", userId, currentUser.id);
             throw new SecurityException("You can only view your own calendars");
         }
 
@@ -265,11 +275,13 @@ public class CalendarService {
     }
 
     /**
-     * Convert guest session calendars to authenticated user calendars. Migrates all calendars with
-     * matching sessionId to the user.
+     * Convert guest session calendars to authenticated user calendars. Migrates all calendars with matching sessionId
+     * to the user.
      *
-     * @param sessionId Session ID to convert
-     * @param user User to assign calendars to
+     * @param sessionId
+     *            Session ID to convert
+     * @param user
+     *            User to assign calendars to
      * @return Number of calendars converted
      */
     @Transactional
@@ -304,7 +316,8 @@ public class CalendarService {
     /**
      * Find public calendar by ID (no authorization required).
      *
-     * @param id Calendar ID
+     * @param id
+     *            Calendar ID
      * @return Calendar if found and public, null otherwise
      */
     public UserCalendar findPublicCalendar(UUID id) {
@@ -316,12 +329,16 @@ public class CalendarService {
     /**
      * Check if user has read access to a calendar.
      *
-     * <p>Rules: - Admin can read all calendars - Owner can read their own calendars - Anyone can
-     * read public calendars - Guest users can read calendars associated with their session
+     * <p>
+     * Rules: - Admin can read all calendars - Owner can read their own calendars - Anyone can read public calendars -
+     * Guest users can read calendars associated with their session
      *
-     * @param calendar Calendar to check
-     * @param currentUser User requesting access (null for anonymous)
-     * @throws SecurityException if access denied
+     * @param calendar
+     *            Calendar to check
+     * @param currentUser
+     *            User requesting access (null for anonymous)
+     * @throws SecurityException
+     *             if access denied
      */
     private void checkReadAccess(UserCalendar calendar, CalendarUser currentUser) {
         // Public calendars are accessible to everyone
@@ -346,20 +363,23 @@ public class CalendarService {
         }
 
         // Unauthorized
-        LOG.warnf(
-                "Unauthorized read access: calendarId=%s, userId=%s", calendar.id, currentUser.id);
+        LOG.warnf("Unauthorized read access: calendarId=%s, userId=%s", calendar.id, currentUser.id);
         throw new SecurityException("You do not have permission to view this calendar");
     }
 
     /**
      * Check if user has write access to a calendar.
      *
-     * <p>Rules: - Admin can write to all calendars - Owner can write to their own calendars - Guest
-     * users can write to calendars associated with their session (if no owner assigned)
+     * <p>
+     * Rules: - Admin can write to all calendars - Owner can write to their own calendars - Guest users can write to
+     * calendars associated with their session (if no owner assigned)
      *
-     * @param calendar Calendar to check
-     * @param currentUser User requesting access (null for anonymous)
-     * @throws SecurityException if access denied
+     * @param calendar
+     *            Calendar to check
+     * @param currentUser
+     *            User requesting access (null for anonymous)
+     * @throws SecurityException
+     *             if access denied
      */
     private void checkWriteAccess(UserCalendar calendar, CalendarUser currentUser) {
         // Anonymous users cannot modify calendars
@@ -379,8 +399,7 @@ public class CalendarService {
         }
 
         // Unauthorized
-        LOG.warnf(
-                "Unauthorized write access: calendarId=%s, userId=%s", calendar.id, currentUser.id);
+        LOG.warnf("Unauthorized write access: calendarId=%s, userId=%s", calendar.id, currentUser.id);
         throw new SecurityException("You do not have permission to modify this calendar");
     }
 
@@ -389,14 +408,18 @@ public class CalendarService {
     /**
      * Validate calendar creation input.
      *
-     * @param name Calendar name
-     * @param year Calendar year
-     * @param user Owner user (null for guests)
-     * @param sessionId Session ID (null for authenticated users)
-     * @throws IllegalArgumentException if validation fails
+     * @param name
+     *            Calendar name
+     * @param year
+     *            Calendar year
+     * @param user
+     *            Owner user (null for guests)
+     * @param sessionId
+     *            Session ID (null for authenticated users)
+     * @throws IllegalArgumentException
+     *             if validation fails
      */
-    private void validateCalendarInput(
-            String name, Integer year, CalendarUser user, String sessionId) {
+    private void validateCalendarInput(String name, Integer year, CalendarUser user, String sessionId) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Calendar name is required");
         }

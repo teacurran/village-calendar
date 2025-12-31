@@ -23,11 +23,14 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class AnalyticsRollupTest {
 
-    @Inject Validator validator;
+    @Inject
+    Validator validator;
 
-    @Inject TestDataCleaner testDataCleaner;
+    @Inject
+    TestDataCleaner testDataCleaner;
 
-    @Inject jakarta.persistence.EntityManager entityManager;
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
 
     @BeforeEach
     @Transactional
@@ -191,17 +194,12 @@ class AnalyticsRollupTest {
         rollup3.persist();
 
         // When
-        List<AnalyticsRollup> pathRollups =
-                AnalyticsRollup.findByMetricAndDimension("page_views", "path").list();
+        List<AnalyticsRollup> pathRollups = AnalyticsRollup.findByMetricAndDimension("page_views", "path").list();
 
         // Then
         assertEquals(2, pathRollups.size());
         assertTrue(
-                pathRollups.stream()
-                        .allMatch(
-                                r ->
-                                        "page_views".equals(r.metricName)
-                                                && "path".equals(r.dimensionKey)));
+                pathRollups.stream().allMatch(r -> "page_views".equals(r.metricName) && "path".equals(r.dimensionKey)));
     }
 
     @Test
@@ -229,19 +227,13 @@ class AnalyticsRollupTest {
         rollup3.persist();
 
         // When
-        List<AnalyticsRollup> templatesRollups =
-                AnalyticsRollup.findByMetricAndDimensionValue("page_views", "path", "/templates")
-                        .list();
+        List<AnalyticsRollup> templatesRollups = AnalyticsRollup
+                .findByMetricAndDimensionValue("page_views", "path", "/templates").list();
 
         // Then
         assertEquals(2, templatesRollups.size());
-        assertTrue(
-                templatesRollups.stream()
-                        .allMatch(
-                                r ->
-                                        "page_views".equals(r.metricName)
-                                                && "path".equals(r.dimensionKey)
-                                                && "/templates".equals(r.dimensionValue)));
+        assertTrue(templatesRollups.stream().allMatch(r -> "page_views".equals(r.metricName)
+                && "path".equals(r.dimensionKey) && "/templates".equals(r.dimensionValue)));
     }
 
     @Test
@@ -274,10 +266,8 @@ class AnalyticsRollupTest {
         entityManager.flush();
 
         // When
-        List<AnalyticsRollup> recentRollups =
-                AnalyticsRollup.findByTimeRange(
-                                yesterday.minusSeconds(1), now.plus(1, ChronoUnit.DAYS))
-                        .list();
+        List<AnalyticsRollup> recentRollups = AnalyticsRollup
+                .findByTimeRange(yesterday.minusSeconds(1), now.plus(1, ChronoUnit.DAYS)).list();
 
         // Then
         assertEquals(1, recentRollups.size());
@@ -312,10 +302,8 @@ class AnalyticsRollupTest {
         pageViewsOld.persist();
 
         // When
-        List<AnalyticsRollup> rollups =
-                AnalyticsRollup.findByMetricAndTimeRange(
-                                "page_views", yesterday, now.plus(1, ChronoUnit.DAYS))
-                        .list();
+        List<AnalyticsRollup> rollups = AnalyticsRollup
+                .findByMetricAndTimeRange("page_views", yesterday, now.plus(1, ChronoUnit.DAYS)).list();
 
         // Then
         assertEquals(1, rollups.size());
@@ -370,15 +358,11 @@ class AnalyticsRollupTest {
         entityManager.flush();
 
         // When
-        BigDecimal sum =
-                AnalyticsRollup.sumByMetricAndTimeRange(
-                        "revenue", yesterday.minusSeconds(1), now.plus(1, ChronoUnit.DAYS));
+        BigDecimal sum = AnalyticsRollup.sumByMetricAndTimeRange("revenue", yesterday.minusSeconds(1),
+                now.plus(1, ChronoUnit.DAYS));
 
         // Then
-        assertEquals(
-                0,
-                BigDecimal.valueOf(350.00)
-                        .compareTo(sum)); // Use compareTo for BigDecimal comparison
+        assertEquals(0, BigDecimal.valueOf(350.00).compareTo(sum)); // Use compareTo for BigDecimal comparison
     }
 
     @Test

@@ -9,20 +9,24 @@ import jakarta.transaction.Transactional;
 @ApplicationScoped
 public class TestDataCleaner {
 
-    @Inject CalendarOrderRepository orderRepository;
+    @Inject
+    CalendarOrderRepository orderRepository;
 
-    @Inject UserCalendarRepository calendarRepository;
+    @Inject
+    UserCalendarRepository calendarRepository;
 
-    @Inject CalendarUserRepository userRepository;
+    @Inject
+    CalendarUserRepository userRepository;
 
-    @Inject CalendarTemplateRepository templateRepository;
+    @Inject
+    CalendarTemplateRepository templateRepository;
 
-    @Inject EntityManager entityManager;
+    @Inject
+    EntityManager entityManager;
 
     /**
-     * Delete all test data in the correct order to avoid foreign key violations. Order:
-     * CalendarOrder → UserCalendar → PageView → AnalyticsRollup → DelayedJob → CalendarUser →
-     * CalendarTemplate
+     * Delete all test data in the correct order to avoid foreign key violations. Order: CalendarOrder → UserCalendar →
+     * PageView → AnalyticsRollup → DelayedJob → CalendarUser → CalendarTemplate
      */
     @Transactional
     public void deleteAll() {

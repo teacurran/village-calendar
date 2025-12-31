@@ -1,5 +1,8 @@
 package villagecompute.calendar.api;
 
+import static villagecompute.calendar.util.MimeTypes.HEADER_CACHE_CONTROL;
+import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
+
 import java.time.DayOfWeek;
 import java.util.HashMap;
 import java.util.List;
@@ -24,23 +27,25 @@ import villagecompute.calendar.util.MimeTypes;
 
 import io.quarkus.logging.Log;
 
-import static villagecompute.calendar.util.MimeTypes.HEADER_CACHE_CONTROL;
-import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
-
 @Path("/calendar")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class CalendarResource {
 
-    @Inject CalendarRenderingService calendarRenderingService;
+    @Inject
+    CalendarRenderingService calendarRenderingService;
 
-    @Inject HebrewCalendarService hebrewCalendarService;
+    @Inject
+    HebrewCalendarService hebrewCalendarService;
 
-    @Inject villagecompute.calendar.services.HolidayService holidayService;
+    @Inject
+    villagecompute.calendar.services.HolidayService holidayService;
 
-    @Inject PDFRenderingService pdfRenderingService;
+    @Inject
+    PDFRenderingService pdfRenderingService;
 
-    @Inject EmojiSvgService emojiSvgService;
+    @Inject
+    EmojiSvgService emojiSvgService;
 
     // Request/Response types
     public static class CalendarRequest {
@@ -133,8 +138,7 @@ public class CalendarResource {
         String svg;
         if ("hebrew".equals(request.calendarType)) {
             // Generate Hebrew calendar
-            HebrewCalendarService.HebrewCalendarConfig hebrewConfig =
-                    new HebrewCalendarService.HebrewCalendarConfig();
+            HebrewCalendarService.HebrewCalendarConfig hebrewConfig = new HebrewCalendarService.HebrewCalendarConfig();
             hebrewConfig.hebrewYear = request.year != null ? request.year : 5784;
             hebrewConfig.theme = config.theme;
             hebrewConfig.showGrid = config.showGrid;
@@ -154,8 +158,7 @@ public class CalendarResource {
             hebrewConfig.latitude = config.latitude;
             hebrewConfig.longitude = config.longitude;
             // Pass holiday set for Hebrew calendar (default to HEBREW_RELIGIOUS if not specified)
-            String holidaySet =
-                    request.holidaySet != null ? request.holidaySet : "HEBREW_RELIGIOUS";
+            String holidaySet = request.holidaySet != null ? request.holidaySet : "HEBREW_RELIGIOUS";
             svg = hebrewCalendarService.generateHebrewCalendarSVG(hebrewConfig, holidaySet);
         } else {
             svg = calendarRenderingService.generateCalendarSVG(config);
@@ -184,15 +187,16 @@ public class CalendarResource {
     /**
      * Get an emoji SVG for preview purposes.
      *
-     * @param emoji The emoji character (URL encoded)
-     * @param style The style: "noto-color", "noto-mono", or "mono-{color}"
+     * @param emoji
+     *            The emoji character (URL encoded)
+     * @param style
+     *            The style: "noto-color", "noto-mono", or "mono-{color}"
      * @return SVG content
      */
     @GET
     @Path("/emoji-preview")
     @Produces("image/svg+xml")
-    public Response getEmojiPreview(
-            @QueryParam("emoji") String emoji, @QueryParam("style") String style) {
+    public Response getEmojiPreview(@QueryParam("emoji") String emoji, @QueryParam("style") String style) {
 
         if (emoji == null || emoji.isEmpty()) {
             emoji = "🎄"; // Default to Christmas tree
@@ -217,8 +221,7 @@ public class CalendarResource {
             return Response.status(Response.Status.NOT_FOUND).entity("Emoji SVG not found").build();
         }
 
-        return Response.ok(svg)
-                .header(HEADER_CACHE_CONTROL, "public, max-age=86400") // Cache for 24 hours
+        return Response.ok(svg).header(HEADER_CACHE_CONTROL, "public, max-age=86400") // Cache for 24 hours
                 .build();
     }
 
@@ -250,22 +253,17 @@ public class CalendarResource {
 
         if (pdf.length == 0) {
             // PDF generation failed
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity("Failed to generate PDF")
-                    .build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Failed to generate PDF").build();
         }
 
-        return Response.ok(pdf)
-                .header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.APPLICATION_PDF)
-                .header(
-                    HEADER_CONTENT_DISPOSITION,
-                        "attachment; filename=\"calendar-" + config.year + ".pdf\"")
+        return Response.ok(pdf).header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.APPLICATION_PDF)
+                .header(HEADER_CONTENT_DISPOSITION, "attachment; filename=\"calendar-" + config.year + ".pdf\"")
                 .build();
     }
 
     /**
-     * Convert SVG content to PDF directly. Used for downloading PDFs from stored SVG content (e.g.,
-     * order confirmations).
+     * Convert SVG content to PDF directly. Used for downloading PDFs from stored SVG content (e.g., order
+     * confirmations).
      */
     @POST
     @Path("/svg-to-pdf")
@@ -273,9 +271,7 @@ public class CalendarResource {
     @Produces(MimeTypes.APPLICATION_PDF)
     public Response svgToPdf(SvgToPdfRequest request) {
         if (request == null) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .type(MediaType.TEXT_PLAIN)
-                    .entity("Request is required")
+            return Response.status(Response.Status.BAD_REQUEST).type(MediaType.TEXT_PLAIN).entity("Request is required")
                     .build();
         }
 
@@ -286,14 +282,12 @@ public class CalendarResource {
             // Check if we should regenerate SVG with new configuration (e.g., different emoji font)
             if (request.regenerateConfig != null) {
                 // Regenerate SVG with updated configuration
-                CalendarRenderingService.CalendarConfig config =
-                        buildConfig(request.regenerateConfig);
+                CalendarRenderingService.CalendarConfig config = buildConfig(request.regenerateConfig);
 
                 // Generate fresh SVG based on calendar type
                 if ("hebrew".equals(request.regenerateConfig.calendarType)) {
                     // Generate Hebrew calendar
-                    HebrewCalendarService.HebrewCalendarConfig hebrewConfig =
-                            new HebrewCalendarService.HebrewCalendarConfig();
+                    HebrewCalendarService.HebrewCalendarConfig hebrewConfig = new HebrewCalendarService.HebrewCalendarConfig();
                     hebrewConfig.hebrewYear = config.year;
                     hebrewConfig.theme = config.theme;
                     hebrewConfig.showGrid = config.showGrid;
@@ -312,13 +306,10 @@ public class CalendarResource {
                     hebrewConfig.moonLightColor = config.moonLightColor;
                     hebrewConfig.latitude = config.latitude;
                     hebrewConfig.longitude = config.longitude;
-                    String holidaySet =
-                            request.regenerateConfig.holidaySet != null
-                                    ? request.regenerateConfig.holidaySet
-                                    : "HEBREW_RELIGIOUS";
-                    svgContent =
-                            hebrewCalendarService.generateHebrewCalendarSVG(
-                                    hebrewConfig, holidaySet);
+                    String holidaySet = request.regenerateConfig.holidaySet != null
+                            ? request.regenerateConfig.holidaySet
+                            : "HEBREW_RELIGIOUS";
+                    svgContent = hebrewCalendarService.generateHebrewCalendarSVG(hebrewConfig, holidaySet);
                 } else {
                     svgContent = calendarRenderingService.generateCalendarSVG(config);
                 }
@@ -326,42 +317,31 @@ public class CalendarResource {
                 // Use provided SVG content
                 svgContent = request.svgContent;
             } else {
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .type(MediaType.TEXT_PLAIN)
-                        .entity("Either svgContent or regenerateConfig is required")
-                        .build();
+                return Response.status(Response.Status.BAD_REQUEST).type(MediaType.TEXT_PLAIN)
+                        .entity("Either svgContent or regenerateConfig is required").build();
             }
 
             // Convert SVG to PDF using PDFRenderingService
             byte[] pdf = pdfRenderingService.renderSVGToPDF(svgContent, year);
 
             if (pdf == null || pdf.length == 0) {
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                        .type(MediaType.TEXT_PLAIN)
-                        .entity("Failed to generate PDF - empty result")
-                        .build();
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).type(MediaType.TEXT_PLAIN)
+                        .entity("Failed to generate PDF - empty result").build();
             }
 
-            return Response.ok(pdf)
-                    .type("application/pdf")
-                    .header(
-                            HEADER_CONTENT_DISPOSITION,
-                            "attachment; filename=\"calendar-" + year + ".pdf\"")
-                    .build();
+            return Response.ok(pdf).type("application/pdf")
+                    .header(HEADER_CONTENT_DISPOSITION, "attachment; filename=\"calendar-" + year + ".pdf\"").build();
 
         } catch (Exception e) {
             Log.error("PDF generation failed", e);
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .type(MediaType.TEXT_PLAIN)
-                    .entity("PDF generation failed: " + e.getMessage())
-                    .build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).type(MediaType.TEXT_PLAIN)
+                    .entity("PDF generation failed: " + e.getMessage()).build();
         }
     }
 
     @GET
     @Path("/holidays")
-    public Response getHolidays(
-            @jakarta.ws.rs.QueryParam("year") Integer year,
+    public Response getHolidays(@jakarta.ws.rs.QueryParam("year") Integer year,
             @jakarta.ws.rs.QueryParam("country") String country) {
 
         // Default to current year if not specified
@@ -381,8 +361,7 @@ public class CalendarResource {
     }
 
     private CalendarRenderingService.CalendarConfig buildConfig(CalendarRequest request) {
-        CalendarRenderingService.CalendarConfig config =
-                new CalendarRenderingService.CalendarConfig();
+        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
 
         if (request.year != null) {
             config.year = request.year;

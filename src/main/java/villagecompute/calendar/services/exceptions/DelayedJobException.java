@@ -1,8 +1,8 @@
 package villagecompute.calendar.services.exceptions;
 
 /**
- * Exception thrown by DelayedJob handlers to indicate job failure. Includes information about
- * whether the job should be retried.
+ * Exception thrown by DelayedJob handlers to indicate job failure. Includes information about whether the job should be
+ * retried.
  */
 public class DelayedJobException extends Exception {
 
@@ -11,8 +11,10 @@ public class DelayedJobException extends Exception {
     /**
      * Create a DelayedJobException.
      *
-     * @param recoverable Whether this job should be retried
-     * @param message Error message
+     * @param recoverable
+     *            Whether this job should be retried
+     * @param message
+     *            Error message
      */
     public DelayedJobException(boolean recoverable, String message) {
         super(message);
@@ -22,9 +24,12 @@ public class DelayedJobException extends Exception {
     /**
      * Create a DelayedJobException with a cause.
      *
-     * @param recoverable Whether this job should be retried
-     * @param message Error message
-     * @param cause Underlying exception
+     * @param recoverable
+     *            Whether this job should be retried
+     * @param message
+     *            Error message
+     * @param cause
+     *            Underlying exception
      */
     public DelayedJobException(boolean recoverable, String message, Throwable cause) {
         super(message, cause);

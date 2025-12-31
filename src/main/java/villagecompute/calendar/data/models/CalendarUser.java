@@ -14,21 +14,14 @@ import org.hibernate.annotations.BatchSize;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 
 /**
- * Entity representing an OAuth authenticated user in the calendar service. Users can create and
- * manage calendars, and place orders for printed calendars.
+ * Entity representing an OAuth authenticated user in the calendar service. Users can create and manage calendars, and
+ * place orders for printed calendars.
  */
 @Entity
-@Table(
-        name = "calendar_users",
-        uniqueConstraints = {
-            @UniqueConstraint(
-                    name = "uk_calendar_users_oauth",
-                    columnNames = {"oauth_provider", "oauth_subject"})
-        },
-        indexes = {
-            @Index(name = "idx_calendar_users_email", columnList = "email"),
-            @Index(name = "idx_calendar_users_last_login", columnList = "last_login_at DESC")
-        })
+@Table(name = "calendar_users", uniqueConstraints = {@UniqueConstraint(name = "uk_calendar_users_oauth", columnNames = {
+        "oauth_provider", "oauth_subject"})}, indexes = {
+                @Index(name = "idx_calendar_users_email", columnList = "email"),
+                @Index(name = "idx_calendar_users_last_login", columnList = "last_login_at DESC")})
 public class CalendarUser extends DefaultPanacheEntityWithTimestamps {
 
     @NotNull @Size(max = 50)
@@ -72,19 +65,21 @@ public class CalendarUser extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find a user by their OAuth provider and subject (unique identifier).
      *
-     * @param provider OAuth provider (e.g., "GOOGLE", "FACEBOOK")
-     * @param subject OAuth subject (sub claim from JWT)
+     * @param provider
+     *            OAuth provider (e.g., "GOOGLE", "FACEBOOK")
+     * @param subject
+     *            OAuth subject (sub claim from JWT)
      * @return Optional containing the user if found
      */
     public static Optional<CalendarUser> findByOAuthSubject(String provider, String subject) {
-        return find("oauthProvider = ?1 AND oauthSubject = ?2", provider, subject)
-                .firstResultOptional();
+        return find("oauthProvider = ?1 AND oauthSubject = ?2", provider, subject).firstResultOptional();
     }
 
     /**
      * Find a user by email address.
      *
-     * @param email Email address
+     * @param email
+     *            Email address
      * @return Optional containing the user if found
      */
     public static Optional<CalendarUser> findByEmail(String email) {
@@ -94,7 +89,8 @@ public class CalendarUser extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find all users who have logged in since a specific time.
      *
-     * @param since Instant to compare against
+     * @param since
+     *            Instant to compare against
      * @return Query of active users
      */
     public static PanacheQuery<CalendarUser> findActiveUsersSince(Instant since) {

@@ -25,11 +25,12 @@ import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.data.repositories.EventRepository;
 
 /**
- * Service layer for event business logic operations. Handles event CRUD operations, validation,
- * authorization, and bulk imports.
+ * Service layer for event business logic operations. Handles event CRUD operations, validation, authorization, and bulk
+ * imports.
  *
- * <p>Events are custom dates/occasions that users add to their calendars. Each event must be within
- * the calendar's year and have valid data.
+ * <p>
+ * Events are custom dates/occasions that users add to their calendars. Each event must be within the calendar's year
+ * and have valid data.
  */
 @ApplicationScoped
 public class EventService {
@@ -37,44 +38,47 @@ public class EventService {
     private static final Logger LOG = Logger.getLogger(EventService.class);
 
     // Hex color pattern (e.g., #FF5733 or #ABC)
-    private static final Pattern HEX_COLOR_PATTERN =
-            Pattern.compile("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$");
+    private static final Pattern HEX_COLOR_PATTERN = Pattern.compile("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$");
 
-    @Inject EventRepository eventRepository;
+    @Inject
+    EventRepository eventRepository;
 
-    @Inject CalendarService calendarService;
+    @Inject
+    CalendarService calendarService;
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
     // ========== CREATE OPERATIONS ==========
 
     /**
-     * Add a new event to a calendar. Validates that: - Event date is within calendar year - Event
-     * text is max 500 characters - Emoji is valid Unicode (if provided) - User has write access to
-     * the calendar
+     * Add a new event to a calendar. Validates that: - Event date is within calendar year - Event text is max 500
+     * characters - Emoji is valid Unicode (if provided) - User has write access to the calendar
      *
-     * @param calendarId Calendar ID
-     * @param eventDate Event date
-     * @param eventText Event text/description (max 500 chars)
-     * @param emoji Unicode emoji (optional)
-     * @param color Hex color code (optional, e.g., #FF5733)
-     * @param currentUser User adding the event
+     * @param calendarId
+     *            Calendar ID
+     * @param eventDate
+     *            Event date
+     * @param eventText
+     *            Event text/description (max 500 chars)
+     * @param emoji
+     *            Unicode emoji (optional)
+     * @param color
+     *            Hex color code (optional, e.g., #FF5733)
+     * @param currentUser
+     *            User adding the event
      * @return Created event
-     * @throws IllegalArgumentException if validation fails
-     * @throws SecurityException if user is not authorized
+     * @throws IllegalArgumentException
+     *             if validation fails
+     * @throws SecurityException
+     *             if user is not authorized
      */
     @Transactional
-    public Event addEvent(
-            UUID calendarId,
-            LocalDate eventDate,
-            String eventText,
-            String emoji,
-            String color,
+    public Event addEvent(UUID calendarId, LocalDate eventDate, String eventText, String emoji, String color,
             CalendarUser currentUser) {
 
-        LOG.infof(
-                "Adding event: calendarId=%s, date=%s, userId=%s",
-                calendarId, eventDate, currentUser != null ? currentUser.id : null);
+        LOG.infof("Adding event: calendarId=%s, date=%s, userId=%s", calendarId, eventDate,
+                currentUser != null ? currentUser.id : null);
 
         // Validate input
         if (calendarId == null) {
@@ -112,25 +116,28 @@ public class EventService {
     // ========== UPDATE OPERATIONS ==========
 
     /**
-     * Update an existing event's text, emoji, or color. Cannot change the event date - delete and
-     * recreate instead.
+     * Update an existing event's text, emoji, or color. Cannot change the event date - delete and recreate instead.
      *
-     * @param eventId Event ID
-     * @param eventText New event text (null to keep current)
-     * @param emoji New emoji (null to keep current)
-     * @param color New color (null to keep current)
-     * @param currentUser User updating the event
+     * @param eventId
+     *            Event ID
+     * @param eventText
+     *            New event text (null to keep current)
+     * @param emoji
+     *            New emoji (null to keep current)
+     * @param color
+     *            New color (null to keep current)
+     * @param currentUser
+     *            User updating the event
      * @return Updated event
-     * @throws IllegalArgumentException if event not found or validation fails
-     * @throws SecurityException if user is not authorized
+     * @throws IllegalArgumentException
+     *             if event not found or validation fails
+     * @throws SecurityException
+     *             if user is not authorized
      */
     @Transactional
-    public Event updateEvent(
-            UUID eventId, String eventText, String emoji, String color, CalendarUser currentUser) {
+    public Event updateEvent(UUID eventId, String eventText, String emoji, String color, CalendarUser currentUser) {
 
-        LOG.infof(
-                "Updating event: id=%s, userId=%s",
-                eventId, currentUser != null ? currentUser.id : null);
+        LOG.infof("Updating event: id=%s, userId=%s", eventId, currentUser != null ? currentUser.id : null);
 
         // Find event
         Event event = Event.findById(eventId);
@@ -169,17 +176,19 @@ public class EventService {
     /**
      * Delete an event.
      *
-     * @param eventId Event ID
-     * @param currentUser User deleting the event
+     * @param eventId
+     *            Event ID
+     * @param currentUser
+     *            User deleting the event
      * @return true if deleted successfully
-     * @throws IllegalArgumentException if event not found
-     * @throws SecurityException if user is not authorized
+     * @throws IllegalArgumentException
+     *             if event not found
+     * @throws SecurityException
+     *             if user is not authorized
      */
     @Transactional
     public boolean deleteEvent(UUID eventId, CalendarUser currentUser) {
-        LOG.infof(
-                "Deleting event: id=%s, userId=%s",
-                eventId, currentUser != null ? currentUser.id : null);
+        LOG.infof("Deleting event: id=%s, userId=%s", eventId, currentUser != null ? currentUser.id : null);
 
         // Find event
         Event event = Event.findById(eventId);
@@ -204,20 +213,24 @@ public class EventService {
     /**
      * List all events for a calendar, optionally filtered by date range.
      *
-     * @param calendarId Calendar ID
-     * @param startDate Optional start date filter (inclusive)
-     * @param endDate Optional end date filter (inclusive)
-     * @param currentUser User requesting the list
+     * @param calendarId
+     *            Calendar ID
+     * @param startDate
+     *            Optional start date filter (inclusive)
+     * @param endDate
+     *            Optional end date filter (inclusive)
+     * @param currentUser
+     *            User requesting the list
      * @return List of events
-     * @throws IllegalArgumentException if calendar not found
-     * @throws SecurityException if user is not authorized
+     * @throws IllegalArgumentException
+     *             if calendar not found
+     * @throws SecurityException
+     *             if user is not authorized
      */
-    public List<Event> listEvents(
-            UUID calendarId, LocalDate startDate, LocalDate endDate, CalendarUser currentUser) {
+    public List<Event> listEvents(UUID calendarId, LocalDate startDate, LocalDate endDate, CalendarUser currentUser) {
 
-        LOG.debugf(
-                "Listing events: calendarId=%s, startDate=%s, endDate=%s, userId=%s",
-                calendarId, startDate, endDate, currentUser != null ? currentUser.id : null);
+        LOG.debugf("Listing events: calendarId=%s, startDate=%s, endDate=%s, userId=%s", calendarId, startDate, endDate,
+                currentUser != null ? currentUser.id : null);
 
         // Get calendar and check authorization (read access)
         UserCalendar calendar = calendarService.getCalendar(calendarId, currentUser);
@@ -227,8 +240,7 @@ public class EventService {
         if (startDate != null && endDate != null) {
             // Validate date range
             if (startDate.isAfter(endDate)) {
-                throw new IllegalArgumentException(
-                        "Start date must be before or equal to end date");
+                throw new IllegalArgumentException("Start date must be before or equal to end date");
             }
             events = eventRepository.findByDateRange(calendarId, startDate, endDate);
         } else {
@@ -243,16 +255,18 @@ public class EventService {
     /**
      * Get a single event by ID.
      *
-     * @param eventId Event ID
-     * @param currentUser User requesting the event
+     * @param eventId
+     *            Event ID
+     * @param currentUser
+     *            User requesting the event
      * @return Event
-     * @throws IllegalArgumentException if event not found
-     * @throws SecurityException if user is not authorized
+     * @throws IllegalArgumentException
+     *             if event not found
+     * @throws SecurityException
+     *             if user is not authorized
      */
     public Event getEvent(UUID eventId, CalendarUser currentUser) {
-        LOG.debugf(
-                "Getting event: id=%s, userId=%s",
-                eventId, currentUser != null ? currentUser.id : null);
+        LOG.debugf("Getting event: id=%s, userId=%s", eventId, currentUser != null ? currentUser.id : null);
 
         Event event = Event.findById(eventId);
         if (event == null) {
@@ -269,23 +283,26 @@ public class EventService {
     // ========== BULK OPERATIONS ==========
 
     /**
-     * Import multiple events from JSON format. JSON format: [{"date": "2025-01-01", "text": "New
-     * Year", "emoji": "🎉", "color": "#FF5733"}, ...]
+     * Import multiple events from JSON format. JSON format: [{"date": "2025-01-01", "text": "New Year", "emoji": "🎉",
+     * "color": "#FF5733"}, ...]
      *
-     * @param calendarId Calendar ID
-     * @param jsonData JSON array of events
-     * @param currentUser User importing events
+     * @param calendarId
+     *            Calendar ID
+     * @param jsonData
+     *            JSON array of events
+     * @param currentUser
+     *            User importing events
      * @return List of created events
-     * @throws IllegalArgumentException if JSON is invalid or validation fails
-     * @throws SecurityException if user is not authorized
+     * @throws IllegalArgumentException
+     *             if JSON is invalid or validation fails
+     * @throws SecurityException
+     *             if user is not authorized
      */
     @Transactional
-    public List<Event> importEventsFromJson(
-            UUID calendarId, String jsonData, CalendarUser currentUser) {
+    public List<Event> importEventsFromJson(UUID calendarId, String jsonData, CalendarUser currentUser) {
 
-        LOG.infof(
-                "Importing events from JSON: calendarId=%s, userId=%s",
-                calendarId, currentUser != null ? currentUser.id : null);
+        LOG.infof("Importing events from JSON: calendarId=%s, userId=%s", calendarId,
+                currentUser != null ? currentUser.id : null);
 
         // Get calendar and check authorization
         UserCalendar calendar = calendarService.getCalendar(calendarId, currentUser);
@@ -329,9 +346,7 @@ public class EventService {
                 createdEvents.add(event);
             }
 
-            LOG.infof(
-                    "Imported %d events from JSON for calendar %s",
-                    createdEvents.size(), calendarId);
+            LOG.infof("Imported %d events from JSON for calendar %s", createdEvents.size(), calendarId);
 
         } catch (Exception e) {
             LOG.errorf(e, "Failed to import events from JSON");
@@ -342,23 +357,26 @@ public class EventService {
     }
 
     /**
-     * Import multiple events from CSV format. CSV format: date,text,emoji,color (header row
-     * required) Example: 2025-01-01,New Year,🎉,#FF5733
+     * Import multiple events from CSV format. CSV format: date,text,emoji,color (header row required) Example:
+     * 2025-01-01,New Year,🎉,#FF5733
      *
-     * @param calendarId Calendar ID
-     * @param csvData CSV data with header row
-     * @param currentUser User importing events
+     * @param calendarId
+     *            Calendar ID
+     * @param csvData
+     *            CSV data with header row
+     * @param currentUser
+     *            User importing events
      * @return List of created events
-     * @throws IllegalArgumentException if CSV is invalid or validation fails
-     * @throws SecurityException if user is not authorized
+     * @throws IllegalArgumentException
+     *             if CSV is invalid or validation fails
+     * @throws SecurityException
+     *             if user is not authorized
      */
     @Transactional
-    public List<Event> importEventsFromCsv(
-            UUID calendarId, String csvData, CalendarUser currentUser) {
+    public List<Event> importEventsFromCsv(UUID calendarId, String csvData, CalendarUser currentUser) {
 
-        LOG.infof(
-                "Importing events from CSV: calendarId=%s, userId=%s",
-                calendarId, currentUser != null ? currentUser.id : null);
+        LOG.infof("Importing events from CSV: calendarId=%s, userId=%s", calendarId,
+                currentUser != null ? currentUser.id : null);
 
         // Get calendar and check authorization
         UserCalendar calendar = calendarService.getCalendar(calendarId, currentUser);
@@ -415,14 +433,11 @@ public class EventService {
                 createdEvents.add(event);
             }
 
-            LOG.infof(
-                    "Imported %d events from CSV for calendar %s",
-                    createdEvents.size(), calendarId);
+            LOG.infof("Imported %d events from CSV for calendar %s", createdEvents.size(), calendarId);
 
         } catch (DateTimeParseException e) {
             LOG.errorf(e, "Failed to parse date in CSV");
-            throw new IllegalArgumentException(
-                    "Invalid date format in CSV. Use ISO format (YYYY-MM-DD)", e);
+            throw new IllegalArgumentException("Invalid date format in CSV. Use ISO format (YYYY-MM-DD)", e);
         } catch (Exception e) {
             LOG.errorf(e, "Failed to import events from CSV");
             throw new IllegalArgumentException("Invalid CSV format: " + e.getMessage(), e);
@@ -436,9 +451,12 @@ public class EventService {
     /**
      * Check if user has write access to a calendar. Delegates to CalendarService for consistency.
      *
-     * @param calendar Calendar to check
-     * @param currentUser User requesting access
-     * @throws SecurityException if access denied
+     * @param calendar
+     *            Calendar to check
+     * @param currentUser
+     *            User requesting access
+     * @throws SecurityException
+     *             if access denied
      */
     private void checkWriteAccess(UserCalendar calendar, CalendarUser currentUser) {
         // Anonymous users cannot modify calendars
@@ -458,8 +476,7 @@ public class EventService {
         }
 
         // Unauthorized
-        LOG.warnf(
-                "Unauthorized write access: calendarId=%s, userId=%s", calendar.id, currentUser.id);
+        LOG.warnf("Unauthorized write access: calendarId=%s, userId=%s", calendar.id, currentUser.id);
         throw new SecurityException("You do not have permission to modify events on this calendar");
     }
 
@@ -468,26 +485,26 @@ public class EventService {
     /**
      * Validate event input data.
      *
-     * @param calendar Parent calendar
-     * @param eventDate Event date
-     * @param eventText Event text
-     * @param emoji Emoji
-     * @param color Color
-     * @throws IllegalArgumentException if validation fails
+     * @param calendar
+     *            Parent calendar
+     * @param eventDate
+     *            Event date
+     * @param eventText
+     *            Event text
+     * @param emoji
+     *            Emoji
+     * @param color
+     *            Color
+     * @throws IllegalArgumentException
+     *             if validation fails
      */
-    private void validateEventInput(
-            UserCalendar calendar,
-            LocalDate eventDate,
-            String eventText,
-            String emoji,
+    private void validateEventInput(UserCalendar calendar, LocalDate eventDate, String eventText, String emoji,
             String color) {
 
         // Validate date is within calendar year
         if (eventDate.getYear() != calendar.year) {
-            throw new IllegalArgumentException(
-                    String.format(
-                            "Event date must be within calendar year %d (got %d)",
-                            calendar.year, eventDate.getYear()));
+            throw new IllegalArgumentException(String.format("Event date must be within calendar year %d (got %d)",
+                    calendar.year, eventDate.getYear()));
         }
 
         // Validate event text
@@ -503,23 +520,25 @@ public class EventService {
     /**
      * Validate event text.
      *
-     * @param eventText Event text
-     * @throws IllegalArgumentException if validation fails
+     * @param eventText
+     *            Event text
+     * @throws IllegalArgumentException
+     *             if validation fails
      */
     private void validateEventText(String eventText) {
         if (eventText != null && eventText.length() > 500) {
             throw new IllegalArgumentException(
-                    String.format(
-                            "Event text must be 500 characters or less (got %d characters)",
-                            eventText.length()));
+                    String.format("Event text must be 500 characters or less (got %d characters)", eventText.length()));
         }
     }
 
     /**
      * Validate emoji is valid Unicode emoji sequence.
      *
-     * @param emoji Emoji string
-     * @throws IllegalArgumentException if validation fails
+     * @param emoji
+     *            Emoji string
+     * @throws IllegalArgumentException
+     *             if validation fails
      */
     private void validateEmoji(String emoji) {
         if (emoji == null || emoji.isEmpty()) {
@@ -529,15 +548,13 @@ public class EventService {
         // Check length
         if (emoji.length() > 100) {
             throw new IllegalArgumentException(
-                    String.format(
-                            "Emoji must be 100 characters or less (got %d characters)",
-                            emoji.length()));
+                    String.format("Emoji must be 100 characters or less (got %d characters)", emoji.length()));
         }
 
         // Check if contains valid emoji characters
         // This is a simplified check - validates common emoji Unicode ranges
         boolean hasEmoji = false;
-        for (int i = 0; i < emoji.length(); ) {
+        for (int i = 0; i < emoji.length();) {
             int codePoint = emoji.codePointAt(i);
 
             // Check for common emoji ranges
@@ -547,12 +564,9 @@ public class EventService {
             // Zero-width joiner (0x200D)
             // Regional indicators for flags (0x1F1E6-0x1F1FF)
             // Skin tone modifiers (0x1F3FB-0x1F3FF)
-            if ((codePoint >= 0x1F300 && codePoint <= 0x1F9FF)
-                    || (codePoint >= 0x2600 && codePoint <= 0x27BF)
-                    || (codePoint >= 0xFE00 && codePoint <= 0xFE0F)
-                    || codePoint == 0x200D
-                    || (codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF)
-                    || (codePoint >= 0x1F3FB && codePoint <= 0x1F3FF)
+            if ((codePoint >= 0x1F300 && codePoint <= 0x1F9FF) || (codePoint >= 0x2600 && codePoint <= 0x27BF)
+                    || (codePoint >= 0xFE00 && codePoint <= 0xFE0F) || codePoint == 0x200D
+                    || (codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF) || (codePoint >= 0x1F3FB && codePoint <= 0x1F3FF)
                     || Character.getType(codePoint) == Character.OTHER_SYMBOL) {
                 hasEmoji = true;
             }
@@ -561,16 +575,17 @@ public class EventService {
         }
 
         if (!hasEmoji) {
-            throw new IllegalArgumentException(
-                    "Invalid emoji: must be valid Unicode emoji sequence");
+            throw new IllegalArgumentException("Invalid emoji: must be valid Unicode emoji sequence");
         }
     }
 
     /**
      * Validate color is valid hex color code.
      *
-     * @param color Color string
-     * @throws IllegalArgumentException if validation fails
+     * @param color
+     *            Color string
+     * @throws IllegalArgumentException
+     *             if validation fails
      */
     private void validateColor(String color) {
         if (color == null || color.isEmpty()) {
@@ -578,8 +593,7 @@ public class EventService {
         }
 
         if (!HEX_COLOR_PATTERN.matcher(color).matches()) {
-            throw new IllegalArgumentException(
-                    "Invalid color: must be hex color code (e.g., #FF5733 or #ABC)");
+            throw new IllegalArgumentException("Invalid color: must be hex color code (e.g., #FF5733 or #ABC)");
         }
     }
 }

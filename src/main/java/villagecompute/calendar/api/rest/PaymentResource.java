@@ -27,9 +27,11 @@ public class PaymentResource {
 
     private static final Logger LOG = Logger.getLogger(PaymentResource.class);
 
-    @Inject PaymentService paymentService;
+    @Inject
+    PaymentService paymentService;
 
-    @Inject OrderService orderService;
+    @Inject
+    OrderService orderService;
 
     /** Get Stripe configuration (publishable key) for frontend */
     @GET
@@ -41,15 +43,13 @@ public class PaymentResource {
     }
 
     /**
-     * Create a PaymentIntent for checkout Accepts optional breakdown (subtotal, tax, shipping) for
-     * Stripe tax reporting
+     * Create a PaymentIntent for checkout Accepts optional breakdown (subtotal, tax, shipping) for Stripe tax reporting
      */
     @POST
     @Path("/create-payment-intent")
     public Response createPaymentIntent(PaymentIntentRequest request) {
-        LOG.infof(
-                "Creating payment intent for amount: %s %s (tax: %s)",
-                request.amount, request.currency, request.taxAmount);
+        LOG.infof("Creating payment intent for amount: %s %s (tax: %s)", request.amount, request.currency,
+                request.taxAmount);
 
         try {
             // Generate a temporary order ID for the payment intent
@@ -60,35 +60,22 @@ public class PaymentResource {
             String currency = request.currency != null ? request.currency : "usd";
 
             // Convert optional breakdown to BigDecimal
-            BigDecimal subtotal =
-                    request.subtotal != null ? BigDecimal.valueOf(request.subtotal) : null;
-            BigDecimal taxAmount =
-                    request.taxAmount != null ? BigDecimal.valueOf(request.taxAmount) : null;
-            BigDecimal shippingCost =
-                    request.shippingCost != null ? BigDecimal.valueOf(request.shippingCost) : null;
+            BigDecimal subtotal = request.subtotal != null ? BigDecimal.valueOf(request.subtotal) : null;
+            BigDecimal taxAmount = request.taxAmount != null ? BigDecimal.valueOf(request.taxAmount) : null;
+            BigDecimal shippingCost = request.shippingCost != null ? BigDecimal.valueOf(request.shippingCost) : null;
 
-            Map<String, String> result =
-                    paymentService.createPaymentIntent(
-                            amount,
-                            currency,
-                            tempOrderId,
-                            subtotal,
-                            taxAmount,
-                            shippingCost,
-                            null // No order number yet - will be created after payment
-                            );
+            Map<String, String> result = paymentService.createPaymentIntent(amount, currency, tempOrderId, subtotal,
+                    taxAmount, shippingCost, null // No order number yet - will be created after payment
+            );
 
             return Response.ok(result).build();
         } catch (StripeException e) {
             LOG.errorf("Stripe error creating payment intent: %s", e.getMessage());
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(ErrorResponse.of(e.getMessage()))
-                    .build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of(e.getMessage())).build();
         } catch (Exception e) {
             LOG.errorf("Error creating payment intent: %s", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(ErrorResponse.of("Failed to create payment intent"))
-                    .build();
+                    .entity(ErrorResponse.of("Failed to create payment intent")).build();
         }
     }
 
@@ -104,11 +91,9 @@ public class PaymentResource {
             var paymentIntent = paymentService.getPaymentIntent(request.paymentIntentId);
 
             if (!"succeeded".equals(paymentIntent.getStatus())) {
-                LOG.warnf(
-                        "PaymentIntent %s has status %s, expected 'succeeded'",
-                        request.paymentIntentId, paymentIntent.getStatus());
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(ErrorResponse.of("Payment not completed"))
+                LOG.warnf("PaymentIntent %s has status %s, expected 'succeeded'", request.paymentIntentId,
+                        paymentIntent.getStatus());
+                return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of("Payment not completed"))
                         .build();
             }
 
@@ -122,46 +107,30 @@ public class PaymentResource {
             // Extract fields from orderDetails
             String email = (String) orderDetails.get("email");
             if (email == null || email.isEmpty()) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(ErrorResponse.of("Email is required"))
+                return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of("Email is required"))
                         .build();
             }
 
-            Map<String, Object> shippingAddress =
-                    (Map<String, Object>) orderDetails.get("shippingAddress");
+            Map<String, Object> shippingAddress = (Map<String, Object>) orderDetails.get("shippingAddress");
             List<Map<String, Object>> items = (List<Map<String, Object>>) orderDetails.get("items");
-            Double subtotal =
-                    orderDetails.get("subtotal") != null
-                            ? ((Number) orderDetails.get("subtotal")).doubleValue()
-                            : null;
-            Double shippingCost =
-                    orderDetails.get("shippingCost") != null
-                            ? ((Number) orderDetails.get("shippingCost")).doubleValue()
-                            : null;
-            Double taxAmount =
-                    orderDetails.get("taxAmount") != null
-                            ? ((Number) orderDetails.get("taxAmount")).doubleValue()
-                            : null;
-            Double totalAmount =
-                    orderDetails.get("totalAmount") != null
-                            ? ((Number) orderDetails.get("totalAmount")).doubleValue()
-                            : null;
+            Double subtotal = orderDetails.get("subtotal") != null
+                    ? ((Number) orderDetails.get("subtotal")).doubleValue()
+                    : null;
+            Double shippingCost = orderDetails.get("shippingCost") != null
+                    ? ((Number) orderDetails.get("shippingCost")).doubleValue()
+                    : null;
+            Double taxAmount = orderDetails.get("taxAmount") != null
+                    ? ((Number) orderDetails.get("taxAmount")).doubleValue()
+                    : null;
+            Double totalAmount = orderDetails.get("totalAmount") != null
+                    ? ((Number) orderDetails.get("totalAmount")).doubleValue()
+                    : null;
 
             // Process checkout and create orders in database
-            String orderNumber =
-                    orderService.processCheckout(
-                            request.paymentIntentId,
-                            email,
-                            shippingAddress,
-                            items,
-                            subtotal,
-                            shippingCost,
-                            taxAmount,
-                            totalAmount);
+            String orderNumber = orderService.processCheckout(request.paymentIntentId, email, shippingAddress, items,
+                    subtotal, shippingCost, taxAmount, totalAmount);
 
-            LOG.infof(
-                    "Payment confirmed, order %s created for PaymentIntent %s",
-                    orderNumber, request.paymentIntentId);
+            LOG.infof("Payment confirmed, order %s created for PaymentIntent %s", orderNumber, request.paymentIntentId);
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
@@ -171,20 +140,16 @@ public class PaymentResource {
             return Response.ok(result).build();
         } catch (StripeException e) {
             LOG.errorf("Stripe error confirming payment: %s", e.getMessage());
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(ErrorResponse.of(e.getMessage()))
-                    .build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of(e.getMessage())).build();
         } catch (Exception e) {
             LOG.errorf(e, "Error confirming payment: %s", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(ErrorResponse.of("Failed to confirm payment: " + e.getMessage()))
-                    .build();
+                    .entity(ErrorResponse.of("Failed to confirm payment: " + e.getMessage())).build();
         }
     }
 
     /**
-     * Request object for creating a PaymentIntent Includes optional breakdown fields for Stripe tax
-     * reporting
+     * Request object for creating a PaymentIntent Includes optional breakdown fields for Stripe tax reporting
      */
     public static class PaymentIntentRequest {
         public double amount;

@@ -18,8 +18,8 @@ import villagecompute.calendar.services.CartService;
 import villagecompute.calendar.services.SessionService;
 
 /**
- * Cart Resource - REST API for shopping cart operations Supports both authenticated users and guest
- * sessions via X-Session-ID header
+ * Cart Resource - REST API for shopping cart operations Supports both authenticated users and guest sessions via
+ * X-Session-ID header
  */
 @Path("/cart")
 @Produces(MediaType.APPLICATION_JSON)
@@ -28,9 +28,11 @@ public class CartResource {
 
     private static final Logger LOG = Logger.getLogger(CartResource.class);
 
-    @Inject CartService cartService;
+    @Inject
+    CartService cartService;
 
-    @Inject SessionService sessionService;
+    @Inject
+    SessionService sessionService;
 
     /** Get cart items for current session */
     @GET
@@ -71,26 +73,16 @@ public class CartResource {
         AddToCartInput input = new AddToCartInput();
 
         // Map generatorType (or productId for backwards compatibility)
-        input.generatorType =
-                requestBody.get("generatorType") != null
-                        ? (String) requestBody.get("generatorType")
-                        : (String) requestBody.get("productId");
+        input.generatorType = requestBody.get("generatorType") != null ? (String) requestBody.get("generatorType")
+                : (String) requestBody.get("productId");
 
         // Map description (or templateName for backwards compatibility)
-        input.description =
-                requestBody.get("description") != null
-                        ? (String) requestBody.get("description")
-                        : (String) requestBody.get("templateName");
+        input.description = requestBody.get("description") != null ? (String) requestBody.get("description")
+                : (String) requestBody.get("templateName");
 
-        input.quantity =
-                requestBody.get("quantity") != null
-                        ? ((Number) requestBody.get("quantity")).intValue()
-                        : 1;
+        input.quantity = requestBody.get("quantity") != null ? ((Number) requestBody.get("quantity")).intValue() : 1;
 
-        input.productCode =
-                requestBody.get("productCode") != null
-                        ? (String) requestBody.get("productCode")
-                        : null;
+        input.productCode = requestBody.get("productCode") != null ? (String) requestBody.get("productCode") : null;
 
         // Handle configuration - can be string or object
         if (requestBody.get("configuration") != null) {
@@ -99,8 +91,7 @@ public class CartResource {
                 input.configuration = (String) configObj;
             } else {
                 try {
-                    com.fasterxml.jackson.databind.ObjectMapper mapper =
-                            new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                     input.configuration = mapper.writeValueAsString(configObj);
                 } catch (Exception e) {
                     LOG.warnf("Could not serialize configuration: %s", e.getMessage());
@@ -142,17 +133,12 @@ public class CartResource {
     @PATCH
     @Path("/items/{itemId}")
     @Transactional
-    public Response updateQuantity(
-            @PathParam("itemId") String itemId, Map<String, Object> requestBody) {
+    public Response updateQuantity(@PathParam("itemId") String itemId, Map<String, Object> requestBody) {
         String sessionId = sessionService.getCurrentSessionId();
-        Integer quantity =
-                requestBody.get("quantity") != null
-                        ? ((Number) requestBody.get("quantity")).intValue()
-                        : null;
+        Integer quantity = requestBody.get("quantity") != null ? ((Number) requestBody.get("quantity")).intValue()
+                : null;
 
-        LOG.infof(
-                "REST: Updating item %s quantity to %d for session: %s",
-                itemId, quantity, sessionId);
+        LOG.infof("REST: Updating item %s quantity to %d for session: %s", itemId, quantity, sessionId);
 
         Cart cart = cartService.updateQuantity(sessionId, UUID.fromString(itemId), quantity);
 

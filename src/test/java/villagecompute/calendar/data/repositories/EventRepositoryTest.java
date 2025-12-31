@@ -19,15 +19,17 @@ import villagecompute.calendar.data.models.UserCalendar;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * Unit tests for EventRepository custom query methods. Tests all custom query methods including
- * findByCalendarId, findByDateRange, etc.
+ * Unit tests for EventRepository custom query methods. Tests all custom query methods including findByCalendarId,
+ * findByDateRange, etc.
  */
 @QuarkusTest
 class EventRepositoryTest {
 
-    @Inject EventRepository eventRepository;
+    @Inject
+    EventRepository eventRepository;
 
-    @Inject UserCalendarRepository calendarRepository;
+    @Inject
+    UserCalendarRepository calendarRepository;
 
     private CalendarUser testUser;
     private UserCalendar testCalendar;
@@ -127,9 +129,8 @@ class EventRepositoryTest {
         createEvent(testCalendar, LocalDate.of(2025, 12, 31), "December");
 
         // When - Query for events in summer (June-August)
-        List<Event> events =
-                eventRepository.findByDateRange(
-                        testCalendar.id, LocalDate.of(2025, 6, 1), LocalDate.of(2025, 8, 31));
+        List<Event> events = eventRepository.findByDateRange(testCalendar.id, LocalDate.of(2025, 6, 1),
+                LocalDate.of(2025, 8, 31));
 
         // Then
         assertEquals(1, events.size());
@@ -145,9 +146,8 @@ class EventRepositoryTest {
         createEvent(testCalendar, LocalDate.of(2025, 6, 30), "End Date");
 
         // When - Query inclusive range
-        List<Event> events =
-                eventRepository.findByDateRange(
-                        testCalendar.id, LocalDate.of(2025, 6, 1), LocalDate.of(2025, 6, 30));
+        List<Event> events = eventRepository.findByDateRange(testCalendar.id, LocalDate.of(2025, 6, 1),
+                LocalDate.of(2025, 6, 30));
 
         // Then
         assertEquals(3, events.size());
@@ -161,9 +161,8 @@ class EventRepositoryTest {
         createEvent(testCalendar, LocalDate.of(2025, 12, 31), "December");
 
         // When - Query for summer events
-        List<Event> events =
-                eventRepository.findByDateRange(
-                        testCalendar.id, LocalDate.of(2025, 6, 1), LocalDate.of(2025, 8, 31));
+        List<Event> events = eventRepository.findByDateRange(testCalendar.id, LocalDate.of(2025, 6, 1),
+                LocalDate.of(2025, 8, 31));
 
         // Then
         assertTrue(events.isEmpty());
@@ -177,9 +176,8 @@ class EventRepositoryTest {
         createEvent(testCalendar, LocalDate.of(2025, 7, 5), "Day After");
 
         // When - Query for single day
-        List<Event> events =
-                eventRepository.findByDateRange(
-                        testCalendar.id, LocalDate.of(2025, 7, 4), LocalDate.of(2025, 7, 4));
+        List<Event> events = eventRepository.findByDateRange(testCalendar.id, LocalDate.of(2025, 7, 4),
+                LocalDate.of(2025, 7, 4));
 
         // Then
         assertEquals(1, events.size());
@@ -195,8 +193,7 @@ class EventRepositoryTest {
         Event event = createEvent(testCalendar, LocalDate.of(2025, 1, 1), "New Year");
 
         // When
-        Event found =
-                eventRepository.findByCalendarAndDate(testCalendar.id, LocalDate.of(2025, 1, 1));
+        Event found = eventRepository.findByCalendarAndDate(testCalendar.id, LocalDate.of(2025, 1, 1));
 
         // Then
         assertNotNull(found);
@@ -208,8 +205,7 @@ class EventRepositoryTest {
     @Transactional
     void testFindByCalendarAndDate_NotFound_ReturnsNull() {
         // When
-        Event found =
-                eventRepository.findByCalendarAndDate(testCalendar.id, LocalDate.of(2025, 1, 1));
+        Event found = eventRepository.findByCalendarAndDate(testCalendar.id, LocalDate.of(2025, 1, 1));
 
         // Then
         assertNull(found);
@@ -223,8 +219,7 @@ class EventRepositoryTest {
         Event event2 = createEvent(testCalendar, LocalDate.of(2025, 1, 1), "Event 2");
 
         // When
-        Event found =
-                eventRepository.findByCalendarAndDate(testCalendar.id, LocalDate.of(2025, 1, 1));
+        Event found = eventRepository.findByCalendarAndDate(testCalendar.id, LocalDate.of(2025, 1, 1));
 
         // Then
         assertNotNull(found);
@@ -290,8 +285,7 @@ class EventRepositoryTest {
         // Then
         assertEquals(2, deletedCount);
         assertEquals(0, eventRepository.countByCalendar(testCalendar.id));
-        assertEquals(
-                1, eventRepository.countByCalendar(otherCalendar.id)); // Other calendar unaffected
+        assertEquals(1, eventRepository.countByCalendar(otherCalendar.id)); // Other calendar unaffected
     }
 
     @Test

@@ -12,8 +12,7 @@ import villagecompute.calendar.data.models.PageView;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 
 /**
- * Repository for PageView entities. Provides custom query methods for analytics tracking and user
- * behavior analysis.
+ * Repository for PageView entities. Provides custom query methods for analytics tracking and user behavior analysis.
  */
 @ApplicationScoped
 public class PageViewRepository implements PanacheRepository<PageView> {
@@ -21,7 +20,8 @@ public class PageViewRepository implements PanacheRepository<PageView> {
     /**
      * Find page view by ID.
      *
-     * @param id Page view ID
+     * @param id
+     *            Page view ID
      * @return Optional containing the page view if found
      */
     public Optional<PageView> findById(UUID id) {
@@ -29,10 +29,11 @@ public class PageViewRepository implements PanacheRepository<PageView> {
     }
 
     /**
-     * Find all page views for a specific session, ordered by creation time. Used for session
-     * reconstruction and funnel analysis.
+     * Find all page views for a specific session, ordered by creation time. Used for session reconstruction and funnel
+     * analysis.
      *
-     * @param sessionId Session identifier
+     * @param sessionId
+     *            Session identifier
      * @return List of page views
      */
     public List<PageView> findBySession(String sessionId) {
@@ -40,10 +41,10 @@ public class PageViewRepository implements PanacheRepository<PageView> {
     }
 
     /**
-     * Find all page views for a specific user, ordered by creation time descending. Used for user
-     * behavior tracking.
+     * Find all page views for a specific user, ordered by creation time descending. Used for user behavior tracking.
      *
-     * @param userId User ID
+     * @param userId
+     *            User ID
      * @return List of page views
      */
     public List<PageView> findByUser(UUID userId) {
@@ -51,10 +52,11 @@ public class PageViewRepository implements PanacheRepository<PageView> {
     }
 
     /**
-     * Find all page views for a specific path, ordered by creation time descending. Used for path
-     * analysis and popular pages tracking.
+     * Find all page views for a specific path, ordered by creation time descending. Used for path analysis and popular
+     * pages tracking.
      *
-     * @param path URL path (e.g., "/templates", "/calendar/123/edit")
+     * @param path
+     *            URL path (e.g., "/templates", "/calendar/123/edit")
      * @return List of page views
      */
     public List<PageView> findByPath(String path) {
@@ -62,11 +64,12 @@ public class PageViewRepository implements PanacheRepository<PageView> {
     }
 
     /**
-     * Find page views within a time range, ordered by creation time descending. Used for time-based
-     * analytics queries.
+     * Find page views within a time range, ordered by creation time descending. Used for time-based analytics queries.
      *
-     * @param since Start time (inclusive)
-     * @param until End time (exclusive)
+     * @param since
+     *            Start time (inclusive)
+     * @param until
+     *            End time (exclusive)
      * @return List of page views
      */
     public List<PageView> findByTimeRange(Instant since, Instant until) {
@@ -76,7 +79,8 @@ public class PageViewRepository implements PanacheRepository<PageView> {
     /**
      * Find page views for a specific referrer source. Used for traffic source attribution.
      *
-     * @param referrer HTTP Referer header
+     * @param referrer
+     *            HTTP Referer header
      * @return List of page views
      */
     public List<PageView> findByReferrer(String referrer) {
@@ -86,9 +90,12 @@ public class PageViewRepository implements PanacheRepository<PageView> {
     /**
      * Count page views for a specific path within a time range. Used for analytics dashboards.
      *
-     * @param path URL path
-     * @param since Start time (inclusive)
-     * @param until End time (exclusive)
+     * @param path
+     *            URL path
+     * @param since
+     *            Start time (inclusive)
+     * @param until
+     *            End time (exclusive)
      * @return Count of page views
      */
     public long countByPathAndTimeRange(String path, Instant since, Instant until) {

@@ -7,8 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.smallrye.graphql.api.Adapter;
 
 /**
- * Adapter to convert between JsonNode and String for GraphQL. This allows JsonNode fields to be
- * represented as JSON strings in the GraphQL schema.
+ * Adapter to convert between JsonNode and String for GraphQL. This allows JsonNode fields to be represented as JSON
+ * strings in the GraphQL schema.
  */
 public class JsonNodeAdapter implements Adapter<JsonNode, String> {
 

@@ -16,8 +16,8 @@ import org.jboss.logging.Logger;
 import io.quarkus.runtime.Startup;
 
 /**
- * Auto-discovers and registers all DelayedJobHandler implementations. Uses CDI Instance to find all
- * beans implementing DelayedJobHandler.
+ * Auto-discovers and registers all DelayedJobHandler implementations. Uses CDI Instance to find all beans implementing
+ * DelayedJobHandler.
  */
 @ApplicationScoped
 @Startup
@@ -25,11 +25,11 @@ public class DelayedJobHandlerRegistry {
 
     private static final Logger LOG = Logger.getLogger(DelayedJobHandlerRegistry.class);
 
-    @Inject Instance<DelayedJobHandler> allHandlers;
+    @Inject
+    Instance<DelayedJobHandler> allHandlers;
 
     private final Map<String, DelayedJobHandler> handlersByQueue = new HashMap<>();
-    private final Map<Class<? extends DelayedJobHandler>, HandlerMetadata> metadataByClass =
-            new HashMap<>();
+    private final Map<Class<? extends DelayedJobHandler>, HandlerMetadata> metadataByClass = new HashMap<>();
 
     @PostConstruct
     void discoverHandlers() {
@@ -44,32 +44,24 @@ public class DelayedJobHandlerRegistry {
                 priority = config.priority();
                 description = config.description();
             } else {
-                LOG.warnf(
-                        "Handler %s missing @DelayedJobConfig annotation, using defaults",
+                LOG.warnf("Handler %s missing @DelayedJobConfig annotation, using defaults",
                         handlerClass.getSimpleName());
             }
 
             String queueName = handler.getQueueName();
 
             if (handlersByQueue.containsKey(queueName)) {
-                throw new IllegalStateException(
-                        "Duplicate queue name '"
-                                + queueName
-                                + "' for handlers: "
-                                + handlersByQueue.get(queueName).getClass().getName()
-                                + " and "
-                                + handlerClass.getName());
+                throw new IllegalStateException("Duplicate queue name '" + queueName + "' for handlers: "
+                        + handlersByQueue.get(queueName).getClass().getName() + " and " + handlerClass.getName());
             }
 
-            HandlerMetadata metadata =
-                    new HandlerMetadata(queueName, priority, description, handlerClass);
+            HandlerMetadata metadata = new HandlerMetadata(queueName, priority, description, handlerClass);
 
             handlersByQueue.put(queueName, handler);
             metadataByClass.put(handlerClass, metadata);
 
-            LOG.infof(
-                    "Registered handler: %s (queue=%s, priority=%d)",
-                    handlerClass.getSimpleName(), queueName, priority);
+            LOG.infof("Registered handler: %s (queue=%s, priority=%d)", handlerClass.getSimpleName(), queueName,
+                    priority);
         }
 
         LOG.infof("Discovered %d delayed job handlers", handlersByQueue.size());
@@ -101,9 +93,7 @@ public class DelayedJobHandlerRegistry {
     }
 
     /** Metadata about a registered handler. */
-    public record HandlerMetadata(
-            String queueName,
-            int priority,
-            String description,
-            Class<? extends DelayedJobHandler> handlerClass) {}
+    public record HandlerMetadata(String queueName, int priority, String description,
+            Class<? extends DelayedJobHandler> handlerClass) {
+    }
 }

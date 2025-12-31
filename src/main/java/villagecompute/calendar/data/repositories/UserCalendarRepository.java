@@ -17,11 +17,13 @@ import io.quarkus.hibernate.orm.panache.PanacheRepository;
 public class UserCalendarRepository implements PanacheRepository<UserCalendar> {
 
     /**
-     * Find calendars by authenticated user and year. This is the required custom query method from
-     * the task specification.
+     * Find calendars by authenticated user and year. This is the required custom query method from the task
+     * specification.
      *
-     * @param userId User ID
-     * @param year Calendar year
+     * @param userId
+     *            User ID
+     * @param year
+     *            Calendar year
      * @return List of calendars for the user and year
      */
     public List<UserCalendar> findByUserAndYear(UUID userId, Integer year) {
@@ -31,7 +33,8 @@ public class UserCalendarRepository implements PanacheRepository<UserCalendar> {
     /**
      * Find all calendars for a specific user.
      *
-     * @param userId User ID
+     * @param userId
+     *            User ID
      * @return List of user's calendars
      */
     public List<UserCalendar> findByUser(UUID userId) {
@@ -41,7 +44,8 @@ public class UserCalendarRepository implements PanacheRepository<UserCalendar> {
     /**
      * Find calendars by session ID (for anonymous users).
      *
-     * @param sessionId Session identifier
+     * @param sessionId
+     *            Session identifier
      * @return List of calendars ordered by update time
      */
     public List<UserCalendar> findBySession(String sessionId) {
@@ -51,7 +55,8 @@ public class UserCalendarRepository implements PanacheRepository<UserCalendar> {
     /**
      * Find a public calendar by ID.
      *
-     * @param id Calendar ID
+     * @param id
+     *            Calendar ID
      * @return Optional containing the calendar if found and public
      */
     public Optional<UserCalendar> findPublicById(UUID id) {
@@ -61,7 +66,8 @@ public class UserCalendarRepository implements PanacheRepository<UserCalendar> {
     /**
      * Find all public calendars.
      *
-     * @param limit Maximum number of results
+     * @param limit
+     *            Maximum number of results
      * @return List of public calendars
      */
     public List<UserCalendar> findPublicCalendars(int limit) {
@@ -71,7 +77,8 @@ public class UserCalendarRepository implements PanacheRepository<UserCalendar> {
     /**
      * Find calendars by template.
      *
-     * @param templateId Template ID
+     * @param templateId
+     *            Template ID
      * @return List of calendars using the template
      */
     public List<UserCalendar> findByTemplate(UUID templateId) {
@@ -81,7 +88,8 @@ public class UserCalendarRepository implements PanacheRepository<UserCalendar> {
     /**
      * Find calendars by year.
      *
-     * @param year Calendar year
+     * @param year
+     *            Calendar year
      * @return List of calendars for the specified year
      */
     public List<UserCalendar> findByYear(Integer year) {

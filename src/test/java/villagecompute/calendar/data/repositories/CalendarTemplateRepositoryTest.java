@@ -21,13 +21,17 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class CalendarTemplateRepositoryTest {
 
-    @Inject TestDataCleaner testDataCleaner;
+    @Inject
+    TestDataCleaner testDataCleaner;
 
-    @Inject CalendarTemplateRepository repository;
+    @Inject
+    CalendarTemplateRepository repository;
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
-    @Inject jakarta.persistence.EntityManager entityManager;
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
 
     @BeforeEach
     @Transactional
@@ -123,8 +127,7 @@ class CalendarTemplateRepositoryTest {
         assertEquals("Third", activeTemplates.get(2).name);
     }
 
-    private CalendarTemplate createTemplate(
-            String name, boolean isActive, boolean isFeatured, int displayOrder) {
+    private CalendarTemplate createTemplate(String name, boolean isActive, boolean isFeatured, int displayOrder) {
         CalendarTemplate template = new CalendarTemplate();
         template.name = name;
         template.description = "Test description for " + name;

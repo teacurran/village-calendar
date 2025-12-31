@@ -19,7 +19,8 @@ public class EventRepository implements PanacheRepository<Event> {
     /**
      * Find all events for a specific calendar.
      *
-     * @param calendarId Calendar ID
+     * @param calendarId
+     *            Calendar ID
      * @return List of events ordered by date ascending
      */
     public List<Event> findByCalendarId(UUID calendarId) {
@@ -27,29 +28,29 @@ public class EventRepository implements PanacheRepository<Event> {
     }
 
     /**
-     * Find events for a calendar within a specific date range. This is one of the required custom
-     * query methods from the task specification.
+     * Find events for a calendar within a specific date range. This is one of the required custom query methods from
+     * the task specification.
      *
-     * @param calendarId Calendar ID
-     * @param startDate Start date (inclusive)
-     * @param endDate End date (inclusive)
+     * @param calendarId
+     *            Calendar ID
+     * @param startDate
+     *            Start date (inclusive)
+     * @param endDate
+     *            End date (inclusive)
      * @return List of events in the date range ordered by date
      */
     public List<Event> findByDateRange(UUID calendarId, LocalDate startDate, LocalDate endDate) {
-        return find(
-                        "calendar.id = ?1 AND eventDate >= ?2 AND eventDate <= ?3 ORDER BY"
-                                + " eventDate ASC",
-                        calendarId,
-                        startDate,
-                        endDate)
-                .list();
+        return find("calendar.id = ?1 AND eventDate >= ?2 AND eventDate <= ?3 ORDER BY" + " eventDate ASC", calendarId,
+                startDate, endDate).list();
     }
 
     /**
      * Find a specific event by calendar and date.
      *
-     * @param calendarId Calendar ID
-     * @param eventDate Event date
+     * @param calendarId
+     *            Calendar ID
+     * @param eventDate
+     *            Event date
      * @return Event if found, null otherwise
      */
     public Event findByCalendarAndDate(UUID calendarId, LocalDate eventDate) {
@@ -59,7 +60,8 @@ public class EventRepository implements PanacheRepository<Event> {
     /**
      * Count events for a specific calendar.
      *
-     * @param calendarId Calendar ID
+     * @param calendarId
+     *            Calendar ID
      * @return Number of events
      */
     public long countByCalendar(UUID calendarId) {
@@ -69,7 +71,8 @@ public class EventRepository implements PanacheRepository<Event> {
     /**
      * Delete all events for a specific calendar.
      *
-     * @param calendarId Calendar ID
+     * @param calendarId
+     *            Calendar ID
      * @return Number of deleted events
      */
     public long deleteByCalendar(UUID calendarId) {
@@ -79,7 +82,8 @@ public class EventRepository implements PanacheRepository<Event> {
     /**
      * Find events by date across all calendars (useful for admin queries).
      *
-     * @param eventDate Event date
+     * @param eventDate
+     *            Event date
      * @return List of events on that date
      */
     public List<Event> findByDate(LocalDate eventDate) {
@@ -89,22 +93,22 @@ public class EventRepository implements PanacheRepository<Event> {
     /**
      * Find events containing specific text (case-insensitive search).
      *
-     * @param calendarId Calendar ID
-     * @param searchText Text to search for
+     * @param calendarId
+     *            Calendar ID
+     * @param searchText
+     *            Text to search for
      * @return List of matching events
      */
     public List<Event> searchByText(UUID calendarId, String searchText) {
-        return find(
-                        "calendar.id = ?1 AND LOWER(eventText) LIKE ?2 ORDER BY eventDate ASC",
-                        calendarId,
-                        "%" + searchText.toLowerCase() + "%")
-                .list();
+        return find("calendar.id = ?1 AND LOWER(eventText) LIKE ?2 ORDER BY eventDate ASC", calendarId,
+                "%" + searchText.toLowerCase() + "%").list();
     }
 
     /**
      * Batch load events for multiple calendars. Used by DataLoader to prevent N+1 queries.
      *
-     * @param calendarIds List of calendar IDs
+     * @param calendarIds
+     *            List of calendar IDs
      * @return List of events for all the calendars ordered by calendar ID and date
      */
     public List<Event> findByCalendarIds(List<UUID> calendarIds) {

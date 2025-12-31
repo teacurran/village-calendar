@@ -4,10 +4,7 @@ import java.util.List;
 
 import org.eclipse.microprofile.graphql.Type;
 
-/**
- * API type representing a product in the catalog.
- * Used by both REST and GraphQL endpoints.
- */
+/** API type representing a product in the catalog. Used by both REST and GraphQL endpoints. */
 @Type("Product")
 public class Product {
     public String code;
@@ -19,17 +16,11 @@ public class Product {
     public String badge;
     public Integer displayOrder;
 
-    public Product() {}
+    public Product() {
+    }
 
-    public Product(
-            String code,
-            String name,
-            String description,
-            Double price,
-            List<String> features,
-            String icon,
-            String badge,
-            Integer displayOrder) {
+    public Product(String code, String name, String description, Double price, List<String> features, String icon,
+            String badge, Integer displayOrder) {
         this.code = code;
         this.name = name;
         this.description = description;

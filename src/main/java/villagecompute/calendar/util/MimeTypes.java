@@ -5,12 +5,13 @@ import jakarta.ws.rs.core.MediaType;
 /**
  * MIME type constants for the application.
  *
- * <p>Extends jakarta.ws.rs.core.MediaType with image and document types not included in the
- * standard JAX-RS API.
+ * <p>
+ * Extends jakarta.ws.rs.core.MediaType with image and document types not included in the standard JAX-RS API.
  */
 public final class MimeTypes {
 
-    private MimeTypes() {}
+    private MimeTypes() {
+    }
 
     public static final String HEADER_CONTENT_TYPE = "Content-Type";
     public static final String HEADER_CACHE_CONTROL = "Cache-Control";

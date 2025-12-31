@@ -3,12 +3,14 @@ package villagecompute.calendar.util;
 /**
  * Role constants for the application.
  *
- * <p>These constants are used with {@code @RolesAllowed} annotations for authorization. They must
- * be compile-time constants (public static final String) to be used in annotations.
+ * <p>
+ * These constants are used with {@code @RolesAllowed} annotations for authorization. They must be compile-time
+ * constants (public static final String) to be used in annotations.
  */
 public final class Roles {
 
-    private Roles() {}
+    private Roles() {
+    }
 
     /** Standard authenticated user role */
     public static final String USER = "USER";

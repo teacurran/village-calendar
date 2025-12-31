@@ -9,6 +9,8 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
+import villagecompute.calendar.exceptions.EmailException;
+
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.Tracer;
@@ -17,17 +19,19 @@ import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
 
 /**
- * Service for sending emails via Quarkus Mailer. Includes domain filtering for non-production
- * environments to prevent accidental email sends to real customers during testing.
+ * Service for sending emails via Quarkus Mailer. Includes domain filtering for non-production environments to prevent
+ * accidental email sends to real customers during testing.
  */
 @ApplicationScoped
 public class EmailService {
 
     private static final Logger LOG = Logger.getLogger(EmailService.class);
 
-    @Inject Mailer mailer;
+    @Inject
+    Mailer mailer;
 
-    @Inject OpenTelemetry openTelemetry;
+    @Inject
+    OpenTelemetry openTelemetry;
 
     @ConfigProperty(name = "quarkus.mailer.from", defaultValue = "no-reply@villagecompute.com")
     String defaultFromEmail;
@@ -38,9 +42,7 @@ public class EmailService {
     @ConfigProperty(name = "mail.enabled", defaultValue = "true")
     boolean emailEnabled;
 
-    @ConfigProperty(
-            name = "email.safe-test-domains",
-            defaultValue = "villagecompute.com,grilledcheese.com,approachingpi.com")
+    @ConfigProperty(name = "email.safe-test-domains", defaultValue = "villagecompute.com,grilledcheese.com,approachingpi.com")
     String safeTestDomains;
 
     /** Get list of safe test domains. */
@@ -58,10 +60,10 @@ public class EmailService {
     }
 
     /**
-     * Check if email domain is safe to send to in non-production environments. In production, all
-     * domains are allowed.
+     * Check if email domain is safe to send to in non-production environments. In production, all domains are allowed.
      *
-     * @param email Email address to check
+     * @param email
+     *            Email address to check
      * @return true if safe to send
      */
     private boolean isEmailDomainSafe(String email) {
@@ -78,18 +80,19 @@ public class EmailService {
         String domain = email.substring(email.lastIndexOf("@") + 1).toLowerCase();
         List<String> safeDomains = getSafeTestDomainsList();
 
-        return safeDomains.stream()
-                .map(String::toLowerCase)
-                .map(String::trim)
+        return safeDomains.stream().map(String::toLowerCase).map(String::trim)
                 .anyMatch(safeDomain -> domain.equals(safeDomain));
     }
 
     /**
      * Log blocked email with OpenTelemetry event for debugging.
      *
-     * @param to Recipient email
-     * @param subject Email subject
-     * @param reason Reason for blocking
+     * @param to
+     *            Recipient email
+     * @param subject
+     *            Email subject
+     * @param reason
+     *            Reason for blocking
      */
     private void logBlockedEmail(String to, String subject, String reason) {
         Tracer tracer = openTelemetry.getTracer(EmailService.class.getName());
@@ -102,9 +105,8 @@ public class EmailService {
             span.setAttribute("environment", profile);
             span.addEvent("Email blocked in non-production environment");
 
-            LOG.warnf(
-                    "EMAIL BLOCKED [%s]: Would have sent '%s' to %s - Reason: %s",
-                    profile.toUpperCase(), subject, to, reason);
+            LOG.warnf("EMAIL BLOCKED [%s]: Would have sent '%s' to %s - Reason: %s", profile.toUpperCase(), subject, to,
+                    reason);
         } finally {
             span.end();
         }
@@ -113,7 +115,8 @@ public class EmailService {
     /**
      * Add environment prefix to email subject if not in production.
      *
-     * @param subject Original subject
+     * @param subject
+     *            Original subject
      * @return Prefixed subject
      */
     private String addEnvironmentPrefix(String subject) {
@@ -126,9 +129,12 @@ public class EmailService {
     /**
      * Send a simple text email.
      *
-     * @param to Recipient email
-     * @param subject Email subject
-     * @param body Email body
+     * @param to
+     *            Recipient email
+     * @param subject
+     *            Email subject
+     * @param body
+     *            Email body
      */
     public void sendEmail(String to, String subject, String body) {
         sendEmail(defaultFromEmail, to, subject, body);
@@ -137,10 +143,14 @@ public class EmailService {
     /**
      * Send a text email with custom from address.
      *
-     * @param from Sender email
-     * @param to Recipient email
-     * @param subject Email subject
-     * @param body Email body
+     * @param from
+     *            Sender email
+     * @param to
+     *            Recipient email
+     * @param subject
+     *            Email subject
+     * @param body
+     *            Email body
      */
     public void sendEmail(String from, String to, String subject, String body) {
         if (!emailEnabled) {
@@ -162,16 +172,19 @@ public class EmailService {
             LOG.infof("[EMAIL SENT] '%s' from %s to %s", prefixedSubject, from, to);
         } catch (Exception e) {
             LOG.errorf(e, "[EMAIL FAILED] Failed to send '%s' to %s", subject, to);
-            throw new RuntimeException("Failed to send email", e);
+            throw new EmailException("Failed to send email", e);
         }
     }
 
     /**
      * Send an HTML email.
      *
-     * @param to Recipient email
-     * @param subject Email subject
-     * @param htmlBody HTML email body
+     * @param to
+     *            Recipient email
+     * @param subject
+     *            Email subject
+     * @param htmlBody
+     *            HTML email body
      */
     public void sendHtmlEmail(String to, String subject, String htmlBody) {
         sendHtmlEmail(defaultFromEmail, to, subject, htmlBody);
@@ -180,10 +193,14 @@ public class EmailService {
     /**
      * Send an HTML email with custom from address.
      *
-     * @param from Sender email
-     * @param to Recipient email
-     * @param subject Email subject
-     * @param htmlBody HTML email body
+     * @param from
+     *            Sender email
+     * @param to
+     *            Recipient email
+     * @param subject
+     *            Email subject
+     * @param htmlBody
+     *            HTML email body
      */
     public void sendHtmlEmail(String from, String to, String subject, String htmlBody) {
         if (!emailEnabled) {
@@ -205,7 +222,7 @@ public class EmailService {
             LOG.infof("[EMAIL SENT] '%s' from %s to %s", prefixedSubject, from, to);
         } catch (Exception e) {
             LOG.errorf(e, "[EMAIL FAILED] Failed to send '%s' to %s", subject, to);
-            throw new RuntimeException("Failed to send email", e);
+            throw new EmailException("Failed to send email", e);
         }
     }
 }

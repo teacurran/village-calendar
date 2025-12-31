@@ -13,8 +13,7 @@ import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import io.quarkus.panache.common.Parameters;
 
 /**
- * Repository for DelayedJob entities. Provides custom query methods for job processing and retry
- * logic.
+ * Repository for DelayedJob entities. Provides custom query methods for job processing and retry logic.
  */
 @ApplicationScoped
 public class DelayedJobRepository implements PanacheRepository<DelayedJob> {
@@ -22,7 +21,8 @@ public class DelayedJobRepository implements PanacheRepository<DelayedJob> {
     /**
      * Find delayed job by ID.
      *
-     * @param id Job ID
+     * @param id
+     *            Job ID
      * @return Optional containing the job if found
      */
     public Optional<DelayedJob> findById(UUID id) {
@@ -32,19 +32,20 @@ public class DelayedJobRepository implements PanacheRepository<DelayedJob> {
     /**
      * Find jobs that are ready to run.
      *
-     * @param limit Maximum number of jobs to return
+     * @param limit
+     *            Maximum number of jobs to return
      * @return List of ready jobs
      */
     public List<DelayedJob> findReadyToRun(int limit) {
-        return find("#" + DelayedJob.QUERY_FIND_READY_TO_RUN, Parameters.with("now", Instant.now()))
-                .range(0, limit - 1)
+        return find("#" + DelayedJob.QUERY_FIND_READY_TO_RUN, Parameters.with("now", Instant.now())).range(0, limit - 1)
                 .list();
     }
 
     /**
      * Find jobs by queue name.
      *
-     * @param queueName Queue name (handler class simple name)
+     * @param queueName
+     *            Queue name (handler class simple name)
      * @return List of jobs in the queue
      */
     public List<DelayedJob> findByQueueName(String queueName) {
@@ -54,7 +55,8 @@ public class DelayedJobRepository implements PanacheRepository<DelayedJob> {
     /**
      * Find jobs by actor ID.
      *
-     * @param actorId Actor ID
+     * @param actorId
+     *            Actor ID
      * @return List of jobs for the actor
      */
     public List<DelayedJob> findByActorId(String actorId) {

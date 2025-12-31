@@ -19,9 +19,11 @@ import villagecompute.calendar.util.Roles;
 @GraphQLApi
 public class MazeGraphQL {
 
-    @Inject MazeService mazeService;
+    @Inject
+    MazeService mazeService;
 
-    @Inject MazeGenerationService mazeGenerationService;
+    @Inject
+    MazeGenerationService mazeGenerationService;
 
     // Queries
 
@@ -49,14 +51,11 @@ public class MazeGraphQL {
     @Query("mazePreview")
     @PermitAll
     @Description("Generate a preview SVG for given maze parameters")
-    public String getMazePreview(
-            @Name("type") @DefaultValue("ORTHOGONAL") MazeType type,
-            @Name("size") @DefaultValue("10") int size,
-            @Name("difficulty") @DefaultValue("3") int difficulty,
+    public String getMazePreview(@Name("type") @DefaultValue("ORTHOGONAL") MazeType type,
+            @Name("size") @DefaultValue("10") int size, @Name("difficulty") @DefaultValue("3") int difficulty,
             @Name("showSolution") @DefaultValue("false") boolean showSolution,
             @Name("showDeadEnds") @DefaultValue("false") boolean showDeadEnds) {
-        return mazeGenerationService.generatePreview(
-                type, size, difficulty, showSolution, showDeadEnds);
+        return mazeGenerationService.generatePreview(type, size, difficulty, showSolution, showDeadEnds);
     }
 
     // Mutations

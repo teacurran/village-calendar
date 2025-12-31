@@ -24,19 +24,21 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 
 /**
- * Integration tests for GraphQL API endpoints. Tests queries, mutations, authorization, and error
- * handling.
+ * Integration tests for GraphQL API endpoints. Tests queries, mutations, authorization, and error handling.
  *
- * <p>NOTE: These tests focus on public queries and unauthorized access scenarios. Full
- * authentication testing requires JWT token generation which is out of scope for this iteration.
+ * <p>
+ * NOTE: These tests focus on public queries and unauthorized access scenarios. Full authentication testing requires JWT
+ * token generation which is out of scope for this iteration.
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class CalendarGraphQLTest {
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
-    @Inject AuthenticationService authService;
+    @Inject
+    AuthenticationService authService;
 
     private CalendarUser testUser;
     private CalendarTemplate testTemplate;
@@ -93,28 +95,21 @@ class CalendarGraphQLTest {
     @Order(1)
     void testQuery_Templates_Public() {
         // Test: Public query for templates should work without authentication
-        String query =
-                """
-            query {
-                templates(isActive: true) {
-                    id
-                    name
-                    description
-                    isActive
-                    isFeatured
+        String query = """
+                query {
+                    templates(isActive: true) {
+                        id
+                        name
+                        description
+                        isActive
+                        isFeatured
+                    }
                 }
-            }
-            """;
+                """;
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("data.templates", notNullValue())
-                .body("data.templates", hasSize(greaterThanOrEqualTo(1)))
-                .body("data.templates[0].name", notNullValue())
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.templates", notNullValue())
+                .body("data.templates", hasSize(greaterThanOrEqualTo(1))).body("data.templates[0].name", notNullValue())
                 .body("errors", nullValue());
     }
 
@@ -122,77 +117,55 @@ class CalendarGraphQLTest {
     @Order(2)
     void testQuery_Template_ById() {
         // Test: Get single template by ID
-        String query =
-                String.format(
-                        """
-            query {
-                template(id: "%s") {
-                    id
-                    name
-                    description
-                    isActive
+        String query = String.format("""
+                query {
+                    template(id: "%s") {
+                        id
+                        name
+                        description
+                        isActive
+                    }
                 }
-            }
-            """,
-                        testTemplate.id.toString());
+                """, testTemplate.id.toString());
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("data.template.id", equalTo(testTemplate.id.toString()))
-                .body("data.template.name", equalTo(testTemplate.name))
-                .body("errors", nullValue());
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.template.id", equalTo(testTemplate.id.toString()))
+                .body("data.template.name", equalTo(testTemplate.name)).body("errors", nullValue());
     }
 
     @Test
     @Order(3)
     void testQuery_Me_Unauthenticated() {
         // Test: `me` query without authentication should return null
-        String query =
-                """
-            query {
-                me {
-                    id
-                    email
-                    displayName
+        String query = """
+                query {
+                    me {
+                        id
+                        email
+                        displayName
+                    }
                 }
-            }
-            """;
+                """;
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("data.me", nullValue())
-                .body("errors", nullValue());
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.me", nullValue()).body("errors", nullValue());
     }
 
     @Test
     @Order(4)
     void testQuery_MyCalendars_Unauthenticated() {
         // Test: `myCalendars` without authentication should return error
-        String query =
-                """
-            query {
-                myCalendars {
-                    id
-                    name
+        String query = """
+                query {
+                    myCalendars {
+                        id
+                        name
+                    }
                 }
-            }
-            """;
+                """;
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("errors", notNullValue());
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
     }
 
     // ============================================================================
@@ -203,77 +176,53 @@ class CalendarGraphQLTest {
     @Order(10)
     void testMutation_CreateCalendar_Unauthenticated() {
         // Test: Create calendar without authentication should fail
-        String mutation =
-                String.format(
-                        """
-            mutation {
-                createCalendar(input: {
-                    name: "Unauthorized Calendar"
-                    year: 2025
-                    templateId: "%s"
-                }) {
-                    id
+        String mutation = String.format("""
+                mutation {
+                    createCalendar(input: {
+                        name: "Unauthorized Calendar"
+                        year: 2025
+                        templateId: "%s"
+                    }) {
+                        id
+                    }
                 }
-            }
-            """,
-                        testTemplate.id.toString());
+                """, testTemplate.id.toString());
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", mutation))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("errors", notNullValue());
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
     }
 
     @Test
     @Order(11)
     void testMutation_UpdateCalendar_Unauthenticated() {
         // Test: Update calendar without authentication should fail
-        String mutation =
-                String.format(
-                        """
-            mutation {
-                updateCalendar(
-                    id: "%s"
-                    input: { name: "Unauthorized Update" }
-                ) {
-                    id
+        String mutation = String.format("""
+                mutation {
+                    updateCalendar(
+                        id: "%s"
+                        input: { name: "Unauthorized Update" }
+                    ) {
+                        id
+                    }
                 }
-            }
-            """,
-                        UUID.randomUUID().toString());
+                """, UUID.randomUUID().toString());
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", mutation))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("errors", notNullValue());
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
     }
 
     @Test
     @Order(12)
     void testMutation_DeleteCalendar_Unauthenticated() {
         // Test: Delete calendar without authentication should fail
-        String mutation =
-                String.format(
-                        """
-            mutation {
-                deleteCalendar(id: "%s")
-            }
-            """,
-                        UUID.randomUUID().toString());
+        String mutation = String.format("""
+                mutation {
+                    deleteCalendar(id: "%s")
+                }
+                """, UUID.randomUUID().toString());
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", mutation))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("errors", notNullValue());
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
     }
 
     // ============================================================================
@@ -284,107 +233,77 @@ class CalendarGraphQLTest {
     @Order(20)
     void testValidation_Template_InvalidId() {
         // Test: Query with invalid UUID should return null or error
-        String query =
-                """
-            query {
-                template(id: "invalid-uuid") {
-                    id
+        String query = """
+                query {
+                    template(id: "invalid-uuid") {
+                        id
+                    }
                 }
-            }
-            """;
+                """;
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("errors", notNullValue());
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
     }
 
     @Test
     @Order(21)
     void testValidation_Template_NotFound() {
         // Test: Query with valid but non-existent UUID should return null
-        String query =
-                String.format(
-                        """
-            query {
-                template(id: "%s") {
-                    id
+        String query = String.format("""
+                query {
+                    template(id: "%s") {
+                        id
+                    }
                 }
-            }
-            """,
-                        "00000000-0000-0000-0000-000000000099");
+                """, "00000000-0000-0000-0000-000000000099");
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("data.template", nullValue())
-                .body("errors", nullValue()); // No error, just null result
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.template", nullValue()).body("errors", nullValue()); // No error, just null
+                                                                                                 // result
     }
 
     /**
-     * Test the GraphQL schema introspection. This verifies that the GraphQL endpoint is properly
-     * configured.
+     * Test the GraphQL schema introspection. This verifies that the GraphQL endpoint is properly configured.
      */
     @Test
     @Order(30)
     void testGraphQL_SchemaIntrospection() {
-        String query =
-                """
-            query {
-                __schema {
-                    queryType {
-                        name
-                    }
-                    mutationType {
-                        name
+        String query = """
+                query {
+                    __schema {
+                        queryType {
+                            name
+                        }
+                        mutationType {
+                            name
+                        }
                     }
                 }
-            }
-            """;
+                """;
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("data.__schema.queryType.name", equalTo("Query"))
-                .body("data.__schema.mutationType.name", equalTo("Mutation"))
-                .body("errors", nullValue());
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.__schema.queryType.name", equalTo("Query"))
+                .body("data.__schema.mutationType.name", equalTo("Mutation")).body("errors", nullValue());
     }
 
     /** Test that GraphQL endpoint correctly exposes the templates query. */
     @Test
     @Order(31)
     void testGraphQL_TemplatesQueryExists() {
-        String query =
-                """
-            query {
-                __type(name: "Query") {
-                    name
-                    fields {
+        String query = """
+                query {
+                    __type(name: "Query") {
                         name
+                        fields {
+                            name
+                        }
                     }
                 }
-            }
-            """;
+                """;
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("data.__type.name", equalTo("Query"))
-                .body(
-                        "data.__type.fields.name",
-                        hasItems("templates", "template", "me", "myCalendars"))
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.__type.name", equalTo("Query"))
+                .body("data.__type.fields.name", hasItems("templates", "template", "me", "myCalendars"))
                 .body("errors", nullValue());
     }
 
@@ -400,30 +319,21 @@ class CalendarGraphQLTest {
 
         try {
             // Test: Public calendar should be accessible without authentication
-            String query =
-                    String.format(
-                            """
-                query {
-                    calendar(id: "%s") {
-                        id
-                        name
-                        year
-                        isPublic
+            String query = String.format("""
+                    query {
+                        calendar(id: "%s") {
+                            id
+                            name
+                            year
+                            isPublic
+                        }
                     }
-                }
-                """,
-                            calendarId.toString());
+                    """, calendarId.toString());
 
-            given().contentType(ContentType.JSON)
-                    .body(Map.of("query", query))
-                    .when()
-                    .post("/graphql")
-                    .then()
-                    .statusCode(200)
-                    .body("data.calendar.id", equalTo(calendarId.toString()))
+            given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                    .statusCode(200).body("data.calendar.id", equalTo(calendarId.toString()))
                     .body("data.calendar.name", equalTo("Public Test Calendar"))
-                    .body("data.calendar.year", equalTo(2025))
-                    .body("data.calendar.isPublic", equalTo(true))
+                    .body("data.calendar.year", equalTo(2025)).body("data.calendar.isPublic", equalTo(true))
                     .body("errors", nullValue());
         } finally {
             deleteTestCalendar(calendarId);
@@ -477,27 +387,17 @@ class CalendarGraphQLTest {
 
         try {
             // Test: Private calendar should NOT be accessible without authentication
-            String query =
-                    String.format(
-                            """
-                query {
-                    calendar(id: "%s") {
-                        id
-                        name
+            String query = String.format("""
+                    query {
+                        calendar(id: "%s") {
+                            id
+                            name
+                        }
                     }
-                }
-                """,
-                            privateCalendar.id.toString());
+                    """, privateCalendar.id.toString());
 
-            given().contentType(ContentType.JSON)
-                    .body(Map.of("query", query))
-                    .when()
-                    .post("/graphql")
-                    .then()
-                    .statusCode(200)
-                    .body(
-                            "data.calendar",
-                            nullValue()) // Should return null for unauthorized access
+            given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                    .statusCode(200).body("data.calendar", nullValue()) // Should return null for unauthorized access
                     .body("errors", nullValue()); // No error, just null result
         } finally {
             privateCalendar.delete();
@@ -508,49 +408,34 @@ class CalendarGraphQLTest {
     @Order(42)
     void testQuery_Calendar_NotFound() {
         // Test: Non-existent calendar should return null
-        String query =
-                String.format(
-                        """
-            query {
-                calendar(id: "%s") {
-                    id
-                    name
+        String query = String.format("""
+                query {
+                    calendar(id: "%s") {
+                        id
+                        name
+                    }
                 }
-            }
-            """,
-                        "00000000-0000-0000-0000-000000000099");
+                """, "00000000-0000-0000-0000-000000000099");
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("data.calendar", nullValue())
-                .body("errors", nullValue());
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.calendar", nullValue()).body("errors", nullValue());
     }
 
     @Test
     @Order(43)
     void testQuery_Calendar_InvalidId() {
         // Test: Invalid UUID format should return error
-        String query =
-                """
-            query {
-                calendar(id: "not-a-uuid") {
-                    id
-                    name
+        String query = """
+                query {
+                    calendar(id: "not-a-uuid") {
+                        id
+                        name
+                    }
                 }
-            }
-            """;
+                """;
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", query))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("errors", notNullValue());
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
     }
 
     // ============================================================================
@@ -566,32 +451,23 @@ class CalendarGraphQLTest {
         try {
             // Test: Query calendar with events field
             // Note: This tests the events field exposed via JPA relationship
-            String query =
-                    String.format(
-                            """
-                query {
-                    calendar(id: "%s") {
-                        id
-                        name
-                        events {
+            String query = String.format("""
+                    query {
+                        calendar(id: "%s") {
                             id
-                            eventDate
-                            eventText
+                            name
+                            events {
+                                id
+                                eventDate
+                                eventText
+                            }
                         }
                     }
-                }
-                """,
-                            calendarId.toString());
+                    """, calendarId.toString());
 
-            given().contentType(ContentType.JSON)
-                    .body(Map.of("query", query))
-                    .when()
-                    .post("/graphql")
-                    .then()
-                    .statusCode(200)
-                    .body("data.calendar.id", equalTo(calendarId.toString()))
-                    .body("data.calendar.events", notNullValue())
-                    .body("errors", nullValue());
+            given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                    .statusCode(200).body("data.calendar.id", equalTo(calendarId.toString()))
+                    .body("data.calendar.events", notNullValue()).body("errors", nullValue());
         } finally {
             deleteTestCalendar(calendarId);
         }
@@ -618,54 +494,40 @@ class CalendarGraphQLTest {
     @Order(60)
     void testMutation_CreateCalendar_InvalidTemplateId() {
         // Test: Creating calendar with non-existent template should fail
-        String mutation =
-                String.format(
-                        """
-            mutation {
-                createCalendar(input: {
-                    name: "Test Calendar"
-                    year: 2025
-                    templateId: "%s"
-                }) {
-                    id
+        String mutation = String.format("""
+                mutation {
+                    createCalendar(input: {
+                        name: "Test Calendar"
+                        year: 2025
+                        templateId: "%s"
+                    }) {
+                        id
+                    }
                 }
-            }
-            """,
-                        "00000000-0000-0000-0000-000000000099");
+                """, "00000000-0000-0000-0000-000000000099");
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", mutation))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("errors", notNullValue()); // Should fail due to authentication
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue()); // Should fail due to authentication
     }
 
     @Test
     @Order(61)
     void testMutation_CreateCalendar_InvalidTemplateIdFormat() {
         // Test: Creating calendar with invalid UUID format should fail
-        String mutation =
-                """
-            mutation {
-                createCalendar(input: {
-                    name: "Test Calendar"
-                    year: 2025
-                    templateId: "not-a-uuid"
-                }) {
-                    id
+        String mutation = """
+                mutation {
+                    createCalendar(input: {
+                        name: "Test Calendar"
+                        year: 2025
+                        templateId: "not-a-uuid"
+                    }) {
+                        id
+                    }
                 }
-            }
-            """;
+                """;
 
-        given().contentType(ContentType.JSON)
-                .body(Map.of("query", mutation))
-                .when()
-                .post("/graphql")
-                .then()
-                .statusCode(200)
-                .body("errors", notNullValue());
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
     }
 
     // ==========================================================================
@@ -673,15 +535,15 @@ class CalendarGraphQLTest {
     // ==========================================================================
 
     /**
-     * Test that DataLoader pattern prevents N+1 queries when fetching multiple calendars with
-     * related entities.
+     * Test that DataLoader pattern prevents N+1 queries when fetching multiple calendars with related entities.
      *
-     * <p>Acceptance Criteria: Fetching 10 calendars with users and templates should result in 3 DB
-     * queries (1 for calendars, 1 for users, 1 for templates), not 21 queries (1 + 10 + 10).
+     * <p>
+     * Acceptance Criteria: Fetching 10 calendars with users and templates should result in 3 DB queries (1 for
+     * calendars, 1 for users, 1 for templates), not 21 queries (1 + 10 + 10).
      *
-     * <p>NOTE: This test verifies the DataLoader field resolvers are working. SQL query counting
-     * would require additional test infrastructure (hibernate statistics or database proxy), so we
-     * verify functional correctness here.
+     * <p>
+     * NOTE: This test verifies the DataLoader field resolvers are working. SQL query counting would require additional
+     * test infrastructure (hibernate statistics or database proxy), so we verify functional correctness here.
      */
     @Test
     @Order(70)
@@ -697,98 +559,83 @@ class CalendarGraphQLTest {
         try {
             // Query all 10 calendars with their users and templates
             // This should trigger DataLoader batching
-            String query =
-                    String.format(
-                            """
-                query {
-                    calendar1: calendar(id: "%s") {
-                        id
-                        name
-                        user { id email }
-                        template { id name }
+            String query = String.format("""
+                    query {
+                        calendar1: calendar(id: "%s") {
+                            id
+                            name
+                            user { id email }
+                            template { id name }
+                        }
+                        calendar2: calendar(id: "%s") {
+                            id
+                            name
+                            user { id email }
+                            template { id name }
+                        }
+                        calendar3: calendar(id: "%s") {
+                            id
+                            name
+                            user { id email }
+                            template { id name }
+                        }
+                        calendar4: calendar(id: "%s") {
+                            id
+                            name
+                            user { id email }
+                            template { id name }
+                        }
+                        calendar5: calendar(id: "%s") {
+                            id
+                            name
+                            user { id email }
+                            template { id name }
+                        }
+                        calendar6: calendar(id: "%s") {
+                            id
+                            name
+                            user { id email }
+                            template { id name }
+                        }
+                        calendar7: calendar(id: "%s") {
+                            id
+                            name
+                            user { id email }
+                            template { id name }
+                        }
+                        calendar8: calendar(id: "%s") {
+                            id
+                            name
+                            user { id email }
+                            template { id name }
+                        }
+                        calendar9: calendar(id: "%s") {
+                            id
+                            name
+                            user { id email }
+                            template { id name }
+                        }
+                        calendar10: calendar(id: "%s") {
+                            id
+                            name
+                            user { id email }
+                            template { id name }
+                        }
                     }
-                    calendar2: calendar(id: "%s") {
-                        id
-                        name
-                        user { id email }
-                        template { id name }
-                    }
-                    calendar3: calendar(id: "%s") {
-                        id
-                        name
-                        user { id email }
-                        template { id name }
-                    }
-                    calendar4: calendar(id: "%s") {
-                        id
-                        name
-                        user { id email }
-                        template { id name }
-                    }
-                    calendar5: calendar(id: "%s") {
-                        id
-                        name
-                        user { id email }
-                        template { id name }
-                    }
-                    calendar6: calendar(id: "%s") {
-                        id
-                        name
-                        user { id email }
-                        template { id name }
-                    }
-                    calendar7: calendar(id: "%s") {
-                        id
-                        name
-                        user { id email }
-                        template { id name }
-                    }
-                    calendar8: calendar(id: "%s") {
-                        id
-                        name
-                        user { id email }
-                        template { id name }
-                    }
-                    calendar9: calendar(id: "%s") {
-                        id
-                        name
-                        user { id email }
-                        template { id name }
-                    }
-                    calendar10: calendar(id: "%s") {
-                        id
-                        name
-                        user { id email }
-                        template { id name }
-                    }
-                }
-                """,
-                            calendarIds.get(0).toString(),
-                            calendarIds.get(1).toString(),
-                            calendarIds.get(2).toString(),
-                            calendarIds.get(3).toString(),
-                            calendarIds.get(4).toString(),
-                            calendarIds.get(5).toString(),
-                            calendarIds.get(6).toString(),
-                            calendarIds.get(7).toString(),
-                            calendarIds.get(8).toString(),
-                            calendarIds.get(9).toString());
+                    """, calendarIds.get(0).toString(), calendarIds.get(1).toString(), calendarIds.get(2).toString(),
+                    calendarIds.get(3).toString(), calendarIds.get(4).toString(), calendarIds.get(5).toString(),
+                    calendarIds.get(6).toString(), calendarIds.get(7).toString(), calendarIds.get(8).toString(),
+                    calendarIds.get(9).toString());
 
             // Execute query and verify all calendars returned successfully
             // If DataLoader is working, this should complete without errors
-            given().contentType(ContentType.JSON)
-                    .body(Map.of("query", query))
-                    .when()
-                    .post("/graphql")
-                    .then()
-                    .statusCode(200)
-                    .body("data.calendar1.id", equalTo(calendarIds.get(0).toString()))
+            given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                    .statusCode(200).body("data.calendar1.id", equalTo(calendarIds.get(0).toString()))
                     .body("data.calendar1.user.email", equalTo(TEST_EMAIL))
                     .body("data.calendar1.template.name", equalTo(testTemplate.name))
                     .body("data.calendar10.id", equalTo(calendarIds.get(9).toString()))
                     .body("data.calendar10.user.email", equalTo(TEST_EMAIL))
-                    .body("data.calendar10.template.name", equalTo(testTemplate.name))
-                    .body("errors", nullValue());
+                    .body("data.calendar10.template.name", equalTo(testTemplate.name)).body("errors", nullValue());
 
         } finally {
             // Clean up test data
@@ -799,8 +646,8 @@ class CalendarGraphQLTest {
     }
 
     /**
-     * Test that field resolvers correctly resolve nested relationships. Verifies that user and
-     * template fields are accessible on calendar.
+     * Test that field resolvers correctly resolve nested relationships. Verifies that user and template fields are
+     * accessible on calendar.
      */
     @Test
     @Order(71)
@@ -810,46 +657,37 @@ class CalendarGraphQLTest {
 
         try {
             // Query calendar with nested user and template fields
-            String query =
-                    String.format(
-                            """
-                query {
-                    calendar(id: "%s") {
-                        id
-                        name
-                        year
-                        user {
-                            id
-                            email
-                            displayName
-                            oauthProvider
-                        }
-                        template {
+            String query = String.format("""
+                    query {
+                        calendar(id: "%s") {
                             id
                             name
-                            description
-                            isActive
-                            isFeatured
+                            year
+                            user {
+                                id
+                                email
+                                displayName
+                                oauthProvider
+                            }
+                            template {
+                                id
+                                name
+                                description
+                                isActive
+                                isFeatured
+                            }
                         }
                     }
-                }
-                """,
-                            calendarId.toString());
+                    """, calendarId.toString());
 
-            given().contentType(ContentType.JSON)
-                    .body(Map.of("query", query))
-                    .when()
-                    .post("/graphql")
-                    .then()
-                    .statusCode(200)
-                    .body("data.calendar.id", equalTo(calendarId.toString()))
+            given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                    .statusCode(200).body("data.calendar.id", equalTo(calendarId.toString()))
                     .body("data.calendar.user.id", equalTo(testUser.id.toString()))
                     .body("data.calendar.user.email", equalTo(TEST_EMAIL))
                     .body("data.calendar.user.displayName", equalTo("GraphQL Test User"))
                     .body("data.calendar.template.id", equalTo(testTemplate.id.toString()))
                     .body("data.calendar.template.name", equalTo(testTemplate.name))
-                    .body("data.calendar.template.isActive", equalTo(true))
-                    .body("errors", nullValue());
+                    .body("data.calendar.template.isActive", equalTo(true)).body("errors", nullValue());
 
         } finally {
             deleteTestCalendar(calendarId);

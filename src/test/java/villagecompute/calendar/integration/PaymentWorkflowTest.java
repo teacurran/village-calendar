@@ -25,22 +25,25 @@ import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * Integration tests for payment and refund workflows. Tests payment processing, order cancellation,
- * and refund handling.
+ * Integration tests for payment and refund workflows. Tests payment processing, order cancellation, and refund
+ * handling.
  *
- * <p>This test suite validates: 1. Order cancellation with refund processing 2. Authorization
- * checks (user can only cancel own orders) 3. Payment entity creation on webhook 4. Refund
- * processing via Stripe
+ * <p>
+ * This test suite validates: 1. Order cancellation with refund processing 2. Authorization checks (user can only cancel
+ * own orders) 3. Payment entity creation on webhook 4. Refund processing via Stripe
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class PaymentWorkflowTest {
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
-    @Inject villagecompute.calendar.services.OrderService orderService;
+    @Inject
+    villagecompute.calendar.services.OrderService orderService;
 
-    @InjectMock PaymentService paymentService;
+    @InjectMock
+    PaymentService paymentService;
 
     private CalendarUser testUser;
     private CalendarUser testUser2;
@@ -57,13 +60,11 @@ class PaymentWorkflowTest {
         testTemplate.isActive = true;
         testTemplate.isFeatured = false;
         testTemplate.displayOrder = 1;
-        testTemplate.configuration =
-                objectMapper.readTree(
-                        """
-            {
-                "theme": "modern"
-            }
-            """);
+        testTemplate.configuration = objectMapper.readTree("""
+                {
+                    "theme": "modern"
+                }
+                """);
         testTemplate.persist();
 
         // Create test user 1
@@ -89,13 +90,11 @@ class PaymentWorkflowTest {
         testCalendar.year = 2025;
         testCalendar.template = testTemplate;
         testCalendar.isPublic = false;
-        testCalendar.configuration =
-                objectMapper.readTree(
-                        """
-            {
-                "theme": "modern"
-            }
-            """);
+        testCalendar.configuration = objectMapper.readTree("""
+                {
+                    "theme": "modern"
+                }
+                """);
         testCalendar.persist();
 
         // Mock PaymentService
@@ -103,11 +102,8 @@ class PaymentWorkflowTest {
         mockPaymentIntent.put("clientSecret", "pi_test_secret_123");
         mockPaymentIntent.put("paymentIntentId", "pi_test_payment_" + System.currentTimeMillis());
 
-        when(paymentService.createPaymentIntent(
-                        org.mockito.ArgumentMatchers.any(BigDecimal.class),
-                        anyString(),
-                        anyString()))
-                .thenReturn(mockPaymentIntent);
+        when(paymentService.createPaymentIntent(org.mockito.ArgumentMatchers.any(BigDecimal.class), anyString(),
+                anyString())).thenReturn(mockPaymentIntent);
         when(paymentService.getWebhookSecret()).thenReturn("");
     }
 
@@ -141,16 +137,15 @@ class PaymentWorkflowTest {
     }
 
     private JsonNode createTestAddress() throws Exception {
-        return objectMapper.readTree(
-                """
-            {
-                "street": "123 Main St",
-                "city": "Nashville",
-                "state": "TN",
-                "postalCode": "37203",
-                "country": "US"
-            }
-            """);
+        return objectMapper.readTree("""
+                {
+                    "street": "123 Main St",
+                    "city": "Nashville",
+                    "state": "TN",
+                    "postalCode": "37203",
+                    "country": "US"
+                }
+                """);
     }
 
     // ============================================================================
@@ -177,26 +172,18 @@ class PaymentWorkflowTest {
         order.persist();
 
         // When: Cancel order via service layer
-        CalendarOrder cancelledOrder =
-                orderService.cancelOrder(
-                        order.id,
-                        testUser.id,
-                        false, // not admin
-                        "Customer requested cancellation");
+        CalendarOrder cancelledOrder = orderService.cancelOrder(order.id, testUser.id, false, // not admin
+                "Customer requested cancellation");
 
         // Then: Verify order was cancelled
-        assertEquals(
-                CalendarOrder.STATUS_CANCELLED, cancelledOrder.status, "Order should be CANCELLED");
+        assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status, "Order should be CANCELLED");
         assertNotNull(cancelledOrder.notes, "Cancellation notes should be added");
-        assertTrue(
-                cancelledOrder.notes.contains("Customer requested cancellation"),
+        assertTrue(cancelledOrder.notes.contains("Customer requested cancellation"),
                 "Notes should contain cancellation reason");
 
         // Note: Refund processing is handled separately by PaymentService (see I3.T3)
         // OrderService.cancelOrder() only updates order status and adds a TODO note about refund
-        assertTrue(
-                cancelledOrder.notes.contains("TODO: Process refund")
-                        || cancelledOrder.notes.contains("refund"),
+        assertTrue(cancelledOrder.notes.contains("TODO: Process refund") || cancelledOrder.notes.contains("refund"),
                 "Notes should mention refund processing needed");
     }
 
@@ -220,16 +207,10 @@ class PaymentWorkflowTest {
         order.persist();
 
         // When/Then: Try to cancel shipped order (should throw exception)
-        IllegalStateException exception =
-                assertThrows(
-                        IllegalStateException.class,
-                        () -> {
-                            orderService.cancelOrder(
-                                    order.id,
-                                    testUser.id,
-                                    false, // not admin
-                                    "Want to cancel");
-                        });
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
+            orderService.cancelOrder(order.id, testUser.id, false, // not admin
+                    "Want to cancel");
+        });
 
         // Verify exception message mentions cancellation not allowed
         assertTrue(
@@ -239,10 +220,7 @@ class PaymentWorkflowTest {
 
         // Verify order status unchanged
         CalendarOrder unchangedOrder = CalendarOrder.<CalendarOrder>findById(order.id);
-        assertEquals(
-                CalendarOrder.STATUS_SHIPPED,
-                unchangedOrder.status,
-                "Order status should remain SHIPPED");
+        assertEquals(CalendarOrder.STATUS_SHIPPED, unchangedOrder.status, "Order status should remain SHIPPED");
     }
 
     @Test
@@ -264,12 +242,8 @@ class PaymentWorkflowTest {
         order.persist();
 
         // When: Cancel pending order via service layer
-        CalendarOrder cancelledOrder =
-                orderService.cancelOrder(
-                        order.id,
-                        testUser.id,
-                        false, // not admin
-                        "Changed my mind");
+        CalendarOrder cancelledOrder = orderService.cancelOrder(order.id, testUser.id, false, // not admin
+                "Changed my mind");
 
         // Then: Order should be cancelled without refund attempt
         assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status);
@@ -338,10 +312,7 @@ class PaymentWorkflowTest {
         order.persist();
 
         // When: Cancel order via service layer
-        orderService.cancelOrder(
-                order.id,
-                testUser.id,
-                false, // not admin
+        orderService.cancelOrder(order.id, testUser.id, false, // not admin
                 "Testing email");
 
         // Then: Verify cancellation email job was enqueued
@@ -349,8 +320,8 @@ class PaymentWorkflowTest {
         assertTrue(jobs.size() >= 1, "At least one email job should be enqueued");
 
         // Find the cancellation email job
-        boolean foundCancellationEmail =
-                jobs.stream().anyMatch(job -> "OrderCancellationJobHandler".equals(job.queueName));
+        boolean foundCancellationEmail = jobs.stream()
+                .anyMatch(job -> "OrderCancellationJobHandler".equals(job.queueName));
         assertTrue(foundCancellationEmail, "Cancellation email job should be enqueued");
     }
 }

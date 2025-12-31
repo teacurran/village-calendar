@@ -10,24 +10,17 @@ import jakarta.validation.constraints.Size;
 import org.eclipse.microprofile.graphql.Ignore;
 
 /**
- * Entity representing a shipment of physical items from an order. An order can have multiple
- * shipments (e.g., split shipments).
+ * Entity representing a shipment of physical items from an order. An order can have multiple shipments (e.g., split
+ * shipments).
  */
 @Entity
-@Table(
-        name = "shipments",
-        indexes = {
-            @Index(name = "idx_shipments_order", columnList = "order_id"),
-            @Index(name = "idx_shipments_tracking", columnList = "tracking_number"),
-            @Index(name = "idx_shipments_status", columnList = "status")
-        })
+@Table(name = "shipments", indexes = {@Index(name = "idx_shipments_order", columnList = "order_id"),
+        @Index(name = "idx_shipments_tracking", columnList = "tracking_number"),
+        @Index(name = "idx_shipments_status", columnList = "status")})
 public class Shipment extends DefaultPanacheEntityWithTimestamps {
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "order_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_shipments_order"))
+    @JoinColumn(name = "order_id", nullable = false, foreignKey = @ForeignKey(name = "fk_shipments_order"))
     @Ignore
     public CalendarOrder order;
 
@@ -128,8 +121,7 @@ public class Shipment extends DefaultPanacheEntityWithTimestamps {
         }
 
         return switch (carrier) {
-            case CARRIER_USPS ->
-                    "https://tools.usps.com/go/TrackConfirmAction?tLabels=" + trackingNumber;
+            case CARRIER_USPS -> "https://tools.usps.com/go/TrackConfirmAction?tLabels=" + trackingNumber;
             case CARRIER_UPS -> "https://www.ups.com/track?tracknum=" + trackingNumber;
             case CARRIER_FEDEX -> "https://www.fedex.com/fedextrack/?trknbr=" + trackingNumber;
             default -> null;

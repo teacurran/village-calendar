@@ -16,14 +16,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 
 @Entity
-@Table(
-        name = "user_calendars",
-        indexes = {
-            @Index(name = "idx_user_calendars_user", columnList = "user_id, `year` DESC"),
-            @Index(name = "idx_user_calendars_session", columnList = "session_id, updated DESC"),
-            @Index(name = "idx_user_calendars_template", columnList = "template_id"),
-            @Index(name = "idx_user_calendars_public", columnList = "is_public, updated DESC")
-        })
+@Table(name = "user_calendars", indexes = {
+        @Index(name = "idx_user_calendars_user", columnList = "user_id, `year` DESC"),
+        @Index(name = "idx_user_calendars_session", columnList = "session_id, updated DESC"),
+        @Index(name = "idx_user_calendars_template", columnList = "template_id"),
+        @Index(name = "idx_user_calendars_public", columnList = "is_public, updated DESC")})
 public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -47,8 +44,7 @@ public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = true)
-    @io.smallrye.graphql.api.AdaptWith(
-            villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
+    @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
     public JsonNode configuration;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -75,7 +71,8 @@ public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find calendars by session ID (for anonymous users).
      *
-     * @param sessionId Session identifier
+     * @param sessionId
+     *            Session identifier
      * @return Query of calendars ordered by update time
      */
     public static PanacheQuery<UserCalendar> findBySession(String sessionId) {
@@ -83,11 +80,13 @@ public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Find calendars by authenticated user and year. This is the required custom query method from
-     * the task specification.
+     * Find calendars by authenticated user and year. This is the required custom query method from the task
+     * specification.
      *
-     * @param userId User ID
-     * @param year Calendar year
+     * @param userId
+     *            User ID
+     * @param year
+     *            Calendar year
      * @return List of calendars for the user and year
      */
     public static List<UserCalendar> findByUserAndYear(UUID userId, Integer year) {
@@ -97,7 +96,8 @@ public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find all calendars for a specific user.
      *
-     * @param userId User ID
+     * @param userId
+     *            User ID
      * @return Query of user's calendars
      */
     public static PanacheQuery<UserCalendar> findByUser(UUID userId) {
@@ -107,8 +107,10 @@ public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find calendars by session ID and name (for anonymous users).
      *
-     * @param sessionId Session identifier
-     * @param name Calendar name
+     * @param sessionId
+     *            Session identifier
+     * @param name
+     *            Calendar name
      * @return Query of matching calendars
      */
     public static PanacheQuery<UserCalendar> findBySessionAndName(String sessionId, String name) {
@@ -118,7 +120,8 @@ public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find a public calendar by ID.
      *
-     * @param id Calendar ID
+     * @param id
+     *            Calendar ID
      * @return Calendar if found and public, null otherwise
      */
     public static UserCalendar findPublicById(UUID id) {
@@ -137,7 +140,8 @@ public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
     /**
      * Create a copy of this calendar for a new session (for sharing/forking).
      *
-     * @param newSessionId New session ID
+     * @param newSessionId
+     *            New session ID
      * @return Copy of the calendar
      */
     public UserCalendar copyForSession(String newSessionId) {

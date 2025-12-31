@@ -23,13 +23,17 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class CalendarTemplateTest {
 
-    @Inject Validator validator;
+    @Inject
+    Validator validator;
 
-    @Inject TestDataCleaner testDataCleaner;
+    @Inject
+    TestDataCleaner testDataCleaner;
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
-    @Inject jakarta.persistence.EntityManager entityManager;
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
 
     @BeforeEach
     @Transactional

@@ -9,16 +9,12 @@ import jakarta.persistence.*;
 import org.eclipse.microprofile.graphql.Ignore;
 
 /**
- * Shopping cart for both authenticated users and guest sessions. Guest carts use sessionId,
- * authenticated carts use user.
+ * Shopping cart for both authenticated users and guest sessions. Guest carts use sessionId, authenticated carts use
+ * user.
  */
 @Entity
-@Table(
-        name = "carts",
-        indexes = {
-            @Index(name = "idx_carts_user", columnList = "user_id"),
-            @Index(name = "idx_carts_session", columnList = "session_id")
-        })
+@Table(name = "carts", indexes = {@Index(name = "idx_carts_user", columnList = "user_id"),
+        @Index(name = "idx_carts_session", columnList = "session_id")})
 public class Cart extends DefaultPanacheEntityWithTimestamps {
 
     /** User who owns this cart (null for guest carts) */
@@ -32,11 +28,7 @@ public class Cart extends DefaultPanacheEntityWithTimestamps {
     public String sessionId;
 
     /** Cart items */
-    @OneToMany(
-            mappedBy = "cart",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true,
-            fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     public List<CartItem> items = new ArrayList<>();
 
     /** Get cart for authenticated user, create if doesn't exist */
@@ -63,9 +55,7 @@ public class Cart extends DefaultPanacheEntityWithTimestamps {
 
     /** Calculate cart subtotal */
     public BigDecimal getSubtotal() {
-        return items.stream()
-                .map(item -> item.getLineTotal())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return items.stream().map(item -> item.getLineTotal()).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /** Get total item count */
@@ -74,16 +64,11 @@ public class Cart extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Add an item to cart. Each item is treated as a new line item since each generated SVG is
-     * unique and should not be merged.
+     * Add an item to cart. Each item is treated as a new line item since each generated SVG is unique and should not be
+     * merged.
      */
-    public CartItem addItem(
-            String generatorType,
-            String description,
-            int quantity,
-            BigDecimal unitPrice,
-            String configuration,
-            String productCode) {
+    public CartItem addItem(String generatorType, String description, int quantity, BigDecimal unitPrice,
+            String configuration, String productCode) {
         CartItem newItem = new CartItem();
         newItem.cart = this;
         newItem.generatorType = generatorType;

@@ -24,11 +24,14 @@ class DelayedJobRepositoryTest {
     private static final String QUEUE_SHIPPING = "ShippingNotificationJobHandler";
     private static final String QUEUE_CANCELLATION = "OrderCancellationJobHandler";
 
-    @Inject TestDataCleaner testDataCleaner;
+    @Inject
+    TestDataCleaner testDataCleaner;
 
-    @Inject DelayedJobRepository repository;
+    @Inject
+    DelayedJobRepository repository;
 
-    @Inject jakarta.persistence.EntityManager entityManager;
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
 
     @BeforeEach
     @Transactional
@@ -40,9 +43,7 @@ class DelayedJobRepositoryTest {
     @Transactional
     void testFindById() {
         // Given
-        DelayedJob job =
-                createJob(
-                        QUEUE_CANCELLATION, "actor-123", Instant.now().plus(1, ChronoUnit.MINUTES));
+        DelayedJob job = createJob(QUEUE_CANCELLATION, "actor-123", Instant.now().plus(1, ChronoUnit.MINUTES));
         repository.persist(job);
         entityManager.flush();
 
@@ -62,30 +63,25 @@ class DelayedJobRepositoryTest {
         Instant now = Instant.now();
 
         // Ready to run (runAt in past)
-        DelayedJob ready1 =
-                createJob(QUEUE_ORDER_EMAIL, "actor-1", now.minus(10, ChronoUnit.MINUTES));
+        DelayedJob ready1 = createJob(QUEUE_ORDER_EMAIL, "actor-1", now.minus(10, ChronoUnit.MINUTES));
         ready1.priority = 10;
         repository.persist(ready1);
 
-        DelayedJob ready2 =
-                createJob(QUEUE_CANCELLATION, "actor-2", now.minus(5, ChronoUnit.MINUTES));
+        DelayedJob ready2 = createJob(QUEUE_CANCELLATION, "actor-2", now.minus(5, ChronoUnit.MINUTES));
         ready2.priority = 5;
         repository.persist(ready2);
 
         // Not ready (runAt in future)
-        DelayedJob notReady =
-                createJob(QUEUE_CANCELLATION, "actor-3", now.plus(10, ChronoUnit.MINUTES));
+        DelayedJob notReady = createJob(QUEUE_CANCELLATION, "actor-3", now.plus(10, ChronoUnit.MINUTES));
         repository.persist(notReady);
 
         // Already complete
-        DelayedJob complete =
-                createJob(QUEUE_CANCELLATION, "actor-4", now.minus(20, ChronoUnit.MINUTES));
+        DelayedJob complete = createJob(QUEUE_CANCELLATION, "actor-4", now.minus(20, ChronoUnit.MINUTES));
         complete.complete = true;
         repository.persist(complete);
 
         // Locked
-        DelayedJob locked =
-                createJob(QUEUE_CANCELLATION, "actor-5", now.minus(15, ChronoUnit.MINUTES));
+        DelayedJob locked = createJob(QUEUE_CANCELLATION, "actor-5", now.minus(15, ChronoUnit.MINUTES));
         locked.locked = true;
         locked.lockedAt = now.minus(1, ChronoUnit.MINUTES);
         repository.persist(locked);
@@ -97,10 +93,7 @@ class DelayedJobRepositoryTest {
 
         // Then
         assertEquals(2, readyJobs.size());
-        assertTrue(
-                readyJobs.stream()
-                        .allMatch(
-                                j -> !j.runAt.isAfter(Instant.now()) && !j.complete && !j.locked));
+        assertTrue(readyJobs.stream().allMatch(j -> !j.runAt.isAfter(Instant.now()) && !j.complete && !j.locked));
         // Verify ORDER BY priority DESC, runAt ASC
         assertEquals(ready1.id, readyJobs.get(0).id); // Higher priority first
         assertEquals(ready2.id, readyJobs.get(1).id);
@@ -114,9 +107,7 @@ class DelayedJobRepositoryTest {
 
         // Create 5 ready jobs
         for (int i = 0; i < 5; i++) {
-            DelayedJob job =
-                    createJob(
-                            QUEUE_CANCELLATION, "actor-" + i, now.minus(i + 1, ChronoUnit.MINUTES));
+            DelayedJob job = createJob(QUEUE_CANCELLATION, "actor-" + i, now.minus(i + 1, ChronoUnit.MINUTES));
             repository.persist(job);
         }
         entityManager.flush();
@@ -133,26 +124,13 @@ class DelayedJobRepositoryTest {
     void testFindByQueueName() {
         // Given
         repository.persist(
-                createJobWithPriority(
-                        QUEUE_ORDER_EMAIL,
-                        "actor-1",
-                        10,
-                        Instant.now().plus(5, ChronoUnit.MINUTES)));
+                createJobWithPriority(QUEUE_ORDER_EMAIL, "actor-1", 10, Instant.now().plus(5, ChronoUnit.MINUTES)));
         repository.persist(
-                createJobWithPriority(
-                        QUEUE_ORDER_EMAIL,
-                        "actor-2",
-                        5,
-                        Instant.now().plus(10, ChronoUnit.MINUTES)));
+                createJobWithPriority(QUEUE_ORDER_EMAIL, "actor-2", 5, Instant.now().plus(10, ChronoUnit.MINUTES)));
         repository.persist(
-                createJobWithPriority(
-                        QUEUE_CANCELLATION,
-                        "actor-3",
-                        5,
-                        Instant.now().plus(1, ChronoUnit.MINUTES)));
+                createJobWithPriority(QUEUE_CANCELLATION, "actor-3", 5, Instant.now().plus(1, ChronoUnit.MINUTES)));
         repository.persist(
-                createJobWithPriority(
-                        QUEUE_SHIPPING, "actor-4", 10, Instant.now().plus(2, ChronoUnit.MINUTES)));
+                createJobWithPriority(QUEUE_SHIPPING, "actor-4", 10, Instant.now().plus(2, ChronoUnit.MINUTES)));
         entityManager.flush();
 
         // When
@@ -160,9 +138,7 @@ class DelayedJobRepositoryTest {
 
         // Then
         assertEquals(2, orderConfirmationJobs.size());
-        assertTrue(
-                orderConfirmationJobs.stream()
-                        .allMatch(j -> QUEUE_ORDER_EMAIL.equals(j.queueName)));
+        assertTrue(orderConfirmationJobs.stream().allMatch(j -> QUEUE_ORDER_EMAIL.equals(j.queueName)));
         // Verify ORDER BY priority DESC, runAt ASC
         assertEquals(10, orderConfirmationJobs.get(0).priority);
         assertEquals(5, orderConfirmationJobs.get(1).priority);
@@ -174,8 +150,7 @@ class DelayedJobRepositoryTest {
         // Given
         Instant now = Instant.now();
 
-        DelayedJob job1 =
-                createJob(QUEUE_CANCELLATION, "actor-123", now.minus(10, ChronoUnit.MINUTES));
+        DelayedJob job1 = createJob(QUEUE_CANCELLATION, "actor-123", now.minus(10, ChronoUnit.MINUTES));
         repository.persist(job1);
 
         // Delay to ensure different created timestamps
@@ -184,12 +159,10 @@ class DelayedJobRepositoryTest {
         } catch (InterruptedException e) {
         }
 
-        DelayedJob job2 =
-                createJob(QUEUE_ORDER_EMAIL, "actor-123", now.minus(5, ChronoUnit.MINUTES));
+        DelayedJob job2 = createJob(QUEUE_ORDER_EMAIL, "actor-123", now.minus(5, ChronoUnit.MINUTES));
         repository.persist(job2);
 
-        DelayedJob job3 =
-                createJob(QUEUE_CANCELLATION, "actor-456", now.minus(3, ChronoUnit.MINUTES));
+        DelayedJob job3 = createJob(QUEUE_CANCELLATION, "actor-456", now.minus(3, ChronoUnit.MINUTES));
         repository.persist(job3);
 
         entityManager.flush();
@@ -209,20 +182,17 @@ class DelayedJobRepositoryTest {
     @Transactional
     void testFindIncomplete() {
         // Given
-        DelayedJob incomplete1 =
-                createJob(QUEUE_CANCELLATION, "actor-1", Instant.now().plus(1, ChronoUnit.MINUTES));
+        DelayedJob incomplete1 = createJob(QUEUE_CANCELLATION, "actor-1", Instant.now().plus(1, ChronoUnit.MINUTES));
         incomplete1.complete = false;
         incomplete1.priority = 10;
         repository.persist(incomplete1);
 
-        DelayedJob incomplete2 =
-                createJob(QUEUE_ORDER_EMAIL, "actor-2", Instant.now().plus(5, ChronoUnit.MINUTES));
+        DelayedJob incomplete2 = createJob(QUEUE_ORDER_EMAIL, "actor-2", Instant.now().plus(5, ChronoUnit.MINUTES));
         incomplete2.complete = false;
         incomplete2.priority = 5;
         repository.persist(incomplete2);
 
-        DelayedJob complete =
-                createJob(QUEUE_CANCELLATION, "actor-3", Instant.now().plus(2, ChronoUnit.MINUTES));
+        DelayedJob complete = createJob(QUEUE_CANCELLATION, "actor-3", Instant.now().plus(2, ChronoUnit.MINUTES));
         complete.complete = true;
         complete.completedAt = Instant.now();
         repository.persist(complete);
@@ -246,8 +216,7 @@ class DelayedJobRepositoryTest {
         // Given
         Instant now = Instant.now();
 
-        DelayedJob failed1 =
-                createJob(QUEUE_CANCELLATION, "actor-1", now.minus(10, ChronoUnit.MINUTES));
+        DelayedJob failed1 = createJob(QUEUE_CANCELLATION, "actor-1", now.minus(10, ChronoUnit.MINUTES));
         failed1.completedWithFailure = true;
         failed1.failedAt = now.minus(5, ChronoUnit.MINUTES);
         failed1.failureReason = "Network error";
@@ -259,15 +228,13 @@ class DelayedJobRepositoryTest {
         } catch (InterruptedException e) {
         }
 
-        DelayedJob failed2 =
-                createJob(QUEUE_ORDER_EMAIL, "actor-2", now.minus(20, ChronoUnit.MINUTES));
+        DelayedJob failed2 = createJob(QUEUE_ORDER_EMAIL, "actor-2", now.minus(20, ChronoUnit.MINUTES));
         failed2.completedWithFailure = true;
         failed2.failedAt = now.minus(1, ChronoUnit.MINUTES);
         failed2.failureReason = "Timeout";
         repository.persist(failed2);
 
-        DelayedJob successful =
-                createJob(QUEUE_CANCELLATION, "actor-3", now.minus(15, ChronoUnit.MINUTES));
+        DelayedJob successful = createJob(QUEUE_CANCELLATION, "actor-3", now.minus(15, ChronoUnit.MINUTES));
         successful.complete = true;
         successful.completedWithFailure = false;
         successful.completedAt = now.minus(2, ChronoUnit.MINUTES);
@@ -290,8 +257,7 @@ class DelayedJobRepositoryTest {
     @Transactional
     void testPersist() {
         // Given
-        DelayedJob job =
-                createJob(QUEUE_SHIPPING, "order-456", Instant.now().plus(30, ChronoUnit.MINUTES));
+        DelayedJob job = createJob(QUEUE_SHIPPING, "order-456", Instant.now().plus(30, ChronoUnit.MINUTES));
 
         // When
         repository.persist(job);
@@ -389,8 +355,7 @@ class DelayedJobRepositoryTest {
         return job;
     }
 
-    private DelayedJob createJobWithPriority(
-            String queueName, String actorId, int priority, Instant runAt) {
+    private DelayedJob createJobWithPriority(String queueName, String actorId, int priority, Instant runAt) {
         DelayedJob job = createJob(queueName, actorId, runAt);
         job.priority = priority;
         return job;

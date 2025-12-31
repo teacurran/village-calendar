@@ -9,10 +9,11 @@ import org.eclipse.microprofile.graphql.Description;
 import org.eclipse.microprofile.graphql.Input;
 
 /**
- * GraphQL input type for creating or updating a calendar template. Admin-only operations. Validated
- * using Bean Validation annotations.
+ * GraphQL input type for creating or updating a calendar template. Admin-only operations. Validated using Bean
+ * Validation annotations.
  *
- * <p>Note: configuration is accepted as a JSON string and parsed in the service layer.
+ * <p>
+ * Note: configuration is accepted as a JSON string and parsed in the service layer.
  */
 @Input("TemplateInput")
 @Description("Input for creating or updating a calendar template (admin only).")
@@ -48,18 +49,12 @@ public class TemplateInput {
     public String previewSvg;
 
     // Default constructor required by SmallRye GraphQL
-    public TemplateInput() {}
+    public TemplateInput() {
+    }
 
     // Constructor for testing
-    public TemplateInput(
-            String name,
-            String description,
-            String configuration,
-            String thumbnailUrl,
-            Boolean isActive,
-            Boolean isFeatured,
-            Integer displayOrder,
-            String previewSvg) {
+    public TemplateInput(String name, String description, String configuration, String thumbnailUrl, Boolean isActive,
+            Boolean isFeatured, Integer displayOrder, String previewSvg) {
         this.name = name;
         this.description = description;
         this.configuration = configuration;

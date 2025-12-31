@@ -8,21 +8,13 @@ import jakarta.persistence.*;
 import io.quarkus.panache.common.Parameters;
 
 /**
- * Entity for asynchronous job processing with retry logic. Jobs are executed via Vert.x EventBus
- * with scheduled fallback.
+ * Entity for asynchronous job processing with retry logic. Jobs are executed via Vert.x EventBus with scheduled
+ * fallback.
  */
 @Entity
-@Table(
-        name = "delayed_jobs",
-        indexes = {
-            @Index(
-                    name = "idx_delayed_jobs_queue_name_run_at",
-                    columnList = "queue_name, run_at, complete, locked")
-        })
-@NamedQuery(
-        name = DelayedJob.QUERY_FIND_READY_TO_RUN,
-        query =
-                """
+@Table(name = "delayed_jobs", indexes = {
+        @Index(name = "idx_delayed_jobs_queue_name_run_at", columnList = "queue_name, run_at, complete, locked")})
+@NamedQuery(name = DelayedJob.QUERY_FIND_READY_TO_RUN, query = """
         FROM DelayedJob
         WHERE runAt <= :now
         AND complete = false
@@ -77,14 +69,17 @@ public class DelayedJob extends DefaultPanacheEntityWithTimestamps {
     /**
      * Factory method to create a DelayedJob.
      *
-     * @param actorId ID of the entity to process
-     * @param queueName Handler queue name
-     * @param priority Job priority
-     * @param runAt When to run the job
+     * @param actorId
+     *            ID of the entity to process
+     * @param queueName
+     *            Handler queue name
+     * @param priority
+     *            Job priority
+     * @param runAt
+     *            When to run the job
      * @return Created DelayedJob
      */
-    public static DelayedJob createDelayedJob(
-            String actorId, String queueName, int priority, Instant runAt) {
+    public static DelayedJob createDelayedJob(String actorId, String queueName, int priority, Instant runAt) {
         DelayedJob delayedJob = new DelayedJob();
         delayedJob.actorId = actorId;
         delayedJob.runAt = runAt;
@@ -103,12 +98,11 @@ public class DelayedJob extends DefaultPanacheEntityWithTimestamps {
     /**
      * Find jobs that are ready to run.
      *
-     * @param limit Maximum number of jobs to return
+     * @param limit
+     *            Maximum number of jobs to return
      * @return List of ready jobs
      */
     public static List<DelayedJob> findReadyToRun(int limit) {
-        return find("#" + QUERY_FIND_READY_TO_RUN, Parameters.with("now", Instant.now()))
-                .range(0, limit - 1)
-                .list();
+        return find("#" + QUERY_FIND_READY_TO_RUN, Parameters.with("now", Instant.now())).range(0, limit - 1).list();
     }
 }

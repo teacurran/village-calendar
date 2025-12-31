@@ -1,8 +1,7 @@
 package villagecompute.calendar.api.types;
 
 /**
- * Standard success response type for REST API endpoints.
- * Serializes to JSON as: {"status": "success"}
+ * Standard success response type for REST API endpoints. Serializes to JSON as: {"status": "success"}
  */
 public record SuccessResponse(String status) {
 

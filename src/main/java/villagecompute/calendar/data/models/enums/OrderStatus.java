@@ -3,7 +3,8 @@ package villagecompute.calendar.data.models.enums;
 /**
  * Order fulfillment status tracking through the order lifecycle.
  *
- * <p>Status transitions typically follow this flow:
+ * <p>
+ * Status transitions typically follow this flow:
  *
  * <pre>
  * PENDING -> PAID -> PROCESSING -> PRINTED -> SHIPPED -> DELIVERED

@@ -3,10 +3,11 @@ package villagecompute.calendar.util;
 import java.security.SecureRandom;
 
 /**
- * Utility class for generating unique order numbers. Order numbers follow the format: VC-XXXX-XXXX
- * where X is an alphanumeric character, making them non-guessable.
+ * Utility class for generating unique order numbers. Order numbers follow the format: VC-XXXX-XXXX where X is an
+ * alphanumeric character, making them non-guessable.
  *
- * <p>Example: VC-A3F2-K9M1, VC-B7N4-P2X8
+ * <p>
+ * Example: VC-A3F2-K9M1, VC-B7N4-P2X8
  */
 public class OrderNumberGenerator {
 
@@ -17,11 +18,12 @@ public class OrderNumberGenerator {
     private static final String CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
     /**
-     * Generate a unique, non-guessable order number. Uses cryptographically secure random
-     * characters.
+     * Generate a unique, non-guessable order number. Uses cryptographically secure random characters.
      *
-     * @param year The year for the order (unused, kept for API compatibility)
-     * @param orderCountThisYear The count of orders (unused, kept for API compatibility)
+     * @param year
+     *            The year for the order (unused, kept for API compatibility)
+     * @param orderCountThisYear
+     *            The count of orders (unused, kept for API compatibility)
      * @return Formatted order number (e.g., "VC-A3F2-K9M1")
      */
     public static String generateOrderNumber(int year, long orderCountThisYear) {
@@ -31,7 +33,8 @@ public class OrderNumberGenerator {
     /**
      * Generate order number using current year.
      *
-     * @param orderCountThisYear The count of orders (unused, kept for API compatibility)
+     * @param orderCountThisYear
+     *            The count of orders (unused, kept for API compatibility)
      * @return Formatted order number (e.g., "VC-A3F2-K9M1")
      */
     public static String generateOrderNumber(long orderCountThisYear) {

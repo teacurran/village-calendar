@@ -3,12 +3,14 @@ package villagecompute.calendar.util;
 /**
  * Color constants for the application.
  *
- * <p>Provides human-readable names for frequently used color values. All colors are in standard CSS
- * hex format (#RRGGBB) or rgba format for transparency.
+ * <p>
+ * Provides human-readable names for frequently used color values. All colors are in standard CSS hex format (#RRGGBB)
+ * or rgba format for transparency.
  */
 public final class Colors {
 
-    private Colors() {}
+    private Colors() {
+    }
 
     // ========================================
     // Core Colors

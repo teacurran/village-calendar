@@ -8,12 +8,13 @@ import java.util.Map;
 /**
  * Utility class for converting between Gregorian and Hebrew calendar dates.
  *
- * <p>This class provides methods to: - Convert Gregorian dates to Hebrew calendar dates - Convert
- * Hebrew dates to Gregorian dates (approximate) - Check for Hebrew leap years - Get Hebrew month
- * names and lengths
+ * <p>
+ * This class provides methods to: - Convert Gregorian dates to Hebrew calendar dates - Convert Hebrew dates to
+ * Gregorian dates (approximate) - Check for Hebrew leap years - Get Hebrew month names and lengths
  *
- * <p>Note: The conversion uses simplified algorithms. For production-grade accuracy, consider
- * integrating a specialized library like Hebcal or Jewish Calendar API.
+ * <p>
+ * Note: The conversion uses simplified algorithms. For production-grade accuracy, consider integrating a specialized
+ * library like Hebcal or Jewish Calendar API.
  */
 public class HebrewCalendarConverter {
 
@@ -31,28 +32,28 @@ public class HebrewCalendarConverter {
     }
 
     // Hebrew month names (transliterated)
-    private static final String[] HEBREW_MONTHS = {
-        "Tishrei", // 1 - September/October
-        "Cheshvan", // 2 - October/November
-        "Kislev", // 3 - November/December
-        "Tevet", // 4 - December/January
-        "Shevat", // 5 - January/February
-        "Adar", // 6 - February/March (Adar I in leap year)
-        "Nisan", // 7 - March/April
-        "Iyar", // 8 - April/May
-        "Sivan", // 9 - May/June
-        "Tammuz", // 10 - June/July
-        "Av", // 11 - July/August
-        "Elul" // 12 - August/September
+    private static final String[] HEBREW_MONTHS = {"Tishrei", // 1 - September/October
+            "Cheshvan", // 2 - October/November
+            "Kislev", // 3 - November/December
+            "Tevet", // 4 - December/January
+            "Shevat", // 5 - January/February
+            "Adar", // 6 - February/March (Adar I in leap year)
+            "Nisan", // 7 - March/April
+            "Iyar", // 8 - April/May
+            "Sivan", // 9 - May/June
+            "Tammuz", // 10 - June/July
+            "Av", // 11 - July/August
+            "Elul" // 12 - August/September
     };
 
     private static final String ADAR_II = "Adar II"; // Used in leap years
 
     /**
-     * Check if a Hebrew year is a leap year. Hebrew calendar has a 19-year cycle with leap years in
-     * years 3, 6, 8, 11, 14, 17, and 19.
+     * Check if a Hebrew year is a leap year. Hebrew calendar has a 19-year cycle with leap years in years 3, 6, 8, 11,
+     * 14, 17, and 19.
      *
-     * @param hebrewYear The Hebrew year
+     * @param hebrewYear
+     *            The Hebrew year
      * @return true if it's a leap year
      */
     public static boolean isHebrewLeapYear(int hebrewYear) {
@@ -62,7 +63,8 @@ public class HebrewCalendarConverter {
     /**
      * Get the number of months in a Hebrew year (12 or 13).
      *
-     * @param hebrewYear The Hebrew year
+     * @param hebrewYear
+     *            The Hebrew year
      * @return 13 if leap year, 12 otherwise
      */
     public static int getMonthsInHebrewYear(int hebrewYear) {
@@ -72,8 +74,10 @@ public class HebrewCalendarConverter {
     /**
      * Get the Hebrew month name for a given month number.
      *
-     * @param month The month number (1-13)
-     * @param hebrewYear The Hebrew year
+     * @param month
+     *            The month number (1-13)
+     * @param hebrewYear
+     *            The Hebrew year
      * @return The month name
      */
     public static String getHebrewMonthName(int month, int hebrewYear) {
@@ -95,7 +99,8 @@ public class HebrewCalendarConverter {
     /**
      * Convert a Gregorian date to a Hebrew date string. This is a simplified conversion algorithm.
      *
-     * @param gregorianDate The Gregorian date
+     * @param gregorianDate
+     *            The Gregorian date
      * @return Hebrew date in format "Day Month Year" (e.g., "15 Nisan 5784")
      */
     public static String gregorianToHebrew(LocalDate gregorianDate) {
@@ -130,12 +135,14 @@ public class HebrewCalendarConverter {
     }
 
     /**
-     * Convert a Hebrew date to an approximate Gregorian date. This is a simplified conversion
-     * algorithm.
+     * Convert a Hebrew date to an approximate Gregorian date. This is a simplified conversion algorithm.
      *
-     * @param hebrewYear The Hebrew year
-     * @param hebrewMonth The Hebrew month (1-13)
-     * @param hebrewDay The Hebrew day (1-30)
+     * @param hebrewYear
+     *            The Hebrew year
+     * @param hebrewMonth
+     *            The Hebrew month (1-13)
+     * @param hebrewDay
+     *            The Hebrew day (1-30)
      * @return Approximate Gregorian date
      */
     public static LocalDate hebrewToGregorian(int hebrewYear, int hebrewMonth, int hebrewDay) {
@@ -145,7 +152,8 @@ public class HebrewCalendarConverter {
 
         // Adjust for month (Hebrew year starts in September/October)
         int gregorianMonth = (hebrewMonth + 8) % 12;
-        if (gregorianMonth == 0) gregorianMonth = 12;
+        if (gregorianMonth == 0)
+            gregorianMonth = 12;
 
         // If we're in the early months (Tishrei-Adar), we're in the next Gregorian year
         if (hebrewMonth <= 6) {
@@ -162,15 +170,16 @@ public class HebrewCalendarConverter {
     }
 
     /**
-     * Generate Hebrew date mappings for all days in a Gregorian year. This includes conversion of
-     * each day to its Hebrew equivalent and any associated holidays.
+     * Generate Hebrew date mappings for all days in a Gregorian year. This includes conversion of each day to its
+     * Hebrew equivalent and any associated holidays.
      *
-     * @param gregorianYear The Gregorian year
-     * @param holidays Map of Hebrew holidays (key: "month-day", value: holiday name)
+     * @param gregorianYear
+     *            The Gregorian year
+     * @param holidays
+     *            Map of Hebrew holidays (key: "month-day", value: holiday name)
      * @return List of Hebrew date mappings for each day of the year
      */
-    public static List<HebrewDateMapping> generateYearMappings(
-            int gregorianYear, Map<String, String> holidays) {
+    public static List<HebrewDateMapping> generateYearMappings(int gregorianYear, Map<String, String> holidays) {
         List<HebrewDateMapping> mappings = new ArrayList<>();
 
         LocalDate startDate = LocalDate.of(gregorianYear, 1, 1);
@@ -201,8 +210,10 @@ public class HebrewCalendarConverter {
     /**
      * Get the number of days in a Hebrew month. This is a simplified calculation.
      *
-     * @param month The Hebrew month (1-13)
-     * @param hebrewYear The Hebrew year
+     * @param month
+     *            The Hebrew month (1-13)
+     * @param hebrewYear
+     *            The Hebrew year
      * @return Number of days in the month
      */
     public static int getDaysInHebrewMonth(int month, int hebrewYear) {
@@ -232,7 +243,8 @@ public class HebrewCalendarConverter {
     /**
      * Determine if Cheshvan has 30 days in the given year. This is a simplified calculation.
      *
-     * @param hebrewYear The Hebrew year
+     * @param hebrewYear
+     *            The Hebrew year
      * @return true if Cheshvan has 30 days
      */
     private static boolean isLongCheshvan(int hebrewYear) {
@@ -243,7 +255,8 @@ public class HebrewCalendarConverter {
     /**
      * Determine if Kislev has 30 days in the given year. This is a simplified calculation.
      *
-     * @param hebrewYear The Hebrew year
+     * @param hebrewYear
+     *            The Hebrew year
      * @return true if Kislev has 30 days
      */
     private static boolean isLongKislev(int hebrewYear) {

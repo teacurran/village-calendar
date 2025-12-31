@@ -27,19 +27,26 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class CalendarOrderRepositoryTest {
 
-    @Inject TestDataCleaner testDataCleaner;
+    @Inject
+    TestDataCleaner testDataCleaner;
 
-    @Inject CalendarOrderRepository orderRepository;
+    @Inject
+    CalendarOrderRepository orderRepository;
 
-    @Inject CalendarUserRepository userRepository;
+    @Inject
+    CalendarUserRepository userRepository;
 
-    @Inject UserCalendarRepository calendarRepository;
+    @Inject
+    UserCalendarRepository calendarRepository;
 
-    @Inject CalendarTemplateRepository templateRepository;
+    @Inject
+    CalendarTemplateRepository templateRepository;
 
-    @Inject ObjectMapper objectMapper;
+    @Inject
+    ObjectMapper objectMapper;
 
-    @Inject jakarta.persistence.EntityManager entityManager;
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
 
     private CalendarUser testUser;
     private UserCalendar testCalendar;
@@ -87,14 +94,12 @@ class CalendarOrderRepositoryTest {
         entityManager.flush();
 
         // When
-        List<CalendarOrder> pendingOrders =
-                orderRepository.findByStatusOrderByCreatedDesc(CalendarOrder.STATUS_PENDING);
+        List<CalendarOrder> pendingOrders = orderRepository
+                .findByStatusOrderByCreatedDesc(CalendarOrder.STATUS_PENDING);
 
         // Then
         assertEquals(2, pendingOrders.size());
-        assertTrue(
-                pendingOrders.stream()
-                        .allMatch(o -> CalendarOrder.STATUS_PENDING.equals(o.status)));
+        assertTrue(pendingOrders.stream().allMatch(o -> CalendarOrder.STATUS_PENDING.equals(o.status)));
     }
 
     @Test
@@ -187,9 +192,7 @@ class CalendarOrderRepositoryTest {
 
         // Then
         assertEquals(2, pendingOrders.size());
-        assertTrue(
-                pendingOrders.stream()
-                        .allMatch(o -> CalendarOrder.STATUS_PENDING.equals(o.status)));
+        assertTrue(pendingOrders.stream().allMatch(o -> CalendarOrder.STATUS_PENDING.equals(o.status)));
     }
 
     @Test
@@ -221,17 +224,13 @@ class CalendarOrderRepositoryTest {
         entityManager.flush();
 
         // When
-        List<CalendarOrder> pendingOrders =
-                orderRepository.findByUserAndStatus(testUser.id, CalendarOrder.STATUS_PENDING);
+        List<CalendarOrder> pendingOrders = orderRepository.findByUserAndStatus(testUser.id,
+                CalendarOrder.STATUS_PENDING);
 
         // Then
         assertEquals(2, pendingOrders.size());
-        assertTrue(
-                pendingOrders.stream()
-                        .allMatch(
-                                o ->
-                                        o.user.id.equals(testUser.id)
-                                                && CalendarOrder.STATUS_PENDING.equals(o.status)));
+        assertTrue(pendingOrders.stream()
+                .allMatch(o -> o.user.id.equals(testUser.id) && CalendarOrder.STATUS_PENDING.equals(o.status)));
     }
 
     @Test

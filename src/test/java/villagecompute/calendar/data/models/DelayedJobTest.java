@@ -23,9 +23,11 @@ class DelayedJobTest {
     private static final String QUEUE_SHIPPING = "ShippingNotificationJobHandler";
     private static final String QUEUE_CANCELLATION = "OrderCancellationJobHandler";
 
-    @Inject TestDataCleaner testDataCleaner;
+    @Inject
+    TestDataCleaner testDataCleaner;
 
-    @Inject jakarta.persistence.EntityManager entityManager;
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
 
     @BeforeEach
     @Transactional
@@ -100,12 +102,10 @@ class DelayedJobTest {
         int lowPriority = 5;
 
         // When
-        DelayedJob highPriorityJob =
-                DelayedJob.createDelayedJob(
-                        "actor1", QUEUE_ORDER_EMAIL, highPriority, Instant.now());
-        DelayedJob lowPriorityJob =
-                DelayedJob.createDelayedJob(
-                        "actor2", QUEUE_CANCELLATION, lowPriority, Instant.now());
+        DelayedJob highPriorityJob = DelayedJob.createDelayedJob("actor1", QUEUE_ORDER_EMAIL, highPriority,
+                Instant.now());
+        DelayedJob lowPriorityJob = DelayedJob.createDelayedJob("actor2", QUEUE_CANCELLATION, lowPriority,
+                Instant.now());
 
         // Then
         assertEquals(10, highPriorityJob.priority);

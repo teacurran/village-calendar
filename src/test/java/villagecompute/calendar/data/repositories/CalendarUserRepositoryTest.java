@@ -20,11 +20,14 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class CalendarUserRepositoryTest {
 
-    @Inject TestDataCleaner testDataCleaner;
+    @Inject
+    TestDataCleaner testDataCleaner;
 
-    @Inject CalendarUserRepository repository;
+    @Inject
+    CalendarUserRepository repository;
 
-    @Inject jakarta.persistence.EntityManager entityManager;
+    @Inject
+    jakarta.persistence.EntityManager entityManager;
 
     @BeforeEach
     @Transactional
@@ -125,12 +128,10 @@ class CalendarUserRepositoryTest {
 
         // When/Then - attempting to insert duplicate OAuth provider+subject should fail
         CalendarUser duplicate = createUser("GOOGLE", "duplicate", "test2@example.com");
-        assertThrows(
-                Exception.class,
-                () -> {
-                    repository.persist(duplicate);
-                    repository.flush();
-                });
+        assertThrows(Exception.class, () -> {
+            repository.persist(duplicate);
+            repository.flush();
+        });
     }
 
     @Test
@@ -289,8 +290,8 @@ class CalendarUserRepositoryTest {
         entityManager.flush();
 
         // When
-        List<CalendarUser> activeUsers =
-                repository.findActiveUsersSince(now.minus(7, java.time.temporal.ChronoUnit.DAYS));
+        List<CalendarUser> activeUsers = repository
+                .findActiveUsersSince(now.minus(7, java.time.temporal.ChronoUnit.DAYS));
 
         // Then
         assertEquals(0, activeUsers.size());

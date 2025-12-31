@@ -14,11 +14,11 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.jboss.logging.Logger;
 
 /**
- * Service for converting emoji characters to inline SVG graphics. Uses Noto Emoji SVG files (Apache
- * 2.0 licensed) for vector rendering. This ensures emojis render correctly in PDFs without font
- * dependencies.
+ * Service for converting emoji characters to inline SVG graphics. Uses Noto Emoji SVG files (Apache 2.0 licensed) for
+ * vector rendering. This ensures emojis render correctly in PDFs without font dependencies.
  *
- * <p>Supports both color (Noto Color Emoji) and monochrome (Noto Emoji) variants.
+ * <p>
+ * Supports both color (Noto Color Emoji) and monochrome (Noto Emoji) variants.
  */
 @ApplicationScoped
 public class EmojiSvgService {
@@ -125,9 +125,7 @@ public class EmojiSvgService {
 
         // Canadian Holidays
         EMOJI_TO_FILENAME.put("🍁", "emoji_u1f341"); // Maple Leaf (Canada Day)
-        EMOJI_TO_FILENAME.put(
-                "👨‍👩‍👧‍👦",
-                "emoji_u1f468_200d_1f469_200d_1f467_200d_1f466"); // Family (Family Day)
+        EMOJI_TO_FILENAME.put("👨‍👩‍👧‍👦", "emoji_u1f468_200d_1f469_200d_1f467_200d_1f466"); // Family (Family Day)
 
         // UK Holidays
         EMOJI_TO_FILENAME.put("🌷", "emoji_u1f337"); // Tulip (Spring Bank Holiday)
@@ -187,28 +185,24 @@ public class EmojiSvgService {
             }
         }
 
-        LOG.infof(
-                "EmojiSvgService initialized: color=%d/%d, mono=%d/%d",
-                colorLoaded, colorLoaded + colorFailed, monoLoaded, monoLoaded + monoFailed);
+        LOG.infof("EmojiSvgService initialized: color=%d/%d, mono=%d/%d", colorLoaded, colorLoaded + colorFailed,
+                monoLoaded, monoLoaded + monoFailed);
     }
 
     /**
-     * Load SVG content from resources folder. Returns an array with [innerContent, viewBox] or null
-     * if not found.
+     * Load SVG content from resources folder. Returns an array with [innerContent, viewBox] or null if not found.
      *
-     * @param resourcePath Full resource path (e.g., "emoji-svg/emoji_u1f384.svg")
+     * @param resourcePath
+     *            Full resource path (e.g., "emoji-svg/emoji_u1f384.svg")
      * @return String array with [innerContent, viewBox] or null
      */
     private String[] loadSvgFromResources(String resourcePath) {
-        try (InputStream is =
-                Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
+        try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
             if (is == null) {
                 return new String[0];
             }
-            String fullSvg =
-                    new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))
-                            .lines()
-                            .collect(Collectors.joining(System.lineSeparator()));
+            String fullSvg = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8)).lines()
+                    .collect(Collectors.joining(System.lineSeparator()));
 
             // Extract viewBox from the SVG
             String viewBox = extractViewBox(fullSvg);
@@ -216,7 +210,7 @@ public class EmojiSvgService {
             // Extract the inner content (we'll wrap it in our own <svg> or <g> when embedding)
             String innerContent = extractSvgInnerContent(fullSvg);
 
-            return new String[] {innerContent, viewBox};
+            return new String[]{innerContent, viewBox};
         } catch (Exception e) {
             LOG.warnf("Error loading emoji SVG %s: %s", resourcePath, e.getMessage());
             return new String[0];
@@ -234,28 +228,29 @@ public class EmojiSvgService {
     }
 
     /**
-     * Extract the inner content from an SVG file. Removes the outer <svg> element and returns
-     * everything inside.
+     * Extract the inner content from an SVG file. Removes the outer <svg> element and returns everything inside.
      */
     private String extractSvgInnerContent(String fullSvg) {
         // Find the opening <svg> tag end
         int svgStart = fullSvg.indexOf("<svg");
-        if (svgStart == -1) return fullSvg;
+        if (svgStart == -1)
+            return fullSvg;
 
         int svgTagEnd = fullSvg.indexOf(">", svgStart);
-        if (svgTagEnd == -1) return fullSvg;
+        if (svgTagEnd == -1)
+            return fullSvg;
 
         // Find the closing </svg> tag
         int svgEnd = fullSvg.lastIndexOf("</svg>");
-        if (svgEnd == -1) return fullSvg;
+        if (svgEnd == -1)
+            return fullSvg;
 
         // Return everything between
         return fullSvg.substring(svgTagEnd + 1, svgEnd).trim();
     }
 
     /**
-     * Check if an emoji has an SVG representation available. Returns true if either color or mono
-     * SVG is available.
+     * Check if an emoji has an SVG representation available. Returns true if either color or mono SVG is available.
      */
     public boolean hasEmojiSvg(String emoji) {
         String normalized = normalizeEmoji(emoji);
@@ -274,9 +269,12 @@ public class EmojiSvgService {
     /**
      * Get a standalone SVG for preview purposes (not for embedding in another SVG).
      *
-     * @param emoji The emoji character(s)
-     * @param monochrome If true, use monochrome SVG variant
-     * @param colorHex Optional hex color for colorization (requires monochrome=true)
+     * @param emoji
+     *            The emoji character(s)
+     * @param monochrome
+     *            If true, use monochrome SVG variant
+     * @param colorHex
+     *            Optional hex color for colorization (requires monochrome=true)
      * @return Complete standalone SVG string, or null if emoji SVG not available
      */
     public String getStandaloneSvg(String emoji, boolean monochrome, String colorHex) {
@@ -306,23 +304,25 @@ public class EmojiSvgService {
         if (colorHex != null && !colorHex.isEmpty() && monochrome) {
             String color = colorHex.startsWith("#") ? colorHex : "#" + colorHex;
             return String.format(
-                    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"%s\">"
-                            + "<g fill=\"%s\">%s</g></svg>",
+                    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"%s\">" + "<g fill=\"%s\">%s</g></svg>",
                     viewBox, color, innerContent);
         } else {
-            return String.format(
-                    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"%s\">%s</svg>",
-                    viewBox, innerContent);
+            return String.format("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"%s\">%s</svg>", viewBox,
+                    innerContent);
         }
     }
 
     /**
      * Get the SVG representation of an emoji as an embeddable SVG element.
      *
-     * @param emoji The emoji character(s)
-     * @param x X position
-     * @param y Y position
-     * @param size Size (width and height) in pixels
+     * @param emoji
+     *            The emoji character(s)
+     * @param x
+     *            X position
+     * @param y
+     *            Y position
+     * @param size
+     *            Size (width and height) in pixels
      * @return SVG element string, or null if emoji SVG not available
      */
     public String getEmojiAsSvg(String emoji, double x, double y, double size) {
@@ -332,11 +332,16 @@ public class EmojiSvgService {
     /**
      * Get the SVG representation of an emoji as an embeddable SVG element.
      *
-     * @param emoji The emoji character(s)
-     * @param x X position
-     * @param y Y position
-     * @param size Size (width and height) in pixels
-     * @param monochrome If true, use monochrome SVG variant (or fall back to grayscale filter)
+     * @param emoji
+     *            The emoji character(s)
+     * @param x
+     *            X position
+     * @param y
+     *            Y position
+     * @param size
+     *            Size (width and height) in pixels
+     * @param monochrome
+     *            If true, use monochrome SVG variant (or fall back to grayscale filter)
      * @return SVG element string, or null if emoji SVG not available
      */
     public String getEmojiAsSvg(String emoji, double x, double y, double size, boolean monochrome) {
@@ -344,20 +349,23 @@ public class EmojiSvgService {
     }
 
     /**
-     * Get the SVG representation of an emoji as an embeddable SVG element with optional
-     * colorization.
+     * Get the SVG representation of an emoji as an embeddable SVG element with optional colorization.
      *
-     * @param emoji The emoji character(s)
-     * @param x X position
-     * @param y Y position
-     * @param size Size (width and height) in pixels
-     * @param monochrome If true, use monochrome SVG variant (or fall back to grayscale filter)
-     * @param colorHex Optional hex color (e.g., "#DC2626") to colorize the emoji (requires
-     *     monochrome=true)
+     * @param emoji
+     *            The emoji character(s)
+     * @param x
+     *            X position
+     * @param y
+     *            Y position
+     * @param size
+     *            Size (width and height) in pixels
+     * @param monochrome
+     *            If true, use monochrome SVG variant (or fall back to grayscale filter)
+     * @param colorHex
+     *            Optional hex color (e.g., "#DC2626") to colorize the emoji (requires monochrome=true)
      * @return SVG element string, or null if emoji SVG not available
      */
-    public String getEmojiAsSvg(
-            String emoji, double x, double y, double size, boolean monochrome, String colorHex) {
+    public String getEmojiAsSvg(String emoji, double x, double y, double size, boolean monochrome, String colorHex) {
         String normalized = normalizeEmoji(emoji);
 
         // Choose the appropriate cache
@@ -400,8 +408,7 @@ public class EmojiSvgService {
             String color = colorHex.startsWith("#") ? colorHex : "#" + colorHex;
             return String.format(
                     "<svg x=\"%.1f\" y=\"%.1f\" width=\"%.1f\" height=\"%.1f\" viewBox=\"%s\""
-                            + " xmlns:xlink=\"http://www.w3.org/1999/xlink\"><g"
-                            + " fill=\"%s\">%s</g></svg>",
+                            + " xmlns:xlink=\"http://www.w3.org/1999/xlink\"><g" + " fill=\"%s\">%s</g></svg>",
                     x, y, size, size, viewBox, color, innerContent);
         } else if (monochrome && !usingMonoSvg) {
             // Fall back to grayscale filter for color SVG (when mono SVG not available)
@@ -422,9 +429,8 @@ public class EmojiSvgService {
     }
 
     /**
-     * Make all IDs in SVG content unique by adding a prefix. This prevents ID collisions when
-     * multiple emoji SVGs are embedded in the same document. Updates both id="..." definitions and
-     * url(#...) / xlink:href="#..." references.
+     * Make all IDs in SVG content unique by adding a prefix. This prevents ID collisions when multiple emoji SVGs are
+     * embedded in the same document. Updates both id="..." definitions and url(#...) / xlink:href="#..." references.
      */
     private String makeIdsUnique(String svgContent, String prefix) {
         // Find all IDs used in the SVG and replace them with prefixed versions
@@ -455,8 +461,8 @@ public class EmojiSvgService {
     }
 
     /**
-     * Normalize emoji by removing variation selectors for lookup. Variation selector VS16 (U+FE0F)
-     * is often appended for emoji presentation.
+     * Normalize emoji by removing variation selectors for lookup. Variation selector VS16 (U+FE0F) is often appended
+     * for emoji presentation.
      */
     private String normalizeEmoji(String emoji) {
         // Remove VS16 (emoji presentation selector)
@@ -464,8 +470,7 @@ public class EmojiSvgService {
     }
 
     /**
-     * Get all available emoji characters that have SVG representations. Returns emojis from both
-     * color and mono caches.
+     * Get all available emoji characters that have SVG representations. Returns emojis from both color and mono caches.
      */
     public java.util.Set<String> getAvailableEmojis() {
         java.util.Set<String> all = new java.util.HashSet<>();

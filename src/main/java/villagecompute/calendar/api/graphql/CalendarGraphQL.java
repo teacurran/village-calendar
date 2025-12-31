@@ -1,11 +1,8 @@
 package villagecompute.calendar.api.graphql;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
@@ -21,14 +18,12 @@ import org.eclipse.microprofile.graphql.Mutation;
 import org.eclipse.microprofile.graphql.Name;
 import org.eclipse.microprofile.graphql.NonNull;
 import org.eclipse.microprofile.graphql.Query;
-import org.eclipse.microprofile.graphql.Source;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
 
 import villagecompute.calendar.api.graphql.inputs.CalendarInput;
 import villagecompute.calendar.api.graphql.inputs.CalendarUpdateInput;
 import villagecompute.calendar.data.models.CalendarOrder;
-import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.AuthenticationService;
@@ -37,9 +32,8 @@ import villagecompute.calendar.services.EventService;
 import villagecompute.calendar.util.Roles;
 
 /**
- * GraphQL resolver for calendar queries and mutations. Handles user authentication, calendar CRUD
- * operations, and authorization. Implements DataLoader pattern for efficient batch loading of
- * related entities.
+ * GraphQL resolver for calendar queries and mutations. Handles user authentication, calendar CRUD operations, and
+ * authorization. Implements DataLoader pattern for efficient batch loading of related entities.
  */
 @GraphQLApi
 @ApplicationScoped
@@ -55,19 +49,24 @@ public class CalendarGraphQL {
     private static final int MAX_USER_LIMIT = 50;
 
     /** JWT token for authenticated user. */
-    @Inject private JsonWebToken jwt;
+    @Inject
+    private JsonWebToken jwt;
 
     /** Security identity for getting principal. */
-    @Inject private io.quarkus.security.identity.SecurityIdentity securityIdentity;
+    @Inject
+    private io.quarkus.security.identity.SecurityIdentity securityIdentity;
 
     /** Authentication service for user management. */
-    @Inject private AuthenticationService authService;
+    @Inject
+    private AuthenticationService authService;
 
     /** Calendar service for business logic. */
-    @Inject private CalendarService calendarService;
+    @Inject
+    private CalendarService calendarService;
 
     /** Event service for event operations. */
-    @Inject private EventService eventService;
+    @Inject
+    private EventService eventService;
 
     // ==================================================================
     // QUERIES
@@ -79,18 +78,15 @@ public class CalendarGraphQL {
      * @return CalendarUser or null
      */
     @Query("me")
-    @Description(
-            "Get the currently authenticated user. "
-                    + "Requires valid JWT token in Authorization header. "
-                    + "Returns null if not authenticated.")
+    @Description("Get the currently authenticated user. " + "Requires valid JWT token in Authorization header. "
+            + "Returns null if not authenticated.")
     @PermitAll
     public CalendarUser me() {
         LOG.debug("Query: me()");
 
         // Try to get JWT from SecurityIdentity principal first (more reliable)
         JsonWebToken effectiveJwt = jwt;
-        if ((effectiveJwt == null || effectiveJwt.getSubject() == null)
-                && securityIdentity != null) {
+        if ((effectiveJwt == null || effectiveJwt.getSubject() == null) && securityIdentity != null) {
             if (securityIdentity.getPrincipal() instanceof JsonWebToken) {
                 effectiveJwt = (JsonWebToken) securityIdentity.getPrincipal();
                 LOG.debug("Got JWT from SecurityIdentity principal");
@@ -116,16 +112,13 @@ public class CalendarGraphQL {
     }
 
     /**
-     * Get the currently authenticated user (alias for 'me' query). Returns null if not
-     * authenticated.
+     * Get the currently authenticated user (alias for 'me' query). Returns null if not authenticated.
      *
      * @return CalendarUser or null
      */
     @Query("currentUser")
-    @Description(
-            "Get the currently authenticated user. Alias for "
-                    + "'me' query. Requires valid JWT token in Authorization "
-                    + "header. Returns null if not authenticated.")
+    @Description("Get the currently authenticated user. Alias for "
+            + "'me' query. Requires valid JWT token in Authorization " + "header. Returns null if not authenticated.")
     @PermitAll
     public CalendarUser currentUser() {
         LOG.debug("Query: currentUser() - delegating to me()");
@@ -135,65 +128,48 @@ public class CalendarGraphQL {
     /**
      * Get calendars for the authenticated user. Requires authentication.
      *
-     * @param year Optional year filter
+     * @param year
+     *            Optional year filter
      * @return List of user calendars
      */
     @Query("myCalendars")
     @Description("Get calendars for the authenticated user. " + "Requires authentication.")
     @RolesAllowed(Roles.USER)
-    public List<UserCalendar> myCalendars(
-            @Description("Filter by calendar year (optional)") final Integer year) {
+    public List<UserCalendar> myCalendars(@Description("Filter by calendar year (optional)") final Integer year) {
         LOG.infof("Query: myCalendars(year=%s)", year);
 
-        // Get current user from JWT
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            LOG.error("User not found despite passing " + "@RolesAllowed check");
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser user = currentUser.get();
+        CalendarUser user = authService.requireCurrentUser(jwt);
         UUID userId = user.id;
 
         // Query calendars using service with pagination
-        List<UserCalendar> calendars =
-                calendarService.listCalendars(userId, year, 0, DEFAULT_PAGE_SIZE, user);
+        List<UserCalendar> calendars = calendarService.listCalendars(userId, year, 0, DEFAULT_PAGE_SIZE, user);
 
-        LOG.infof(
-                "Found %d calendars for user %s%s",
-                calendars.size(), user.email, year != null ? " in year " + year : " (all years)");
+        LOG.infof("Found %d calendars for user %s%s", calendars.size(), user.email,
+                year != null ? " in year " + year : " (all years)");
 
         return calendars;
     }
 
     /**
-     * Get calendars for a specific user (admin only) or filter by year. If userId is provided,
-     * requires ADMIN role. If userId is NOT provided, returns calendars for authenticated user.
+     * Get calendars for a specific user (admin only) or filter by year. If userId is provided, requires ADMIN role. If
+     * userId is NOT provided, returns calendars for authenticated user.
      *
-     * @param userId User ID to fetch calendars for (admin only)
-     * @param year Optional year filter
+     * @param userId
+     *            User ID to fetch calendars for (admin only)
+     * @param year
+     *            Optional year filter
      * @return List of user calendars
      */
     @Query("calendars")
-    @Description(
-            "Get calendars for a specific user (admin only) or "
-                    + "filter by year. If userId is not provided, returns "
-                    + "calendars for authenticated user.")
+    @Description("Get calendars for a specific user (admin only) or "
+            + "filter by year. If userId is not provided, returns " + "calendars for authenticated user.")
     @RolesAllowed(Roles.USER)
     public List<UserCalendar> calendars(
-            @Name("userId") @Description("User ID to fetch calendars for (admin only)")
-                    final String userId,
+            @Name("userId") @Description("User ID to fetch calendars for (admin only)") final String userId,
             @Name("year") @Description("Filter by calendar year (optional)") final Integer year) {
         LOG.infof("Query: calendars(userId=%s, year=%s)", userId, year);
 
-        // Get current user from JWT
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            LOG.error("User not found despite passing " + "@RolesAllowed check");
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser user = currentUser.get();
+        CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Determine target user ID
         UUID targetUserId;
@@ -201,11 +177,8 @@ public class CalendarGraphQL {
             // Admin access requested - verify admin role
             boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains("ADMIN");
             if (!isAdmin) {
-                LOG.errorf(
-                        "Non-admin user %s attempted to access " + "calendars for userId=%s",
-                        user.email, userId);
-                throw new SecurityException(
-                        "Unauthorized: ADMIN role " + "required to access other users' calendars");
+                LOG.errorf("Non-admin user %s attempted to access " + "calendars for userId=%s", user.email, userId);
+                throw new SecurityException("Unauthorized: ADMIN role " + "required to access other users' calendars");
             }
 
             // Parse the provided user ID
@@ -224,12 +197,10 @@ public class CalendarGraphQL {
         }
 
         // Query calendars using service with pagination
-        List<UserCalendar> calendars =
-                calendarService.listCalendars(targetUserId, year, 0, DEFAULT_PAGE_SIZE, user);
+        List<UserCalendar> calendars = calendarService.listCalendars(targetUserId, year, 0, DEFAULT_PAGE_SIZE, user);
 
-        LOG.infof(
-                "Found %d calendars for user %s%s",
-                calendars.size(), targetUserId, year != null ? " in year " + year : " (all years)");
+        LOG.infof("Found %d calendars for user %s%s", calendars.size(), targetUserId,
+                year != null ? " in year " + year : " (all years)");
 
         return calendars;
     }
@@ -237,12 +208,12 @@ public class CalendarGraphQL {
     /**
      * Get a single calendar by ID. Returns calendar if user owns it or if it's public.
      *
-     * @param id Calendar ID
+     * @param id
+     *            Calendar ID
      * @return UserCalendar or null
      */
     @Query("calendar")
-    @Description(
-            "Get a single calendar by ID. Returns calendar if " + "user owns it or if it's public.")
+    @Description("Get a single calendar by ID. Returns calendar if " + "user owns it or if it's public.")
     @PermitAll
     public UserCalendar calendar(@Name("id") @Description("Calendar ID") @NonNull final String id) {
         LOG.infof("Query: calendar(id=%s)", id);
@@ -260,10 +231,7 @@ public class CalendarGraphQL {
             // Use service to get calendar with authorization check
             try {
                 UserCalendar calendar = calendarService.getCalendar(calendarId, currentUser);
-                LOG.infof(
-                        "Returning calendar: %s (name=%s, owner=%s)",
-                        id,
-                        calendar.name,
+                LOG.infof("Returning calendar: %s (name=%s, owner=%s)", id, calendar.name,
                         calendar.user != null ? calendar.user.email : "anonymous");
                 return calendar;
             } catch (IllegalArgumentException e) {
@@ -285,15 +253,15 @@ public class CalendarGraphQL {
     /**
      * Get all users (admin only). Requires ADMIN role.
      *
-     * @param limit Maximum number of users to return
+     * @param limit
+     *            Maximum number of users to return
      * @return List of users
      */
     @Query("allUsers")
     @Description("Get all users (admin only). Requires ADMIN role " + "in JWT claims.")
     @RolesAllowed(Roles.ADMIN)
     public List<CalendarUser> allUsers(
-            @Name("limit") @Description("Maximum number of users to return (default: 50)")
-                    final Integer limit) {
+            @Name("limit") @Description("Maximum number of users to return (default: 50)") final Integer limit) {
         LOG.infof("Query: allUsers(limit=%s)", limit);
 
         // Apply limit with default of 50
@@ -313,31 +281,21 @@ public class CalendarGraphQL {
     /**
      * Create a new calendar based on a template. Requires authentication.
      *
-     * @param input Calendar creation data
+     * @param input
+     *            Calendar creation data
      * @return Created calendar
      */
     @Mutation("createCalendar")
-    @Description(
-            "Create a new calendar based on a template. "
-                    + "Requires authentication. The calendar is created "
-                    + "in DRAFT status.")
+    @Description("Create a new calendar based on a template. " + "Requires authentication. The calendar is created "
+            + "in DRAFT status.")
     @RolesAllowed(Roles.USER)
     @Transactional
     public UserCalendar createCalendar(
-            @Name("input") @Description("Calendar creation data") @NotNull @Valid
-                    final CalendarInput input) {
-        LOG.infof(
-                "Mutation: createCalendar(name=%s, year=%d, " + "templateId=%s)",
-                input.name, input.year, input.templateId);
+            @Name("input") @Description("Calendar creation data") @NotNull @Valid final CalendarInput input) {
+        LOG.infof("Mutation: createCalendar(name=%s, year=%d, " + "templateId=%s)", input.name, input.year,
+                input.templateId);
 
-        // Get current user
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            LOG.error("User not found despite passing " + "@RolesAllowed check");
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser user = currentUser.get();
+        CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Parse and validate template ID
         UUID templateId;
@@ -349,20 +307,11 @@ public class CalendarGraphQL {
         }
 
         // Create calendar using service
-        UserCalendar calendar =
-                calendarService.createCalendar(
-                        input.name,
-                        input.year,
-                        templateId,
-                        input.configuration,
-                        input.isPublic,
-                        user,
-                        null // sessionId is null for authenticated users
-                        );
+        UserCalendar calendar = calendarService.createCalendar(input.name, input.year, templateId, input.configuration,
+                input.isPublic, user, null // sessionId is null for authenticated users
+        );
 
-        LOG.infof(
-                "Created calendar: %s (ID: %s) for user %s",
-                calendar.name, calendar.id, user.email);
+        LOG.infof("Created calendar: %s (ID: %s) for user %s", calendar.name, calendar.id, user.email);
 
         return calendar;
     }
@@ -370,30 +319,21 @@ public class CalendarGraphQL {
     /**
      * Update an existing calendar's customization. Requires authentication and calendar ownership.
      *
-     * @param id Calendar ID
-     * @param input Calendar update data
+     * @param id
+     *            Calendar ID
+     * @param input
+     *            Calendar update data
      * @return Updated calendar
      */
     @Mutation("updateCalendar")
-    @Description(
-            "Update an existing calendar's customization. "
-                    + "Requires authentication and calendar ownership.")
+    @Description("Update an existing calendar's customization. " + "Requires authentication and calendar ownership.")
     @RolesAllowed(Roles.USER)
     @Transactional
-    public UserCalendar updateCalendar(
-            @Name("id") @Description("Calendar ID to update") @NotNull final String id,
-            @Name("input") @Description("Calendar update data") @NotNull @Valid
-                    final CalendarUpdateInput input) {
+    public UserCalendar updateCalendar(@Name("id") @Description("Calendar ID to update") @NotNull final String id,
+            @Name("input") @Description("Calendar update data") @NotNull @Valid final CalendarUpdateInput input) {
         LOG.infof("Mutation: updateCalendar(id=%s)", id);
 
-        // Get current user
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            LOG.error("User not found despite passing " + "@RolesAllowed check");
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser user = currentUser.get();
+        CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Parse calendar ID
         UUID calendarId;
@@ -405,9 +345,8 @@ public class CalendarGraphQL {
         }
 
         // Update calendar using service (handles auth and validation)
-        UserCalendar calendar =
-                calendarService.updateCalendar(
-                        calendarId, input.name, input.configuration, input.isPublic, user);
+        UserCalendar calendar = calendarService.updateCalendar(calendarId, input.name, input.configuration,
+                input.isPublic, user);
 
         LOG.infof("Updated calendar: %s (ID: %s)", calendar.name, calendar.id);
 
@@ -415,31 +354,21 @@ public class CalendarGraphQL {
     }
 
     /**
-     * Delete a calendar. Requires authentication and calendar ownership. Cannot delete calendars
-     * with paid orders.
+     * Delete a calendar. Requires authentication and calendar ownership. Cannot delete calendars with paid orders.
      *
-     * @param id Calendar ID
+     * @param id
+     *            Calendar ID
      * @return true if deleted successfully
      */
     @Mutation("deleteCalendar")
-    @Description(
-            "Delete a calendar. Requires authentication and "
-                    + "calendar ownership. Cannot delete calendars with "
-                    + "paid orders.")
+    @Description("Delete a calendar. Requires authentication and " + "calendar ownership. Cannot delete calendars with "
+            + "paid orders.")
     @RolesAllowed(Roles.USER)
     @Transactional
-    public Boolean deleteCalendar(
-            @Name("id") @Description("Calendar ID to delete") @NotNull final String id) {
+    public Boolean deleteCalendar(@Name("id") @Description("Calendar ID to delete") @NotNull final String id) {
         LOG.infof("Mutation: deleteCalendar(id=%s)", id);
 
-        // Get current user
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            LOG.error("User not found despite passing " + "@RolesAllowed check");
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser user = currentUser.get();
+        CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Parse calendar ID
         UUID calendarId;
@@ -451,23 +380,16 @@ public class CalendarGraphQL {
         }
 
         // Check for paid orders before deletion
-        Optional<UserCalendar> calendarOpt =
-                UserCalendar.<UserCalendar>findByIdOptional(calendarId);
+        Optional<UserCalendar> calendarOpt = UserCalendar.<UserCalendar>findByIdOptional(calendarId);
         if (calendarOpt.isPresent()) {
             UserCalendar calendar = calendarOpt.get();
             // Check for paid orders
             if (calendar.orders != null && !calendar.orders.isEmpty()) {
-                boolean hasPaidOrders =
-                        calendar.orders.stream()
-                                .anyMatch(
-                                        order ->
-                                                CalendarOrder.STATUS_PAID.equals(order.status)
-                                                        || CalendarOrder.STATUS_PROCESSING.equals(
-                                                                order.status)
-                                                        || CalendarOrder.STATUS_SHIPPED.equals(
-                                                                order.status)
-                                                        || CalendarOrder.STATUS_DELIVERED.equals(
-                                                                order.status));
+                boolean hasPaidOrders = calendar.orders.stream()
+                        .anyMatch(order -> CalendarOrder.STATUS_PAID.equals(order.status)
+                                || CalendarOrder.STATUS_PROCESSING.equals(order.status)
+                                || CalendarOrder.STATUS_SHIPPED.equals(order.status)
+                                || CalendarOrder.STATUS_DELIVERED.equals(order.status));
 
                 if (hasPaidOrders) {
                     LOG.errorf("Cannot delete calendar %s: " + "has paid orders", id);
@@ -487,29 +409,22 @@ public class CalendarGraphQL {
     /**
      * Update a user's admin status. Requires ADMIN role. Cannot remove admin from self.
      *
-     * @param userId User ID to update
-     * @param isAdmin New admin status
+     * @param userId
+     *            User ID to update
+     * @param isAdmin
+     *            New admin status
      * @return Updated user
      */
     @Mutation("updateUserAdmin")
-    @Description(
-            "Update a user's admin status. Requires ADMIN role. "
-                    + "Cannot remove admin from self to prevent lockout.")
+    @Description("Update a user's admin status. Requires ADMIN role. "
+            + "Cannot remove admin from self to prevent lockout.")
     @RolesAllowed(Roles.ADMIN)
     @Transactional
-    public CalendarUser updateUserAdmin(
-            @Name("userId") @Description("User ID to update") @NotNull final String userId,
+    public CalendarUser updateUserAdmin(@Name("userId") @Description("User ID to update") @NotNull final String userId,
             @Name("isAdmin") @Description("New admin status") @NotNull final Boolean isAdmin) {
         LOG.infof("Mutation: updateUserAdmin(userId=%s, isAdmin=%s)", userId, isAdmin);
 
-        // Get current admin user
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            LOG.error("Admin user not found despite passing " + "@RolesAllowed check");
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser adminUser = currentUser.get();
+        CalendarUser adminUser = authService.requireCurrentUser(jwt);
 
         // Parse target user ID
         UUID targetUserId;
@@ -539,47 +454,34 @@ public class CalendarGraphQL {
         targetUser.isAdmin = isAdmin;
         targetUser.persist();
 
-        LOG.infof(
-                "Updated user %s admin status to %s by admin %s",
-                targetUser.email, isAdmin, adminUser.email);
+        LOG.infof("Updated user %s admin status to %s by admin %s", targetUser.email, isAdmin, adminUser.email);
 
         return targetUser;
     }
 
     /**
-     * Convert anonymous guest session to authenticated user account. Links all calendars from the
-     * guest session to the newly authenticated user. Called after successful OAuth authentication
-     * when user had existing session.
+     * Convert anonymous guest session to authenticated user account. Links all calendars from the guest session to the
+     * newly authenticated user. Called after successful OAuth authentication when user had existing session.
      *
-     * @param sessionId Guest session ID to convert
+     * @param sessionId
+     *            Guest session ID to convert
      * @return User with linked calendars
      */
     @Mutation("convertGuestSession")
-    @Description(
-            "Convert anonymous guest session to authenticated "
-                    + "user account. Links all calendars from the guest session "
-                    + "to the newly authenticated user.")
+    @Description("Convert anonymous guest session to authenticated "
+            + "user account. Links all calendars from the guest session " + "to the newly authenticated user.")
     @RolesAllowed(Roles.USER)
     @Transactional
     public CalendarUser convertGuestSession(
             @Name("sessionId") @Description("Guest session ID to convert") @NotNull final String sessionId) {
         LOG.infof("Mutation: convertGuestSession(sessionId=%s)", sessionId);
 
-        // Get current user
-        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-        if (currentUser.isEmpty()) {
-            LOG.error("User not found despite passing " + "@RolesAllowed check");
-            throw new IllegalStateException("Unauthorized: User not found");
-        }
-
-        CalendarUser user = currentUser.get();
+        CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Convert session calendars to user calendars using service
         int convertedCount = calendarService.convertSessionToUser(sessionId, user);
 
-        LOG.infof(
-                "Converted %d calendars from session %s to user %s",
-                convertedCount, sessionId, user.email);
+        LOG.infof("Converted %d calendars from session %s to user %s", convertedCount, sessionId, user.email);
 
         return user;
     }

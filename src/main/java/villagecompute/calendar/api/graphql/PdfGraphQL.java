@@ -14,10 +14,10 @@ import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.util.Roles;
 
 /**
- * GraphQL resolver for PDF generation operations. Handles asynchronous PDF job creation and status
- * tracking.
+ * GraphQL resolver for PDF generation operations. Handles asynchronous PDF job creation and status tracking.
  *
- * <p>TODO: Implementation pending - currently returns stub responses
+ * <p>
+ * TODO: Implementation pending - currently returns stub responses
  */
 @GraphQLApi
 @ApplicationScoped
@@ -25,22 +25,25 @@ public class PdfGraphQL {
 
     private static final Logger LOG = Logger.getLogger(PdfGraphQL.class);
 
-    @Inject JsonWebToken jwt;
+    @Inject
+    JsonWebToken jwt;
 
-    @Inject AuthenticationService authService;
+    @Inject
+    AuthenticationService authService;
 
     /**
-     * Get a PDF generation job by ID. Returns job status and download URL when complete. Users can
-     * poll this endpoint to track PDF generation progress.
+     * Get a PDF generation job by ID. Returns job status and download URL when complete. Users can poll this endpoint
+     * to track PDF generation progress.
      *
-     * <p>TODO: Implement PdfJob retrieval from database
+     * <p>
+     * TODO: Implement PdfJob retrieval from database
      *
-     * @param id PDF job ID
+     * @param id
+     *            PDF job ID
      * @return PdfJob object with status and PDF URL, or null if not found
      */
     @Query("pdfJob")
-    @Description(
-            "Get a PDF generation job by ID. Returns job status and download URL when complete.")
+    @Description("Get a PDF generation job by ID. Returns job status and download URL when complete.")
     @RolesAllowed(Roles.USER)
     public PdfJobStub pdfJob(@Name("id") @NotNull @Description("PDF job ID") String id) {
         LOG.infof("Query pdfJob called with id=%s (STUB IMPLEMENTATION)", id);
@@ -54,34 +57,30 @@ public class PdfGraphQL {
     }
 
     /**
-     * Generate PDF for a calendar asynchronously. Requires authentication and calendar ownership
-     * (or calendar is public). Creates a background job and returns PdfJob for status polling.
-     * Watermark option allows generating preview PDFs (for non-paying users).
+     * Generate PDF for a calendar asynchronously. Requires authentication and calendar ownership (or calendar is
+     * public). Creates a background job and returns PdfJob for status polling. Watermark option allows generating
+     * preview PDFs (for non-paying users).
      *
-     * <p>TODO: Implement PDF generation job creation
+     * <p>
+     * TODO: Implement PDF generation job creation
      *
-     * @param calendarId Calendar ID to generate PDF for
-     * @param watermark Include watermark on PDF (true for previews, false for paid downloads)
+     * @param calendarId
+     *            Calendar ID to generate PDF for
+     * @param watermark
+     *            Include watermark on PDF (true for previews, false for paid downloads)
      * @return PdfJob object for tracking generation progress
      */
     @Mutation("generatePdf")
-    @Description(
-            "Generate PDF for a calendar asynchronously. Creates a background job and returns"
-                    + " PdfJob for status polling.")
+    @Description("Generate PDF for a calendar asynchronously. Creates a background job and returns"
+            + " PdfJob for status polling.")
     @RolesAllowed(Roles.USER)
     @Transactional
     public PdfJobStub generatePdf(
-            @Name("calendarId") @NotNull @Description("Calendar ID to generate PDF for")
-                    String calendarId,
-            @Name("watermark")
-                    @NotNull @Description(
-                            "Include watermark on PDF (true for previews, false for paid"
-                                    + " downloads)")
-                    Boolean watermark) {
-        LOG.infof(
-                "Mutation generatePdf called with calendarId=%s, watermark=%s (STUB"
-                        + " IMPLEMENTATION)",
-                calendarId, watermark);
+            @Name("calendarId") @NotNull @Description("Calendar ID to generate PDF for") String calendarId,
+            @Name("watermark") @NotNull @Description("Include watermark on PDF (true for previews, false for paid"
+                    + " downloads)") Boolean watermark) {
+        LOG.infof("Mutation generatePdf called with calendarId=%s, watermark=%s (STUB" + " IMPLEMENTATION)", calendarId,
+                watermark);
 
         // TODO: Implement PDF generation job creation
         // Example implementation:
@@ -96,10 +95,11 @@ public class PdfGraphQL {
     }
 
     /**
-     * Temporary stub class representing a PDF generation job. This should be replaced with the
-     * actual PdfJob entity once implemented.
+     * Temporary stub class representing a PDF generation job. This should be replaced with the actual PdfJob entity
+     * once implemented.
      *
-     * <p>TODO: Replace with actual PdfJob entity from data models
+     * <p>
+     * TODO: Replace with actual PdfJob entity from data models
      */
     @Type("PdfJob")
     @Description("Asynchronous PDF generation job (stub)")

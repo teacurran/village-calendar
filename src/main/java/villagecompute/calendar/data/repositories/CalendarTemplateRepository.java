@@ -18,11 +18,12 @@ import io.quarkus.hibernate.orm.panache.PanacheRepository;
 @ApplicationScoped
 public class CalendarTemplateRepository implements PanacheRepository<CalendarTemplate> {
 
-    @Inject EntityManager entityManager;
+    @Inject
+    EntityManager entityManager;
 
     /**
-     * Find all active templates ordered by display order. This is the required custom query method
-     * from the task specification.
+     * Find all active templates ordered by display order. This is the required custom query method from the task
+     * specification.
      *
      * @return List of active templates
      */
@@ -33,7 +34,8 @@ public class CalendarTemplateRepository implements PanacheRepository<CalendarTem
     /**
      * Find a template by name.
      *
-     * @param name Template name
+     * @param name
+     *            Template name
      * @return Optional containing the template if found
      */
     public Optional<CalendarTemplate> findByName(String name) {
@@ -46,14 +48,14 @@ public class CalendarTemplateRepository implements PanacheRepository<CalendarTem
      * @return List of featured templates
      */
     public List<CalendarTemplate> findFeaturedTemplates() {
-        return find("isActive = ?1 AND isFeatured = ?2 ORDER BY displayOrder, name", true, true)
-                .list();
+        return find("isActive = ?1 AND isFeatured = ?2 ORDER BY displayOrder, name", true, true).list();
     }
 
     /**
      * Find templates by active status.
      *
-     * @param isActive Active status
+     * @param isActive
+     *            Active status
      * @return List of templates matching the status
      */
     public List<CalendarTemplate> findByActiveStatus(boolean isActive) {
@@ -61,25 +63,24 @@ public class CalendarTemplateRepository implements PanacheRepository<CalendarTem
     }
 
     /**
-     * Count the number of user calendars that use a specific template. Used to prevent deletion of
-     * templates that are in use.
+     * Count the number of user calendars that use a specific template. Used to prevent deletion of templates that are
+     * in use.
      *
-     * @param templateId Template ID
+     * @param templateId
+     *            Template ID
      * @return Number of calendars using this template
      */
     public long countCalendarsUsingTemplate(UUID templateId) {
         return entityManager
-                .createQuery(
-                        "SELECT COUNT(c) FROM UserCalendar c WHERE c.template.id = :templateId",
-                        Long.class)
-                .setParameter("templateId", templateId)
-                .getSingleResult();
+                .createQuery("SELECT COUNT(c) FROM UserCalendar c WHERE c.template.id = :templateId", Long.class)
+                .setParameter("templateId", templateId).getSingleResult();
     }
 
     /**
      * Batch load templates by their IDs. Used by DataLoader to prevent N+1 queries.
      *
-     * @param ids List of template IDs
+     * @param ids
+     *            List of template IDs
      * @return List of templates matching the IDs
      */
     public List<CalendarTemplate> findByIds(List<UUID> ids) {
