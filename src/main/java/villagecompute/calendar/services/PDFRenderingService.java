@@ -25,8 +25,8 @@ public class PDFRenderingService {
     // PDF page size: 35w x 23h inches (landscape)
     // PDF units are in points (1 inch = 72 points)
     // NOTE: These MUST be float - Batik's LengthKey rejects Integer values
-    private static final float PDF_WIDTH_POINTS = 35 * 72; // 2520 points
-    private static final float PDF_HEIGHT_POINTS = 23 * 72; // 1656 points
+    private static final float PDF_WIDTH_POINTS = 35 * 72f; // 2520 points
+    private static final float PDF_HEIGHT_POINTS = 23 * 72f; // 1656 points
 
     /**
      * Render SVG content to PDF format. Uses Apache Batik's PDFTranscoder for SVG to PDF
