@@ -23,6 +23,9 @@ import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.services.PDFRenderingService;
 
+import static villagecompute.calendar.util.MimeTypes.HEADER_CACHE_CONTROL;
+import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
+
 /**
  * API endpoint for static content generation. CI/CD calls these endpoints to download data and
  * assets for static product pages.
@@ -115,7 +118,7 @@ public class StaticContentResource {
         String svgContent = generateSvgForTemplate(template);
 
         return Response.ok(svgContent)
-                .header("Content-Disposition", "inline; filename=\"" + slug + ".svg\"")
+                .header(HEADER_CONTENT_DISPOSITION, "inline; filename=\"" + slug + ".svg\"")
                 .build();
     }
 
@@ -143,7 +146,7 @@ public class StaticContentResource {
             byte[] pngBytes = pdfRenderingService.renderSVGToPNG(wrappedSvg, 1200);
 
             return Response.ok(pngBytes)
-                    .header("Content-Disposition", "inline; filename=\"" + slug + ".png\"")
+                    .header(HEADER_CONTENT_DISPOSITION, "inline; filename=\"" + slug + ".png\"")
                     .build();
         } catch (Exception e) {
             LOG.errorf(e, "Failed to generate PNG for calendar: %s", slug);
@@ -168,7 +171,7 @@ public class StaticContentResource {
         String svgContent = generateSvgForTemplateById(template);
 
         return Response.ok(svgContent)
-                .header("Content-Disposition", "inline; filename=\"" + templateId + ".svg\"")
+                .header(HEADER_CONTENT_DISPOSITION, "inline; filename=\"" + templateId + ".svg\"")
                 .build();
     }
 
@@ -196,8 +199,8 @@ public class StaticContentResource {
             byte[] pngBytes = pdfRenderingService.renderSVGToPNG(wrappedSvg, 400);
 
             return Response.ok(pngBytes)
-                    .header("Content-Disposition", "inline; filename=\"" + templateId + ".png\"")
-                    .header("Cache-Control", "public, max-age=86400") // Cache for 1 day
+                    .header(HEADER_CONTENT_DISPOSITION, "inline; filename=\"" + templateId + ".png\"")
+                    .header(HEADER_CACHE_CONTROL, "public, max-age=86400") // Cache for 1 day
                     .build();
         } catch (Exception e) {
             LOG.errorf(e, "Failed to generate PNG for template ID: %s", templateId);

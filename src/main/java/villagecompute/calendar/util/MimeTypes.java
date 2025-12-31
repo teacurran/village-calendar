@@ -14,6 +14,9 @@ public final class MimeTypes {
 
     public static final String HEADER_CONTENT_TYPE = "Content-Type";
     public static final String HEADER_CACHE_CONTROL = "Cache-Control";
+    public static final String HEADER_CONTENT_DISPOSITION = "Content-Disposition";
+    public static final String HEADER_X_SESSION_ID = "X-Session-ID";
+    public static final String HEADER_STRIPE_SIGNATURE = "Stripe-Signature";
 
     // Re-export common JAX-RS types for convenience
     public static final String APPLICATION_JSON = MediaType.APPLICATION_JSON;
