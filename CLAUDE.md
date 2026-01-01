@@ -34,3 +34,25 @@ Key points:
 - Use `Parameters.with()` for type-safe parameter binding
 - Use `JOIN FETCH` to eagerly load relationships and avoid N+1 queries
 - Return `Optional` via `firstResultOptional()` for single results
+
+## Application Exceptions
+
+Use custom exceptions from `villagecompute.calendar.exceptions` instead of throwing `RuntimeException`:
+
+```java
+// Base exception (extends RuntimeException - no throws declaration needed)
+throw new ApplicationException("Something went wrong");
+throw new ApplicationException("Something went wrong", cause);
+
+// Domain-specific exceptions
+throw new EmailException("Failed to send email", cause);
+throw new RenderingException("PDF rendering failed: " + e.getMessage(), e);
+throw new PaymentException("Payment intent creation failed", e);
+```
+
+Key points:
+- Never throw raw `RuntimeException` - use `ApplicationException` or a specific subclass
+- All exceptions extend `RuntimeException` so they don't require throws declarations
+- Use the appropriate domain exception: `EmailException`, `RenderingException`, `PaymentException`
+- Always include the cause exception when wrapping: `new XxxException("message", cause)`
+- Add new exception types to the `exceptions` package as needed for new domains

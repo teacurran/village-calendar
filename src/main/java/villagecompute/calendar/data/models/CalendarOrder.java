@@ -27,7 +27,7 @@ import io.quarkus.panache.common.Parameters;
 @Entity
 @NamedQueries({
         @NamedQuery(name = CalendarOrder.QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS, query = "SELECT DISTINCT o FROM CalendarOrder o "
-                + "LEFT JOIN FETCH o.items i " + "LEFT JOIN FETCH i.calendar " + "WHERE o.orderNumber = :orderNumber")})
+                + "LEFT JOIN FETCH o.items i " + "LEFT JOIN FETCH i.assets " + "WHERE o.orderNumber = :orderNumber")})
 @Table(name = "calendar_orders", indexes = {
         @Index(name = "idx_calendar_orders_user", columnList = "user_id, created DESC"),
         @Index(name = "idx_calendar_orders_status", columnList = "status, created DESC"),
