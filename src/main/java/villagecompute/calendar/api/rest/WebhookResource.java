@@ -181,7 +181,7 @@ public class WebhookResource {
             } else {
                 // Fallback: parse from JSON manually for test compatibility
                 String dataJson = event.getData().toJson();
-                JsonNode sessionData = MAPPER.readTree(dataJson).get("object");
+                JsonNode sessionData = MAPPER.readTree(dataJson).get(STRIPE_OBJECT_PROPERTY);
                 String sessionId = sessionData.get("id").asText();
 
                 LOG.infof("Deserializing session from JSON, ID: %s", sessionId);
