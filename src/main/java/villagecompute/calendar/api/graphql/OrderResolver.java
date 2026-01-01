@@ -155,7 +155,7 @@ public class OrderResolver {
 
         // Filter by status if provided
         if (status != null && !status.isBlank()) {
-            orders = orders.stream().filter(o -> o.status.equals(status)).collect(Collectors.toList());
+            orders = orders.stream().filter(o -> o.status.equals(status)).toList();
         }
 
         LOG.infof("Found %d orders for user %s", orders.size(), targetUserId);
@@ -184,7 +184,7 @@ public class OrderResolver {
 
         // Filter by status if provided
         if (status != null && !status.isBlank()) {
-            orders = orders.stream().filter(o -> o.status.equals(status)).collect(Collectors.toList());
+            orders = orders.stream().filter(o -> o.status.equals(status)).toList();
         }
 
         LOG.infof("Found %d orders for current user %s", orders.size(), currentUser.id);
@@ -392,11 +392,11 @@ public class OrderResolver {
 
         // Extract unique calendar IDs from orders
         List<UUID> calendarIds = orders.stream().map(o -> o.calendar != null ? o.calendar.id : null)
-                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
+                .filter(Objects::nonNull).distinct().toList();
 
         if (calendarIds.isEmpty()) {
             LOG.debug("No calendar IDs to load");
-            return orders.stream().map(o -> (UserCalendar) null).collect(Collectors.toList());
+            return orders.stream().map(o -> (UserCalendar) null).toList();
         }
 
         // Batch load calendars in a single query
@@ -408,7 +408,7 @@ public class OrderResolver {
 
         // Return calendars in same order as input orders (DataLoader contract)
         List<UserCalendar> result = orders.stream().map(o -> o.calendar != null ? calendarMap.get(o.calendar.id) : null)
-                .collect(Collectors.toList());
+                .toList();
 
         LOG.debugf("Returning %d calendars for %d orders", result.size(), orders.size());
         return result;
@@ -430,11 +430,11 @@ public class OrderResolver {
 
         // Extract unique user IDs from orders
         List<UUID> userIds = orders.stream().map(o -> o.user != null ? o.user.id : null).filter(Objects::nonNull)
-                .distinct().collect(Collectors.toList());
+                .distinct().toList();
 
         if (userIds.isEmpty()) {
             LOG.debug("No user IDs to load");
-            return orders.stream().map(o -> (CalendarUser) null).collect(Collectors.toList());
+            return orders.stream().map(o -> (CalendarUser) null).toList();
         }
 
         // Batch load users in a single query
@@ -445,8 +445,7 @@ public class OrderResolver {
         Map<UUID, CalendarUser> userMap = users.stream().collect(Collectors.toMap(u -> u.id, u -> u));
 
         // Return users in same order as input orders (DataLoader contract)
-        List<CalendarUser> result = orders.stream().map(o -> o.user != null ? userMap.get(o.user.id) : null)
-                .collect(Collectors.toList());
+        List<CalendarUser> result = orders.stream().map(o -> o.user != null ? userMap.get(o.user.id) : null).toList();
 
         LOG.debugf("Returning %d users for %d orders", result.size(), orders.size());
         return result;

@@ -319,7 +319,7 @@ class SessionServiceTest {
         calendarService.createCalendar("Recent Guest Cal", 2025, null, null, true, null, testSessionId);
 
         // When
-        int deletedCount = sessionService.deleteExpiredSessions();
+        sessionService.deleteExpiredSessions();
 
         // Then - Should not delete recent calendars
         List<UserCalendar> calendars = sessionService.getSessionCalendars(testSessionId);

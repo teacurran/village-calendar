@@ -41,7 +41,7 @@ public class PDFRenderingServiceTest {
         assertNotNull(pdf, "PDF output should not be null");
         assertTrue(pdf.length > 0, "PDF should have content");
         // PDF files start with %PDF
-        assertTrue(new String(pdf, 0, 4).equals("%PDF"), "Output should be a valid PDF");
+        assertEquals("%PDF", new String(pdf, 0, 4), "Output should be a valid PDF");
     }
 
     @Test
@@ -68,7 +68,7 @@ public class PDFRenderingServiceTest {
         byte[] pdf = pdfRenderingService.renderSVGToPDF(svgWithXlink, 2025);
         assertNotNull(pdf, "PDF output should not be null for SVG with xlink:href");
         assertTrue(pdf.length > 0, "PDF should have content");
-        assertTrue(new String(pdf, 0, 4).equals("%PDF"), "Output should be a valid PDF");
+        assertEquals("%PDF", new String(pdf, 0, 4), "Output should be a valid PDF");
     }
 
     @Test
@@ -92,7 +92,7 @@ public class PDFRenderingServiceTest {
         byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, 2025);
         assertNotNull(pdf, "PDF output should not be null for calendar with secular holidays");
         assertTrue(pdf.length > 0, "PDF should have content");
-        assertTrue(new String(pdf, 0, 4).equals("%PDF"), "Output should be a valid PDF");
+        assertEquals("%PDF", new String(pdf, 0, 4), "Output should be a valid PDF");
     }
 
     @Test
@@ -114,7 +114,7 @@ public class PDFRenderingServiceTest {
             byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, 2025);
             assertNotNull(pdf, "PDF output should not be null");
             assertTrue(pdf.length > 0, "PDF should have content");
-            assertTrue(new String(pdf, 0, 4).equals("%PDF"), "Output should be a valid PDF");
+            assertEquals("%PDF", new String(pdf, 0, 4), "Output should be a valid PDF");
         }
     }
 
@@ -167,7 +167,7 @@ public class PDFRenderingServiceTest {
         byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, 2025);
         assertNotNull(pdf, "PDF output should not be null for monochrome calendar");
         assertTrue(pdf.length > 0, "PDF should have content");
-        assertTrue(new String(pdf, 0, 4).equals("%PDF"), "Output should be a valid PDF");
+        assertEquals("%PDF", new String(pdf, 0, 4), "Output should be a valid PDF");
     }
 
     @Test
@@ -216,7 +216,7 @@ public class PDFRenderingServiceTest {
         byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, 2025);
         assertNotNull(pdf, "PDF output should not be null for complex calendar");
         assertTrue(pdf.length > 10000, "PDF should be substantial in size (>10KB)");
-        assertTrue(new String(pdf, 0, 4).equals("%PDF"), "Output should be a valid PDF");
+        assertEquals("%PDF", new String(pdf, 0, 4), "Output should be a valid PDF");
 
         System.out.println("Complex calendar PDF generated successfully: " + pdf.length + " bytes");
     }
@@ -239,7 +239,7 @@ public class PDFRenderingServiceTest {
         byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, 2025);
         assertNotNull(pdf, "PDF output should not be null");
         assertTrue(pdf.length > 1000, "PDF should have substantial content");
-        assertTrue(new String(pdf, 0, 4).equals("%PDF"), "Output should be a valid PDF");
+        assertEquals("%PDF", new String(pdf, 0, 4), "Output should be a valid PDF");
 
         // Also test with color emojis
         config.emojiFont = "noto-color";

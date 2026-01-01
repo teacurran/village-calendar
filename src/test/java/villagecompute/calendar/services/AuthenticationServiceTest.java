@@ -168,7 +168,7 @@ class AuthenticationServiceTest {
         // Then: JWT is generated
         assertNotNull(jwt, "JWT should be generated");
         assertFalse(jwt.isEmpty(), "JWT should not be empty");
-        assertTrue(jwt.split("\\.").length == 3, "JWT should have three parts (header.payload.signature)");
+        assertEquals(3, jwt.split("\\.").length, "JWT should have three parts (header.payload.signature)");
 
         // Note: Full JWT validation would require decoding and verifying the token,
         // which is tested in integration tests

@@ -51,7 +51,7 @@ class OrderGraphQLTest {
 
     @BeforeEach
     @Transactional
-    void setUp() throws Exception {
+    void setUp() {
         // Clean up
         CalendarOrder.deleteAll();
         UserCalendar.deleteAll();
@@ -198,7 +198,7 @@ class OrderGraphQLTest {
     @Test
     @Order(20)
     @Transactional
-    void testOrderService_CreateOrderWithPrintProduct() throws Exception {
+    void testOrderService_CreateOrderWithPrintProduct() {
         BigDecimal printPrice = productService.getPrice(ProductType.PRINT.getProductCode());
 
         JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "123 Print St")
@@ -216,7 +216,7 @@ class OrderGraphQLTest {
     @Test
     @Order(21)
     @Transactional
-    void testOrderService_CreateOrderWithPdfProduct() throws Exception {
+    void testOrderService_CreateOrderWithPdfProduct() {
         BigDecimal pdfPrice = productService.getPrice(ProductType.PDF.getProductCode());
 
         JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "456 PDF Ave").put("city", "Memphis")
@@ -237,7 +237,7 @@ class OrderGraphQLTest {
     @Test
     @Order(30)
     @Transactional
-    void testOrderService_CancelPendingOrder() throws Exception {
+    void testOrderService_CancelPendingOrder() {
         // Create order
         JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "789 Cancel St")
                 .put("city", "Knoxville").put("state", "TN").put("postalCode", "37902").put("country", "US");
@@ -258,7 +258,7 @@ class OrderGraphQLTest {
     @Test
     @Order(31)
     @Transactional
-    void testOrderService_CancelPaidOrder() throws Exception {
+    void testOrderService_CancelPaidOrder() {
         JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "101 Paid St").put("city", "Nashville")
                 .put("state", "TN").put("postalCode", "37201").put("country", "US");
 
@@ -282,7 +282,7 @@ class OrderGraphQLTest {
     @Test
     @Order(32)
     @Transactional
-    void testOrderService_CannotCancelDeliveredOrder() throws Exception {
+    void testOrderService_CannotCancelDeliveredOrder() {
         JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "202 Delivered St")
                 .put("city", "Memphis").put("state", "TN").put("postalCode", "38101").put("country", "US");
 
@@ -301,7 +301,7 @@ class OrderGraphQLTest {
     @Test
     @Order(33)
     @Transactional
-    void testOrderService_NonOwnerCannotCancel() throws Exception {
+    void testOrderService_NonOwnerCannotCancel() {
         // Create another user
         CalendarUser otherUser = new CalendarUser();
         otherUser.email = "other@example.com";
@@ -325,7 +325,7 @@ class OrderGraphQLTest {
     @Test
     @Order(34)
     @Transactional
-    void testOrderService_AdminCanCancelAnyOrder() throws Exception {
+    void testOrderService_AdminCanCancelAnyOrder() {
         // Create admin user
         CalendarUser adminUser = new CalendarUser();
         adminUser.email = "admin@example.com";
@@ -414,7 +414,7 @@ class OrderGraphQLTest {
     @Test
     @Order(42)
     @Transactional
-    void testCancelOrder_Unauthenticated() throws Exception {
+    void testCancelOrder_Unauthenticated() {
         JsonNode shippingAddress = objectMapper.createObjectNode().put("country", "US");
         CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, productService.getPrice("print"),
                 shippingAddress);

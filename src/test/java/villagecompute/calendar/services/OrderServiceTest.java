@@ -215,8 +215,8 @@ class OrderServiceTest {
     @Transactional
     void testGetUserOrders() {
         // Given
-        CalendarOrder order1 = createTestOrder();
-        CalendarOrder order2 = createTestOrder();
+        createTestOrder();
+        createTestOrder();
 
         // When
         List<CalendarOrder> userOrders = orderService.getUserOrders(testUser.id);

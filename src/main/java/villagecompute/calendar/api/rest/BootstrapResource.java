@@ -42,8 +42,7 @@ public class BootstrapResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(summary = "Check bootstrap status", description = "Check if the system needs to be bootstrapped with an initial admin user."
             + " Returns needsBootstrap=true when no admin users exist in the database.")
-    @APIResponses({
-            @APIResponse(responseCode = "200", description = "Bootstrap status retrieved successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = BootstrapStatus.class)))})
+    @APIResponse(responseCode = "200", description = "Bootstrap status retrieved successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = BootstrapStatus.class)))
     public Response getBootstrapStatus() {
         LOG.debug("Checking bootstrap status");
 

@@ -63,10 +63,10 @@ public class CustomEventDisplay {
     }
 
     public boolean isTextBold() {
-        return displaySettings.containsKey("textBold") ? (Boolean) displaySettings.get("textBold") : false;
+        return Boolean.TRUE.equals(displaySettings.get("textBold"));
     }
 
     public boolean isTextWrap() {
-        return displaySettings.containsKey("textWrap") ? (Boolean) displaySettings.get("textWrap") : false;
+        return Boolean.TRUE.equals(displaySettings.get("textWrap"));
     }
 }
