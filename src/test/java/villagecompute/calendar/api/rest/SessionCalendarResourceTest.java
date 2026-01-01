@@ -544,6 +544,130 @@ class SessionCalendarResourceTest {
     }
 
     // ============================================================================
+    // POST /session-calendar/{id}/copy-to-session TESTS
+    // ============================================================================
+
+    @Test
+    void testCopyToSession_WithNoSession_ReturnsBadRequest() {
+        given().contentType(ContentType.JSON).when()
+                .post("/api/session-calendar/" + UUID.randomUUID() + "/copy-to-session").then().statusCode(400)
+                .body("error", equalTo("No session found"));
+    }
+
+    @Test
+    void testCopyToSession_WithNonexistentCalendar_ReturnsNotFound() {
+        given().header(HEADER_X_SESSION_ID, testSessionId).contentType(ContentType.JSON).when()
+                .post("/api/session-calendar/" + UUID.randomUUID() + "/copy-to-session").then().statusCode(404)
+                .body("error", equalTo("Calendar not found"));
+    }
+
+    @Test
+    void testCopyToSession_CopiesPublicCalendar() {
+        // Create public calendar from another session
+        UUID sourceCalendarId = QuarkusTransaction.requiringNew().call(() -> {
+            UserCalendar calendar = new UserCalendar();
+            calendar.sessionId = "other-session-id";
+            calendar.name = "Source Calendar";
+            calendar.year = 2025;
+            calendar.isPublic = true;
+            calendar.generatedSvg = "<svg>source</svg>";
+            calendar.configuration = objectMapper.createObjectNode().put("theme", "source-theme");
+            calendar.persist();
+            return calendar.id;
+        });
+
+        given().header(HEADER_X_SESSION_ID, testSessionId).contentType(ContentType.JSON).when()
+                .post("/api/session-calendar/" + sourceCalendarId + "/copy-to-session").then().statusCode(200)
+                .body("id", notNullValue()).body("copied", equalTo(true))
+                .body("configuration.theme", equalTo("source-theme")).body("svg", equalTo("<svg>source</svg>"));
+
+        // Verify a new calendar was created for this session
+        UserCalendar copiedCalendar = QuarkusTransaction.requiringNew()
+                .call(() -> UserCalendar.<UserCalendar>find("sessionId", testSessionId).firstResult());
+        assertNotNull(copiedCalendar);
+        assertEquals("Source Calendar (Copy)", copiedCalendar.name);
+        assertEquals("source-theme", copiedCalendar.configuration.get("theme").asText());
+    }
+
+    @Test
+    void testCopyToSession_PrivateCalendar_ReturnsForbidden() {
+        // Create private calendar from another session
+        UUID sourceCalendarId = QuarkusTransaction.requiringNew().call(() -> {
+            UserCalendar calendar = new UserCalendar();
+            calendar.sessionId = "other-session-id";
+            calendar.name = "Private Calendar";
+            calendar.year = 2025;
+            calendar.isPublic = false;
+            calendar.persist();
+            return calendar.id;
+        });
+
+        given().header(HEADER_X_SESSION_ID, testSessionId).contentType(ContentType.JSON).when()
+                .post("/api/session-calendar/" + sourceCalendarId + "/copy-to-session").then().statusCode(403)
+                .body("error", equalTo("Calendar is not public"));
+    }
+
+    @Test
+    void testCopyToSession_OwnCalendar_ReturnsWithoutCopying() {
+        // Create calendar owned by current session
+        UUID ownCalendarId = QuarkusTransaction.requiringNew().call(() -> {
+            UserCalendar calendar = new UserCalendar();
+            calendar.sessionId = testSessionId;
+            calendar.name = "Own Calendar";
+            calendar.year = 2025;
+            calendar.isPublic = true;
+            calendar.generatedSvg = "<svg>own</svg>";
+            calendar.configuration = objectMapper.createObjectNode().put("theme", "own-theme");
+            calendar.persist();
+            return calendar.id;
+        });
+
+        given().header(HEADER_X_SESSION_ID, testSessionId).contentType(ContentType.JSON).when()
+                .post("/api/session-calendar/" + ownCalendarId + "/copy-to-session").then().statusCode(200)
+                .body("id", equalTo(ownCalendarId.toString())).body("copied", equalTo(false));
+    }
+
+    @Test
+    void testCopyToSession_OverwritesExistingSessionCalendar() {
+        // Create existing calendar for current session
+        QuarkusTransaction.requiringNew().run(() -> {
+            UserCalendar existing = new UserCalendar();
+            existing.sessionId = testSessionId;
+            existing.name = "Existing Calendar";
+            existing.year = 2024;
+            existing.isPublic = true;
+            existing.configuration = objectMapper.createObjectNode().put("theme", "old-theme");
+            existing.persist();
+        });
+
+        // Create source calendar from another session
+        UUID sourceCalendarId = QuarkusTransaction.requiringNew().call(() -> {
+            UserCalendar calendar = new UserCalendar();
+            calendar.sessionId = "other-session-id";
+            calendar.name = "New Source";
+            calendar.year = 2025;
+            calendar.isPublic = true;
+            calendar.configuration = objectMapper.createObjectNode().put("theme", "new-theme");
+            calendar.persist();
+            return calendar.id;
+        });
+
+        given().header(HEADER_X_SESSION_ID, testSessionId).contentType(ContentType.JSON).when()
+                .post("/api/session-calendar/" + sourceCalendarId + "/copy-to-session").then().statusCode(200)
+                .body("copied", equalTo(true)).body("configuration.theme", equalTo("new-theme"));
+
+        // Verify the existing calendar was updated (not a new one created)
+        long calendarCount = QuarkusTransaction.requiringNew()
+                .call(() -> UserCalendar.count("sessionId", testSessionId));
+        assertEquals(1L, calendarCount);
+
+        UserCalendar updatedCalendar = QuarkusTransaction.requiringNew()
+                .call(() -> UserCalendar.<UserCalendar>find("sessionId", testSessionId).firstResult());
+        assertEquals("New Source (Copy)", updatedCalendar.name);
+        assertEquals(2025, updatedCalendar.year);
+    }
+
+    // ============================================================================
     // DTO TESTS
     // ============================================================================
 
