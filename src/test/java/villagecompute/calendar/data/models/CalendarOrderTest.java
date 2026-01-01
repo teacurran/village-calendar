@@ -817,6 +817,388 @@ class CalendarOrderTest {
         assertNull(found.shippedAt);
     }
 
+    // ==================== Item Management Tests ====================
+
+    @Test
+    @Transactional
+    void testAddItem() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        orderRepository.persist(order);
+
+        CalendarOrderItem item = new CalendarOrderItem();
+        item.productType = CalendarOrderItem.TYPE_PRINT;
+        item.productName = "Test Calendar 2025";
+        item.quantity = 2;
+        item.unitPrice = BigDecimal.valueOf(29.99);
+        item.lineTotal = BigDecimal.valueOf(59.98);
+        item.itemStatus = CalendarOrderItem.STATUS_PENDING;
+
+        // When
+        CalendarOrderItem addedItem = order.addItem(item);
+        entityManager.flush();
+
+        // Then
+        assertNotNull(addedItem);
+        assertEquals(order, addedItem.order);
+        assertEquals(1, order.items.size());
+        assertTrue(order.items.contains(item));
+    }
+
+    @Test
+    @Transactional
+    void testGetPhysicalItems() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        orderRepository.persist(order);
+
+        // Add a print item (physical)
+        CalendarOrderItem printItem = new CalendarOrderItem();
+        printItem.productType = CalendarOrderItem.TYPE_PRINT;
+        printItem.productName = "Print Calendar";
+        printItem.quantity = 1;
+        printItem.unitPrice = BigDecimal.valueOf(29.99);
+        printItem.lineTotal = BigDecimal.valueOf(29.99);
+        printItem.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        order.addItem(printItem);
+        printItem.persist();
+
+        // Add a PDF item (digital)
+        CalendarOrderItem pdfItem = new CalendarOrderItem();
+        pdfItem.productType = CalendarOrderItem.TYPE_PDF;
+        pdfItem.productName = "PDF Calendar";
+        pdfItem.quantity = 1;
+        pdfItem.unitPrice = BigDecimal.valueOf(9.99);
+        pdfItem.lineTotal = BigDecimal.valueOf(9.99);
+        pdfItem.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        order.addItem(pdfItem);
+        pdfItem.persist();
+
+        entityManager.flush();
+
+        // When
+        List<CalendarOrderItem> physicalItems = order.getPhysicalItems();
+
+        // Then
+        assertEquals(1, physicalItems.size());
+        assertEquals(CalendarOrderItem.TYPE_PRINT, physicalItems.get(0).productType);
+    }
+
+    @Test
+    @Transactional
+    void testGetDigitalItems() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        orderRepository.persist(order);
+
+        // Add a print item
+        CalendarOrderItem printItem = new CalendarOrderItem();
+        printItem.productType = CalendarOrderItem.TYPE_PRINT;
+        printItem.productName = "Print Calendar";
+        printItem.quantity = 1;
+        printItem.unitPrice = BigDecimal.valueOf(29.99);
+        printItem.lineTotal = BigDecimal.valueOf(29.99);
+        printItem.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        order.addItem(printItem);
+        printItem.persist();
+
+        // Add two PDF items
+        CalendarOrderItem pdfItem1 = new CalendarOrderItem();
+        pdfItem1.productType = CalendarOrderItem.TYPE_PDF;
+        pdfItem1.productName = "PDF Calendar 1";
+        pdfItem1.quantity = 1;
+        pdfItem1.unitPrice = BigDecimal.valueOf(9.99);
+        pdfItem1.lineTotal = BigDecimal.valueOf(9.99);
+        pdfItem1.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        order.addItem(pdfItem1);
+        pdfItem1.persist();
+
+        CalendarOrderItem pdfItem2 = new CalendarOrderItem();
+        pdfItem2.productType = CalendarOrderItem.TYPE_PDF;
+        pdfItem2.productName = "PDF Calendar 2";
+        pdfItem2.quantity = 1;
+        pdfItem2.unitPrice = BigDecimal.valueOf(9.99);
+        pdfItem2.lineTotal = BigDecimal.valueOf(9.99);
+        pdfItem2.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        order.addItem(pdfItem2);
+        pdfItem2.persist();
+
+        entityManager.flush();
+
+        // When
+        List<CalendarOrderItem> digitalItems = order.getDigitalItems();
+
+        // Then
+        assertEquals(2, digitalItems.size());
+        assertTrue(digitalItems.stream().allMatch(item -> CalendarOrderItem.TYPE_PDF.equals(item.productType)));
+    }
+
+    @Test
+    @Transactional
+    void testGetUnshippedItems() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        orderRepository.persist(order);
+
+        // Add unshipped print item
+        CalendarOrderItem unshippedItem = new CalendarOrderItem();
+        unshippedItem.productType = CalendarOrderItem.TYPE_PRINT;
+        unshippedItem.productName = "Unshipped Calendar";
+        unshippedItem.quantity = 1;
+        unshippedItem.unitPrice = BigDecimal.valueOf(29.99);
+        unshippedItem.lineTotal = BigDecimal.valueOf(29.99);
+        unshippedItem.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        unshippedItem.shipment = null; // Not assigned to shipment
+        order.addItem(unshippedItem);
+        unshippedItem.persist();
+
+        // Add shipped print item (with shipment)
+        Shipment shipment = new Shipment();
+        shipment.order = order;
+        shipment.carrier = "USPS";
+        shipment.trackingNumber = "123456";
+        shipment.status = Shipment.STATUS_SHIPPED;
+        shipment.persist();
+
+        CalendarOrderItem shippedItem = new CalendarOrderItem();
+        shippedItem.productType = CalendarOrderItem.TYPE_PRINT;
+        shippedItem.productName = "Shipped Calendar";
+        shippedItem.quantity = 1;
+        shippedItem.unitPrice = BigDecimal.valueOf(29.99);
+        shippedItem.lineTotal = BigDecimal.valueOf(29.99);
+        shippedItem.itemStatus = CalendarOrderItem.STATUS_SHIPPED;
+        shippedItem.shipment = shipment;
+        order.addItem(shippedItem);
+        shippedItem.persist();
+
+        // Add PDF item (digital, doesn't need shipping)
+        CalendarOrderItem pdfItem = new CalendarOrderItem();
+        pdfItem.productType = CalendarOrderItem.TYPE_PDF;
+        pdfItem.productName = "PDF Calendar";
+        pdfItem.quantity = 1;
+        pdfItem.unitPrice = BigDecimal.valueOf(9.99);
+        pdfItem.lineTotal = BigDecimal.valueOf(9.99);
+        pdfItem.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        order.addItem(pdfItem);
+        pdfItem.persist();
+
+        entityManager.flush();
+
+        // When
+        List<CalendarOrderItem> unshippedItems = order.getUnshippedItems();
+
+        // Then
+        assertEquals(1, unshippedItems.size());
+        assertEquals("Unshipped Calendar", unshippedItems.get(0).productName);
+    }
+
+    @Test
+    @Transactional
+    void testIsFullyShipped_AllShipped() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        orderRepository.persist(order);
+
+        // Add item with shipment
+        Shipment shipment = new Shipment();
+        shipment.order = order;
+        shipment.carrier = "USPS";
+        shipment.trackingNumber = "123456";
+        shipment.status = Shipment.STATUS_SHIPPED;
+        shipment.persist();
+
+        CalendarOrderItem item = new CalendarOrderItem();
+        item.productType = CalendarOrderItem.TYPE_PRINT;
+        item.productName = "Shipped Calendar";
+        item.quantity = 1;
+        item.unitPrice = BigDecimal.valueOf(29.99);
+        item.lineTotal = BigDecimal.valueOf(29.99);
+        item.itemStatus = CalendarOrderItem.STATUS_SHIPPED;
+        item.shipment = shipment;
+        order.addItem(item);
+        item.persist();
+
+        entityManager.flush();
+
+        // When/Then
+        assertTrue(order.isFullyShipped());
+    }
+
+    @Test
+    @Transactional
+    void testIsFullyShipped_NotAllShipped() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        orderRepository.persist(order);
+
+        CalendarOrderItem item = new CalendarOrderItem();
+        item.productType = CalendarOrderItem.TYPE_PRINT;
+        item.productName = "Pending Calendar";
+        item.quantity = 1;
+        item.unitPrice = BigDecimal.valueOf(29.99);
+        item.lineTotal = BigDecimal.valueOf(29.99);
+        item.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        item.shipment = null;
+        order.addItem(item);
+        item.persist();
+
+        entityManager.flush();
+
+        // When/Then
+        assertFalse(order.isFullyShipped());
+    }
+
+    @Test
+    @Transactional
+    void testGetTotalItemCount() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        orderRepository.persist(order);
+
+        CalendarOrderItem item1 = new CalendarOrderItem();
+        item1.productType = CalendarOrderItem.TYPE_PRINT;
+        item1.productName = "Calendar 1";
+        item1.quantity = 3;
+        item1.unitPrice = BigDecimal.valueOf(29.99);
+        item1.lineTotal = BigDecimal.valueOf(89.97);
+        item1.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        order.addItem(item1);
+        item1.persist();
+
+        CalendarOrderItem item2 = new CalendarOrderItem();
+        item2.productType = CalendarOrderItem.TYPE_PDF;
+        item2.productName = "Calendar 2";
+        item2.quantity = 2;
+        item2.unitPrice = BigDecimal.valueOf(9.99);
+        item2.lineTotal = BigDecimal.valueOf(19.98);
+        item2.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        order.addItem(item2);
+        item2.persist();
+
+        entityManager.flush();
+
+        // When
+        int totalCount = order.getTotalItemCount();
+
+        // Then
+        assertEquals(5, totalCount); // 3 + 2
+    }
+
+    @Test
+    @Transactional
+    void testCalculateSubtotal() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        order.subtotal = null;
+        orderRepository.persist(order);
+
+        CalendarOrderItem item1 = new CalendarOrderItem();
+        item1.productType = CalendarOrderItem.TYPE_PRINT;
+        item1.productName = "Calendar 1";
+        item1.quantity = 2;
+        item1.unitPrice = BigDecimal.valueOf(29.99);
+        item1.lineTotal = BigDecimal.valueOf(59.98);
+        item1.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        order.addItem(item1);
+        item1.persist();
+
+        CalendarOrderItem item2 = new CalendarOrderItem();
+        item2.productType = CalendarOrderItem.TYPE_PDF;
+        item2.productName = "Calendar 2";
+        item2.quantity = 1;
+        item2.unitPrice = BigDecimal.valueOf(9.99);
+        item2.lineTotal = BigDecimal.valueOf(9.99);
+        item2.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        order.addItem(item2);
+        item2.persist();
+
+        entityManager.flush();
+
+        // When
+        order.calculateSubtotal();
+
+        // Then
+        assertEquals(0, new BigDecimal("69.97").compareTo(order.subtotal));
+    }
+
+    @Test
+    void testCalculateTotalPrice() {
+        // Given - test calculateTotalPrice without persisting (in-memory)
+        CalendarOrder order = new CalendarOrder();
+        order.subtotal = new BigDecimal("69.97");
+        order.shippingCost = new BigDecimal("5.99");
+        order.taxAmount = new BigDecimal("6.30");
+
+        // When
+        order.calculateTotalPrice();
+
+        // Then
+        assertEquals(0, new BigDecimal("82.26").compareTo(order.totalPrice));
+    }
+
+    @Test
+    void testCalculateTotalPrice_WithNullValues() {
+        // Given - test with null values (in-memory, no persistence)
+        CalendarOrder order = new CalendarOrder();
+        order.subtotal = new BigDecimal("50.00");
+        order.shippingCost = null;
+        order.taxAmount = null;
+
+        // When
+        order.calculateTotalPrice();
+
+        // Then - Should handle null values as zero
+        assertEquals(0, new BigDecimal("50.00").compareTo(order.totalPrice));
+    }
+
+    @Test
+    @Transactional
+    void testFindByOrderNumberWithItems() {
+        // Given
+        CalendarOrder order = createValidOrder();
+        order.orderNumber = "VC-TEST-1234";
+        orderRepository.persist(order);
+
+        CalendarOrderItem item = new CalendarOrderItem();
+        item.productType = CalendarOrderItem.TYPE_PRINT;
+        item.productName = "Test Calendar";
+        item.quantity = 1;
+        item.unitPrice = BigDecimal.valueOf(29.99);
+        item.lineTotal = BigDecimal.valueOf(29.99);
+        item.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        order.addItem(item);
+        item.persist();
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        java.util.Optional<CalendarOrder> found = CalendarOrder.findByOrderNumberWithItems("VC-TEST-1234");
+
+        // Then
+        assertTrue(found.isPresent());
+        assertEquals("VC-TEST-1234", found.get().orderNumber);
+        assertEquals(1, found.get().items.size());
+    }
+
+    @Test
+    @Transactional
+    void testCountOrdersByYear() {
+        // Given
+        CalendarOrder order1 = createValidOrder();
+        orderRepository.persist(order1);
+        CalendarOrder order2 = createValidOrder();
+        orderRepository.persist(order2);
+        entityManager.flush();
+
+        // When
+        int currentYear = java.time.Year.now().getValue();
+        long count = CalendarOrder.countOrdersByYear(currentYear);
+
+        // Then
+        assertEquals(2, count);
+    }
+
     private CalendarOrder createValidOrder() {
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
