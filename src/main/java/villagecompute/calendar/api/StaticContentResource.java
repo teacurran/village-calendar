@@ -204,35 +204,6 @@ public class StaticContentResource {
         }
     }
 
-    /**
-     * Legacy endpoint - kept for backwards compatibility. Returns all template data including SVG content.
-     *
-     * @deprecated Use /calendars.json, /calendars/{slug}.svg, /calendars/{slug}.png instead
-     */
-    @GET
-    @Path("/templates")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Transactional
-    @Deprecated
-    public List<TemplateStaticData> getTemplatesForStaticGeneration() {
-        LOG.info("Fetching templates for static content generation (legacy endpoint)");
-
-        List<CalendarTemplate> templates = CalendarTemplate.findActiveWithSlug();
-        int year = LocalDate.now().getYear() + 1;
-        List<TemplateStaticData> results = new ArrayList<>();
-
-        for (CalendarTemplate template : templates) {
-            try {
-                TemplateStaticData data = generateLegacyTemplateData(template, year);
-                results.add(data);
-            } catch (Exception e) {
-                LOG.errorf(e, "Failed to generate data for template: %s", template.slug);
-            }
-        }
-
-        return results;
-    }
-
     private CalendarTemplate getTemplateBySlug(String slug) {
         // Check cache first
         CalendarTemplate cached = templateCache.get(slug);
@@ -314,31 +285,8 @@ public class StaticContentResource {
         return config;
     }
 
-    private TemplateStaticData generateLegacyTemplateData(CalendarTemplate template, int year) {
-        String svgContent = generateSvgForTemplate(template);
-
-        TemplateStaticData data = new TemplateStaticData();
-        data.slug = template.slug;
-        data.templateId = template.id.toString();
-        data.name = template.name;
-        data.title = template.name + " " + year + " Calendar";
-        data.description = template.description != null ? template.description
-                : "Custom printable calendar from Village Compute";
-        data.ogDescription = template.ogDescription != null ? template.ogDescription : data.description;
-        data.keywords = template.metaKeywords != null ? template.metaKeywords
-                : "calendar, custom calendar, printable calendar, " + year;
-        data.thumbnailUrl = null; // No longer uploading to R2 during API call
-        data.priceFormatted = String.format("%.2f", (template.priceCents != null ? template.priceCents : 2999) / 100.0);
-        data.svgContent = svgContent;
-        data.year = year;
-        data.siteUrl = siteUrl;
-
-        return data;
-    }
-
     /**
-     * JSON data for calendar products (no SVG content - that's separate). This matches the structure expected by
-     * ROQ @DataMapping.
+     * JSON data for calendar products (no SVG content - that's separate).
      */
     public static class CalendarJsonData {
         public String slug;
@@ -351,26 +299,5 @@ public class StaticContentResource {
         public String priceFormatted;
         public int year;
         public String configuration; // Full calendar config JSON, frozen at build time
-    }
-
-    /**
-     * Legacy data transfer object (includes SVG content).
-     *
-     * @deprecated Use CalendarJsonData instead
-     */
-    @Deprecated
-    public static class TemplateStaticData {
-        public String slug;
-        public String templateId;
-        public String name;
-        public String title;
-        public String description;
-        public String ogDescription;
-        public String keywords;
-        public String thumbnailUrl;
-        public String priceFormatted;
-        public String svgContent;
-        public int year;
-        public String siteUrl;
     }
 }
