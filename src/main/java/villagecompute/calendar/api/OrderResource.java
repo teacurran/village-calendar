@@ -2,6 +2,7 @@ package villagecompute.calendar.api;
 
 import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.inject.Inject;
@@ -14,12 +15,16 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.jboss.logging.Logger;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarOrderItem;
+import villagecompute.calendar.data.models.CalendarUser;
+import villagecompute.calendar.data.models.ItemAsset;
+import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PDFRenderingService;
 
@@ -37,6 +42,12 @@ public class OrderResource {
 
     @Inject
     ObjectMapper objectMapper;
+
+    @Inject
+    JsonWebToken jwt;
+
+    @Inject
+    AuthenticationService authService;
 
     /**
      * Download PDF for a specific order item. This endpoint retrieves the saved SVG content from the order and
@@ -98,11 +109,11 @@ public class OrderResource {
             }
 
             // Security check - verify user can access this order
-            // For now, we allow access to any order by order number
-            // TODO: Add proper user authentication and authorization
-            // if (!canUserAccessOrder(securityContext, order)) {
-            // return Response.status(Response.Status.FORBIDDEN).build();
-            // }
+            if (!canUserAccessOrder(order)) {
+                LOG.warnf("Access denied to order %s", orderNumber);
+                return Response.status(Response.Status.FORBIDDEN).type(MediaType.TEXT_PLAIN)
+                        .entity("Access denied to this order").build();
+            }
 
             // Extract SVG content from the order item configuration
             String svgContent = extractSvgFromOrderItem(orderItem);
@@ -143,51 +154,33 @@ public class OrderResource {
     }
 
     /**
-     * Extract SVG content from order item configuration. Checks multiple possible locations for the SVG content.
+     * Extract SVG content from order item assets.
+     *
+     * @param orderItem
+     *            The order item
+     * @return SVG content string, or null if not found
      */
     private String extractSvgFromOrderItem(CalendarOrderItem orderItem) {
-        LOG.infof("Extracting SVG from order item %s", orderItem.id);
+        LOG.debugf("Extracting SVG from order item %s", orderItem.id);
 
-        // First, try to get SVG from the linked UserCalendar
-        if (orderItem.calendar != null) {
-            LOG.infof("Item has linked calendar: %s", orderItem.calendar.id);
-            if (orderItem.calendar.generatedSvg != null && !orderItem.calendar.generatedSvg.isEmpty()) {
-                LOG.infof("Found SVG in UserCalendar.generatedSvg for item %s (%d chars)", orderItem.id,
-                        orderItem.calendar.generatedSvg.length());
-                return orderItem.calendar.generatedSvg;
-            } else {
-                LOG.warnf("Calendar %s exists but generatedSvg is null/empty", orderItem.calendar.id);
-            }
-        } else {
-            LOG.infof("Item %s has no linked calendar", orderItem.id);
+        // Get the main SVG asset from the order item
+        ItemAsset mainAsset = orderItem.getMainAsset();
+        if (mainAsset != null && mainAsset.svgContent != null && !mainAsset.svgContent.isEmpty()) {
+            LOG.debugf("Found SVG in main asset for item %s (%d chars)", orderItem.id, mainAsset.svgContent.length());
+            return mainAsset.svgContent;
         }
 
-        // Fallback: try to extract from order item configuration JSON
-        if (orderItem.configuration != null) {
-            LOG.infof("Checking configuration JSON for SVG content");
-            try {
-                // Log configuration structure for debugging
-                LOG.infof("Configuration keys: %s", orderItem.configuration.fieldNames());
-
-                // Check for generatedSvg field
-                if (orderItem.configuration.has("generatedSvg")) {
-                    String svgContent = orderItem.configuration.get("generatedSvg").asText();
-                    if (svgContent != null && !svgContent.isEmpty()) {
-                        LOG.infof("Found SVG in configuration.generatedSvg for item %s (%d chars)", orderItem.id,
-                                svgContent.length());
-                        return svgContent;
-                    }
-                }
-
-                LOG.warnf("Configuration exists but no generatedSvg field found");
-            } catch (Exception e) {
-                LOG.errorf(e, "Error extracting SVG from configuration for item %s: %s", orderItem.id, e.getMessage());
+        // Fallback: check configuration JSON for legacy orders
+        if (orderItem.configuration != null && orderItem.configuration.has("generatedSvg")) {
+            String svgContent = orderItem.configuration.get("generatedSvg").asText();
+            if (svgContent != null && !svgContent.isEmpty()) {
+                LOG.debugf("Found SVG in configuration.generatedSvg for item %s (%d chars)", orderItem.id,
+                        svgContent.length());
+                return svgContent;
             }
-        } else {
-            LOG.warnf("Item %s has no configuration", orderItem.id);
         }
 
-        LOG.errorf("No SVG content found for order item %s", orderItem.id);
+        LOG.warnf("No SVG content found for order item %s", orderItem.id);
         return null;
     }
 
@@ -198,9 +191,42 @@ public class OrderResource {
         return input.replaceAll("[^a-zA-Z0-9.-]", "").toLowerCase();
     }
 
-    // TODO: Implement proper authorization
-    // private boolean canUserAccessOrder(SecurityContext securityContext, CalendarOrder order) {
-    // // Check if current user owns this order or has admin privileges
-    // return true; // For now, allow access to all orders
-    // }
+    /**
+     * Check if the current user can access the given order.
+     *
+     * <p>
+     * Access is granted if:
+     * <ul>
+     * <li>User is authenticated and has ADMIN role</li>
+     * <li>User is authenticated and owns the order (order.user matches current user)</li>
+     * <li>Order is a guest order (no user) - access via order number acts as shared secret</li>
+     * </ul>
+     *
+     * @param order
+     *            The order to check access for
+     * @return true if access is allowed
+     */
+    private boolean canUserAccessOrder(CalendarOrder order) {
+        // Guest orders (no user) can be accessed by anyone with the order number
+        // The order number serves as a shared secret sent to the customer's email
+        if (order.user == null) {
+            return true;
+        }
+
+        // Check if user is authenticated
+        Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
+        if (currentUser.isEmpty()) {
+            return false;
+        }
+
+        CalendarUser user = currentUser.get();
+
+        // Admins can access any order
+        if (Boolean.TRUE.equals(user.isAdmin)) {
+            return true;
+        }
+
+        // User can only access their own orders
+        return order.user.id.equals(user.id);
+    }
 }
