@@ -331,9 +331,7 @@ public class AuthResource {
 
         try {
             // Use the JWT from the Authorization header to look up the user
-            JsonWebToken jwt = securityIdentity.getPrincipal() instanceof JsonWebToken
-                    ? (JsonWebToken) securityIdentity.getPrincipal()
-                    : null;
+            JsonWebToken jwt = securityIdentity.getPrincipal() instanceof JsonWebToken token ? token : null;
 
             if (jwt == null) {
                 return Response.status(Response.Status.UNAUTHORIZED)

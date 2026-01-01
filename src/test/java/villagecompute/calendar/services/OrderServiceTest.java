@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import villagecompute.calendar.data.models.CalendarOrder;
+import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
@@ -40,7 +41,11 @@ class OrderServiceTest {
     @BeforeEach
     @Transactional
     void setUp() {
-        // Clean up test data
+        // Clean up test data in correct order (children before parents due to FK constraints)
+        // Note: OrderItems reference Shipments, so we need to clear items first or set shipment_id to null
+        CalendarOrderItem.update("shipment = null where shipment is not null");
+        villagecompute.calendar.data.models.Shipment.deleteAll();
+        CalendarOrderItem.deleteAll();
         CalendarOrder.deleteAll();
         UserCalendar.deleteAll();
         CalendarUser.deleteAll();
@@ -215,8 +220,8 @@ class OrderServiceTest {
     @Transactional
     void testGetUserOrders() {
         // Given
-        CalendarOrder order1 = createTestOrder();
-        CalendarOrder order2 = createTestOrder();
+        createTestOrder();
+        createTestOrder();
 
         // When
         List<CalendarOrder> userOrders = orderService.getUserOrders(testUser.id);
@@ -510,6 +515,370 @@ class OrderServiceTest {
             assertNotNull(order.orderNumber);
             assertTrue(order.orderNumber.matches("VC-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}"));
         });
+    }
+
+    // ==================== Shipping Methods Tests ====================
+
+    @Test
+    @Transactional
+    void testMarkItemAsShipped() {
+        // Given
+        CalendarOrder order = createTestOrder();
+        order.status = CalendarOrder.STATUS_PAID;
+        order.persist();
+
+        CalendarOrderItem item = new CalendarOrderItem();
+        item.order = order;
+        item.productType = CalendarOrderItem.TYPE_PRINT;
+        item.productName = "Test Calendar";
+        item.quantity = 1;
+        item.unitPrice = new BigDecimal("29.99");
+        item.lineTotal = new BigDecimal("29.99");
+        item.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        item.persist();
+        order.items.add(item);
+
+        // When
+        CalendarOrderItem shippedItem = orderService.markItemAsShipped(item.id);
+
+        // Then
+        assertEquals(CalendarOrderItem.STATUS_SHIPPED, shippedItem.itemStatus);
+    }
+
+    @Test
+    @Transactional
+    void testMarkItemAsShipped_NotFound() {
+        // Given
+        UUID nonExistentId = UUID.randomUUID();
+
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () -> orderService.markItemAsShipped(nonExistentId));
+    }
+
+    @Test
+    @Transactional
+    void testMarkItemAsDelivered() {
+        // Given
+        CalendarOrder order = createTestOrder();
+        order.status = CalendarOrder.STATUS_SHIPPED;
+        order.persist();
+
+        CalendarOrderItem item = new CalendarOrderItem();
+        item.order = order;
+        item.productType = CalendarOrderItem.TYPE_PRINT;
+        item.productName = "Test Calendar";
+        item.quantity = 1;
+        item.unitPrice = new BigDecimal("29.99");
+        item.lineTotal = new BigDecimal("29.99");
+        item.itemStatus = CalendarOrderItem.STATUS_SHIPPED;
+        item.persist();
+        order.items.add(item);
+
+        // When
+        CalendarOrderItem deliveredItem = orderService.markItemAsDelivered(item.id);
+
+        // Then
+        assertEquals(CalendarOrderItem.STATUS_DELIVERED, deliveredItem.itemStatus);
+    }
+
+    @Test
+    @Transactional
+    void testMarkItemAsDelivered_NotFound() {
+        // Given
+        UUID nonExistentId = UUID.randomUUID();
+
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () -> orderService.markItemAsDelivered(nonExistentId));
+    }
+
+    @Test
+    @Transactional
+    void testCreateShipment() {
+        // Given
+        CalendarOrder order = createTestOrder();
+        order.status = CalendarOrder.STATUS_PAID;
+        order.persist();
+
+        CalendarOrderItem item1 = new CalendarOrderItem();
+        item1.order = order;
+        item1.productType = CalendarOrderItem.TYPE_PRINT;
+        item1.productName = "Test Calendar 1";
+        item1.quantity = 1;
+        item1.unitPrice = new BigDecimal("29.99");
+        item1.lineTotal = new BigDecimal("29.99");
+        item1.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        item1.persist();
+        order.items.add(item1);
+
+        CalendarOrderItem item2 = new CalendarOrderItem();
+        item2.order = order;
+        item2.productType = CalendarOrderItem.TYPE_PRINT;
+        item2.productName = "Test Calendar 2";
+        item2.quantity = 1;
+        item2.unitPrice = new BigDecimal("29.99");
+        item2.lineTotal = new BigDecimal("29.99");
+        item2.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        item2.persist();
+        order.items.add(item2);
+
+        // When
+        villagecompute.calendar.data.models.Shipment shipment = orderService.createShipment(order.id,
+                java.util.List.of(item1.id, item2.id), "USPS", "TRACK123456");
+
+        // Then
+        assertNotNull(shipment);
+        assertNotNull(shipment.id);
+        assertEquals("USPS", shipment.carrier);
+        assertEquals("TRACK123456", shipment.trackingNumber);
+        assertEquals(2, shipment.items.size());
+    }
+
+    @Test
+    @Transactional
+    void testCreateShipment_OrderNotFound() {
+        // Given
+        UUID nonExistentId = UUID.randomUUID();
+
+        // When & Then
+        assertThrows(IllegalArgumentException.class,
+                () -> orderService.createShipment(nonExistentId, java.util.List.of(), "USPS", "TRACK123"));
+    }
+
+    @Test
+    @Transactional
+    void testMarkShipmentAsShipped() {
+        // Given
+        CalendarOrder order = createTestOrder();
+        order.status = CalendarOrder.STATUS_PAID;
+        order.persist();
+
+        CalendarOrderItem item = new CalendarOrderItem();
+        item.order = order;
+        item.productType = CalendarOrderItem.TYPE_PRINT;
+        item.productName = "Test Calendar";
+        item.quantity = 1;
+        item.unitPrice = new BigDecimal("29.99");
+        item.lineTotal = new BigDecimal("29.99");
+        item.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        item.persist();
+        order.items.add(item);
+
+        villagecompute.calendar.data.models.Shipment shipment = orderService.createShipment(order.id,
+                java.util.List.of(item.id), "USPS", "TRACK123456");
+
+        // When
+        villagecompute.calendar.data.models.Shipment shippedShipment = orderService.markShipmentAsShipped(shipment.id);
+
+        // Then
+        assertNotNull(shippedShipment.shippedAt);
+        assertEquals(villagecompute.calendar.data.models.Shipment.STATUS_SHIPPED, shippedShipment.status);
+    }
+
+    @Test
+    @Transactional
+    void testMarkShipmentAsShipped_NotFound() {
+        // Given
+        UUID nonExistentId = UUID.randomUUID();
+
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () -> orderService.markShipmentAsShipped(nonExistentId));
+    }
+
+    @Test
+    @Transactional
+    void testAutoShipDigitalItems() {
+        // Given
+        CalendarOrder order = createTestOrder();
+        order.status = CalendarOrder.STATUS_PAID;
+        order.persist();
+
+        // Add PDF item (digital)
+        CalendarOrderItem pdfItem = new CalendarOrderItem();
+        pdfItem.order = order;
+        pdfItem.productType = CalendarOrderItem.TYPE_PDF;
+        pdfItem.productName = "PDF Calendar";
+        pdfItem.quantity = 1;
+        pdfItem.unitPrice = new BigDecimal("9.99");
+        pdfItem.lineTotal = new BigDecimal("9.99");
+        pdfItem.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        pdfItem.persist();
+        order.items.add(pdfItem);
+
+        // Add print item (physical)
+        CalendarOrderItem printItem = new CalendarOrderItem();
+        printItem.order = order;
+        printItem.productType = CalendarOrderItem.TYPE_PRINT;
+        printItem.productName = "Print Calendar";
+        printItem.quantity = 1;
+        printItem.unitPrice = new BigDecimal("29.99");
+        printItem.lineTotal = new BigDecimal("29.99");
+        printItem.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        printItem.persist();
+        order.items.add(printItem);
+
+        // When
+        int shippedCount = orderService.autoShipDigitalItems(order.id);
+
+        // Then
+        assertEquals(1, shippedCount);
+        pdfItem = CalendarOrderItem.findById(pdfItem.id);
+        assertEquals(CalendarOrderItem.STATUS_SHIPPED, pdfItem.itemStatus);
+        printItem = CalendarOrderItem.findById(printItem.id);
+        assertEquals(CalendarOrderItem.STATUS_PENDING, printItem.itemStatus);
+    }
+
+    @Test
+    @Transactional
+    void testAutoShipDigitalItems_OrderNotFound() {
+        // Given
+        UUID nonExistentId = UUID.randomUUID();
+
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () -> orderService.autoShipDigitalItems(nonExistentId));
+    }
+
+    // ==================== Checkout Methods Tests ====================
+
+    @Test
+    @Transactional
+    void testProcessCheckout() {
+        // Given
+        String paymentIntentId = "pi_test_checkout_123";
+        String email = "checkout-test@example.com";
+        java.util.Map<String, Object> shippingAddress = new java.util.HashMap<>();
+        shippingAddress.put("firstName", "John");
+        shippingAddress.put("lastName", "Doe");
+        shippingAddress.put("street", "123 Main St");
+        shippingAddress.put("city", "Portland");
+        shippingAddress.put("state", "OR");
+        shippingAddress.put("postalCode", "97201");
+        shippingAddress.put("country", "US");
+
+        java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+        java.util.Map<String, Object> item1 = new java.util.HashMap<>();
+        item1.put("description", "Modern Calendar 2025");
+        item1.put("quantity", 2);
+        item1.put("unitPrice", 29.99);
+        item1.put("lineTotal", 59.98);
+        item1.put("configuration", "{\"theme\":\"modern\",\"year\":2025}");
+        items.add(item1);
+
+        Double subtotal = 59.98;
+        Double shippingCost = 5.99;
+        Double taxAmount = 0.0;
+        Double totalAmount = 65.97;
+
+        // When
+        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, subtotal,
+                shippingCost, taxAmount, totalAmount);
+
+        // Then
+        assertNotNull(orderNumber);
+        assertTrue(orderNumber.matches("VC-[23456789A-HJ-NP-Z]{4}-[23456789A-HJ-NP-Z]{4}"));
+
+        // Verify order was created
+        CalendarOrder order = orderService.findByOrderNumber(orderNumber);
+        assertNotNull(order);
+        assertEquals(CalendarOrder.STATUS_PAID, order.status);
+        assertEquals(paymentIntentId, order.stripePaymentIntentId);
+        assertEquals(1, order.items.size());
+    }
+
+    @Test
+    @Transactional
+    void testProcessCheckout_WithBillingAddress() {
+        // Given
+        String paymentIntentId = "pi_test_billing_123";
+        String email = "billing-test@example.com";
+        java.util.Map<String, Object> shippingAddress = new java.util.HashMap<>();
+        shippingAddress.put("firstName", "John");
+        shippingAddress.put("lastName", "Doe");
+        shippingAddress.put("street", "123 Main St");
+
+        java.util.Map<String, Object> billingAddress = new java.util.HashMap<>();
+        billingAddress.put("firstName", "John");
+        billingAddress.put("lastName", "Doe");
+        billingAddress.put("street", "456 Billing Ave");
+
+        java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+
+        // When
+        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, billingAddress,
+                items, 0.0, 0.0, 0.0, 0.0);
+
+        // Then
+        assertNotNull(orderNumber);
+        CalendarOrder order = orderService.findByOrderNumber(orderNumber);
+        assertNotNull(order.billingAddress);
+    }
+
+    @Test
+    @Transactional
+    void testFindOrCreateGuestUser_ExistingUser() {
+        // Given - testUser already exists with email test@example.com
+
+        // When
+        CalendarUser foundUser = orderService.findOrCreateGuestUser(testUser.email, null);
+
+        // Then
+        assertEquals(testUser.id, foundUser.id);
+    }
+
+    @Test
+    @Transactional
+    void testFindOrCreateGuestUser_NewGuest() {
+        // Given
+        String newEmail = "new-guest-" + System.currentTimeMillis() + "@example.com";
+        java.util.Map<String, Object> addressInfo = new java.util.HashMap<>();
+        addressInfo.put("firstName", "Jane");
+        addressInfo.put("lastName", "Guest");
+
+        // When
+        CalendarUser guestUser = orderService.findOrCreateGuestUser(newEmail, addressInfo);
+
+        // Then
+        assertNotNull(guestUser);
+        assertNotNull(guestUser.id);
+        assertEquals(newEmail, guestUser.email);
+        assertEquals("GUEST", guestUser.oauthProvider);
+        assertEquals("Jane Guest", guestUser.displayName);
+        assertFalse(guestUser.isAdmin);
+    }
+
+    @Test
+    @Transactional
+    void testFindByOrderNumber() {
+        // Given
+        CalendarOrder order = createTestOrder();
+
+        // When
+        CalendarOrder found = orderService.findByOrderNumber(order.orderNumber);
+
+        // Then
+        assertNotNull(found);
+        assertEquals(order.id, found.id);
+    }
+
+    @Test
+    @Transactional
+    void testFindByOrderNumber_NotFound() {
+        // Given
+        String nonExistentOrderNumber = "VC-XXXX-XXXX";
+
+        // When
+        CalendarOrder found = orderService.findByOrderNumber(nonExistentOrderNumber);
+
+        // Then
+        assertNull(found);
+    }
+
+    @Test
+    @Transactional
+    void testFindByOrderNumber_NullOrEmpty() {
+        // Given/When/Then
+        assertNull(orderService.findByOrderNumber(null));
+        assertNull(orderService.findByOrderNumber(""));
+        assertNull(orderService.findByOrderNumber("   "));
     }
 
     // Helper method to create a test order

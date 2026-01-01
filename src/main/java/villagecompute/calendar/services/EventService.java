@@ -232,8 +232,8 @@ public class EventService {
         LOG.debugf("Listing events: calendarId=%s, startDate=%s, endDate=%s, userId=%s", calendarId, startDate, endDate,
                 currentUser != null ? currentUser.id : null);
 
-        // Get calendar and check authorization (read access)
-        UserCalendar calendar = calendarService.getCalendar(calendarId, currentUser);
+        // Check authorization (read access)
+        calendarService.getCalendar(calendarId, currentUser);
 
         // Fetch events
         List<Event> events;

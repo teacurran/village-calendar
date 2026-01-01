@@ -336,9 +336,6 @@ public class HebrewCalendarService {
                     boolean isShabbat = (day % 7) == 0;
 
                     if (isShabbat && config.highlightWeekends) {
-                        String cellBackground = CalendarRenderingService.getCellBackgroundColor(config, date, month,
-                                day, true, weekendIndex - 1);
-
                         svg.append(String.format(
                                 "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"" + " class=\"shabbat-bg\"/>%n",
                                 cellX, cellY, cellWidth, cellHeight));

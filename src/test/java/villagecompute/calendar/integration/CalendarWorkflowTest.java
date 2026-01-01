@@ -325,14 +325,9 @@ public class CalendarWorkflowTest {
     @Transactional
     void testWorkflow_ListCalendarsForUser() {
         // Create multiple calendars for the test user
-        UserCalendar calendar1 = calendarService.createCalendar("My Calendar 2025", 2025, testTemplate.id, null, true,
-                testUser, null);
-
-        UserCalendar calendar2 = calendarService.createCalendar("My Calendar 2026", 2026, testTemplate.id, null, false,
-                testUser, null);
-
-        UserCalendar calendar3 = calendarService.createCalendar("My Calendar 2025 #2", 2025, testTemplate.id, null,
-                true, testUser, null);
+        calendarService.createCalendar("My Calendar 2025", 2025, testTemplate.id, null, true, testUser, null);
+        calendarService.createCalendar("My Calendar 2026", 2026, testTemplate.id, null, false, testUser, null);
+        calendarService.createCalendar("My Calendar 2025 #2", 2025, testTemplate.id, null, true, testUser, null);
 
         // Query calendars via service layer
         List<UserCalendar> allCalendars = calendarService.listCalendars(testUser.id, null, // No year filter

@@ -14,6 +14,7 @@ import org.jboss.logging.Logger;
 
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarOrderItem;
+import villagecompute.calendar.data.models.ItemAsset;
 import villagecompute.calendar.services.EmailService;
 import villagecompute.calendar.services.PDFRenderingService;
 import villagecompute.calendar.services.exceptions.DelayedJobException;
@@ -92,10 +93,9 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
     public void run(String actorId) throws Exception {
         LOG.infof("Processing order confirmation email for order: %s", actorId);
 
-        // Find the order with eagerly fetched relationships including item calendars
-        CalendarOrder order = CalendarOrder.find(
-                "SELECT DISTINCT o FROM CalendarOrder o " + "LEFT JOIN FETCH o.user " + "LEFT JOIN FETCH o.items i "
-                        + "LEFT JOIN FETCH i.calendar " + "LEFT JOIN FETCH o.calendar " + "WHERE o.id = ?1",
+        // Find the order with eagerly fetched relationships including item assets
+        CalendarOrder order = CalendarOrder.find("SELECT DISTINCT o FROM CalendarOrder o " + "LEFT JOIN FETCH o.user "
+                + "LEFT JOIN FETCH o.items i " + "LEFT JOIN FETCH i.assets " + "WHERE o.id = ?1",
                 UUID.fromString(actorId)).firstResult();
 
         if (order == null) {
@@ -152,12 +152,12 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
     }
 
     /**
-     * Generate preview images for each order item's calendar. Returns a list of base64 PNG data URIs, parallel to
-     * order.items. Items without a calendar or SVG will have null in the corresponding position.
+     * Generate preview images for each order item. Returns a list of base64 PNG data URIs, parallel to order.items.
+     * Items without an asset or SVG will have null in the corresponding position.
      *
      * @param order
      *            The order containing items
-     * @return List of base64 PNG data URIs (or null for items without calendars)
+     * @return List of base64 PNG data URIs (or null for items without assets)
      */
     private List<String> generatePreviewImages(CalendarOrder order) {
         List<String> previews = new ArrayList<>();
@@ -169,17 +169,18 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
         for (CalendarOrderItem item : order.items) {
             String previewDataUri = null;
 
-            if (item.calendar != null && item.calendar.generatedSvg != null && !item.calendar.generatedSvg.isEmpty()) {
+            ItemAsset mainAsset = item.getMainAsset();
+            if (mainAsset != null && mainAsset.svgContent != null && !mainAsset.svgContent.isEmpty()) {
                 try {
-                    previewDataUri = pdfRenderingService.renderSVGToPNGDataUri(item.calendar.generatedSvg,
+                    previewDataUri = pdfRenderingService.renderSVGToPNGDataUri(mainAsset.svgContent,
                             PREVIEW_IMAGE_WIDTH);
-                    LOG.debugf("Generated preview image for item %s (calendar %s)", item.id, item.calendar.id);
+                    LOG.debugf("Generated preview image for item %s (asset %s)", item.id, mainAsset.id);
                 } catch (Exception e) {
                     LOG.warnf(e, "Failed to generate preview image for item %s, skipping", item.id);
                     // Continue without preview for this item
                 }
             } else {
-                LOG.debugf("No calendar SVG available for item %s", item.id);
+                LOG.debugf("No SVG asset available for item %s", item.id);
             }
 
             previews.add(previewDataUri);

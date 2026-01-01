@@ -120,7 +120,7 @@ public class HebrewCalendarConverter {
 
         // Approximate Hebrew month based on Gregorian month
         // This is very simplified and not accurate for actual conversions
-        int hebrewMonth = ((gregorianMonth + 3) % 12) + 1;
+        int hebrewMonth;
         if (gregorianMonth >= 9) {
             hebrewMonth = gregorianMonth - 8;
         } else {

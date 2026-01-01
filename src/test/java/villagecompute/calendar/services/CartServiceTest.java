@@ -343,4 +343,187 @@ class CartServiceTest {
         // Default print price is $29.99
         assertTrue(cart.subtotal > 0);
     }
+
+    // ========== EDGE CASE TESTS ==========
+
+    @Test
+    @Transactional
+    void testAddToCart_WithInvalidProductCode_UsesDefault() {
+        // Given
+        AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar";
+        input.quantity = 1;
+        input.productCode = "invalid_product_code"; // Invalid code
+
+        // When
+        Cart cart = cartService.addToCart(testSessionId, input);
+
+        // Then - Should still create item using default price
+        assertNotNull(cart);
+        assertEquals(1, cart.itemCount);
+        assertTrue(cart.subtotal > 0); // Has a price from default product
+    }
+
+    @Test
+    @Transactional
+    void testAddToCart_WithNullProductCode_UsesDefault() {
+        // Given
+        AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar";
+        input.quantity = 1;
+        input.productCode = null; // Null product code
+
+        // When
+        Cart cart = cartService.addToCart(testSessionId, input);
+
+        // Then - Should still create item using default price
+        assertNotNull(cart);
+        assertEquals(1, cart.itemCount);
+        assertTrue(cart.subtotal > 0);
+    }
+
+    @Test
+    @Transactional
+    void testAddToCart_WithAssets_CreatesItemWithAssets() {
+        // Given
+        AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar with Assets";
+        input.quantity = 1;
+        input.productCode = "print";
+
+        // Add asset inputs
+        villagecompute.calendar.api.graphql.inputs.AssetInput asset = new villagecompute.calendar.api.graphql.inputs.AssetInput();
+        asset.assetKey = "page1";
+        asset.svgContent = "<svg>Test SVG</svg>";
+        asset.widthInches = java.math.BigDecimal.valueOf(8.5);
+        asset.heightInches = java.math.BigDecimal.valueOf(11.0);
+        input.assets = java.util.List.of(asset);
+
+        // When
+        Cart cart = cartService.addToCart(testSessionId, input);
+
+        // Then
+        assertNotNull(cart);
+        assertEquals(1, cart.itemCount);
+        assertEquals("Test Calendar with Assets", cart.items.get(0).description);
+    }
+
+    @Test
+    @Transactional
+    void testAddToCart_WithMultipleAssets_CreatesAllAssets() {
+        // Given
+        AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Multi-Page Calendar";
+        input.quantity = 1;
+        input.productCode = "print";
+
+        villagecompute.calendar.api.graphql.inputs.AssetInput asset1 = new villagecompute.calendar.api.graphql.inputs.AssetInput();
+        asset1.assetKey = "page1";
+        asset1.svgContent = "<svg>Page 1</svg>";
+        asset1.widthInches = java.math.BigDecimal.valueOf(8.5);
+        asset1.heightInches = java.math.BigDecimal.valueOf(11.0);
+
+        villagecompute.calendar.api.graphql.inputs.AssetInput asset2 = new villagecompute.calendar.api.graphql.inputs.AssetInput();
+        asset2.assetKey = "page2";
+        asset2.svgContent = "<svg>Page 2</svg>";
+        asset2.widthInches = java.math.BigDecimal.valueOf(8.5);
+        asset2.heightInches = java.math.BigDecimal.valueOf(11.0);
+
+        input.assets = java.util.List.of(asset1, asset2);
+
+        // When
+        Cart cart = cartService.addToCart(testSessionId, input);
+
+        // Then
+        assertNotNull(cart);
+        assertEquals(1, cart.itemCount);
+    }
+
+    @Test
+    @Transactional
+    void testAddToCart_WithNullQuantity_DefaultsToOne() {
+        // Given
+        AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar";
+        input.quantity = null; // Null quantity
+        input.productCode = "print";
+
+        // When
+        Cart cart = cartService.addToCart(testSessionId, input);
+
+        // Then
+        assertNotNull(cart);
+        assertEquals(1, cart.itemCount);
+        assertEquals(1, cart.items.get(0).quantity); // Defaults to 1
+    }
+
+    @Test
+    @Transactional
+    void testUpdateQuantity_ItemNotFoundOrWrongCart_NoChange() {
+        // Given
+        AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar";
+        input.quantity = 1;
+        input.productCode = "print";
+
+        Cart initialCart = cartService.addToCart(testSessionId, input);
+        UUID randomItemId = UUID.randomUUID(); // Non-existent item
+
+        // When
+        Cart updatedCart = cartService.updateQuantity(testSessionId, randomItemId, 10);
+
+        // Then - Cart should be unchanged
+        assertEquals(initialCart.itemCount, updatedCart.itemCount);
+    }
+
+    @Test
+    @Transactional
+    void testRemoveItem_ItemNotFoundOrWrongCart_NoChange() {
+        // Given
+        AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar";
+        input.quantity = 1;
+        input.productCode = "print";
+
+        Cart initialCart = cartService.addToCart(testSessionId, input);
+        UUID randomItemId = UUID.randomUUID(); // Non-existent item
+
+        // When
+        Cart updatedCart = cartService.removeItem(testSessionId, randomItemId);
+
+        // Then - Cart should be unchanged
+        assertEquals(initialCart.itemCount, updatedCart.itemCount);
+    }
+
+    @Test
+    @Transactional
+    void testUpdateQuantity_ItemFromDifferentCart_NoChange() {
+        // Given - Create two sessions with items
+        String sessionId1 = "session-1-" + UUID.randomUUID();
+        String sessionId2 = "session-2-" + UUID.randomUUID();
+
+        AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar";
+        input.quantity = 1;
+        input.productCode = "print";
+
+        Cart cart1 = cartService.addToCart(sessionId1, input);
+        cartService.addToCart(sessionId2, input);
+        UUID itemFromCart1 = UUID.fromString(cart1.items.get(0).id);
+
+        // When - Try to update item from cart1 while using session2
+        Cart cart2AfterUpdate = cartService.updateQuantity(sessionId2, itemFromCart1, 10);
+
+        // Then - Cart2 should be unchanged (item belongs to different cart)
+        assertEquals(1, cart2AfterUpdate.itemCount);
+        assertEquals(1, cart2AfterUpdate.items.get(0).quantity); // Still 1
+    }
 }

@@ -73,7 +73,7 @@ public class CalendarService {
         calendar.year = year;
         calendar.user = user;
         calendar.sessionId = sessionId;
-        calendar.isPublic = isPublic != null ? isPublic : true;
+        calendar.isPublic = isPublic == null || isPublic;
 
         // Apply template if specified
         if (templateId != null) {

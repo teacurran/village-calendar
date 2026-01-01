@@ -205,8 +205,8 @@ class AuthenticationIntegrationTest {
 
         // Then: Each JWT should be unique
         assertNotEquals(jwt1, jwt2, "JWTs for different users should be unique");
-        assertTrue(jwt1.split("\\.").length == 3, "JWT 1 should be valid");
-        assertTrue(jwt2.split("\\.").length == 3, "JWT 2 should be valid");
+        assertEquals(3, jwt1.split("\\.").length, "JWT 1 should be valid");
+        assertEquals(3, jwt2.split("\\.").length, "JWT 2 should be valid");
 
         // Clean up
         CalendarUser.deleteById(user1.id);
@@ -299,7 +299,7 @@ class AuthenticationIntegrationTest {
         String jwt = authService.issueJWT(user);
 
         assertNotNull(jwt, "JWT should be issued");
-        assertTrue(jwt.split("\\.").length == 3, "JWT should be valid format");
+        assertEquals(3, jwt.split("\\.").length, "JWT should be valid format");
 
         // Step 3: Verify user can be retrieved from database
         Optional<CalendarUser> retrievedUser = CalendarUser.findByOAuthSubject("GOOGLE",

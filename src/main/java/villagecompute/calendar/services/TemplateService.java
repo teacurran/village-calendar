@@ -65,8 +65,8 @@ public class TemplateService {
         template.description = input.description;
         template.configuration = configNode;
         template.thumbnailUrl = input.thumbnailUrl;
-        template.isActive = input.isActive != null ? input.isActive : true;
-        template.isFeatured = input.isFeatured != null ? input.isFeatured : false;
+        template.isActive = input.isActive == null || input.isActive;
+        template.isFeatured = input.isFeatured != null && input.isFeatured;
         template.displayOrder = input.displayOrder != null ? input.displayOrder : 0;
         template.previewSvg = input.previewSvg;
 

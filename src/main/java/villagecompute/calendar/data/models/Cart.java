@@ -55,7 +55,7 @@ public class Cart extends DefaultPanacheEntityWithTimestamps {
 
     /** Calculate cart subtotal */
     public BigDecimal getSubtotal() {
-        return items.stream().map(item -> item.getLineTotal()).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return items.stream().map(CartItem::getLineTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /** Get total item count */

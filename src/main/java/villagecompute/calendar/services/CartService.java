@@ -2,7 +2,6 @@ package villagecompute.calendar.services;
 
 import java.math.BigDecimal;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -139,7 +138,7 @@ public class CartService {
         cart.taxAmount = 0.0; // TODO: Calculate tax
         cart.totalAmount = cart.subtotal + cart.taxAmount;
         cart.itemCount = cartEntity.getItemCount();
-        cart.items = cartEntity.items.stream().map(this::toGraphQLCartItem).collect(Collectors.toList());
+        cart.items = cartEntity.items.stream().map(this::toGraphQLCartItem).toList();
 
         return cart;
     }

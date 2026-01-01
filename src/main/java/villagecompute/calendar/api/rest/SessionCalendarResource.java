@@ -223,6 +223,72 @@ public class SessionCalendarResource {
     }
 
     /**
+     * Copy a shared calendar to the current session. Creates a new calendar with the same configuration. Used when a
+     * user wants to edit a shared calendar - they get their own copy.
+     */
+    @POST
+    @Path("/{id}/copy-to-session")
+    @Transactional
+    public Response copyToSession(@HeaderParam("X-Session-ID") String sessionId, @PathParam("id") UUID id) {
+        if (sessionId == null || sessionId.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of("No session found")).build();
+        }
+
+        UserCalendar sourceCalendar = UserCalendar.findById(id);
+        if (sourceCalendar == null) {
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorResponse.of("Calendar not found")).build();
+        }
+
+        // Only allow copying public calendars or calendars that belong to the session
+        boolean isOwnCalendar = sessionId.equals(sourceCalendar.sessionId);
+        if (!sourceCalendar.isPublic && !isOwnCalendar) {
+            return Response.status(Response.Status.FORBIDDEN).entity(ErrorResponse.of("Calendar is not public"))
+                    .build();
+        }
+
+        // If already owns this calendar, just return it
+        if (isOwnCalendar) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", sourceCalendar.id);
+            response.put(CONFIGURATION, sourceCalendar.configuration);
+            response.put("svg", sourceCalendar.generatedSvg);
+            response.put("copied", false);
+            return Response.ok(response).build();
+        }
+
+        // Check if session already has a calendar - if so, update it with source config
+        UserCalendar existingCalendar = UserCalendar.<UserCalendar>find("sessionId", sessionId).firstResult();
+        UserCalendar targetCalendar;
+
+        if (existingCalendar != null) {
+            targetCalendar = existingCalendar;
+            targetCalendar.name = sourceCalendar.name + " (Copy)";
+        } else {
+            targetCalendar = new UserCalendar();
+            targetCalendar.sessionId = sessionId;
+            targetCalendar.name = sourceCalendar.name + " (Copy)";
+            targetCalendar.isPublic = true;
+        }
+
+        // Copy configuration from source
+        targetCalendar.configuration = sourceCalendar.configuration;
+        targetCalendar.year = sourceCalendar.year;
+        targetCalendar.generatedSvg = sourceCalendar.generatedSvg;
+
+        targetCalendar.persist();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", targetCalendar.id);
+        response.put(CONFIGURATION, targetCalendar.configuration);
+        response.put("svg", targetCalendar.generatedSvg);
+        response.put("copied", true);
+
+        Log.infof("Copied calendar %s to session %s as calendar %s", id, sessionId, targetCalendar.id);
+
+        return Response.ok(response).build();
+    }
+
+    /**
      * Auto-save calendar configuration. Uses pessimistic locking to handle concurrent updates gracefully - last write
      * wins.
      */
