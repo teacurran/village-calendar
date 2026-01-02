@@ -382,7 +382,7 @@ public class WebhookResource {
     public static class WebhookSuccessResponse {
         @Schema(
                 description = "Status message",
-                example = "success")
+                examples = "success")
         public String status;
     }
 
@@ -392,7 +392,7 @@ public class WebhookResource {
     public static class WebhookErrorResponse {
         @Schema(
                 description = "Error message describing what went wrong",
-                example = "Invalid signature")
+                examples = "Invalid signature")
         public String error;
     }
 }

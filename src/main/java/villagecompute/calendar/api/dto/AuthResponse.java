@@ -14,7 +14,7 @@ public class AuthResponse {
     @JsonProperty("token")
     @Schema(
             description = "JWT token for API authentication",
-            example = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...")
+            examples = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...")
     public String token;
 
     @JsonProperty("user")

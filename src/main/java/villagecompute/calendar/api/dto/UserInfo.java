@@ -18,25 +18,25 @@ public class UserInfo {
     @JsonProperty("id")
     @Schema(
             description = "Unique user identifier (UUID)",
-            example = "550e8400-e29b-41d4-a716-446655440000")
+            examples = "550e8400-e29b-41d4-a716-446655440000")
     public UUID id;
 
     @JsonProperty("email")
     @Schema(
             description = "User email address",
-            example = "user@example.com")
+            examples = "user@example.com")
     public String email;
 
     @JsonProperty("displayName")
     @Schema(
             description = "User display name",
-            example = "John Doe")
+            examples = "John Doe")
     public String displayName;
 
     @JsonProperty("profileImageUrl")
     @Schema(
             description = "URL to user's profile image",
-            example = "https://example.com/avatar.jpg")
+            examples = "https://example.com/avatar.jpg")
     public String profileImageUrl;
 
     public UserInfo() {
