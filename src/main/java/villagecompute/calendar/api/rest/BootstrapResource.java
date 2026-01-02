@@ -12,7 +12,6 @@ import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
-import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.logging.Logger;
 
@@ -26,7 +25,9 @@ import villagecompute.calendar.services.AuthenticationService;
  * admin users exist in the system.
  */
 @Path("/bootstrap")
-@Tag(name = "Bootstrap", description = "Bootstrap endpoints for initial admin setup")
+@Tag(
+        name = "Bootstrap",
+        description = "Bootstrap endpoints for initial admin setup")
 public class BootstrapResource {
 
     private static final Logger LOG = Logger.getLogger(BootstrapResource.class);
@@ -40,9 +41,17 @@ public class BootstrapResource {
     @GET
     @Path("/status")
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Check bootstrap status", description = "Check if the system needs to be bootstrapped with an initial admin user."
-            + " Returns needsBootstrap=true when no admin users exist in the database.")
-    @APIResponse(responseCode = "200", description = "Bootstrap status retrieved successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = BootstrapStatus.class)))
+    @Operation(
+            summary = "Check bootstrap status",
+            description = "Check if the system needs to be bootstrapped with an initial admin user."
+                    + " Returns needsBootstrap=true when no admin users exist in the database.")
+    @APIResponse(
+            responseCode = "200",
+            description = "Bootstrap status retrieved successfully",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = BootstrapStatus.class)))
     public Response getBootstrapStatus() {
         LOG.debug("Checking bootstrap status");
 
@@ -73,13 +82,32 @@ public class BootstrapResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
-    @Operation(summary = "Create first admin user", description = "Promotes an existing OAuth user to admin status. This endpoint is only"
-            + " accessible when no admin users exist in the system. The user must have"
-            + " already authenticated via OAuth (Google or Facebook) before being" + " promoted to admin.")
-    @APIResponses({
-            @APIResponse(responseCode = "200", description = "Admin user created successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = AuthResponse.class))),
-            @APIResponse(responseCode = "400", description = "Invalid request or user not found", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ErrorResponse.class))),
-            @APIResponse(responseCode = "403", description = "Bootstrap not allowed - admin users already exist", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ErrorResponse.class)))})
+    @Operation(
+            summary = "Create first admin user",
+            description = "Promotes an existing OAuth user to admin status. This endpoint is only"
+                    + " accessible when no admin users exist in the system. The user must have"
+                    + " already authenticated via OAuth (Google or Facebook) before being" + " promoted to admin.")
+    @APIResponse(
+            responseCode = "200",
+            description = "Admin user created successfully",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = AuthResponse.class)))
+    @APIResponse(
+            responseCode = "400",
+            description = "Invalid request or user not found",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = ErrorResponse.class)))
+    @APIResponse(
+            responseCode = "403",
+            description = "Bootstrap not allowed - admin users already exist",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = ErrorResponse.class)))
     public Response createAdmin(BootstrapRequest request) {
         LOG.infof("Attempting to create admin user for email: %s", request.email);
 
@@ -131,11 +159,17 @@ public class BootstrapResource {
     @GET
     @Path("/users")
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "List users for bootstrap", description = "Returns a list of all users who have authenticated via OAuth. "
-            + "This endpoint helps in selecting which user to promote to admin. "
-            + "Only accessible when no admin users exist.")
-    @APIResponses({@APIResponse(responseCode = "200", description = "User list retrieved successfully"),
-            @APIResponse(responseCode = "403", description = "Bootstrap not allowed - admin users already exist")})
+    @Operation(
+            summary = "List users for bootstrap",
+            description = "Returns a list of all users who have authenticated via OAuth. "
+                    + "This endpoint helps in selecting which user to promote to admin. "
+                    + "Only accessible when no admin users exist.")
+    @APIResponse(
+            responseCode = "200",
+            description = "User list retrieved successfully")
+    @APIResponse(
+            responseCode = "403",
+            description = "Bootstrap not allowed - admin users already exist")
     public Response getUsers() {
         LOG.debug("Fetching users for bootstrap");
 

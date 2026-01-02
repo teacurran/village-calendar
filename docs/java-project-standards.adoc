@@ -1,0 +1,211 @@
+= Village Calendar - Java Project Standards
+:toc: left
+:toclevels: 3
+:source-highlighter: highlight.js
+
+== Overview
+
+This document defines the Java coding standards for the Village Calendar project.
+These standards ensure consistent, readable, and maintainable code across the codebase.
+
+== Code Formatting
+
+The project uses Spotless with Eclipse JDT formatter for automated code formatting.
+Run `./mvnw spotless:apply` to format code before committing.
+
+=== Line Length
+
+Maximum line length is 120 characters.
+
+=== Indentation
+
+* Use 4 spaces for indentation (no tabs)
+* Continuation indent is 8 spaces (2 x 4)
+
+=== Braces
+
+Use K&R style (opening brace on same line):
+
+[source,java]
+----
+public class MyClass {
+    public void myMethod() {
+        if (condition) {
+            // code
+        } else {
+            // code
+        }
+    }
+}
+----
+
+== OpenAPI Annotation Standards
+
+=== @APIResponse Formatting
+
+Use multi-line formatting for `@APIResponse` and related OpenAPI annotations.
+Since Java 8+, repeatable annotations don't require wrapper annotations.
+
+==== Preferred Format
+
+[source,java]
+----
+@APIResponse(
+    responseCode = "200",
+    description = "Success response",
+    content = @Content(
+        mediaType = MediaType.APPLICATION_JSON,
+        schema = @Schema(implementation = MyType.class),
+        examples = @ExampleObject(value = "{\"status\": \"ok\"}")
+    )
+)
+@APIResponse(
+    responseCode = "400",
+    description = "Bad request",
+    content = @Content(
+        mediaType = MediaType.APPLICATION_JSON,
+        schema = @Schema(implementation = ErrorType.class)
+    )
+)
+public Response myEndpoint() { ... }
+----
+
+==== Key Points
+
+* Use separate `@APIResponse` annotations instead of `@APIResponses({...})` wrapper
+* Each annotation attribute on its own line with 4-space indent
+* Nested annotations (`@Content`, `@Schema`, `@ExampleObject`) also use multi-line format
+* Closing parenthesis aligns with the opening annotation
+* Keep each line short and readable (under 80-100 chars when possible)
+
+==== Avoid This Format
+
+[source,java]
+----
+// DON'T: Long single lines and wrapper annotation
+@APIResponses({
+        @APIResponse(responseCode = "200", description = "...", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = MyType.class))),
+        @APIResponse(responseCode = "400", description = "...", content = @Content(...))})
+----
+
+==== Simple Responses
+
+For responses without content body, single-line format is acceptable:
+
+[source,java]
+----
+@APIResponse(responseCode = "303", description = "Redirect to OAuth page")
+@APIResponse(responseCode = "401", description = "Authentication required")
+----
+
+=== @Operation Formatting
+
+[source,java]
+----
+@Operation(
+    summary = "Handle webhook events",
+    description = "Processes payment webhook events with signature verification. "
+        + "This endpoint is called by the payment provider when events occur.")
+----
+
+== Named Query Pattern
+
+Use this pattern for all JPA named queries:
+
+[source,java]
+----
+// 1. Define constant for query name (in the entity class)
+public static final String QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS =
+        "CalendarOrder.findByOrderNumberWithItems";
+
+// 2. NamedQuery annotation references the constant
+@NamedQueries({
+    @NamedQuery(
+            name = QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS,
+            query =
+                    "SELECT DISTINCT o FROM CalendarOrder o "
+                            + "LEFT JOIN FETCH o.items i "
+                            + "LEFT JOIN FETCH i.calendar "
+                            + "WHERE o.orderNumber = :orderNumber")
+})
+
+// 3. Static finder method uses Panache find() with # prefix and Parameters
+public static Optional<CalendarOrder> findByOrderNumberWithItems(String orderNumber) {
+    return find("#" + QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS,
+                Parameters.with("orderNumber", orderNumber))
+           .firstResultOptional();
+}
+----
+
+=== Key Points
+
+* Query name constant uses `QUERY_` prefix
+* Use `#` prefix with `find()` to invoke named queries
+* Use `Parameters.with()` for type-safe parameter binding
+* Use `JOIN FETCH` to eagerly load relationships and avoid N+1 queries
+* Return `Optional` via `firstResultOptional()` for single results
+
+== Exception Handling
+
+Use custom exceptions from `villagecompute.calendar.exceptions`:
+
+[source,java]
+----
+// Base exception
+throw new ApplicationException("Something went wrong");
+throw new ApplicationException("Something went wrong", cause);
+
+// Domain-specific exceptions
+throw new EmailException("Failed to send email", cause);
+throw new RenderingException("PDF rendering failed: " + e.getMessage(), e);
+throw new PaymentException("Payment intent creation failed", e);
+----
+
+=== Key Points
+
+* Never throw raw `RuntimeException`
+* All exceptions extend `RuntimeException` (no throws declarations needed)
+* Always include the cause exception when wrapping
+* Add new exception types as needed for new domains
+
+== JSON Serialization
+
+Use Jackson's ObjectMapper with direct object mapping:
+
+[source,java]
+----
+// Write object to JSON string
+String json = objectMapper.writeValueAsString(myObject);
+
+// Read JSON string to object
+MyType obj = objectMapper.readValue(jsonString, MyType.class);
+
+// Merge/update an existing object
+objectMapper.readerForUpdating(existingObject).readValue(jsonString);
+----
+
+=== Avoid These Methods
+
+* `treeToValue()` - Use `readValue()` with string instead
+* `valueToTree()` - Use `writeValueAsString()` instead
+* `convertValue()` - Use write then read pattern instead
+* `readTree()` - Use `readValue()` with typed class instead
+
+== Type Naming Conventions
+
+* All API/serialization types in `villagecompute.calendar.types` package
+* Type names end with `Type` suffix (e.g., `CalendarConfigType`, `ErrorType`)
+* Avoid `Response` suffix - use `Type` instead
+
+== Import Organization
+
+Imports are organized in this order:
+
+1. `java.*`
+2. `javax.*`
+3. `jakarta.*`
+4. `org.*`
+5. `com.*`
+6. `villagecompute.*`
+
+Spotless automatically organizes imports when formatting.

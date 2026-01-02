@@ -19,7 +19,6 @@ import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.ExampleObject;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
-import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityScheme;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
@@ -39,8 +38,15 @@ import io.quarkus.security.identity.SecurityIdentity;
  * callbacks.
  */
 @Path("/auth")
-@Tag(name = "Authentication", description = "OAuth2 authentication endpoints for Google, Facebook, and Apple login")
-@SecurityScheme(securitySchemeName = "BearerAuth", type = SecuritySchemeType.HTTP, scheme = "bearer", bearerFormat = "JWT", description = "JWT token obtained from OAuth2 callback endpoints")
+@Tag(
+        name = "Authentication",
+        description = "OAuth2 authentication endpoints for Google, Facebook, and Apple login")
+@SecurityScheme(
+        securitySchemeName = "BearerAuth",
+        type = SecuritySchemeType.HTTP,
+        scheme = "bearer",
+        bearerFormat = "JWT",
+        description = "JWT token obtained from OAuth2 callback endpoints")
 public class AuthResource {
 
     private static final Logger LOG = Logger.getLogger(AuthResource.class);
@@ -51,7 +57,8 @@ public class AuthResource {
     private static final String AUTH_CALLBACK_PATH = "/auth/callback?token=";
     private static final String LOG_AUTH_SUCCESS = "Successfully authenticated user: %s";
 
-    @org.eclipse.microprofile.config.inject.ConfigProperty(name = "app.frontend.url")
+    @org.eclipse.microprofile.config.inject.ConfigProperty(
+            name = "app.frontend.url")
     java.util.Optional<String> frontendUrl;
 
     @Inject
@@ -74,12 +81,18 @@ public class AuthResource {
     @GET
     @Path("/login/google")
     @Authenticated
-    @Operation(summary = "Initiate Google OAuth login", description = "Redirects user to Google OAuth consent page. This endpoint triggers the OAuth2"
-            + " authorization code flow. After user grants permissions on Google's"
-            + " consent page, they will be redirected back to /auth/google/callback" + " with an authorization code.")
-    @APIResponses({
-            @APIResponse(responseCode = "303", description = "Redirect to Google OAuth consent page or callback endpoint"),
-            @APIResponse(responseCode = "401", description = "Authentication required or OAuth flow failed")})
+    @Operation(
+            summary = "Initiate Google OAuth login",
+            description = "Redirects user to Google OAuth consent page. This endpoint triggers the OAuth2"
+                    + " authorization code flow. After user grants permissions on Google's"
+                    + " consent page, they will be redirected back to /auth/google/callback"
+                    + " with an authorization code.")
+    @APIResponse(
+            responseCode = "303",
+            description = "Redirect to Google OAuth consent page or callback endpoint")
+    @APIResponse(
+            responseCode = "401",
+            description = "Authentication required or OAuth flow failed")
     public Response loginWithGoogle() {
         LOG.info("Initiating Google OAuth login");
         // Quarkus OIDC will handle the redirect to Google
@@ -97,25 +110,41 @@ public class AuthResource {
     @Path("/google/callback")
     @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Handle Google OAuth callback", description = "OAuth2 callback endpoint invoked by Google after user grants permissions."
-            + " Exchanges the authorization code for an access token, creates/updates"
-            + " the user record, and issues a JWT token for subsequent API requests."
-            + " This endpoint is NOT directly callable by clients - it's part of the"
-            + " OAuth2 authorization code flow.")
-    @APIResponses({
-            @APIResponse(responseCode = "200", description = "Authentication successful, JWT token issued", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = AuthResponse.class), examples = @ExampleObject(value = """
-                    {
-                      "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-                      "user": {
-                        "id": "550e8400-e29b-41d4-a716-446655440000",
-                        "email": "user@example.com",
-                        "displayName": "John Doe",
-                        "profileImageUrl": "https://example.com/avatar.jpg"
-                      }
-                    }
-                    """))),
-            @APIResponse(responseCode = "500", description = "Authentication failed", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ErrorResponse.class), examples = @ExampleObject(value = "{\"error\": \"Authentication failed:"
-                    + " ...\"}")))})
+    @Operation(
+            summary = "Handle Google OAuth callback",
+            description = "OAuth2 callback endpoint invoked by Google after user grants permissions."
+                    + " Exchanges the authorization code for an access token, creates/updates"
+                    + " the user record, and issues a JWT token for subsequent API requests."
+                    + " This endpoint is NOT directly callable by clients - it's part of the"
+                    + " OAuth2 authorization code flow.")
+    @APIResponse(
+            responseCode = "200",
+            description = "Authentication successful, JWT token issued",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = AuthResponse.class),
+                    examples = @ExampleObject(
+                            value = """
+                                    {
+                                      "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+                                      "user": {
+                                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                                        "email": "user@example.com",
+                                        "displayName": "John Doe",
+                                        "profileImageUrl": "https://example.com/avatar.jpg"
+                                      }
+                                    }
+                                    """)))
+    @APIResponse(
+            responseCode = "500",
+            description = "Authentication failed",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = ErrorResponse.class),
+                    examples = @ExampleObject(
+                            value = "{\"error\": \"Authentication failed: ...\"}")))
     public Response handleGoogleCallback(@jakarta.ws.rs.QueryParam("sessionId") String sessionId) {
         LOG.info("Handling Google OAuth callback");
 
@@ -165,13 +194,18 @@ public class AuthResource {
     @GET
     @Path("/login/facebook")
     @Authenticated
-    @Operation(summary = "Initiate Facebook OAuth login", description = "Redirects user to Facebook OAuth consent page. This endpoint triggers the"
-            + " OAuth2 authorization code flow. After user grants permissions on"
-            + " Facebook's consent page, they will be redirected back to"
-            + " /auth/facebook/callback with an authorization code.")
-    @APIResponses({
-            @APIResponse(responseCode = "303", description = "Redirect to Facebook OAuth consent page or callback endpoint"),
-            @APIResponse(responseCode = "401", description = "Authentication required or OAuth flow failed")})
+    @Operation(
+            summary = "Initiate Facebook OAuth login",
+            description = "Redirects user to Facebook OAuth consent page. This endpoint triggers the"
+                    + " OAuth2 authorization code flow. After user grants permissions on"
+                    + " Facebook's consent page, they will be redirected back to"
+                    + " /auth/facebook/callback with an authorization code.")
+    @APIResponse(
+            responseCode = "303",
+            description = "Redirect to Facebook OAuth consent page or callback endpoint")
+    @APIResponse(
+            responseCode = "401",
+            description = "Authentication required or OAuth flow failed")
     public Response loginWithFacebook() {
         LOG.info("Initiating Facebook OAuth login");
         // Quarkus OIDC will handle the redirect to Facebook
@@ -189,25 +223,41 @@ public class AuthResource {
     @Path("/facebook/callback")
     @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Handle Facebook OAuth callback", description = "OAuth2 callback endpoint invoked by Facebook after user grants permissions."
-            + " Exchanges the authorization code for an access token, creates/updates"
-            + " the user record, and issues a JWT token for subsequent API requests."
-            + " This endpoint is NOT directly callable by clients - it's part of the"
-            + " OAuth2 authorization code flow.")
-    @APIResponses({
-            @APIResponse(responseCode = "200", description = "Authentication successful, JWT token issued", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = AuthResponse.class), examples = @ExampleObject(value = """
-                    {
-                      "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-                      "user": {
-                        "id": "550e8400-e29b-41d4-a716-446655440000",
-                        "email": "user@example.com",
-                        "displayName": "Jane Smith",
-                        "profileImageUrl": "https://example.com/avatar.jpg"
-                      }
-                    }
-                    """))),
-            @APIResponse(responseCode = "500", description = "Authentication failed", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ErrorResponse.class), examples = @ExampleObject(value = "{\"error\": \"Authentication failed:"
-                    + " ...\"}")))})
+    @Operation(
+            summary = "Handle Facebook OAuth callback",
+            description = "OAuth2 callback endpoint invoked by Facebook after user grants permissions."
+                    + " Exchanges the authorization code for an access token, creates/updates"
+                    + " the user record, and issues a JWT token for subsequent API requests."
+                    + " This endpoint is NOT directly callable by clients - it's part of the"
+                    + " OAuth2 authorization code flow.")
+    @APIResponse(
+            responseCode = "200",
+            description = "Authentication successful, JWT token issued",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = AuthResponse.class),
+                    examples = @ExampleObject(
+                            value = """
+                                    {
+                                      "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+                                      "user": {
+                                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                                        "email": "user@example.com",
+                                        "displayName": "Jane Smith",
+                                        "profileImageUrl": "https://example.com/avatar.jpg"
+                                      }
+                                    }
+                                    """)))
+    @APIResponse(
+            responseCode = "500",
+            description = "Authentication failed",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = ErrorResponse.class),
+                    examples = @ExampleObject(
+                            value = "{\"error\": \"Authentication failed: ...\"}")))
     public Response handleFacebookCallback(@jakarta.ws.rs.QueryParam("sessionId") String sessionId) {
         LOG.info("Handling Facebook OAuth callback");
 
@@ -240,12 +290,18 @@ public class AuthResource {
     @GET
     @Path("/login/apple")
     @Authenticated
-    @Operation(summary = "Initiate Apple OAuth login", description = "Redirects user to Apple Sign In page. This endpoint triggers the OAuth2"
-            + " authorization code flow. After user grants permissions on Apple's"
-            + " consent page, they will be redirected back to /auth/apple/callback with" + " an authorization code.")
-    @APIResponses({
-            @APIResponse(responseCode = "303", description = "Redirect to Apple Sign In page or callback endpoint"),
-            @APIResponse(responseCode = "401", description = "Authentication required or OAuth flow failed")})
+    @Operation(
+            summary = "Initiate Apple OAuth login",
+            description = "Redirects user to Apple Sign In page. This endpoint triggers the OAuth2"
+                    + " authorization code flow. After user grants permissions on Apple's"
+                    + " consent page, they will be redirected back to /auth/apple/callback with"
+                    + " an authorization code.")
+    @APIResponse(
+            responseCode = "303",
+            description = "Redirect to Apple Sign In page or callback endpoint")
+    @APIResponse(
+            responseCode = "401",
+            description = "Authentication required or OAuth flow failed")
     public Response loginWithApple() {
         LOG.info("Initiating Apple OAuth login");
         // Quarkus OIDC will handle the redirect to Apple
@@ -263,25 +319,41 @@ public class AuthResource {
     @Path("/apple/callback")
     @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Handle Apple OAuth callback", description = "OAuth2 callback endpoint invoked by Apple after user grants permissions."
-            + " Exchanges the authorization code for an access token, creates/updates"
-            + " the user record, and issues a JWT token for subsequent API requests."
-            + " This endpoint is NOT directly callable by clients - it's part of the"
-            + " OAuth2 authorization code flow.")
-    @APIResponses({
-            @APIResponse(responseCode = "200", description = "Authentication successful, JWT token issued", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = AuthResponse.class), examples = @ExampleObject(value = """
-                    {
-                      "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-                      "user": {
-                        "id": "550e8400-e29b-41d4-a716-446655440000",
-                        "email": "user@example.com",
-                        "displayName": "Alice Johnson",
-                        "profileImageUrl": null
-                      }
-                    }
-                    """))),
-            @APIResponse(responseCode = "500", description = "Authentication failed", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ErrorResponse.class), examples = @ExampleObject(value = "{\"error\": \"Authentication failed:"
-                    + " ...\"}")))})
+    @Operation(
+            summary = "Handle Apple OAuth callback",
+            description = "OAuth2 callback endpoint invoked by Apple after user grants permissions."
+                    + " Exchanges the authorization code for an access token, creates/updates"
+                    + " the user record, and issues a JWT token for subsequent API requests."
+                    + " This endpoint is NOT directly callable by clients - it's part of the"
+                    + " OAuth2 authorization code flow.")
+    @APIResponse(
+            responseCode = "200",
+            description = "Authentication successful, JWT token issued",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = AuthResponse.class),
+                    examples = @ExampleObject(
+                            value = """
+                                    {
+                                      "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+                                      "user": {
+                                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                                        "email": "user@example.com",
+                                        "displayName": "Alice Johnson",
+                                        "profileImageUrl": null
+                                      }
+                                    }
+                                    """)))
+    @APIResponse(
+            responseCode = "500",
+            description = "Authentication failed",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = ErrorResponse.class),
+                    examples = @ExampleObject(
+                            value = "{\"error\": \"Authentication failed: ...\"}")))
     public Response handleAppleCallback(@jakarta.ws.rs.QueryParam("sessionId") String sessionId) {
         LOG.info("Handling Apple OAuth callback");
 
@@ -314,23 +386,55 @@ public class AuthResource {
     @Path("/me")
     @Authenticated
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(summary = "Get current authenticated user", description = "Returns user information based on the JWT token provided in the Authorization"
-            + " header. Used to verify token validity and retrieve current user" + " details.")
-    @SecurityRequirement(name = "BearerAuth")
-    @APIResponses({
-            @APIResponse(responseCode = "200", description = "User information retrieved successfully", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = UserInfo.class), examples = @ExampleObject(value = """
-                    {
-                      "id": "550e8400-e29b-41d4-a716-446655440000",
-                      "email": "user@example.com",
-                      "displayName": "John Doe",
-                      "profileImageUrl": "https://example.com/avatar.jpg"
-                    }
-                    """))),
-            @APIResponse(responseCode = "401", description = "Invalid or missing JWT token", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ErrorResponse.class), examples = @ExampleObject(value = "{\"error\": \"No valid JWT token"
-                    + " found\"}"))),
-            @APIResponse(responseCode = "404", description = "User not found", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ErrorResponse.class), examples = @ExampleObject(value = "{\"error\": \"User not found\"}"))),
-            @APIResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = ErrorResponse.class), examples = @ExampleObject(value = "{\"error\": \"Failed to fetch user:"
-                    + " ...\"}")))})
+    @Operation(
+            summary = "Get current authenticated user",
+            description = "Returns user information based on the JWT token provided in the Authorization"
+                    + " header. Used to verify token validity and retrieve current user" + " details.")
+    @SecurityRequirement(
+            name = "BearerAuth")
+    @APIResponse(
+            responseCode = "200",
+            description = "User information retrieved successfully",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = UserInfo.class),
+                    examples = @ExampleObject(
+                            value = """
+                                    {
+                                      "id": "550e8400-e29b-41d4-a716-446655440000",
+                                      "email": "user@example.com",
+                                      "displayName": "John Doe",
+                                      "profileImageUrl": "https://example.com/avatar.jpg"
+                                    }
+                                    """)))
+    @APIResponse(
+            responseCode = "401",
+            description = "Invalid or missing JWT token",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = ErrorResponse.class),
+                    examples = @ExampleObject(
+                            value = "{\"error\": \"No valid JWT token found\"}")))
+    @APIResponse(
+            responseCode = "404",
+            description = "User not found",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = ErrorResponse.class),
+                    examples = @ExampleObject(
+                            value = "{\"error\": \"User not found\"}")))
+    @APIResponse(
+            responseCode = "500",
+            description = "Internal server error",
+            content = @Content(
+                    mediaType = MediaType.APPLICATION_JSON,
+                    schema = @Schema(
+                            implementation = ErrorResponse.class),
+                    examples = @ExampleObject(
+                            value = "{\"error\": \"Failed to fetch user: ...\"}")))
     public Response getCurrentUser() {
         LOG.info("Fetching current user information");
 
