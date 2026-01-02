@@ -23,6 +23,7 @@ import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.services.EmojiSvgService;
 import villagecompute.calendar.services.HebrewCalendarService;
 import villagecompute.calendar.services.PDFRenderingService;
+import villagecompute.calendar.types.CalendarConfigType;
 import villagecompute.calendar.util.MimeTypes;
 
 import io.quarkus.logging.Log;
@@ -119,7 +120,7 @@ public class CalendarResource {
     @Produces(MediaType.APPLICATION_XML)
     public Response generateCalendar(CalendarRequest request) {
         // Build configuration from request
-        CalendarRenderingService.CalendarConfig config = buildConfig(request);
+        CalendarConfigType config = buildConfig(request);
 
         // Generate SVG
         String svg = calendarRenderingService.generateCalendarSVG(config);
@@ -132,7 +133,7 @@ public class CalendarResource {
     @Produces(MediaType.APPLICATION_JSON)
     public CalendarResponse generateCalendarJson(CalendarRequest request) {
         // Build configuration from request
-        CalendarRenderingService.CalendarConfig config = buildConfig(request);
+        CalendarConfigType config = buildConfig(request);
 
         // Generate SVG based on calendar type
         String svg;
@@ -246,7 +247,7 @@ public class CalendarResource {
     @Produces(MimeTypes.APPLICATION_PDF)
     public Response generatePDF(CalendarRequest request) {
         // Build configuration
-        CalendarRenderingService.CalendarConfig config = buildConfig(request);
+        CalendarConfigType config = buildConfig(request);
 
         // Generate PDF
         byte[] pdf = calendarRenderingService.generateCalendarPDF(config);
@@ -282,7 +283,7 @@ public class CalendarResource {
             // Check if we should regenerate SVG with new configuration (e.g., different emoji font)
             if (request.regenerateConfig != null) {
                 // Regenerate SVG with updated configuration
-                CalendarRenderingService.CalendarConfig config = buildConfig(request.regenerateConfig);
+                CalendarConfigType config = buildConfig(request.regenerateConfig);
 
                 // Generate fresh SVG based on calendar type
                 if ("hebrew".equals(request.regenerateConfig.calendarType)) {
@@ -360,8 +361,8 @@ public class CalendarResource {
         return Response.ok(response).build();
     }
 
-    private CalendarRenderingService.CalendarConfig buildConfig(CalendarRequest request) {
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+    private CalendarConfigType buildConfig(CalendarRequest request) {
+        CalendarConfigType config = new CalendarConfigType();
 
         if (request.year != null) {
             config.year = request.year;

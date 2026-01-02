@@ -13,9 +13,12 @@ import jakarta.inject.Inject;
 
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.services.PDFRenderingService;
+import villagecompute.calendar.types.CalendarConfigType;
 
 import io.quarkus.qute.Template;
 import io.quarkus.vertx.web.Route;
@@ -47,6 +50,9 @@ public class CalendarsPageResource {
 
     @Inject
     PDFRenderingService pdfRenderingService;
+
+    @Inject
+    ObjectMapper objectMapper;
 
     /** Redirect /calendars to /calendars/ for consistency */
     @Route(path = "", methods = Route.HttpMethod.GET)
@@ -180,17 +186,22 @@ public class CalendarsPageResource {
     /** Generate SVG from a calendar template using CalendarRenderingService. */
     private String generateSvgForTemplate(CalendarTemplate template) {
         int year = LocalDate.now().getYear() + 1;
-        CalendarRenderingService.CalendarConfig config = buildConfigFromTemplate(template, year);
+        CalendarConfigType config = buildConfigFromTemplate(template, year);
         return calendarRenderingService.generateCalendarSVG(config);
     }
 
-    /** Build CalendarConfig from a template's JSON configuration. */
-    private CalendarRenderingService.CalendarConfig buildConfigFromTemplate(CalendarTemplate template, int year) {
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+    /** Build CalendarConfigType from a template's JSON configuration. */
+    private CalendarConfigType buildConfigFromTemplate(CalendarTemplate template, int year) {
+        CalendarConfigType config = new CalendarConfigType();
         config.year = year;
 
         if (template.configuration != null) {
-            CalendarRenderingService.applyJsonConfiguration(config, template.configuration);
+            try {
+                String configJson = objectMapper.writeValueAsString(template.configuration);
+                config = objectMapper.readValue(configJson, CalendarConfigType.class);
+            } catch (Exception e) {
+                LOG.warnf(e, "Error parsing template configuration, using defaults");
+            }
         }
 
         // Always use the target year, even if configuration has a different year

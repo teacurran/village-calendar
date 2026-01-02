@@ -1,4 +1,4 @@
-package villagecompute.calendar.api.types;
+package villagecompute.calendar.types;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,15 +7,15 @@ import org.eclipse.microprofile.graphql.Type;
 
 /** API type representing a shopping cart. Used by both REST and GraphQL endpoints. */
 @Type("Cart")
-public class Cart {
+public class CartType {
     public String id;
     public Double subtotal;
     public Double taxAmount;
     public Double totalAmount;
     public Integer itemCount;
-    public List<CartItem> items;
+    public List<CartItemType> items;
 
-    public Cart() {
+    public CartType() {
         this.id = "";
         this.subtotal = 0.0;
         this.taxAmount = 0.0;
@@ -24,8 +24,8 @@ public class Cart {
         this.items = new ArrayList<>();
     }
 
-    public Cart(String id, Double subtotal, Double taxAmount, Double totalAmount, Integer itemCount,
-            List<CartItem> items) {
+    public CartType(String id, Double subtotal, Double taxAmount, Double totalAmount, Integer itemCount,
+            List<CartItemType> items) {
         this.id = id;
         this.subtotal = subtotal;
         this.taxAmount = taxAmount;

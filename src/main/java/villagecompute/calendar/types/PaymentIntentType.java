@@ -1,4 +1,4 @@
-package villagecompute.calendar.api.types;
+package villagecompute.calendar.types;
 
 import java.util.UUID;
 
@@ -14,7 +14,7 @@ import org.eclipse.microprofile.graphql.Type;
 @Description("Stripe PaymentIntent for checkout flow. "
         + "Returned by placeOrder mutation to initiate payment on client. "
         + "The client uses the clientSecret to complete payment via Stripe.js.")
-public class PaymentIntentResponse {
+public class PaymentIntentType {
 
     @Description("Stripe PaymentIntent ID or Checkout Session ID")
     public String id;
@@ -35,7 +35,7 @@ public class PaymentIntentResponse {
     public String status;
 
     /**
-     * Create a PaymentIntent response from Stripe Checkout Session data.
+     * Create a PaymentIntentType response from Stripe Checkout Session data.
      *
      * @param sessionId
      *            Stripe Checkout Session ID
@@ -47,11 +47,11 @@ public class PaymentIntentResponse {
      *            Associated calendar ID
      * @param quantity
      *            Order quantity
-     * @return PaymentIntentResponse instance
+     * @return PaymentIntentType instance
      */
-    public static PaymentIntentResponse fromCheckoutSession(String sessionId, String checkoutUrl, Integer amountInCents,
+    public static PaymentIntentType fromCheckoutSession(String sessionId, String checkoutUrl, Integer amountInCents,
             UUID calendarId, Integer quantity) {
-        PaymentIntentResponse response = new PaymentIntentResponse();
+        PaymentIntentType response = new PaymentIntentType();
         response.id = sessionId;
         response.clientSecret = checkoutUrl;
         response.amount = amountInCents;

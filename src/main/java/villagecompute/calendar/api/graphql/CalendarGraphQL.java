@@ -30,6 +30,7 @@ import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.CalendarService;
 import villagecompute.calendar.services.EventService;
 import villagecompute.calendar.util.Roles;
+import villagecompute.calendar.util.UuidUtil;
 
 /**
  * GraphQL resolver for calendar queries and mutations. Handles user authentication, calendar CRUD operations, and
@@ -175,19 +176,12 @@ public class CalendarGraphQL {
         UUID targetUserId;
         if (userId != null && !userId.isEmpty()) {
             // Admin access requested - verify admin role
-            boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains("ADMIN");
-            if (!isAdmin) {
-                LOG.errorf("Non-admin user %s attempted to access " + "calendars for userId=%s", user.email, userId);
-                throw new SecurityException("Unauthorized: ADMIN role " + "required to access other users' calendars");
+            if (!isCurrentUserAdmin()) {
+                LOG.errorf("Non-admin user %s attempted to access calendars for userId=%s", user.email, userId);
+                throw new SecurityException("Unauthorized: ADMIN role required to access other users' calendars");
             }
 
-            // Parse the provided user ID
-            try {
-                targetUserId = UUID.fromString(userId);
-            } catch (IllegalArgumentException e) {
-                LOG.errorf("Invalid user ID format: %s", userId);
-                throw new IllegalArgumentException("Invalid user ID format");
-            }
+            targetUserId = UuidUtil.parse(userId, "user ID");
 
             LOG.infof("Admin %s accessing calendars for user %s", user.email, userId);
         } else {
@@ -219,7 +213,7 @@ public class CalendarGraphQL {
         LOG.infof("Query: calendar(id=%s)", id);
 
         try {
-            UUID calendarId = UUID.fromString(id);
+            UUID calendarId = UuidUtil.parse(id, "calendar ID");
 
             // Get current user (may be null for anonymous access)
             CalendarUser currentUser = null;
@@ -297,14 +291,7 @@ public class CalendarGraphQL {
 
         CalendarUser user = authService.requireCurrentUser(jwt);
 
-        // Parse and validate template ID
-        UUID templateId;
-        try {
-            templateId = UUID.fromString(input.templateId);
-        } catch (IllegalArgumentException e) {
-            LOG.errorf("Invalid template ID format: %s", input.templateId);
-            throw new IllegalArgumentException("Invalid template ID format");
-        }
+        UUID templateId = UuidUtil.parse(input.templateId, "template ID");
 
         // Create calendar using service
         UserCalendar calendar = calendarService.createCalendar(input.name, input.year, templateId, input.configuration,
@@ -334,15 +321,7 @@ public class CalendarGraphQL {
         LOG.infof("Mutation: updateCalendar(id=%s)", id);
 
         CalendarUser user = authService.requireCurrentUser(jwt);
-
-        // Parse calendar ID
-        UUID calendarId;
-        try {
-            calendarId = UUID.fromString(id);
-        } catch (IllegalArgumentException e) {
-            LOG.errorf("Invalid calendar ID format: %s", id);
-            throw new IllegalArgumentException("Invalid calendar ID format");
-        }
+        UUID calendarId = UuidUtil.parse(id, "calendar ID");
 
         // Update calendar using service (handles auth and validation)
         UserCalendar calendar = calendarService.updateCalendar(calendarId, input.name, input.configuration,
@@ -369,15 +348,7 @@ public class CalendarGraphQL {
         LOG.infof("Mutation: deleteCalendar(id=%s)", id);
 
         CalendarUser user = authService.requireCurrentUser(jwt);
-
-        // Parse calendar ID
-        UUID calendarId;
-        try {
-            calendarId = UUID.fromString(id);
-        } catch (IllegalArgumentException e) {
-            LOG.errorf("Invalid calendar ID format: %s", id);
-            throw new IllegalArgumentException("Invalid calendar ID format");
-        }
+        UUID calendarId = UuidUtil.parse(id, "calendar ID");
 
         // Check for paid orders before deletion
         Optional<UserCalendar> calendarOpt = UserCalendar.<UserCalendar>findByIdOptional(calendarId);
@@ -425,15 +396,7 @@ public class CalendarGraphQL {
         LOG.infof("Mutation: updateUserAdmin(userId=%s, isAdmin=%s)", userId, isAdmin);
 
         CalendarUser adminUser = authService.requireCurrentUser(jwt);
-
-        // Parse target user ID
-        UUID targetUserId;
-        try {
-            targetUserId = UUID.fromString(userId);
-        } catch (IllegalArgumentException e) {
-            LOG.errorf("Invalid user ID format: %s", userId);
-            throw new IllegalArgumentException("Invalid user ID format");
-        }
+        UUID targetUserId = UuidUtil.parse(userId, "user ID");
 
         // Prevent removing admin from self (lockout protection)
         if (adminUser.id.equals(targetUserId) && !isAdmin) {
@@ -484,5 +447,10 @@ public class CalendarGraphQL {
         LOG.infof("Converted %d calendars from session %s to user %s", convertedCount, sessionId, user.email);
 
         return user;
+    }
+
+    /** Check if the current JWT user has ADMIN role. */
+    private boolean isCurrentUserAdmin() {
+        return jwt.getGroups() != null && jwt.getGroups().contains(Roles.ADMIN);
     }
 }

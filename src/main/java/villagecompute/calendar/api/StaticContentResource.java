@@ -22,9 +22,12 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.services.PDFRenderingService;
+import villagecompute.calendar.types.CalendarConfigType;
 
 /**
  * API endpoint for static content generation. CI/CD calls these endpoints to download data and assets for static
@@ -45,6 +48,9 @@ public class StaticContentResource {
 
     @Inject
     PDFRenderingService pdfRenderingService;
+
+    @Inject
+    ObjectMapper objectMapper;
 
     @ConfigProperty(name = "site.url", defaultValue = "http://localhost:8080")
     String siteUrl;
@@ -250,7 +256,7 @@ public class StaticContentResource {
         }
 
         int year = LocalDate.now().getYear() + 1;
-        CalendarRenderingService.CalendarConfig config = buildConfigFromTemplate(template, year);
+        CalendarConfigType config = buildConfigFromTemplate(template, year);
         String svgContent = calendarRenderingService.generateCalendarSVG(config);
 
         svgCache.put(cacheKey, svgContent);
@@ -266,19 +272,24 @@ public class StaticContentResource {
         }
 
         int year = LocalDate.now().getYear() + 1;
-        CalendarRenderingService.CalendarConfig config = buildConfigFromTemplate(template, year);
+        CalendarConfigType config = buildConfigFromTemplate(template, year);
         String svgContent = calendarRenderingService.generateCalendarSVG(config);
 
         svgCache.put(cacheKey, svgContent);
         return svgContent;
     }
 
-    private CalendarRenderingService.CalendarConfig buildConfigFromTemplate(CalendarTemplate template, int year) {
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+    private CalendarConfigType buildConfigFromTemplate(CalendarTemplate template, int year) {
+        CalendarConfigType config = new CalendarConfigType();
         config.year = year;
 
         if (template.configuration != null) {
-            CalendarRenderingService.applyJsonConfiguration(config, template.configuration);
+            try {
+                String configJson = objectMapper.writeValueAsString(template.configuration);
+                config = objectMapper.readValue(configJson, CalendarConfigType.class);
+            } catch (Exception e) {
+                LOG.warnf(e, "Error parsing template configuration, using defaults");
+            }
         }
 
         config.year = year;

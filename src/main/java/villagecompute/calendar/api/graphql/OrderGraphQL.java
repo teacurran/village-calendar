@@ -35,6 +35,7 @@ import villagecompute.calendar.services.PaymentService;
 import villagecompute.calendar.services.ProductService;
 import villagecompute.calendar.util.OrderNumberGenerator;
 import villagecompute.calendar.util.Roles;
+import villagecompute.calendar.util.UuidUtil;
 
 /**
  * GraphQL resolver for order queries and mutations. Handles order creation, payment processing, and order management.
@@ -135,20 +136,12 @@ public class OrderGraphQL {
         UUID targetUserId;
         if (userId != null && !userId.isEmpty()) {
             // Admin access requested - verify admin role
-            boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains(Roles.ADMIN);
-            if (!isAdmin) {
+            if (!isCurrentUserAdmin()) {
                 LOG.errorf("Non-admin user %s attempted to access orders for userId=%s", user.email, userId);
                 throw new SecurityException("Unauthorized: ADMIN role required to access other users' orders");
             }
 
-            // Parse the provided user ID
-            try {
-                targetUserId = UUID.fromString(userId);
-            } catch (IllegalArgumentException e) {
-                LOG.errorf("Invalid user ID format: %s", userId);
-                throw new IllegalArgumentException("Invalid user ID format");
-            }
-
+            targetUserId = UuidUtil.parse(userId, "user ID");
             LOG.infof("Admin %s accessing orders for user %s", user.email, userId);
         } else {
             // No userId provided - return current user's orders
@@ -185,14 +178,7 @@ public class OrderGraphQL {
 
         CalendarUser user = authService.requireCurrentUser(jwt);
 
-        // Parse order ID
-        UUID orderId;
-        try {
-            orderId = UUID.fromString(id);
-        } catch (IllegalArgumentException e) {
-            LOG.errorf("Invalid order ID format: %s", id);
-            throw new IllegalArgumentException("Invalid order ID format");
-        }
+        UUID orderId = UuidUtil.parse(id, "order ID");
 
         // Find the order
         Optional<CalendarOrder> orderOpt = orderService.getOrderById(orderId);
@@ -205,9 +191,7 @@ public class OrderGraphQL {
 
         // Check authorization (user must own the order or be admin)
         boolean isOwner = order.user != null && order.user.id.equals(user.id);
-        boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains(Roles.ADMIN);
-
-        if (!isOwner && !isAdmin) {
+        if (!isOwner && !isCurrentUserAdmin()) {
             LOG.warnf("User %s attempted to access order %s owned by another user", user.email, id);
             throw new SecurityException("Unauthorized: You don't have access to this order");
         }
@@ -260,14 +244,13 @@ public class OrderGraphQL {
             @Name("orderId") @Description("Order UUID") @NonNull String orderId) {
         LOG.infof("Query: orderByNumberAndId(orderNumber=%s, orderId=%s)", orderNumber, orderId);
 
-        // Parse UUID
-        java.util.UUID orderUuid;
-        try {
-            orderUuid = java.util.UUID.fromString(orderId);
-        } catch (IllegalArgumentException e) {
+        // Parse UUID - return null on invalid format (public query, no error thrown)
+        Optional<UUID> orderUuidOpt = UuidUtil.tryParse(orderId);
+        if (orderUuidOpt.isEmpty()) {
             LOG.warnf("Invalid orderId format: %s", orderId);
             return null;
         }
+        UUID orderUuid = orderUuidOpt.get();
 
         // Find order by order number first
         CalendarOrder order = CalendarOrder.findByOrderNumber(orderNumber).firstResult();
@@ -320,16 +303,14 @@ public class OrderGraphQL {
                 return null;
             }
 
-            // Parse and look up the order
-            UUID orderUuid;
-            try {
-                orderUuid = UUID.fromString(orderId);
-            } catch (IllegalArgumentException e) {
+            // Parse and look up the order - return null on invalid format
+            Optional<UUID> orderUuidOpt = UuidUtil.tryParse(orderId);
+            if (orderUuidOpt.isEmpty()) {
                 LOG.errorf("Invalid orderId format in session %s: %s", sessionId, orderId);
                 return null;
             }
 
-            Optional<CalendarOrder> orderOpt = orderService.getOrderById(orderUuid);
+            Optional<CalendarOrder> orderOpt = orderService.getOrderById(orderUuidOpt.get());
             if (orderOpt.isEmpty()) {
                 LOG.warnf("Order not found for session %s, orderId: %s", sessionId, orderId);
                 return null;
@@ -403,32 +384,11 @@ public class OrderGraphQL {
         CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Validate and find the calendar
-        UUID calendarId;
-        try {
-            calendarId = UUID.fromString(input.calendarId);
-        } catch (IllegalArgumentException e) {
-            LOG.errorf("Invalid calendar ID format: %s", input.calendarId);
-            throw new IllegalArgumentException("Invalid calendar ID format");
-        }
+        UUID calendarId = UuidUtil.parse(input.calendarId, "calendar ID");
+        UserCalendar calendar = findAndVerifyCalendarOwnership(calendarId, user);
 
-        Optional<UserCalendar> calendarOpt = UserCalendar.<UserCalendar>findByIdOptional(calendarId);
-        if (calendarOpt.isEmpty()) {
-            LOG.errorf("Calendar not found: %s", input.calendarId);
-            throw new IllegalArgumentException("Calendar not found");
-        }
-
-        UserCalendar calendar = calendarOpt.get();
-
-        // Verify ownership
-        if (calendar.user == null || !calendar.user.id.equals(user.id)) {
-            LOG.errorf("User %s attempted to order calendar %s owned by another user", user.email, input.calendarId);
-            throw new SecurityException("Unauthorized: You don't own this calendar");
-        }
-
-        // Convert shipping address to JSON
+        // Convert shipping address to JSON and create the order
         ObjectNode shippingAddressJson = objectMapper.valueToTree(input.shippingAddress);
-
-        // Create the order
         CalendarOrder order = orderService.createOrder(user, calendar, input.quantity, BASE_UNIT_PRICE,
                 shippingAddressJson);
 
@@ -479,27 +439,8 @@ public class OrderGraphQL {
         CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Validate and find the calendar
-        UUID calendarId;
-        try {
-            calendarId = UUID.fromString(input.calendarId);
-        } catch (IllegalArgumentException e) {
-            LOG.errorf("Invalid calendar ID format: %s", input.calendarId);
-            throw new IllegalArgumentException("Invalid calendar ID format");
-        }
-
-        Optional<UserCalendar> calendarOpt = UserCalendar.<UserCalendar>findByIdOptional(calendarId);
-        if (calendarOpt.isEmpty()) {
-            LOG.errorf("Calendar not found: %s", input.calendarId);
-            throw new IllegalArgumentException("Calendar not found");
-        }
-
-        UserCalendar calendar = calendarOpt.get();
-
-        // Verify ownership
-        if (calendar.user == null || !calendar.user.id.equals(user.id)) {
-            LOG.errorf("User %s attempted to order calendar %s owned by another user", user.email, input.calendarId);
-            throw new SecurityException("Unauthorized: You don't own this calendar");
-        }
+        UUID calendarId = UuidUtil.parse(input.calendarId, "calendar ID");
+        UserCalendar calendar = findAndVerifyCalendarOwnership(calendarId, user);
 
         // Get price from product catalog using ProductType
         String productCode = input.productType.getProductCode();
@@ -552,17 +493,7 @@ public class OrderGraphQL {
     public CalendarOrder updateOrderStatus(
             @Name("input") @Description("Order status update data") @NotNull @Valid OrderStatusUpdateInput input) {
         LOG.infof("Mutation: updateOrderStatus(orderId=%s, status=%s)", input.orderId, input.status);
-
-        // Parse order ID
-        UUID orderId;
-        try {
-            orderId = UUID.fromString(input.orderId);
-        } catch (IllegalArgumentException e) {
-            LOG.errorf("Invalid order ID format: %s", input.orderId);
-            throw new IllegalArgumentException("Invalid order ID format");
-        }
-
-        // Update the order
+        UUID orderId = UuidUtil.parse(input.orderId, "order ID");
         return orderService.updateOrderStatus(orderId, input.status, input.notes);
     }
 
@@ -585,18 +516,8 @@ public class OrderGraphQL {
         LOG.infof("Mutation: cancelOrder(orderId=%s, reason=%s)", orderId, reason);
 
         CalendarUser user = authService.requireCurrentUser(jwt);
-
-        // Parse order ID
-        UUID orderIdUuid;
-        try {
-            orderIdUuid = UUID.fromString(orderId);
-        } catch (IllegalArgumentException e) {
-            LOG.errorf("Invalid order ID format: %s", orderId);
-            throw new IllegalArgumentException("Invalid order ID format");
-        }
-
-        // Check if user is admin
-        boolean isAdmin = jwt.getGroups() != null && jwt.getGroups().contains(Roles.ADMIN);
+        UUID orderIdUuid = UuidUtil.parse(orderId, "order ID");
+        boolean isAdmin = isCurrentUserAdmin();
 
         // Cancel the order (service handles authorization and status validation)
         CalendarOrder order = orderService.cancelOrder(orderIdUuid, user.id, isAdmin, reason);
@@ -848,5 +769,30 @@ public class OrderGraphQL {
 
         @Description("Configuration JSON")
         public String configuration;
+    }
+
+    // ============================================================================
+    // HELPER METHODS
+    // ============================================================================
+
+    /** Check if the current JWT user has ADMIN role. */
+    private boolean isCurrentUserAdmin() {
+        return jwt.getGroups() != null && jwt.getGroups().contains(Roles.ADMIN);
+    }
+
+    /** Find a calendar by ID and verify the user owns it. */
+    private UserCalendar findAndVerifyCalendarOwnership(UUID calendarId, CalendarUser user) {
+        Optional<UserCalendar> calendarOpt = UserCalendar.<UserCalendar>findByIdOptional(calendarId);
+        if (calendarOpt.isEmpty()) {
+            LOG.errorf("Calendar not found: %s", calendarId);
+            throw new IllegalArgumentException("Calendar not found");
+        }
+
+        UserCalendar calendar = calendarOpt.get();
+        if (calendar.user == null || !calendar.user.id.equals(user.id)) {
+            LOG.errorf("User %s attempted to order calendar %s owned by another user", user.email, calendarId);
+            throw new SecurityException("Unauthorized: You don't own this calendar");
+        }
+        return calendar;
     }
 }

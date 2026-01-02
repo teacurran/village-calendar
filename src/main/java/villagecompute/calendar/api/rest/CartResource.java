@@ -13,9 +13,9 @@ import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 
 import villagecompute.calendar.api.graphql.inputs.AddToCartInput;
-import villagecompute.calendar.api.types.Cart;
 import villagecompute.calendar.services.CartService;
 import villagecompute.calendar.services.SessionService;
+import villagecompute.calendar.types.CartType;
 
 /**
  * Cart Resource - REST API for shopping cart operations Supports both authenticated users and guest sessions via
@@ -41,7 +41,7 @@ public class CartResource {
         String sessionId = sessionService.getCurrentSessionId();
         LOG.infof("REST: Fetching cart for session: %s", sessionId);
 
-        Cart cart = cartService.getCart(sessionId);
+        CartType cart = cartService.getCart(sessionId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("items", cart.items);
@@ -100,7 +100,7 @@ public class CartResource {
             }
         }
 
-        Cart cart = cartService.addToCart(sessionId, input);
+        CartType cart = cartService.addToCart(sessionId, input);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -119,7 +119,7 @@ public class CartResource {
         String sessionId = sessionService.getCurrentSessionId();
         LOG.infof("REST: Removing item %s from cart for session: %s", itemId, sessionId);
 
-        Cart cart = cartService.removeItem(sessionId, UUID.fromString(itemId));
+        CartType cart = cartService.removeItem(sessionId, UUID.fromString(itemId));
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -140,7 +140,7 @@ public class CartResource {
 
         LOG.infof("REST: Updating item %s quantity to %d for session: %s", itemId, quantity, sessionId);
 
-        Cart cart = cartService.updateQuantity(sessionId, UUID.fromString(itemId), quantity);
+        CartType cart = cartService.updateQuantity(sessionId, UUID.fromString(itemId), quantity);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -158,7 +158,7 @@ public class CartResource {
         String sessionId = sessionService.getCurrentSessionId();
         LOG.infof("REST: Clearing cart for session: %s", sessionId);
 
-        Cart cart = cartService.clearCart(sessionId);
+        CartType cart = cartService.clearCart(sessionId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);

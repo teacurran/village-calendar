@@ -4,17 +4,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.StringReader;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.Month;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -27,8 +22,7 @@ import org.apache.fop.svg.PDFTranscoder;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
+import villagecompute.calendar.types.CalendarConfigType;
 import villagecompute.calendar.util.Colors;
 
 import io.quarkus.logging.Log;
@@ -62,233 +56,11 @@ public class CalendarRenderingService {
 
     public static final String DEFAULT_THEME = "default";
 
-    // Calendar configuration options
-    public static class CalendarConfig {
-        public int year = LocalDate.now().getYear();
-        public String theme = DEFAULT_THEME;
-        public String moonDisplayMode = "none"; // "none", "illumination", "phases", "full-only"
-        public boolean showWeekNumbers = false;
-        public boolean compactMode = false;
-        public boolean showDayNames = true;
-        public boolean showDayNumbers = true;
-        public boolean showGrid = true;
-        public boolean highlightWeekends = true;
-        public boolean rotateMonthNames = false;
-        public double latitude = 0; // Default: No location (no rotation)
-        public double longitude = 0; // Default: No location (no rotation)
-        public LocalTime observationTime = LocalTime.of(20, 0); // Default: 8:00 PM for moon calculations
-        public String timeZone = "America/New_York"; // Time zone for calculations
-        public int moonSize = 24; // Default moon radius in pixels
-        public int moonOffsetX = 30; // Horizontal offset in pixels from left edge of cell
-        public int moonOffsetY = 30; // Vertical offset in pixels from top edge of cell
-        public String moonBorderColor = "#c1c1c1"; // Default border color
-        public double moonBorderWidth = 0.5; // Default border width
-        // Color customization
-        public String yearColor = null; // Will use theme default if null
-        public String monthColor = null; // Will use theme default if null
-        public String dayTextColor = null; // Will use theme default if null
-        public String dayNameColor = null; // Will use theme default if null
-        public String gridLineColor = Colors.GRAY_400; // Default grid color
-        public String weekendBgColor = null; // Will use theme default if null
-        public String holidayColor = "#ff5252"; // Default holiday color
-        public String customDateColor = Colors.GREEN; // Default custom date color
-        public String moonDarkColor = Colors.GRAY_400; // Default moon dark side
-        public String moonLightColor = Colors.WHITE; // Default moon light side
-        public String emojiPosition = "bottom-left"; // Position of emojis in calendar cells
-        public Map<String, Object> customDates = new HashMap<>(); // date -> emoji/text or CustomEventDisplay object
-        public Map<String, String> eventTitles = new HashMap<>(); // date -> title mapping
-        public Set<String> holidays = new HashSet<>();
-        public Map<String, String> holidayEmojis = new HashMap<>(); // date -> emoji for holidays
-        public Map<String, String> holidayNames = new HashMap<>(); // date -> holiday name for text display
-        public List<String> holidaySets = new ArrayList<>(); // List of holiday set IDs to include
-        public String eventDisplayMode = "large"; // "large", "large-text", "small", "text", or "none"
-        public String emojiFont = "noto-color"; // "noto-color", "noto-mono", or "mono-{color}" for colored monochrome
-        public String locale = "en-US";
-        public DayOfWeek firstDayOfWeek = DayOfWeek.SUNDAY;
-        public String layoutStyle = "grid"; // "grid" for 12x31 layout, "weekday-grid" for weekday-aligned layout
-    }
-
-    // JSON configuration field names
-    public static final String HOLIDAY_SETS = "holidaySets";
-    public static final String HOLIDAYS = "holidays";
-    public static final String EVENT_TITLES = "eventTitles";
-    public static final String HOLIDAY_EMOJIS = "holidayEmojis";
-    public static final String HOLIDAY_NAMES = "holidayNames";
-    public static final String CUSTOM_DATES = "customDates";
-
-    /**
-     * Apply JSON configuration to a CalendarConfig object. This is the single source of truth for JSON ->
-     * CalendarConfig mapping.
-     *
-     * @param config
-     *            The CalendarConfig to modify
-     * @param jsonConfig
-     *            The JSON configuration node
-     */
-    public static void applyJsonConfiguration(CalendarConfig config, JsonNode jsonConfig) {
-        if (jsonConfig == null) {
-            return;
-        }
-        try {
-            // String fields
-            if (jsonConfig.has("theme"))
-                config.theme = jsonConfig.get("theme").asText();
-            if (jsonConfig.has("moonDisplayMode"))
-                config.moonDisplayMode = jsonConfig.get("moonDisplayMode").asText();
-
-            // Boolean fields
-            if (jsonConfig.has("showWeekNumbers"))
-                config.showWeekNumbers = jsonConfig.get("showWeekNumbers").asBoolean();
-            if (jsonConfig.has("compactMode"))
-                config.compactMode = jsonConfig.get("compactMode").asBoolean();
-            if (jsonConfig.has("showDayNames"))
-                config.showDayNames = jsonConfig.get("showDayNames").asBoolean();
-            if (jsonConfig.has("showDayNumbers"))
-                config.showDayNumbers = jsonConfig.get("showDayNumbers").asBoolean();
-            if (jsonConfig.has("showGrid"))
-                config.showGrid = jsonConfig.get("showGrid").asBoolean();
-            if (jsonConfig.has("highlightWeekends"))
-                config.highlightWeekends = jsonConfig.get("highlightWeekends").asBoolean();
-            if (jsonConfig.has("rotateMonthNames"))
-                config.rotateMonthNames = jsonConfig.get("rotateMonthNames").asBoolean();
-
-            // Numeric fields
-            if (jsonConfig.has("latitude"))
-                config.latitude = jsonConfig.get("latitude").asDouble();
-            if (jsonConfig.has("longitude"))
-                config.longitude = jsonConfig.get("longitude").asDouble();
-            if (jsonConfig.has("moonSize"))
-                config.moonSize = jsonConfig.get("moonSize").asInt();
-            if (jsonConfig.has("moonOffsetX"))
-                config.moonOffsetX = jsonConfig.get("moonOffsetX").asInt();
-            if (jsonConfig.has("moonOffsetY"))
-                config.moonOffsetY = jsonConfig.get("moonOffsetY").asInt();
-            if (jsonConfig.has("moonBorderWidth"))
-                config.moonBorderWidth = jsonConfig.get("moonBorderWidth").asDouble();
-
-            // Color fields
-            if (jsonConfig.has("yearColor"))
-                config.yearColor = jsonConfig.get("yearColor").asText();
-            if (jsonConfig.has("monthColor"))
-                config.monthColor = jsonConfig.get("monthColor").asText();
-            if (jsonConfig.has("dayTextColor"))
-                config.dayTextColor = jsonConfig.get("dayTextColor").asText();
-            if (jsonConfig.has("dayNameColor"))
-                config.dayNameColor = jsonConfig.get("dayNameColor").asText();
-            if (jsonConfig.has("gridLineColor"))
-                config.gridLineColor = jsonConfig.get("gridLineColor").asText();
-            if (jsonConfig.has("weekendBgColor"))
-                config.weekendBgColor = jsonConfig.get("weekendBgColor").asText();
-            if (jsonConfig.has("holidayColor"))
-                config.holidayColor = jsonConfig.get("holidayColor").asText();
-            if (jsonConfig.has("customDateColor"))
-                config.customDateColor = jsonConfig.get("customDateColor").asText();
-            if (jsonConfig.has("moonDarkColor"))
-                config.moonDarkColor = jsonConfig.get("moonDarkColor").asText();
-            if (jsonConfig.has("moonLightColor"))
-                config.moonLightColor = jsonConfig.get("moonLightColor").asText();
-            if (jsonConfig.has("moonBorderColor"))
-                config.moonBorderColor = jsonConfig.get("moonBorderColor").asText();
-
-            // Additional string fields
-            if (jsonConfig.has("emojiPosition"))
-                config.emojiPosition = jsonConfig.get("emojiPosition").asText();
-            if (jsonConfig.has("emojiFont"))
-                config.emojiFont = jsonConfig.get("emojiFont").asText();
-            if (jsonConfig.has("eventDisplayMode"))
-                config.eventDisplayMode = jsonConfig.get("eventDisplayMode").asText();
-            if (jsonConfig.has("locale"))
-                config.locale = jsonConfig.get("locale").asText();
-            if (jsonConfig.has("layoutStyle"))
-                config.layoutStyle = jsonConfig.get("layoutStyle").asText();
-            if (jsonConfig.has("timeZone"))
-                config.timeZone = jsonConfig.get("timeZone").asText();
-
-            // Enum fields
-            if (jsonConfig.has("firstDayOfWeek")) {
-                String dow = jsonConfig.get("firstDayOfWeek").asText();
-                try {
-                    config.firstDayOfWeek = DayOfWeek.valueOf(dow);
-                } catch (IllegalArgumentException e) {
-                    Log.warnf("Invalid firstDayOfWeek value: %s", dow);
-                }
-            }
-
-            // Complex types: customDates (Map<String, Object>)
-            if (jsonConfig.has(CUSTOM_DATES) && jsonConfig.get(CUSTOM_DATES).isObject()) {
-                JsonNode customDates = jsonConfig.get(CUSTOM_DATES);
-                customDates.properties().forEach(entry -> {
-                    String date = entry.getKey();
-                    JsonNode value = entry.getValue();
-                    if (value.isTextual()) {
-                        config.customDates.put(date, value.asText());
-                    } else if (value.isObject()) {
-                        Map<String, Object> map = new HashMap<>();
-                        value.properties().forEach(f -> {
-                            if (f.getValue().isTextual())
-                                map.put(f.getKey(), f.getValue().asText());
-                            else if (f.getValue().isNumber())
-                                map.put(f.getKey(), f.getValue().asDouble());
-                            else if (f.getValue().isBoolean())
-                                map.put(f.getKey(), f.getValue().asBoolean());
-                        });
-                        config.customDates.put(date, map);
-                    }
-                });
-            }
-
-            // Complex types: eventTitles (Map<String, String>)
-            if (jsonConfig.has(EVENT_TITLES) && jsonConfig.get(EVENT_TITLES).isObject()) {
-                JsonNode eventTitles = jsonConfig.get(EVENT_TITLES);
-                eventTitles.properties().forEach(entry -> {
-                    config.eventTitles.put(entry.getKey(), entry.getValue().asText());
-                });
-            }
-
-            // Complex types: holidays (Set<String>)
-            if (jsonConfig.has(HOLIDAYS) && jsonConfig.get(HOLIDAYS).isArray()) {
-                config.holidays.clear();
-                jsonConfig.get(HOLIDAYS).forEach(holiday -> {
-                    config.holidays.add(holiday.asText());
-                });
-            }
-
-            // Complex types: holidaySets (List<String>)
-            if (jsonConfig.has(HOLIDAY_SETS) && jsonConfig.get(HOLIDAY_SETS).isArray()) {
-                config.holidaySets.clear();
-                jsonConfig.get(HOLIDAY_SETS).forEach(set -> {
-                    config.holidaySets.add(set.asText());
-                });
-            }
-
-            // Complex types: holidayEmojis (Map<String, String>)
-            if (jsonConfig.has(HOLIDAY_EMOJIS) && jsonConfig.get(HOLIDAY_EMOJIS).isObject()) {
-                config.holidayEmojis.clear();
-                JsonNode holidayEmojis = jsonConfig.get(HOLIDAY_EMOJIS);
-                holidayEmojis.properties().forEach(entry -> {
-                    config.holidayEmojis.put(entry.getKey(), entry.getValue().asText());
-                });
-            }
-
-            // Complex types: holidayNames (Map<String, String>)
-            if (jsonConfig.has(HOLIDAY_NAMES) && jsonConfig.get(HOLIDAY_NAMES).isObject()) {
-                config.holidayNames.clear();
-                JsonNode holidayNames = jsonConfig.get(HOLIDAY_NAMES);
-                holidayNames.properties().forEach(entry -> {
-                    config.holidayNames.put(entry.getKey(), entry.getValue().asText());
-                });
-            }
-
-        } catch (Exception e) {
-            Log.warnf(e, "Error applying JSON configuration");
-        }
-    }
-
     /**
      * Returns the CSS font-family string for emoji rendering based on config. Noto Color Emoji is the default (Apache
      * 2.0 licensed, safe for commercial printing). Noto Emoji (monochrome) is available for a text-only look.
      */
-    private static String getEmojiFontFamily(CalendarConfig config) {
+    private static String getEmojiFontFamily(CalendarConfigType config) {
         if ("noto-mono".equals(config.emojiFont)) {
             // Noto Emoji (monochrome version) - black and white outline style
             // Include DejaVu Sans as fallback which has wide Unicode coverage on Linux servers
@@ -347,7 +119,7 @@ public class CalendarRenderingService {
      * Substitutes emojis that aren't available in Noto Emoji monochrome font with compatible alternatives. Also applies
      * to colored monochrome variants.
      */
-    private static String substituteEmojiForMonochrome(String emoji, CalendarConfig config) {
+    private static String substituteEmojiForMonochrome(String emoji, CalendarConfigType config) {
         // Apply substitutions for noto-mono and all mono-* color variants
         boolean needsSubstitution = "noto-mono".equals(config.emojiFont)
                 || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
@@ -375,7 +147,8 @@ public class CalendarRenderingService {
      *            Whether the emoji should be centered at x,y
      * @return SVG element string (either <svg> or <text>)
      */
-    private String renderEmoji(String emoji, double x, double y, int size, CalendarConfig config, boolean centered) {
+    private String renderEmoji(String emoji, double x, double y, int size, CalendarConfigType config,
+            boolean centered) {
         // Check if monochrome mode is enabled (noto-mono or any mono-* color variant)
         boolean isMonochrome = "noto-mono".equals(config.emojiFont)
                 || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
@@ -464,7 +237,7 @@ public class CalendarRenderingService {
      * @return SVG string for holiday content
      */
     private String renderHolidayContent(String holidayEmoji, String holidayName, int cellX, int cellY, int cellWidth,
-            int cellHeight, boolean shouldShowMoon, CalendarConfig config) {
+            int cellHeight, boolean shouldShowMoon, CalendarConfigType config) {
 
         if ("none".equals(config.eventDisplayMode)) {
             return "";
@@ -546,7 +319,7 @@ public class CalendarRenderingService {
      */
     private void renderDayCell(StringBuilder svg, int cellX, int cellY, int cellWidth, int cellHeight, LocalDate date,
             DayOfWeek dayOfWeek, boolean isWeekend, int monthNum, int weekendIndex, Locale locale,
-            CalendarConfig config, ThemeColors theme) {
+            CalendarConfigType config, ThemeColors theme) {
 
         int day = date.getDayOfMonth();
         String dateStr = date.toString();
@@ -929,7 +702,7 @@ public class CalendarRenderingService {
         }
     }
 
-    public String generateCalendarSVG(CalendarConfig config) {
+    public String generateCalendarSVG(CalendarConfigType config) {
         // Populate holidays from holidaySets if provided
         if (config.holidaySets != null && !config.holidaySets.isEmpty()) {
             for (String setId : config.holidaySets) {
@@ -957,12 +730,12 @@ public class CalendarRenderingService {
     private static final boolean LAYOUT_WEEKDAY_GRID = true; // 12 rows x 37 columns, weekday-aligned
 
     // Fixed grid layout (12 rows x 31 columns)
-    private String generateGridCalendarSVG(CalendarConfig config) {
+    private String generateGridCalendarSVG(CalendarConfigType config) {
         return generateCalendarGridSVG(config, LAYOUT_FIXED_GRID);
     }
 
     // Weekday aligned grid layout (12 rows x 37 columns)
-    private String generateWeekdayGridCalendarSVG(CalendarConfig config) {
+    private String generateWeekdayGridCalendarSVG(CalendarConfigType config) {
         return generateCalendarGridSVG(config, LAYOUT_WEEKDAY_GRID);
     }
 
@@ -974,7 +747,7 @@ public class CalendarRenderingService {
      * @param weekdayAligned
      *            If true, use weekday-aligned layout; if false, use fixed 31-column grid
      */
-    private String generateCalendarGridSVG(CalendarConfig config, boolean weekdayAligned) {
+    private String generateCalendarGridSVG(CalendarConfigType config, boolean weekdayAligned) {
         ThemeColors theme = THEMES.getOrDefault(config.theme, THEMES.get(DEFAULT_THEME));
 
         int year = config.year;
@@ -1084,7 +857,7 @@ public class CalendarRenderingService {
                 width, height, width, height));
     }
 
-    private void appendGridStyles(StringBuilder svg, CalendarConfig config, ThemeColors theme) {
+    private void appendGridStyles(StringBuilder svg, CalendarConfigType config, ThemeColors theme) {
         svg.append("<style>").append(System.lineSeparator());
         svg.append(String.format(
                 ".year-text { fill: %s; font-family: Helvetica, Arial, sans-serif;"
@@ -1109,7 +882,7 @@ public class CalendarRenderingService {
         svg.append("</style>").append(System.lineSeparator());
     }
 
-    private void renderEmptyCell(StringBuilder svg, int x, int y, int width, int height, CalendarConfig config) {
+    private void renderEmptyCell(StringBuilder svg, int x, int y, int width, int height, CalendarConfigType config) {
         if (config.showGrid) {
             String pdfSafeColor = convertColorForPDF("rgba(255, 255, 255, 0)");
             svg.append(String.format(
@@ -1297,7 +1070,7 @@ public class CalendarRenderingService {
     }
 
     // Generate PDF using Apache Batik
-    public byte[] generateCalendarPDF(CalendarConfig config) {
+    public byte[] generateCalendarPDF(CalendarConfigType config) {
         try {
             // Generate SVG content
             String svgContent = generateCalendarSVG(config);
@@ -1492,7 +1265,7 @@ public class CalendarRenderingService {
 
     // Generate SVG for moon illumination visualization
     public String generateMoonIlluminationSVG(LocalDate date, int x, int y, double latitude, double longitude,
-            CalendarConfig config) {
+            CalendarConfigType config) {
         StringBuilder svg = new StringBuilder();
 
         // Calculate moon illumination and position
@@ -1766,7 +1539,7 @@ public class CalendarRenderingService {
         return color;
     }
 
-    public static String getCellBackgroundColor(CalendarConfig config, LocalDate date, int monthNum, int dayNum,
+    public static String getCellBackgroundColor(CalendarConfigType config, LocalDate date, int monthNum, int dayNum,
             boolean isWeekend, int weekendIndex) {
         String theme = config.theme;
 

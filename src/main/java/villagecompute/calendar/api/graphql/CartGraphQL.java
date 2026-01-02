@@ -10,9 +10,9 @@ import org.eclipse.microprofile.graphql.*;
 import org.jboss.logging.Logger;
 
 import villagecompute.calendar.api.graphql.inputs.AddToCartInput;
-import villagecompute.calendar.api.types.Cart;
 import villagecompute.calendar.services.CartService;
 import villagecompute.calendar.services.SessionService;
+import villagecompute.calendar.types.CartType;
 
 /** GraphQL API for shopping cart operations Supports both authenticated users and guest sessions */
 @GraphQLApi
@@ -30,7 +30,7 @@ public class CartGraphQL {
     /** Get the current user/session cart */
     @Query("cart")
     @Description("Get the current user's shopping cart")
-    public Cart getCart() {
+    public CartType getCart() {
         String sessionId = sessionService.getCurrentSessionId();
         LOG.info("Fetching cart for session: " + sessionId);
         return cartService.getCart(sessionId);
@@ -43,7 +43,7 @@ public class CartGraphQL {
     @Mutation("addToCart")
     @Description("Add an item to the shopping cart")
     @Transactional
-    public Cart addToCart(@Name("input") AddToCartInput input) {
+    public CartType addToCart(@Name("input") AddToCartInput input) {
         String sessionId = sessionService.getCurrentSessionId();
 
         int assetCount = input.assets != null ? input.assets.size() : 0;
@@ -58,7 +58,7 @@ public class CartGraphQL {
     @Mutation("updateCartItemQuantity")
     @Description("Update the quantity of an item in the cart")
     @Transactional
-    public Cart updateCartItemQuantity(@Name("itemId") String itemId, @Name("quantity") Integer quantity) {
+    public CartType updateCartItemQuantity(@Name("itemId") String itemId, @Name("quantity") Integer quantity) {
         String sessionId = sessionService.getCurrentSessionId();
         LOG.info(String.format("Updating cart item %s to quantity %d for session %s", itemId, quantity, sessionId));
 
@@ -69,7 +69,7 @@ public class CartGraphQL {
     @Mutation("removeFromCart")
     @Description("Remove an item from the cart")
     @Transactional
-    public Cart removeFromCart(@Name("itemId") String itemId) {
+    public CartType removeFromCart(@Name("itemId") String itemId) {
         String sessionId = sessionService.getCurrentSessionId();
         LOG.info(String.format("Removing item %s from cart for session %s", itemId, sessionId));
 
@@ -80,7 +80,7 @@ public class CartGraphQL {
     @Mutation("clearCart")
     @Description("Clear all items from the cart")
     @Transactional
-    public Cart clearCart() {
+    public CartType clearCart() {
         String sessionId = sessionService.getCurrentSessionId();
         LOG.info("Clearing cart for session " + sessionId);
 
