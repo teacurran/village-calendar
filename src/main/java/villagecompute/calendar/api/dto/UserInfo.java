@@ -11,23 +11,32 @@ import villagecompute.calendar.data.models.CalendarUser;
 /**
  * Data transfer object containing basic user information. Returned to the frontend after successful authentication.
  */
-@Schema(description = "User information")
+@Schema(
+        description = "User information")
 public class UserInfo {
 
     @JsonProperty("id")
-    @Schema(description = "Unique user identifier (UUID)", example = "550e8400-e29b-41d4-a716-446655440000")
+    @Schema(
+            description = "Unique user identifier (UUID)",
+            example = "550e8400-e29b-41d4-a716-446655440000")
     public UUID id;
 
     @JsonProperty("email")
-    @Schema(description = "User email address", example = "user@example.com")
+    @Schema(
+            description = "User email address",
+            example = "user@example.com")
     public String email;
 
     @JsonProperty("displayName")
-    @Schema(description = "User display name", example = "John Doe")
+    @Schema(
+            description = "User display name",
+            example = "John Doe")
     public String displayName;
 
     @JsonProperty("profileImageUrl")
-    @Schema(description = "URL to user's profile image", example = "https://example.com/avatar.jpg")
+    @Schema(
+            description = "URL to user's profile image",
+            example = "https://example.com/avatar.jpg")
     public String profileImageUrl;
 
     public UserInfo() {

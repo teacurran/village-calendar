@@ -14,7 +14,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 @Description("Input for updating an existing calendar.")
 public class CalendarUpdateInput {
 
-    @Size(max = 255, message = "Calendar name must not exceed 255 characters")
+    @Size(
+            max = 255,
+            message = "Calendar name must not exceed 255 characters")
     @Description("Updated calendar name")
     public String name;
 

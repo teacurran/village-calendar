@@ -29,7 +29,9 @@ import io.quarkus.qute.TemplateInstance;
  * Renders HTML email templates using Qute and sends via EmailService.
  */
 @ApplicationScoped
-@DelayedJobConfig(priority = 10, description = "Order confirmation email sender")
+@DelayedJobConfig(
+        priority = 10,
+        description = "Order confirmation email sender")
 public class OrderEmailJobHandler implements DelayedJobHandler {
 
     private static final Logger LOG = Logger.getLogger(OrderEmailJobHandler.class);
@@ -43,17 +45,24 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
     // Preview image width in pixels (height calculated automatically from aspect ratio)
     private static final int PREVIEW_IMAGE_WIDTH = 600;
 
-    @ConfigProperty(name = "email.order.from", defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
+    @ConfigProperty(
+            name = "email.order.from",
+            defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
     String orderFromEmail;
 
-    @ConfigProperty(name = "email.admin.to", defaultValue = "terrence.curran@villagecompute.com")
+    @ConfigProperty(
+            name = "email.admin.to",
+            defaultValue = "terrence.curran@villagecompute.com")
     String adminEmail;
 
-    @ConfigProperty(name = "app.base-url", defaultValue = "https://calendar.villagecompute.com")
+    @ConfigProperty(
+            name = "app.base-url",
+            defaultValue = "https://calendar.villagecompute.com")
     String baseUrl;
 
     /** Type-safe Qute templates for order emails. */
-    @CheckedTemplate(basePath = "email-templates/OrderEmailJobHandler")
+    @CheckedTemplate(
+            basePath = "email-templates/OrderEmailJobHandler")
     public static class Templates {
         /**
          * Order confirmation email template for customers.

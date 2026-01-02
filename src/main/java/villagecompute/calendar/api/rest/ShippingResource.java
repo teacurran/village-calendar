@@ -25,13 +25,19 @@ public class ShippingResource {
     private static final String CA_COUNTRY_CODE = "CA";
     private static final String MX_COUNTRY_CODE = "MX";
 
-    @ConfigProperty(name = "calendar.shipping.domestic.standard", defaultValue = "5.99")
+    @ConfigProperty(
+            name = "calendar.shipping.domestic.standard",
+            defaultValue = "5.99")
     BigDecimal domesticStandardRate;
 
-    @ConfigProperty(name = "calendar.shipping.domestic.priority", defaultValue = "9.99")
+    @ConfigProperty(
+            name = "calendar.shipping.domestic.priority",
+            defaultValue = "9.99")
     BigDecimal domesticPriorityRate;
 
-    @ConfigProperty(name = "calendar.shipping.domestic.express", defaultValue = "14.99")
+    @ConfigProperty(
+            name = "calendar.shipping.domestic.express",
+            defaultValue = "14.99")
     BigDecimal domesticExpressRate;
 
     /** Calculate shipping options for calendar products */

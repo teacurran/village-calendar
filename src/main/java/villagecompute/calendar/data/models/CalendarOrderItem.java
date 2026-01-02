@@ -21,85 +21,143 @@ import com.fasterxml.jackson.databind.JsonNode;
  * SVG assets.
  */
 @Entity
-@Table(name = "calendar_order_items", indexes = {@Index(name = "idx_order_items_order", columnList = "order_id"),
-        @Index(name = "idx_order_items_calendar", columnList = "calendar_id"),
-        @Index(name = "idx_order_items_shipment", columnList = "shipment_id")})
+@Table(
+        name = "calendar_order_items",
+        indexes = {@Index(
+                name = "idx_order_items_order",
+                columnList = "order_id"),
+                @Index(
+                        name = "idx_order_items_calendar",
+                        columnList = "calendar_id"),
+                @Index(
+                        name = "idx_order_items_shipment",
+                        columnList = "shipment_id")})
 public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
 
-    @NotNull @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false, foreignKey = @ForeignKey(name = "fk_order_items_order"))
+    @NotNull @ManyToOne(
+            optional = false,
+            fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "order_id",
+            nullable = false,
+            foreignKey = @ForeignKey(
+                    name = "fk_order_items_order"))
     @Ignore
     public CalendarOrder order;
 
     /** Type of generator: 'calendar', 'maze', etc. */
-    @Size(max = 50)
-    @Column(name = "generator_type", length = 50)
+    @Size(
+            max = 50)
+    @Column(
+            name = "generator_type",
+            length = 50)
     public String generatorType;
 
     /** User-facing description like "2026 Calendar" or "Hard Orthogonal Maze" */
-    @Size(max = 500)
-    @Column(name = "description", length = 500)
+    @Size(
+            max = 500)
+    @Column(
+            name = "description",
+            length = 500)
     public String description;
 
     /**
      * @deprecated since 1.0, use generatorType instead. Kept for backward compatibility. The calendar design for this
      *             line item (optional - may be null for non-calendar products)
      */
-    @Deprecated(since = "1.0", forRemoval = false)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "calendar_id", foreignKey = @ForeignKey(name = "fk_order_items_calendar"))
+    @Deprecated(
+            since = "1.0",
+            forRemoval = false)
+    @ManyToOne(
+            fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "calendar_id",
+            foreignKey = @ForeignKey(
+                    name = "fk_order_items_calendar"))
     @Ignore
     public UserCalendar calendar;
 
     /** Product type: PRINT, PDF, etc. */
-    @NotNull @Size(max = 50)
-    @Column(name = "product_type", nullable = false, length = 50)
+    @NotNull @Size(
+            max = 50)
+    @Column(
+            name = "product_type",
+            nullable = false,
+            length = 50)
     public String productType = TYPE_PRINT;
 
     /**
      * @deprecated since 1.0, use description instead. Kept for backward compatibility. Product name/description for
      *             display
      */
-    @Deprecated(since = "1.0", forRemoval = false)
-    @Size(max = 255)
-    @Column(name = "product_name", length = 255)
+    @Deprecated(
+            since = "1.0",
+            forRemoval = false)
+    @Size(
+            max = 255)
+    @Column(
+            name = "product_name",
+            length = 255)
     public String productName;
 
     /**
      * @deprecated since 1.0, use configuration JSON instead. Kept for backward compatibility. Calendar year (for
      *             calendar products)
      */
-    @Deprecated(since = "1.0", forRemoval = false)
-    @Column(name = "calendar_year")
+    @Deprecated(
+            since = "1.0",
+            forRemoval = false)
+    @Column(
+            name = "calendar_year")
     public Integer calendarYear;
 
     @NotNull @Min(1)
-    @Column(nullable = false)
+    @Column(
+            nullable = false)
     public Integer quantity = 1;
 
     @NotNull @DecimalMin("0.00")
-    @Column(name = "unit_price", nullable = false, precision = 10, scale = 2)
+    @Column(
+            name = "unit_price",
+            nullable = false,
+            precision = 10,
+            scale = 2)
     public BigDecimal unitPrice;
 
     @NotNull @DecimalMin("0.00")
-    @Column(name = "line_total", nullable = false, precision = 10, scale = 2)
+    @Column(
+            name = "line_total",
+            nullable = false,
+            precision = 10,
+            scale = 2)
     public BigDecimal lineTotal;
 
     /** Configuration/customization details as JSON */
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column(
+            columnDefinition = "jsonb")
     @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
     public JsonNode configuration;
 
     /** Assets (SVGs) associated with this order item. */
-    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    @JoinTable(name = "order_item_assets", joinColumns = @JoinColumn(name = "order_item_id"), inverseJoinColumns = @JoinColumn(name = "asset_id"))
+    @ManyToMany(
+            cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+            name = "order_item_assets",
+            joinColumns = @JoinColumn(
+                    name = "order_item_id"),
+            inverseJoinColumns = @JoinColumn(
+                    name = "asset_id"))
     @Ignore
     public Set<ItemAsset> assets = new HashSet<>();
 
     /** Shipment this item belongs to (null until shipped) */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shipment_id", foreignKey = @ForeignKey(name = "fk_order_items_shipment"))
+    @ManyToOne(
+            fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "shipment_id",
+            foreignKey = @ForeignKey(
+                    name = "fk_order_items_shipment"))
     @Ignore
     public Shipment shipment;
 
@@ -107,8 +165,11 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
      * Status of this specific item (for partial fulfillment) PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED,
      * REFUNDED
      */
-    @Size(max = 50)
-    @Column(name = "item_status", length = 50)
+    @Size(
+            max = 50)
+    @Column(
+            name = "item_status",
+            length = 50)
     public String itemStatus = STATUS_PENDING;
 
     // Product type constants

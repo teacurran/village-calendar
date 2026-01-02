@@ -36,27 +36,39 @@ public class PaymentService {
 
     private static final Logger LOG = Logger.getLogger(PaymentService.class);
 
-    @ConfigProperty(name = "stripe.api.key")
+    @ConfigProperty(
+            name = "stripe.api.key")
     String stripeApiKey;
 
-    @ConfigProperty(name = "stripe.publishable.key")
+    @ConfigProperty(
+            name = "stripe.publishable.key")
     String stripePublishableKey;
 
-    @ConfigProperty(name = "stripe.webhook.secret", defaultValue = "")
+    @ConfigProperty(
+            name = "stripe.webhook.secret",
+            defaultValue = "")
     String webhookSecret;
 
     // Shipping rates (in cents) - matches ShippingService defaults
-    @ConfigProperty(name = "calendar.shipping.domestic.standard", defaultValue = "5.99")
+    @ConfigProperty(
+            name = "calendar.shipping.domestic.standard",
+            defaultValue = "5.99")
     String domesticStandardRate;
 
-    @ConfigProperty(name = "calendar.shipping.domestic.priority", defaultValue = "9.99")
+    @ConfigProperty(
+            name = "calendar.shipping.domestic.priority",
+            defaultValue = "9.99")
     String domesticPriorityRate;
 
-    @ConfigProperty(name = "calendar.shipping.domestic.express", defaultValue = "14.99")
+    @ConfigProperty(
+            name = "calendar.shipping.domestic.express",
+            defaultValue = "14.99")
     String domesticExpressRate;
 
     // Tax configuration
-    @ConfigProperty(name = "stripe.automatic.tax.enabled", defaultValue = "true")
+    @ConfigProperty(
+            name = "stripe.automatic.tax.enabled",
+            defaultValue = "true")
     boolean automaticTaxEnabled;
 
     @Inject

@@ -58,7 +58,8 @@ public class StripeWebhookControllerTest {
     @Inject
     EntityManager entityManager;
 
-    @ConfigProperty(name = "stripe.webhook.secret")
+    @ConfigProperty(
+            name = "stripe.webhook.secret")
     String webhookSecret;
 
     private CalendarUser testUser;

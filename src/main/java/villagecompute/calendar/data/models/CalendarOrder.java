@@ -25,37 +25,66 @@ import io.quarkus.panache.common.Parameters;
  * Entity representing an e-commerce order for printed calendars. Integrates with Stripe for payment processing.
  */
 @Entity
-@NamedQueries({
-        @NamedQuery(name = CalendarOrder.QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS, query = "SELECT DISTINCT o FROM CalendarOrder o "
-                + "LEFT JOIN FETCH o.items i " + "LEFT JOIN FETCH i.assets " + "WHERE o.orderNumber = :orderNumber")})
-@Table(name = "calendar_orders", indexes = {
-        @Index(name = "idx_calendar_orders_user", columnList = "user_id, created DESC"),
-        @Index(name = "idx_calendar_orders_status", columnList = "status, created DESC"),
-        @Index(name = "idx_calendar_orders_calendar", columnList = "calendar_id"),
-        @Index(name = "idx_calendar_orders_stripe_payment", columnList = "stripe_payment_intent_id"),
-        @Index(name = "idx_calendar_orders_order_number", columnList = "order_number", unique = true)})
+@NamedQueries({@NamedQuery(
+        name = CalendarOrder.QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS,
+        query = "SELECT DISTINCT o FROM CalendarOrder o " + "LEFT JOIN FETCH o.items i " + "LEFT JOIN FETCH i.assets "
+                + "WHERE o.orderNumber = :orderNumber")})
+@Table(
+        name = "calendar_orders",
+        indexes = {@Index(
+                name = "idx_calendar_orders_user",
+                columnList = "user_id, created DESC"),
+                @Index(
+                        name = "idx_calendar_orders_status",
+                        columnList = "status, created DESC"),
+                @Index(
+                        name = "idx_calendar_orders_calendar",
+                        columnList = "calendar_id"),
+                @Index(
+                        name = "idx_calendar_orders_stripe_payment",
+                        columnList = "stripe_payment_intent_id"),
+                @Index(
+                        name = "idx_calendar_orders_order_number",
+                        columnList = "order_number",
+                        unique = true)})
 public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
 
     public static final String QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS = "CalendarOrder.findByOrderNumberWithItems";
 
-    @ManyToOne(optional = true)
-    @JoinColumn(name = "user_id", nullable = true, foreignKey = @ForeignKey(name = "fk_calendar_orders_user"))
+    @ManyToOne(
+            optional = true)
+    @JoinColumn(
+            name = "user_id",
+            nullable = true,
+            foreignKey = @ForeignKey(
+                    name = "fk_calendar_orders_user"))
     @Ignore // GraphQL field resolver provided by OrderResolver.batchLoadUsers()
     public CalendarUser user; // Nullable for guest checkout
 
     /** Customer email (especially important for guest orders) */
-    @Size(max = 255)
-    @Column(name = "customer_email", length = 255)
+    @Size(
+            max = 255)
+    @Column(
+            name = "customer_email",
+            length = 255)
     public String customerEmail;
 
     // ==================== Order Items ====================
 
     /** Line items in this order */
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(
+            mappedBy = "order",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY)
     public List<CalendarOrderItem> items = new ArrayList<>();
 
     /** Shipments for this order */
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(
+            mappedBy = "order",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY)
     public List<Shipment> shipments = new ArrayList<>();
 
     // ==================== Legacy Single-Item Fields (for backwards compatibility)
@@ -65,8 +94,12 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
      * @deprecated Use items list instead. Kept for backwards compatibility with existing orders.
      */
     @Deprecated
-    @ManyToOne(optional = true)
-    @JoinColumn(name = "calendar_id", foreignKey = @ForeignKey(name = "fk_calendar_orders_calendar"))
+    @ManyToOne(
+            optional = true)
+    @JoinColumn(
+            name = "calendar_id",
+            foreignKey = @ForeignKey(
+                    name = "fk_calendar_orders_calendar"))
     @Ignore
     public UserCalendar calendar;
 
@@ -75,7 +108,8 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
      */
     @Deprecated
     @Min(1)
-    @Column(nullable = true)
+    @Column(
+            nullable = true)
     public Integer quantity = 1;
 
     /**
@@ -83,70 +117,110 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
      */
     @Deprecated
     @DecimalMin("0.00")
-    @Column(name = "unit_price", precision = 10, scale = 2)
+    @Column(
+            name = "unit_price",
+            precision = 10,
+            scale = 2)
     public BigDecimal unitPrice;
 
     // ==================== Order Totals ====================
 
     /** Subtotal (sum of all line items) */
     @DecimalMin("0.00")
-    @Column(name = "subtotal", precision = 10, scale = 2)
+    @Column(
+            name = "subtotal",
+            precision = 10,
+            scale = 2)
     public BigDecimal subtotal;
 
     /** Shipping cost */
     @DecimalMin("0.00")
-    @Column(name = "shipping_cost", precision = 10, scale = 2)
+    @Column(
+            name = "shipping_cost",
+            precision = 10,
+            scale = 2)
     public BigDecimal shippingCost;
 
     /** Tax amount */
     @DecimalMin("0.00")
-    @Column(name = "tax_amount", precision = 10, scale = 2)
+    @Column(
+            name = "tax_amount",
+            precision = 10,
+            scale = 2)
     public BigDecimal taxAmount;
 
     @NotNull @DecimalMin("0.00")
-    @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
+    @Column(
+            name = "total_price",
+            nullable = false,
+            precision = 10,
+            scale = 2)
     public BigDecimal totalPrice;
 
-    @NotNull @Size(max = 50)
-    @Column(nullable = false, length = 50)
+    @NotNull @Size(
+            max = 50)
+    @Column(
+            nullable = false,
+            length = 50)
     public String status = STATUS_PENDING;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "shipping_address", columnDefinition = "jsonb")
+    @Column(
+            name = "shipping_address",
+            columnDefinition = "jsonb")
     @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
     public JsonNode shippingAddress;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "billing_address", columnDefinition = "jsonb")
+    @Column(
+            name = "billing_address",
+            columnDefinition = "jsonb")
     @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
     public JsonNode billingAddress;
 
-    @Size(max = 255)
-    @Column(name = "stripe_payment_intent_id", length = 255)
+    @Size(
+            max = 255)
+    @Column(
+            name = "stripe_payment_intent_id",
+            length = 255)
     public String stripePaymentIntentId;
 
-    @Size(max = 255)
-    @Column(name = "stripe_charge_id", length = 255)
+    @Size(
+            max = 255)
+    @Column(
+            name = "stripe_charge_id",
+            length = 255)
     public String stripeChargeId;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(
+            columnDefinition = "TEXT")
     public String notes;
 
-    @Column(name = "paid_at")
+    @Column(
+            name = "paid_at")
     public Instant paidAt;
 
-    @Column(name = "shipped_at")
+    @Column(
+            name = "shipped_at")
     public Instant shippedAt;
 
-    @Column(name = "cancelled_at")
+    @Column(
+            name = "cancelled_at")
     public Instant cancelledAt;
 
-    @Size(max = 50)
-    @Column(name = "order_number", unique = true, length = 50)
+    @Size(
+            max = 50)
+    @Column(
+            name = "order_number",
+            unique = true,
+            length = 50)
     public String orderNumber;
 
-    @Size(max = 255)
-    @Column(name = "tracking_number", length = 255)
+    @Size(
+            max = 255)
+    @Column(
+            name = "tracking_number",
+            length = 255)
     public String trackingNumber;
 
     // Order status constants

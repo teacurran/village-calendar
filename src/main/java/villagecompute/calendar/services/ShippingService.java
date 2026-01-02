@@ -24,16 +24,24 @@ public class ShippingService {
     private static final String US_COUNTRY_CODE = "US";
 
     // Inject shipping rates from configuration
-    @ConfigProperty(name = "calendar.shipping.domestic.standard", defaultValue = "5.99")
+    @ConfigProperty(
+            name = "calendar.shipping.domestic.standard",
+            defaultValue = "5.99")
     BigDecimal domesticStandardRate;
 
-    @ConfigProperty(name = "calendar.shipping.domestic.priority", defaultValue = "9.99")
+    @ConfigProperty(
+            name = "calendar.shipping.domestic.priority",
+            defaultValue = "9.99")
     BigDecimal domesticPriorityRate;
 
-    @ConfigProperty(name = "calendar.shipping.domestic.express", defaultValue = "14.99")
+    @ConfigProperty(
+            name = "calendar.shipping.domestic.express",
+            defaultValue = "14.99")
     BigDecimal domesticExpressRate;
 
-    @ConfigProperty(name = "calendar.shipping.international", defaultValue = "19.99")
+    @ConfigProperty(
+            name = "calendar.shipping.international",
+            defaultValue = "19.99")
     BigDecimal internationalRate;
 
     /**

@@ -15,27 +15,49 @@ import io.quarkus.hibernate.orm.panache.PanacheQuery;
  * text, emoji, and color values.
  */
 @Entity
-@Table(name = "events", indexes = {@Index(name = "idx_events_calendar", columnList = "calendar_id, event_date"),
-        @Index(name = "idx_events_calendar_date_range", columnList = "calendar_id, event_date DESC")})
+@Table(
+        name = "events",
+        indexes = {@Index(
+                name = "idx_events_calendar",
+                columnList = "calendar_id, event_date"),
+                @Index(
+                        name = "idx_events_calendar_date_range",
+                        columnList = "calendar_id, event_date DESC")})
 public class Event extends DefaultPanacheEntityWithTimestamps {
 
-    @NotNull @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "calendar_id", nullable = false, foreignKey = @ForeignKey(name = "fk_events_calendar"))
+    @NotNull @ManyToOne(
+            fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "calendar_id",
+            nullable = false,
+            foreignKey = @ForeignKey(
+                    name = "fk_events_calendar"))
     public UserCalendar calendar;
 
-    @NotNull @Column(name = "event_date", nullable = false)
+    @NotNull @Column(
+            name = "event_date",
+            nullable = false)
     public LocalDate eventDate;
 
-    @Size(max = 500)
-    @Column(name = "event_text", length = 500)
+    @Size(
+            max = 500)
+    @Column(
+            name = "event_text",
+            length = 500)
     public String eventText;
 
-    @Size(max = 100)
-    @Column(name = "emoji", length = 100)
+    @Size(
+            max = 100)
+    @Column(
+            name = "emoji",
+            length = 100)
     public String emoji;
 
-    @Size(max = 20)
-    @Column(name = "color", length = 20)
+    @Size(
+            max = 20)
+    @Column(
+            name = "color",
+            length = 20)
     public String color;
 
     // ========== QUERY METHODS (Panache Active Record Pattern) ==========

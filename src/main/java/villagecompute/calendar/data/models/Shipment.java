@@ -14,54 +14,84 @@ import org.eclipse.microprofile.graphql.Ignore;
  * shipments).
  */
 @Entity
-@Table(name = "shipments", indexes = {@Index(name = "idx_shipments_order", columnList = "order_id"),
-        @Index(name = "idx_shipments_tracking", columnList = "tracking_number"),
-        @Index(name = "idx_shipments_status", columnList = "status")})
+@Table(
+        name = "shipments",
+        indexes = {@Index(
+                name = "idx_shipments_order",
+                columnList = "order_id"),
+                @Index(
+                        name = "idx_shipments_tracking",
+                        columnList = "tracking_number"),
+                @Index(
+                        name = "idx_shipments_status",
+                        columnList = "status")})
 public class Shipment extends DefaultPanacheEntityWithTimestamps {
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false, foreignKey = @ForeignKey(name = "fk_shipments_order"))
+    @ManyToOne(
+            optional = false,
+            fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "order_id",
+            nullable = false,
+            foreignKey = @ForeignKey(
+                    name = "fk_shipments_order"))
     @Ignore
     public CalendarOrder order;
 
     /** Items included in this shipment */
-    @OneToMany(mappedBy = "shipment", fetch = FetchType.LAZY)
+    @OneToMany(
+            mappedBy = "shipment",
+            fetch = FetchType.LAZY)
     public List<CalendarOrderItem> items = new ArrayList<>();
 
     /** Shipping carrier (e.g., USPS, UPS, FedEx) */
-    @Size(max = 50)
-    @Column(length = 50)
+    @Size(
+            max = 50)
+    @Column(
+            length = 50)
     public String carrier;
 
     /** Tracking number */
-    @Size(max = 255)
-    @Column(name = "tracking_number", length = 255)
+    @Size(
+            max = 255)
+    @Column(
+            name = "tracking_number",
+            length = 255)
     public String trackingNumber;
 
     /** Tracking URL (optional - can be generated from carrier + tracking number) */
-    @Size(max = 500)
-    @Column(name = "tracking_url", length = 500)
+    @Size(
+            max = 500)
+    @Column(
+            name = "tracking_url",
+            length = 500)
     public String trackingUrl;
 
     /** Shipment status */
-    @Size(max = 50)
-    @Column(length = 50)
+    @Size(
+            max = 50)
+    @Column(
+            length = 50)
     public String status = STATUS_PENDING;
 
     /** When the shipment was created/label printed */
-    @Column(name = "label_created_at")
+    @Column(
+            name = "label_created_at")
     public Instant labelCreatedAt;
 
     /** When the shipment was actually shipped */
-    @Column(name = "shipped_at")
+    @Column(
+            name = "shipped_at")
     public Instant shippedAt;
 
     /** When the shipment was delivered */
-    @Column(name = "delivered_at")
+    @Column(
+            name = "delivered_at")
     public Instant deliveredAt;
 
     /** Admin notes about the shipment */
-    @Column(columnDefinition = "TEXT")
+    @Column(
+            columnDefinition = "TEXT")
     public String notes;
 
     // Status constants

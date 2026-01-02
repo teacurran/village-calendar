@@ -19,20 +19,30 @@ import org.eclipse.microprofile.graphql.Input;
 @Description("Input for creating or updating a calendar template (admin only).")
 public class TemplateInput {
 
-    @NotNull(message = "Template name is required") @NotBlank(message = "Template name cannot be blank")
-    @Size(max = 255, message = "Template name must not exceed 255 characters")
+    @NotNull(
+            message = "Template name is required")
+    @NotBlank(
+            message = "Template name cannot be blank")
+    @Size(
+            max = 255,
+            message = "Template name must not exceed 255 characters")
     @Description("Template name")
     public String name;
 
     @Description("Template description")
     public String description;
 
-    @NotNull(message = "Configuration is required") @NotBlank(message = "Configuration cannot be blank")
+    @NotNull(
+            message = "Configuration is required")
+    @NotBlank(
+            message = "Configuration cannot be blank")
     @Description("JSON string containing template configuration")
     public String configuration;
 
     @Description("URL to thumbnail image")
-    @Size(max = 500, message = "Thumbnail URL must not exceed 500 characters")
+    @Size(
+            max = 500,
+            message = "Thumbnail URL must not exceed 500 characters")
     public String thumbnailUrl;
 
     @Description("Whether template is active")
@@ -42,7 +52,9 @@ public class TemplateInput {
     public Boolean isFeatured;
 
     @Description("Display order")
-    @Min(value = 0, message = "Display order must be 0 or greater")
+    @Min(
+            value = 0,
+            message = "Display order must be 0 or greater")
     public Integer displayOrder;
 
     @Description("SVG preview rendering")

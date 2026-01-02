@@ -50,7 +50,8 @@ class OrderWorkflowTest {
     @Inject
     PaymentService paymentService;
 
-    @ConfigProperty(name = "stripe.webhook.secret")
+    @ConfigProperty(
+            name = "stripe.webhook.secret")
     String webhookSecret;
 
     private CalendarUser testUser;

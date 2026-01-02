@@ -18,46 +18,81 @@ import io.quarkus.hibernate.orm.panache.PanacheQuery;
  * place orders for printed calendars.
  */
 @Entity
-@Table(name = "calendar_users", uniqueConstraints = {@UniqueConstraint(name = "uk_calendar_users_oauth", columnNames = {
-        "oauth_provider", "oauth_subject"})}, indexes = {
-                @Index(name = "idx_calendar_users_email", columnList = "email"),
-                @Index(name = "idx_calendar_users_last_login", columnList = "last_login_at DESC")})
+@Table(
+        name = "calendar_users",
+        uniqueConstraints = {@UniqueConstraint(
+                name = "uk_calendar_users_oauth",
+                columnNames = {"oauth_provider", "oauth_subject"})},
+        indexes = {@Index(
+                name = "idx_calendar_users_email",
+                columnList = "email"),
+                @Index(
+                        name = "idx_calendar_users_last_login",
+                        columnList = "last_login_at DESC")})
 public class CalendarUser extends DefaultPanacheEntityWithTimestamps {
 
-    @NotNull @Size(max = 50)
-    @Column(name = "oauth_provider", nullable = false, length = 50)
+    @NotNull @Size(
+            max = 50)
+    @Column(
+            name = "oauth_provider",
+            nullable = false,
+            length = 50)
     public String oauthProvider;
 
-    @NotNull @Size(max = 255)
-    @Column(name = "oauth_subject", nullable = false, length = 255)
+    @NotNull @Size(
+            max = 255)
+    @Column(
+            name = "oauth_subject",
+            nullable = false,
+            length = 255)
     public String oauthSubject;
 
     @NotNull @Email
-    @Size(max = 255)
-    @Column(nullable = false, length = 255)
+    @Size(
+            max = 255)
+    @Column(
+            nullable = false,
+            length = 255)
     public String email;
 
-    @Size(max = 255)
-    @Column(name = "display_name", length = 255)
+    @Size(
+            max = 255)
+    @Column(
+            name = "display_name",
+            length = 255)
     public String displayName;
 
-    @Size(max = 500)
-    @Column(name = "profile_image_url", length = 500)
+    @Size(
+            max = 500)
+    @Column(
+            name = "profile_image_url",
+            length = 500)
     public String profileImageUrl;
 
-    @Column(name = "last_login_at")
+    @Column(
+            name = "last_login_at")
     public Instant lastLoginAt;
 
-    @NotNull @Column(name = "is_admin", nullable = false)
+    @NotNull @Column(
+            name = "is_admin",
+            nullable = false)
     public Boolean isAdmin = false;
 
     // Relationships
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @BatchSize(size = 10)
+    @OneToMany(
+            mappedBy = "user",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
+    @BatchSize(
+            size = 10)
     public List<UserCalendar> calendars;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @BatchSize(size = 10)
+    @OneToMany(
+            mappedBy = "user",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
+    @BatchSize(
+            size = 10)
     public List<CalendarOrder> orders;
 
     // Static finder methods (ActiveRecord pattern)

@@ -33,16 +33,24 @@ public class EmailService {
     @Inject
     OpenTelemetry openTelemetry;
 
-    @ConfigProperty(name = "quarkus.mailer.from", defaultValue = "no-reply@villagecompute.com")
+    @ConfigProperty(
+            name = "quarkus.mailer.from",
+            defaultValue = "no-reply@villagecompute.com")
     String defaultFromEmail;
 
-    @ConfigProperty(name = "quarkus.profile", defaultValue = "dev")
+    @ConfigProperty(
+            name = "quarkus.profile",
+            defaultValue = "dev")
     String profile;
 
-    @ConfigProperty(name = "mail.enabled", defaultValue = "true")
+    @ConfigProperty(
+            name = "mail.enabled",
+            defaultValue = "true")
     boolean emailEnabled;
 
-    @ConfigProperty(name = "email.safe-test-domains", defaultValue = "villagecompute.com,grilledcheese.com,approachingpi.com")
+    @ConfigProperty(
+            name = "email.safe-test-domains",
+            defaultValue = "villagecompute.com,grilledcheese.com,approachingpi.com")
     String safeTestDomains;
 
     /** Get list of safe test domains. */

@@ -34,10 +34,12 @@ public class StripeService {
 
     private static final Logger LOG = Logger.getLogger(StripeService.class);
 
-    @ConfigProperty(name = "stripe.api.key")
+    @ConfigProperty(
+            name = "stripe.api.key")
     String stripeApiKey;
 
-    @ConfigProperty(name = "stripe.webhook.secret")
+    @ConfigProperty(
+            name = "stripe.webhook.secret")
     String webhookSecret;
 
     @PostConstruct

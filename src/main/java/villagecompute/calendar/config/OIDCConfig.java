@@ -22,22 +22,28 @@ public class OIDCConfig {
     private static final String STATUS_CONFIGURED = "configured";
     private static final String PLACEHOLDER_CLIENT_ID = "placeholder";
 
-    @ConfigProperty(name = "quarkus.oidc.google.enabled")
+    @ConfigProperty(
+            name = "quarkus.oidc.google.enabled")
     boolean googleEnabled;
 
-    @ConfigProperty(name = "quarkus.oidc.facebook.enabled")
+    @ConfigProperty(
+            name = "quarkus.oidc.facebook.enabled")
     boolean facebookEnabled;
 
-    @ConfigProperty(name = "quarkus.oidc.apple.enabled")
+    @ConfigProperty(
+            name = "quarkus.oidc.apple.enabled")
     boolean appleEnabled;
 
-    @ConfigProperty(name = "quarkus.oidc.google.client-id")
+    @ConfigProperty(
+            name = "quarkus.oidc.google.client-id")
     String googleClientId;
 
-    @ConfigProperty(name = "quarkus.oidc.facebook.client-id")
+    @ConfigProperty(
+            name = "quarkus.oidc.facebook.client-id")
     String facebookClientId;
 
-    @ConfigProperty(name = "quarkus.oidc.apple.client-id")
+    @ConfigProperty(
+            name = "quarkus.oidc.apple.client-id")
     String appleClientId;
 
     void onStart(@Observes StartupEvent event) {
