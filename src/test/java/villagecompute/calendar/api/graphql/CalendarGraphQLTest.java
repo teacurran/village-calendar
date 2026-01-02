@@ -693,4 +693,272 @@ class CalendarGraphQLTest {
             deleteTestCalendar(calendarId);
         }
     }
+
+    // ============================================================================
+    // ADDITIONAL QUERY TESTS
+    // ============================================================================
+
+    @Test
+    @Order(80)
+    void testQuery_CurrentUser_Unauthenticated() {
+        // Test: `currentUser` query (alias for me) without authentication should return null
+        String query = """
+                query {
+                    currentUser {
+                        id
+                        email
+                        displayName
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.currentUser", nullValue()).body("errors", nullValue());
+    }
+
+    @Test
+    @Order(81)
+    void testQuery_Calendars_Unauthenticated() {
+        // Test: `calendars` query without authentication should return error
+        String query = """
+                query {
+                    calendars {
+                        id
+                        name
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(82)
+    void testQuery_CalendarsWithYear_Unauthenticated() {
+        // Test: `calendars` with year filter without authentication should return error
+        String query = """
+                query {
+                    calendars(year: 2025) {
+                        id
+                        name
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(83)
+    void testQuery_AllUsers_Unauthenticated() {
+        // Test: `allUsers` admin query without authentication should return error
+        String query = """
+                query {
+                    allUsers {
+                        id
+                        email
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(84)
+    void testQuery_AllUsersWithLimit_Unauthenticated() {
+        // Test: `allUsers` with limit without authentication should return error
+        String query = """
+                query {
+                    allUsers(limit: 10) {
+                        id
+                        email
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(85)
+    void testQuery_MyCalendarsWithYear_Unauthenticated() {
+        // Test: `myCalendars` with year filter without authentication should return error
+        String query = """
+                query {
+                    myCalendars(year: 2025) {
+                        id
+                        name
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    // ============================================================================
+    // ADDITIONAL MUTATION TESTS
+    // ============================================================================
+
+    @Test
+    @Order(90)
+    void testMutation_UpdateUserAdmin_Unauthenticated() {
+        // Test: `updateUserAdmin` mutation without authentication should return error
+        String mutation = String.format("""
+                mutation {
+                    updateUserAdmin(userId: "%s", isAdmin: true) {
+                        id
+                        isAdmin
+                    }
+                }
+                """, testUser.id.toString());
+
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(91)
+    void testMutation_ConvertGuestSession_Unauthenticated() {
+        // Test: `convertGuestSession` mutation without authentication should return error
+        String mutation = """
+                mutation {
+                    convertGuestSession(sessionId: "test-session-123") {
+                        id
+                        email
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(92)
+    void testMutation_UpdateCalendar_InvalidId() {
+        // Test: Update calendar with invalid UUID format should fail
+        String mutation = """
+                mutation {
+                    updateCalendar(
+                        id: "not-a-valid-uuid"
+                        input: { name: "Test Update" }
+                    ) {
+                        id
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(93)
+    void testMutation_DeleteCalendar_InvalidId() {
+        // Test: Delete calendar with invalid UUID format should fail
+        String mutation = """
+                mutation {
+                    deleteCalendar(id: "not-a-valid-uuid")
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(94)
+    void testMutation_CreateCalendar_MissingName() {
+        // Test: Create calendar without required name field should fail
+        String mutation = String.format("""
+                mutation {
+                    createCalendar(input: {
+                        year: 2025
+                        templateId: "%s"
+                    }) {
+                        id
+                    }
+                }
+                """, testTemplate.id.toString());
+
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(95)
+    void testMutation_CreateCalendar_MissingYear() {
+        // Test: Create calendar without required year field should fail
+        String mutation = String.format("""
+                mutation {
+                    createCalendar(input: {
+                        name: "Test"
+                        templateId: "%s"
+                    }) {
+                        id
+                    }
+                }
+                """, testTemplate.id.toString());
+
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(96)
+    void testMutation_CreateCalendar_MissingTemplateId() {
+        // Test: Create calendar without required templateId field should fail
+        String mutation = """
+                mutation {
+                    createCalendar(input: {
+                        name: "Test"
+                        year: 2025
+                    }) {
+                        id
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(97)
+    void testMutation_UpdateUserAdmin_InvalidUserId() {
+        // Test: Update user admin with invalid UUID should fail (even if authenticated)
+        String mutation = """
+                mutation {
+                    updateUserAdmin(userId: "invalid-uuid", isAdmin: true) {
+                        id
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(98)
+    void testQuery_CalendarsWithUserId_Unauthenticated() {
+        // Test: `calendars` query with userId (admin operation) without authentication should return error
+        String query = String.format("""
+                query {
+                    calendars(userId: "%s") {
+                        id
+                        name
+                    }
+                }
+                """, testUser.id.toString());
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
 }

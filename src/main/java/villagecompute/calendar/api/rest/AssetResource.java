@@ -14,7 +14,7 @@ import villagecompute.calendar.util.MimeTypes;
 /**
  * REST resource for accessing asset content (SVGs stored in item_assets table) and cart item thumbnails.
  */
-@Path("/api")
+@Path("/")
 public class AssetResource {
 
     private static final Logger LOG = Logger.getLogger(AssetResource.class);
