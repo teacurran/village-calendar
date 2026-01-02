@@ -11,9 +11,9 @@ import org.jboss.logging.Logger;
 
 import villagecompute.calendar.api.graphql.inputs.AddToCartInput;
 import villagecompute.calendar.api.graphql.inputs.AssetInput;
-import villagecompute.calendar.api.types.Cart;
-import villagecompute.calendar.api.types.CartItem;
 import villagecompute.calendar.data.models.ItemAsset;
+import villagecompute.calendar.types.CartItemType;
+import villagecompute.calendar.types.CartType;
 
 /** Service for cart operations Handles cart persistence and business logic */
 @ApplicationScoped
@@ -26,7 +26,7 @@ public class CartService {
 
     /** Get or create cart for session */
     @Transactional
-    public Cart getCart(String sessionId) {
+    public CartType getCart(String sessionId) {
         villagecompute.calendar.data.models.Cart cartEntity = villagecompute.calendar.data.models.Cart
                 .getOrCreateForSession(sessionId);
 
@@ -38,7 +38,7 @@ public class CartService {
      * items.
      */
     @Transactional
-    public Cart addToCart(String sessionId, AddToCartInput input) {
+    public CartType addToCart(String sessionId, AddToCartInput input) {
         villagecompute.calendar.data.models.Cart cartEntity = villagecompute.calendar.data.models.Cart
                 .getOrCreateForSession(sessionId);
 
@@ -84,7 +84,7 @@ public class CartService {
 
     /** Update item quantity */
     @Transactional
-    public Cart updateQuantity(String sessionId, UUID itemId, Integer quantity) {
+    public CartType updateQuantity(String sessionId, UUID itemId, Integer quantity) {
         villagecompute.calendar.data.models.Cart cartEntity = villagecompute.calendar.data.models.Cart
                 .getOrCreateForSession(sessionId);
 
@@ -105,7 +105,7 @@ public class CartService {
 
     /** Remove item from cart */
     @Transactional
-    public Cart removeItem(String sessionId, UUID itemId) {
+    public CartType removeItem(String sessionId, UUID itemId) {
         villagecompute.calendar.data.models.Cart cartEntity = villagecompute.calendar.data.models.Cart
                 .getOrCreateForSession(sessionId);
 
@@ -121,7 +121,7 @@ public class CartService {
 
     /** Clear cart */
     @Transactional
-    public Cart clearCart(String sessionId) {
+    public CartType clearCart(String sessionId) {
         villagecompute.calendar.data.models.Cart cartEntity = villagecompute.calendar.data.models.Cart
                 .getOrCreateForSession(sessionId);
 
@@ -131,8 +131,8 @@ public class CartService {
     }
 
     /** Convert database cart entity to GraphQL cart type */
-    private Cart toGraphQLCart(villagecompute.calendar.data.models.Cart cartEntity) {
-        Cart cart = new Cart();
+    private CartType toGraphQLCart(villagecompute.calendar.data.models.Cart cartEntity) {
+        CartType cart = new CartType();
         cart.id = cartEntity.id.toString();
         cart.subtotal = cartEntity.getSubtotal().doubleValue();
         cart.taxAmount = 0.0; // TODO: Calculate tax
@@ -144,7 +144,7 @@ public class CartService {
     }
 
     /** Convert database cart item to GraphQL cart item */
-    private CartItem toGraphQLCartItem(villagecompute.calendar.data.models.CartItem itemEntity) {
-        return CartItem.fromEntity(itemEntity);
+    private CartItemType toGraphQLCartItem(villagecompute.calendar.data.models.CartItem itemEntity) {
+        return CartItemType.fromEntity(itemEntity);
     }
 }

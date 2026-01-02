@@ -15,9 +15,9 @@ import org.jboss.logging.Logger;
 
 import com.stripe.exception.StripeException;
 
-import villagecompute.calendar.api.types.ErrorResponse;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PaymentService;
+import villagecompute.calendar.types.ErrorType;
 
 /** Payment Resource - REST API for Stripe payment processing */
 @Path("/payment")
@@ -71,11 +71,11 @@ public class PaymentResource {
             return Response.ok(result).build();
         } catch (StripeException e) {
             LOG.errorf("Stripe error creating payment intent: %s", e.getMessage());
-            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of(e.getMessage())).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of(e.getMessage())).build();
         } catch (Exception e) {
             LOG.errorf("Error creating payment intent: %s", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(ErrorResponse.of("Failed to create payment intent")).build();
+                    .entity(ErrorType.of("Failed to create payment intent")).build();
         }
     }
 
@@ -93,7 +93,7 @@ public class PaymentResource {
             if (!"succeeded".equals(paymentIntent.getStatus())) {
                 LOG.warnf("PaymentIntent %s has status %s, expected 'succeeded'", request.paymentIntentId,
                         paymentIntent.getStatus());
-                return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of("Payment not completed"))
+                return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of("Payment not completed"))
                         .build();
             }
 
@@ -107,8 +107,7 @@ public class PaymentResource {
             // Extract fields from orderDetails
             String email = (String) orderDetails.get("email");
             if (email == null || email.isEmpty()) {
-                return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of("Email is required"))
-                        .build();
+                return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of("Email is required")).build();
             }
 
             Map<String, Object> shippingAddress = (Map<String, Object>) orderDetails.get("shippingAddress");
@@ -140,11 +139,11 @@ public class PaymentResource {
             return Response.ok(result).build();
         } catch (StripeException e) {
             LOG.errorf("Stripe error confirming payment: %s", e.getMessage());
-            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of(e.getMessage())).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of(e.getMessage())).build();
         } catch (Exception e) {
             LOG.errorf(e, "Error confirming payment: %s", e.getMessage());
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(ErrorResponse.of("Failed to confirm payment: " + e.getMessage())).build();
+                    .entity(ErrorType.of("Failed to confirm payment: " + e.getMessage())).build();
         }
     }
 

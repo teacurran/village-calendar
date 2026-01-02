@@ -31,7 +31,6 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
 
 import villagecompute.calendar.api.graphql.inputs.PlaceOrderInput;
-import villagecompute.calendar.api.types.PaymentIntentResponse;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
@@ -39,7 +38,9 @@ import villagecompute.calendar.exceptions.PaymentException;
 import villagecompute.calendar.integration.stripe.StripeService;
 import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.OrderService;
+import villagecompute.calendar.types.PaymentIntentType;
 import villagecompute.calendar.util.Roles;
+import villagecompute.calendar.util.UuidUtil;
 
 /**
  * GraphQL resolver for order operations. Handles order queries, order placement, and order cancellation.
@@ -246,21 +247,13 @@ public class OrderResolver {
             + "Requires authentication. Creates Stripe Checkout Session for payment.")
     @RolesAllowed({Roles.USER, Roles.ADMIN})
     @Transactional
-    public PaymentIntentResponse placeOrder(
+    public PaymentIntentType placeOrder(
             @Name("input") @Description("Order details") @NotNull final PlaceOrderInput input) {
         LOG.infof("Mutation: placeOrder(calendarId=%s, productType=%s, quantity=%d)", input.calendarId,
                 input.productType, input.quantity);
 
         CalendarUser currentUser = authService.requireCurrentUser(jwt);
-
-        // Parse calendar ID
-        UUID calendarId;
-        try {
-            calendarId = UUID.fromString(input.calendarId);
-        } catch (IllegalArgumentException e) {
-            LOG.errorf("Invalid calendar ID format: %s", input.calendarId);
-            throw new IllegalArgumentException("Invalid calendar ID format");
-        }
+        UUID calendarId = UuidUtil.parse(input.calendarId, "calendar ID");
 
         // Validate calendar exists and user owns it
         Optional<UserCalendar> calendarOpt = UserCalendar.findByIdOptional(calendarId);
@@ -333,7 +326,7 @@ public class OrderResolver {
 
         // Build PaymentIntent response
         Integer amountInCents = order.totalPrice.multiply(BigDecimal.valueOf(100)).intValue();
-        PaymentIntentResponse response = PaymentIntentResponse.fromCheckoutSession(checkoutSession.getId(),
+        PaymentIntentType response = PaymentIntentType.fromCheckoutSession(checkoutSession.getId(),
                 checkoutSession.getUrl(), amountInCents, calendar.id, input.quantity);
 
         LOG.infof("Returning PaymentIntent for order %s", order.id);

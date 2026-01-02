@@ -8,6 +8,8 @@ import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.Test;
 
+import villagecompute.calendar.types.CalendarConfigType;
+
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
@@ -74,7 +76,7 @@ public class PDFRenderingServiceTest {
     @Test
     public void testCalendarWithSecularHolidays() {
         // Generate a calendar with secular holidays (which may use emojis with xlink:href)
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+        CalendarConfigType config = new CalendarConfigType();
         config.year = 2025;
         config.theme = "default";
         config.layoutStyle = "grid";
@@ -100,7 +102,7 @@ public class PDFRenderingServiceTest {
         // Test specific emojis that use xlink:href (like the dancing woman emoji)
         // emoji_u1f483.svg is known to use xlink:href
         if (emojiSvgService.hasEmojiSvg("💃")) {
-            CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+            CalendarConfigType config = new CalendarConfigType();
             config.year = 2025;
             config.theme = "default";
             config.layoutStyle = "grid";
@@ -126,7 +128,7 @@ public class PDFRenderingServiceTest {
 
         for (String emoji : emojisWithXlink) {
             if (emojiSvgService.hasEmojiSvg(emoji)) {
-                CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+                CalendarConfigType config = new CalendarConfigType();
                 config.year = 2025;
                 config.theme = "default";
                 config.layoutStyle = "grid";
@@ -150,7 +152,7 @@ public class PDFRenderingServiceTest {
     @Test
     public void testMonochromeCalendarWithSecularHolidays() {
         // Test monochrome mode with secular holidays
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+        CalendarConfigType config = new CalendarConfigType();
         config.year = 2025;
         config.theme = "default";
         config.layoutStyle = "grid";
@@ -173,7 +175,7 @@ public class PDFRenderingServiceTest {
     @Test
     public void testComplexCalendarWithAllFeatures() {
         // Test a complex calendar with all features that could cause CSS URI reference issues
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+        CalendarConfigType config = new CalendarConfigType();
         config.year = 2025;
         config.theme = "rainbowWeekends";
         config.layoutStyle = "grid";
@@ -225,7 +227,7 @@ public class PDFRenderingServiceTest {
     public void testEmojiFontConsistency() {
         // Test that emoji font setting is properly applied in both SVG generation and PDF
         // conversion
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+        CalendarConfigType config = new CalendarConfigType();
         config.year = 2025;
         config.theme = "default";
         config.emojiFont = "noto-mono"; // Explicitly set to monochrome

@@ -1,4 +1,4 @@
-package villagecompute.calendar.api.types;
+package villagecompute.calendar.types;
 
 import java.util.List;
 
@@ -6,7 +6,7 @@ import org.eclipse.microprofile.graphql.Type;
 
 /** API type representing a product in the catalog. Used by both REST and GraphQL endpoints. */
 @Type("Product")
-public class Product {
+public class ProductType {
     public String code;
     public String name;
     public String description;
@@ -16,10 +16,10 @@ public class Product {
     public String badge;
     public Integer displayOrder;
 
-    public Product() {
+    public ProductType() {
     }
 
-    public Product(String code, String name, String description, Double price, List<String> features, String icon,
+    public ProductType(String code, String name, String description, Double price, List<String> features, String icon,
             String badge, Integer displayOrder) {
         this.code = code;
         this.name = name;

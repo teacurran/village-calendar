@@ -22,6 +22,7 @@ import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.exceptions.CalendarGenerationException;
 import villagecompute.calendar.services.exceptions.StorageException;
+import villagecompute.calendar.types.CalendarConfigType;
 
 /**
  * Unit tests for CalendarGenerationService. Tests PDF generation pipeline with mocked dependencies.
@@ -236,11 +237,10 @@ public class CalendarGenerationServiceTest {
         calendarGenerationService.generateCalendar(testUserCalendar);
 
         // Capture the CalendarConfig passed to generateCalendarSVG
-        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor = ArgumentCaptor
-                .forClass(CalendarRenderingService.CalendarConfig.class);
+        ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarConfigType capturedConfig = configCaptor.getValue();
 
         // Assert: Configuration should merge template + user settings
         assertEquals(2025, capturedConfig.year);
@@ -313,11 +313,10 @@ public class CalendarGenerationServiceTest {
         assertNotNull(result);
 
         // Verify moon configuration was applied
-        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor = ArgumentCaptor
-                .forClass(CalendarRenderingService.CalendarConfig.class);
+        ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarConfigType capturedConfig = configCaptor.getValue();
         assertEquals("phases", capturedConfig.moonDisplayMode);
         assertEquals(32, capturedConfig.moonSize);
         assertEquals(40, capturedConfig.moonOffsetX);
@@ -359,11 +358,10 @@ public class CalendarGenerationServiceTest {
         // Assert: moonDisplayMode should be propagated correctly
         assertNotNull(result);
 
-        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor = ArgumentCaptor
-                .forClass(CalendarRenderingService.CalendarConfig.class);
+        ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarConfigType capturedConfig = configCaptor.getValue();
         assertEquals("illumination", capturedConfig.moonDisplayMode, "moonDisplayMode should be 'illumination'");
     }
 
@@ -396,11 +394,10 @@ public class CalendarGenerationServiceTest {
         calendarGenerationService.generateCalendar(testUserCalendar);
 
         // Assert: moonDisplayMode should be propagated correctly
-        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor = ArgumentCaptor
-                .forClass(CalendarRenderingService.CalendarConfig.class);
+        ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarConfigType capturedConfig = configCaptor.getValue();
         assertEquals("phases", capturedConfig.moonDisplayMode, "moonDisplayMode should be 'phases'");
     }
 
@@ -432,11 +429,10 @@ public class CalendarGenerationServiceTest {
         calendarGenerationService.generateCalendar(testUserCalendar);
 
         // Assert: moonDisplayMode should be propagated correctly
-        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor = ArgumentCaptor
-                .forClass(CalendarRenderingService.CalendarConfig.class);
+        ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarConfigType capturedConfig = configCaptor.getValue();
         assertEquals("full-only", capturedConfig.moonDisplayMode, "moonDisplayMode should be 'full-only'");
     }
 
@@ -472,11 +468,10 @@ public class CalendarGenerationServiceTest {
         calendarGenerationService.generateCalendar(testUserCalendar);
 
         // Assert: moonDisplayMode is used (legacy booleans are ignored)
-        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor = ArgumentCaptor
-                .forClass(CalendarRenderingService.CalendarConfig.class);
+        ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarConfigType capturedConfig = configCaptor.getValue();
         assertEquals("phases", capturedConfig.moonDisplayMode,
                 "moonDisplayMode should be 'phases' (legacy booleans are ignored)");
     }
@@ -509,11 +504,10 @@ public class CalendarGenerationServiceTest {
         calendarGenerationService.generateCalendar(testUserCalendar);
 
         // Assert: moonDisplayMode should be "none" (no moons displayed)
-        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor = ArgumentCaptor
-                .forClass(CalendarRenderingService.CalendarConfig.class);
+        ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarConfigType capturedConfig = configCaptor.getValue();
         assertEquals("none", capturedConfig.moonDisplayMode, "moonDisplayMode should be 'none'");
     }
 
@@ -549,11 +543,10 @@ public class CalendarGenerationServiceTest {
         calendarGenerationService.generateCalendar(testUserCalendar);
 
         // Assert: holidaySets should be parsed correctly
-        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor = ArgumentCaptor
-                .forClass(CalendarRenderingService.CalendarConfig.class);
+        ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarConfigType capturedConfig = configCaptor.getValue();
         assertEquals(2, capturedConfig.holidaySets.size());
         assertTrue(capturedConfig.holidaySets.contains("us-federal"));
         assertTrue(capturedConfig.holidaySets.contains("us-christian"));
@@ -587,11 +580,10 @@ public class CalendarGenerationServiceTest {
         calendarGenerationService.generateCalendar(testUserCalendar);
 
         // Assert: holidaySets should be empty
-        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor = ArgumentCaptor
-                .forClass(CalendarRenderingService.CalendarConfig.class);
+        ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarConfigType capturedConfig = configCaptor.getValue();
         assertTrue(capturedConfig.holidaySets.isEmpty());
     }
 
@@ -626,11 +618,10 @@ public class CalendarGenerationServiceTest {
         calendarGenerationService.generateCalendar(testUserCalendar);
 
         // Assert: holidayEmojis should be parsed correctly
-        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor = ArgumentCaptor
-                .forClass(CalendarRenderingService.CalendarConfig.class);
+        ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarConfigType capturedConfig = configCaptor.getValue();
         assertEquals(2, capturedConfig.holidayEmojis.size());
         assertEquals("🎉", capturedConfig.holidayEmojis.get("2025-01-01"));
         assertEquals("🎄", capturedConfig.holidayEmojis.get("2025-12-25"));
@@ -667,11 +658,10 @@ public class CalendarGenerationServiceTest {
         calendarGenerationService.generateCalendar(testUserCalendar);
 
         // Assert: holidayNames should be parsed correctly
-        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor = ArgumentCaptor
-                .forClass(CalendarRenderingService.CalendarConfig.class);
+        ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarConfigType capturedConfig = configCaptor.getValue();
         assertEquals(2, capturedConfig.holidayNames.size());
         assertEquals("New Year's Day", capturedConfig.holidayNames.get("2025-01-01"));
         assertEquals("Independence Day", capturedConfig.holidayNames.get("2025-07-04"));
@@ -711,11 +701,10 @@ public class CalendarGenerationServiceTest {
         calendarGenerationService.generateCalendar(testUserCalendar);
 
         // Assert: All holiday config should be parsed correctly
-        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor = ArgumentCaptor
-                .forClass(CalendarRenderingService.CalendarConfig.class);
+        ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarConfigType capturedConfig = configCaptor.getValue();
         assertEquals(1, capturedConfig.holidaySets.size());
         assertTrue(capturedConfig.holidaySets.contains("us-federal"));
         assertEquals("🎉", capturedConfig.holidayEmojis.get("2025-01-01"));
@@ -761,11 +750,10 @@ public class CalendarGenerationServiceTest {
         calendarGenerationService.generateCalendar(testUserCalendar);
 
         // Assert: User's empty config should override template
-        ArgumentCaptor<CalendarRenderingService.CalendarConfig> configCaptor = ArgumentCaptor
-                .forClass(CalendarRenderingService.CalendarConfig.class);
+        ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
-        CalendarRenderingService.CalendarConfig capturedConfig = configCaptor.getValue();
+        CalendarConfigType capturedConfig = configCaptor.getValue();
         assertTrue(capturedConfig.holidaySets.isEmpty(), "User's empty holidaySets should override template");
         assertTrue(capturedConfig.holidayEmojis.isEmpty(), "User's empty holidayEmojis should override template");
     }

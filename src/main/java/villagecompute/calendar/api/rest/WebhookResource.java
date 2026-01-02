@@ -28,11 +28,11 @@ import com.stripe.model.Event;
 import com.stripe.model.StripeObject;
 import com.stripe.net.Webhook;
 
-import villagecompute.calendar.api.types.ErrorResponse;
-import villagecompute.calendar.api.types.SuccessResponse;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PaymentService;
+import villagecompute.calendar.types.ErrorType;
+import villagecompute.calendar.types.SuccessType;
 
 /**
  * REST resource for handling Stripe webhooks. Validates webhook signatures and processes payment events.
@@ -88,7 +88,7 @@ public class WebhookResource {
         // Validate signature
         if (signatureHeader == null || signatureHeader.isBlank()) {
             LOG.error("Missing Stripe-Signature header");
-            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of("Missing signature header"))
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of("Missing signature header"))
                     .build();
         }
 
@@ -116,21 +116,20 @@ public class WebhookResource {
             LOG.errorf("Invalid webhook signature: %s", e.getMessage());
             LOG.errorf("SignatureVerificationException details - sigHeader length: %d, payload length:" + " %d",
                     signatureHeader.length(), payload != null ? payload.length() : 0);
-            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of("Invalid signature")).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of("Invalid signature")).build();
         } catch (Exception e) {
             LOG.errorf(e, "Failed to construct webhook event");
-            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorResponse.of("Invalid webhook payload"))
-                    .build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of("Invalid webhook payload")).build();
         }
 
         // Process the event
         try {
             processWebhookEvent(event);
-            return Response.ok(SuccessResponse.ok()).build();
+            return Response.ok(SuccessType.ok()).build();
         } catch (Exception e) {
             LOG.errorf(e, "Failed to process webhook event");
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(ErrorResponse.of("Failed to process event")).build();
+                    .entity(ErrorType.of("Failed to process event")).build();
         }
     }
 

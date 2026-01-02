@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.exceptions.CalendarGenerationException;
 import villagecompute.calendar.services.exceptions.StorageException;
+import villagecompute.calendar.types.CalendarConfigType;
 
 /**
  * Main orchestration service for calendar generation. Coordinates SVG generation, PDF rendering, and storage upload.
@@ -71,7 +72,7 @@ public class CalendarGenerationService {
 
         try {
             // Step 1: Build configuration by merging template + user configuration
-            CalendarRenderingService.CalendarConfig config = buildCalendarConfig(userCalendar);
+            CalendarConfigType config = buildCalendarConfig(userCalendar);
 
             // Step 2: Generate SVG
             LOG.debug("Generating SVG...");
@@ -124,34 +125,41 @@ public class CalendarGenerationService {
      * @return SVG content string
      */
     public String generateCalendarSVG(UserCalendar userCalendar) {
-        CalendarRenderingService.CalendarConfig config = buildCalendarConfig(userCalendar);
+        CalendarConfigType config = buildCalendarConfig(userCalendar);
         return calendarRenderingService.generateCalendarSVG(config);
     }
 
     /**
-     * Build a CalendarConfig by merging template configuration with user configuration. User settings override template
-     * defaults.
+     * Build a CalendarConfigType by merging template configuration with user configuration. User settings override
+     * template defaults.
      *
      * @param userCalendar
      *            The UserCalendar entity
-     * @return Merged CalendarConfig
+     * @return Merged CalendarConfigType
      */
-    private CalendarRenderingService.CalendarConfig buildCalendarConfig(UserCalendar userCalendar) {
-        CalendarRenderingService.CalendarConfig config = new CalendarRenderingService.CalendarConfig();
+    private CalendarConfigType buildCalendarConfig(UserCalendar userCalendar) {
+        CalendarConfigType config = new CalendarConfigType();
 
         // Start with default config values
         config.year = userCalendar.year;
 
-        // Apply template configuration if present
-        if (userCalendar.template != null && userCalendar.template.configuration != null) {
-            LOG.debugf("Applying template configuration from template: %s", userCalendar.template.name);
-            CalendarRenderingService.applyJsonConfiguration(config, userCalendar.template.configuration);
-        }
+        try {
+            // Apply template configuration if present
+            if (userCalendar.template != null && userCalendar.template.configuration != null) {
+                LOG.debugf("Applying template configuration from template: %s", userCalendar.template.name);
+                String templateConfigJson = objectMapper.writeValueAsString(userCalendar.template.configuration);
+                config = objectMapper.readValue(templateConfigJson, CalendarConfigType.class);
+            }
 
-        // Override with user configuration if present
-        if (userCalendar.configuration != null) {
-            LOG.debugf("Applying user configuration overrides");
-            CalendarRenderingService.applyJsonConfiguration(config, userCalendar.configuration);
+            // Override with user configuration if present - merge with template config
+            if (userCalendar.configuration != null) {
+                LOG.debugf("Applying user configuration overrides");
+                String userConfigJson = objectMapper.writeValueAsString(userCalendar.configuration);
+                // Merge user config into existing config
+                objectMapper.readerForUpdating(config).readValue(userConfigJson);
+            }
+        } catch (Exception e) {
+            LOG.warnf(e, "Error building calendar config, using defaults");
         }
 
         // Ensure year is always set from UserCalendar

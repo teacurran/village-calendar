@@ -7,8 +7,8 @@ import jakarta.inject.Inject;
 
 import org.eclipse.microprofile.graphql.*;
 
-import villagecompute.calendar.api.types.Product;
 import villagecompute.calendar.services.ProductService;
+import villagecompute.calendar.types.ProductType;
 
 /** GraphQL API for product catalog */
 @GraphQLApi
@@ -21,14 +21,14 @@ public class ProductGraphQL {
     /** Get all available products */
     @Query("products")
     @Description("Get all available products with pricing")
-    public List<Product> getProducts() {
+    public List<ProductType> getProducts() {
         return productService.getAllProducts().stream().map(this::toGraphQLProduct).toList();
     }
 
     /** Get a single product by code */
     @Query("product")
     @Description("Get a product by its code")
-    public Product getProduct(@Name("code") String code) {
+    public ProductType getProduct(@Name("code") String code) {
         return productService.getProduct(code).map(this::toGraphQLProduct).orElse(null);
     }
 
@@ -39,8 +39,8 @@ public class ProductGraphQL {
         return productService.getDefaultProductCode();
     }
 
-    private Product toGraphQLProduct(ProductService.Product p) {
-        return new Product(p.code, p.name, p.description, p.price.doubleValue(), p.features, p.icon, p.badge,
+    private ProductType toGraphQLProduct(ProductService.Product p) {
+        return new ProductType(p.code, p.name, p.description, p.price.doubleValue(), p.features, p.icon, p.badge,
                 p.displayOrder);
     }
 }

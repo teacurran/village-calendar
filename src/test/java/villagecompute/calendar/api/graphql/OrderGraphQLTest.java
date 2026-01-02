@@ -431,4 +431,263 @@ class OrderGraphQLTest {
         given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
                 .statusCode(200).body("errors", notNullValue()); // Requires authentication
     }
+
+    // ==================================================================
+    // PUBLIC QUERIES - orderByNumber
+    // ==================================================================
+
+    @Test
+    @Order(50)
+    void testOrderByNumber_NotFound() {
+        String query = """
+                query {
+                    orderByNumber(orderNumber: "VC-XXXX-XXXX") {
+                        id
+                        orderNumber
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.orderByNumber", nullValue()).body("errors", nullValue());
+    }
+
+    // ==================================================================
+    // PUBLIC QUERIES - orderByNumberAndId
+    // ==================================================================
+
+    @Test
+    @Order(51)
+    void testOrderByNumberAndId_InvalidUUID() {
+        String query = """
+                query {
+                    orderByNumberAndId(orderNumber: "VC-TEST-1234", orderId: "not-a-uuid") {
+                        id
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.orderByNumberAndId", nullValue()).body("errors", nullValue());
+    }
+
+    @Test
+    @Order(55)
+    void testOrderByNumberAndId_NotFoundOrderNumber() {
+        String query = String.format("""
+                query {
+                    orderByNumberAndId(orderNumber: "VC-NOTFOUND-123", orderId: "%s") {
+                        id
+                    }
+                }
+                """, java.util.UUID.randomUUID());
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.orderByNumberAndId", nullValue()).body("errors", nullValue());
+    }
+
+    // ==================================================================
+    // MYORDERS QUERY - Unauthenticated
+    // ==================================================================
+
+    @Test
+    @Order(60)
+    void testMyOrders_Unauthenticated() {
+        String query = """
+                query {
+                    myOrders {
+                        id
+                        orderNumber
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue()); // Requires authentication
+    }
+
+    @Test
+    @Order(61)
+    void testMyOrders_WithStatusFilter_Unauthenticated() {
+        String query = """
+                query {
+                    myOrders(status: "pending") {
+                        id
+                        orderNumber
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    // ==================================================================
+    // ORDER QUERY (by id) - Unauthenticated
+    // ==================================================================
+
+    @Test
+    @Order(62)
+    @Transactional
+    void testOrder_ById_Unauthenticated() {
+        JsonNode shippingAddress = objectMapper.createObjectNode().put("country", "US");
+        CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, productService.getPrice("print"),
+                shippingAddress);
+
+        String query = String.format("""
+                query {
+                    order(id: "%s") {
+                        id
+                        orderNumber
+                    }
+                }
+                """, order.id);
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue()); // Requires authentication
+    }
+
+    @Test
+    @Order(63)
+    void testOrder_InvalidId() {
+        String query = """
+                query {
+                    order(id: "not-a-uuid") {
+                        id
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue()); // Should fail due to invalid UUID or auth
+    }
+
+    // ==================================================================
+    // ORDERS QUERY (with userId filter) - Unauthenticated
+    // ==================================================================
+
+    @Test
+    @Order(64)
+    void testOrders_Unauthenticated() {
+        String query = """
+                query {
+                    orders {
+                        id
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(65)
+    void testOrders_WithUserId_Unauthenticated() {
+        String query = String.format("""
+                query {
+                    orders(userId: "%s") {
+                        id
+                    }
+                }
+                """, java.util.UUID.randomUUID());
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    // ==================================================================
+    // ALLORDERS QUERY - Admin only
+    // ==================================================================
+
+    @Test
+    @Order(66)
+    void testAllOrders_Unauthenticated() {
+        String query = """
+                query {
+                    allOrders {
+                        id
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue()); // Requires ADMIN role
+    }
+
+    @Test
+    @Order(67)
+    void testAllOrders_WithFilters_Unauthenticated() {
+        String query = """
+                query {
+                    allOrders(status: "pending", limit: 10) {
+                        id
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    // ==================================================================
+    // CREATEORDER MUTATION - Unauthenticated
+    // ==================================================================
+
+    @Test
+    @Order(70)
+    void testCreateOrder_Unauthenticated() {
+        String mutation = String.format("""
+                mutation {
+                    createOrder(input: {
+                        calendarId: "%s"
+                        quantity: 1
+                        shippingAddress: {
+                            street: "123 Test St"
+                            city: "Nashville"
+                            state: "TN"
+                            postalCode: "37201"
+                            country: "US"
+                        }
+                    }) {
+                        order {
+                            id
+                        }
+                        clientSecret
+                    }
+                }
+                """, testCalendar.id);
+
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    // ==================================================================
+    // UPDATEORDERSTATUS MUTATION - Unauthenticated
+    // ==================================================================
+
+    @Test
+    @Order(71)
+    @Transactional
+    void testUpdateOrderStatus_Unauthenticated() {
+        JsonNode shippingAddress = objectMapper.createObjectNode().put("country", "US");
+        CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, productService.getPrice("print"),
+                shippingAddress);
+
+        String mutation = String.format("""
+                mutation {
+                    updateOrderStatus(input: {
+                        orderId: "%s"
+                        status: "processing"
+                    }) {
+                        id
+                        status
+                    }
+                }
+                """, order.id);
+
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue()); // Requires ADMIN role
+    }
+
 }

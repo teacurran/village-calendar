@@ -17,13 +17,14 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import villagecompute.calendar.api.types.ErrorResponse;
-import villagecompute.calendar.api.types.SuccessResponse;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.CalendarRenderingService;
+import villagecompute.calendar.types.CalendarConfigType;
+import villagecompute.calendar.types.ErrorType;
+import villagecompute.calendar.types.SuccessType;
 import villagecompute.calendar.util.Roles;
 
 import io.quarkus.logging.Log;
@@ -108,14 +109,13 @@ public class UserCalendarResource {
             // Update existing calendar
             calendar = UserCalendar.findById(request.id);
             if (calendar == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity(ErrorResponse.of("Calendar not found"))
-                        .build();
+                return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of("Calendar not found")).build();
             }
 
             // Verify ownership
             if (!calendar.user.id.equals(user.id)) {
                 return Response.status(Response.Status.FORBIDDEN)
-                        .entity(ErrorResponse.of("Not authorized to update this calendar")).build();
+                        .entity(ErrorType.of("Not authorized to update this calendar")).build();
             }
         } else {
             // Create new calendar
@@ -151,8 +151,8 @@ public class UserCalendarResource {
         // Generate SVG if not provided and we have configuration
         if (calendar.generatedSvg == null && calendar.configuration != null) {
             try {
-                CalendarRenderingService.CalendarConfig config = objectMapper.treeToValue(calendar.configuration,
-                        CalendarRenderingService.CalendarConfig.class);
+                String configJson = objectMapper.writeValueAsString(calendar.configuration);
+                CalendarConfigType config = objectMapper.readValue(configJson, CalendarConfigType.class);
                 calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
             } catch (Exception e) {
                 Log.error("Error generating calendar SVG", e);
@@ -179,17 +179,17 @@ public class UserCalendarResource {
 
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
-            return Response.status(Response.Status.NOT_FOUND).entity(ErrorResponse.of("Calendar not found")).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of("Calendar not found")).build();
         }
 
         // Verify ownership
         if (!calendar.user.id.equals(user.id)) {
             return Response.status(Response.Status.FORBIDDEN)
-                    .entity(ErrorResponse.of("Not authorized to view this calendar")).build();
+                    .entity(ErrorType.of("Not authorized to view this calendar")).build();
         }
 
         if (calendar.generatedSvg == null) {
-            return Response.status(Response.Status.NOT_FOUND).entity(ErrorResponse.of("No preview available")).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of("No preview available")).build();
         }
 
         return Response.ok(calendar.generatedSvg).type("image/svg+xml").build();
@@ -206,17 +206,17 @@ public class UserCalendarResource {
 
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
-            return Response.status(Response.Status.NOT_FOUND).entity(ErrorResponse.of("Calendar not found")).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of("Calendar not found")).build();
         }
 
         // Verify ownership
         if (!calendar.user.id.equals(user.id)) {
             return Response.status(Response.Status.FORBIDDEN)
-                    .entity(ErrorResponse.of("Not authorized to delete this calendar")).build();
+                    .entity(ErrorType.of("Not authorized to delete this calendar")).build();
         }
 
         calendar.delete();
 
-        return Response.ok(SuccessResponse.ok()).build();
+        return Response.ok(SuccessType.ok()).build();
     }
 }

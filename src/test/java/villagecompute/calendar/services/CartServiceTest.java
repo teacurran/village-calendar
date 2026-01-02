@@ -12,8 +12,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import villagecompute.calendar.api.graphql.inputs.AddToCartInput;
-import villagecompute.calendar.api.types.Cart;
 import villagecompute.calendar.data.models.CartItem;
+import villagecompute.calendar.types.CartType;
 
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -45,7 +45,7 @@ class CartServiceTest {
     @Transactional
     void testGetCart_NewSession_CreatesEmptyCart() {
         // When
-        Cart cart = cartService.getCart(testSessionId);
+        CartType cart = cartService.getCart(testSessionId);
 
         // Then
         assertNotNull(cart);
@@ -59,10 +59,10 @@ class CartServiceTest {
     @Transactional
     void testGetCart_SameSession_ReturnsSameCart() {
         // Given
-        Cart cart1 = cartService.getCart(testSessionId);
+        CartType cart1 = cartService.getCart(testSessionId);
 
         // When
-        Cart cart2 = cartService.getCart(testSessionId);
+        CartType cart2 = cartService.getCart(testSessionId);
 
         // Then
         assertEquals(cart1.id, cart2.id);
@@ -76,8 +76,8 @@ class CartServiceTest {
         String sessionId2 = "session-2-" + UUID.randomUUID();
 
         // When
-        Cart cart1 = cartService.getCart(sessionId1);
-        Cart cart2 = cartService.getCart(sessionId2);
+        CartType cart1 = cartService.getCart(sessionId1);
+        CartType cart2 = cartService.getCart(sessionId2);
 
         // Then
         assertNotEquals(cart1.id, cart2.id);
@@ -97,7 +97,7 @@ class CartServiceTest {
         input.configuration = "{\"theme\":\"modern\",\"year\":2026}";
 
         // When
-        Cart cart = cartService.addToCart(testSessionId, input);
+        CartType cart = cartService.addToCart(testSessionId, input);
 
         // Then
         assertNotNull(cart);
@@ -121,7 +121,7 @@ class CartServiceTest {
 
         // When - Add same configuration twice
         cartService.addToCart(testSessionId, input);
-        Cart cart = cartService.addToCart(testSessionId, input);
+        CartType cart = cartService.addToCart(testSessionId, input);
 
         // Then - Each add creates a separate item (unique SVGs)
         assertEquals(2, cart.itemCount);
@@ -148,7 +148,7 @@ class CartServiceTest {
 
         // When
         cartService.addToCart(testSessionId, input1);
-        Cart cart = cartService.addToCart(testSessionId, input2);
+        CartType cart = cartService.addToCart(testSessionId, input2);
 
         // Then - Different configs = different line items
         assertEquals(2, cart.itemCount);
@@ -175,7 +175,7 @@ class CartServiceTest {
 
         // When
         cartService.addToCart(testSessionId, input1);
-        Cart cart = cartService.addToCart(testSessionId, input2);
+        CartType cart = cartService.addToCart(testSessionId, input2);
 
         // Then - Different years = different line items
         assertEquals(2, cart.itemCount);
@@ -194,7 +194,7 @@ class CartServiceTest {
         input.configuration = "{\"theme\":\"vermont\",\"year\":2026}";
 
         // When
-        Cart cart = cartService.addToCart(testSessionId, input);
+        CartType cart = cartService.addToCart(testSessionId, input);
 
         // Then
         assertNotNull(cart);
@@ -220,8 +220,8 @@ class CartServiceTest {
 
         // When - Add to session 1 only
         cartService.addToCart(sessionId1, input);
-        Cart cart1 = cartService.getCart(sessionId1);
-        Cart cart2 = cartService.getCart(sessionId2);
+        CartType cart1 = cartService.getCart(sessionId1);
+        CartType cart2 = cartService.getCart(sessionId2);
 
         // Then
         assertEquals(1, cart1.itemCount);
@@ -240,11 +240,11 @@ class CartServiceTest {
         input.quantity = 1;
         input.productCode = "print";
 
-        Cart initialCart = cartService.addToCart(testSessionId, input);
+        CartType initialCart = cartService.addToCart(testSessionId, input);
         UUID itemId = UUID.fromString(initialCart.items.get(0).id);
 
         // When
-        Cart updatedCart = cartService.updateQuantity(testSessionId, itemId, 5);
+        CartType updatedCart = cartService.updateQuantity(testSessionId, itemId, 5);
 
         // Then
         assertEquals(5, updatedCart.itemCount);
@@ -261,11 +261,11 @@ class CartServiceTest {
         input.quantity = 1;
         input.productCode = "print";
 
-        Cart initialCart = cartService.addToCart(testSessionId, input);
+        CartType initialCart = cartService.addToCart(testSessionId, input);
         UUID itemId = UUID.fromString(initialCart.items.get(0).id);
 
         // When
-        Cart updatedCart = cartService.updateQuantity(testSessionId, itemId, 0);
+        CartType updatedCart = cartService.updateQuantity(testSessionId, itemId, 0);
 
         // Then
         assertEquals(0, updatedCart.itemCount);
@@ -284,11 +284,11 @@ class CartServiceTest {
         input.quantity = 2;
         input.productCode = "print";
 
-        Cart initialCart = cartService.addToCart(testSessionId, input);
+        CartType initialCart = cartService.addToCart(testSessionId, input);
         UUID itemId = UUID.fromString(initialCart.items.get(0).id);
 
         // When
-        Cart updatedCart = cartService.removeItem(testSessionId, itemId);
+        CartType updatedCart = cartService.removeItem(testSessionId, itemId);
 
         // Then
         assertEquals(0, updatedCart.itemCount);
@@ -319,7 +319,7 @@ class CartServiceTest {
         cartService.addToCart(testSessionId, input2);
 
         // When
-        Cart clearedCart = cartService.clearCart(testSessionId);
+        CartType clearedCart = cartService.clearCart(testSessionId);
 
         // Then
         assertEquals(0, clearedCart.itemCount);
@@ -337,7 +337,7 @@ class CartServiceTest {
         input.productCode = "print";
 
         // When
-        Cart cart = cartService.addToCart(testSessionId, input);
+        CartType cart = cartService.addToCart(testSessionId, input);
 
         // Then
         // Default print price is $29.99
@@ -357,7 +357,7 @@ class CartServiceTest {
         input.productCode = "invalid_product_code"; // Invalid code
 
         // When
-        Cart cart = cartService.addToCart(testSessionId, input);
+        CartType cart = cartService.addToCart(testSessionId, input);
 
         // Then - Should still create item using default price
         assertNotNull(cart);
@@ -376,7 +376,7 @@ class CartServiceTest {
         input.productCode = null; // Null product code
 
         // When
-        Cart cart = cartService.addToCart(testSessionId, input);
+        CartType cart = cartService.addToCart(testSessionId, input);
 
         // Then - Should still create item using default price
         assertNotNull(cart);
@@ -403,7 +403,7 @@ class CartServiceTest {
         input.assets = java.util.List.of(asset);
 
         // When
-        Cart cart = cartService.addToCart(testSessionId, input);
+        CartType cart = cartService.addToCart(testSessionId, input);
 
         // Then
         assertNotNull(cart);
@@ -436,7 +436,7 @@ class CartServiceTest {
         input.assets = java.util.List.of(asset1, asset2);
 
         // When
-        Cart cart = cartService.addToCart(testSessionId, input);
+        CartType cart = cartService.addToCart(testSessionId, input);
 
         // Then
         assertNotNull(cart);
@@ -454,7 +454,7 @@ class CartServiceTest {
         input.productCode = "print";
 
         // When
-        Cart cart = cartService.addToCart(testSessionId, input);
+        CartType cart = cartService.addToCart(testSessionId, input);
 
         // Then
         assertNotNull(cart);
@@ -472,13 +472,13 @@ class CartServiceTest {
         input.quantity = 1;
         input.productCode = "print";
 
-        Cart initialCart = cartService.addToCart(testSessionId, input);
+        CartType initialCart = cartService.addToCart(testSessionId, input);
         UUID randomItemId = UUID.randomUUID(); // Non-existent item
 
         // When
-        Cart updatedCart = cartService.updateQuantity(testSessionId, randomItemId, 10);
+        CartType updatedCart = cartService.updateQuantity(testSessionId, randomItemId, 10);
 
-        // Then - Cart should be unchanged
+        // Then - CartTypeshould be unchanged
         assertEquals(initialCart.itemCount, updatedCart.itemCount);
     }
 
@@ -492,13 +492,13 @@ class CartServiceTest {
         input.quantity = 1;
         input.productCode = "print";
 
-        Cart initialCart = cartService.addToCart(testSessionId, input);
+        CartType initialCart = cartService.addToCart(testSessionId, input);
         UUID randomItemId = UUID.randomUUID(); // Non-existent item
 
         // When
-        Cart updatedCart = cartService.removeItem(testSessionId, randomItemId);
+        CartType updatedCart = cartService.removeItem(testSessionId, randomItemId);
 
-        // Then - Cart should be unchanged
+        // Then - CartTypeshould be unchanged
         assertEquals(initialCart.itemCount, updatedCart.itemCount);
     }
 
@@ -515,12 +515,12 @@ class CartServiceTest {
         input.quantity = 1;
         input.productCode = "print";
 
-        Cart cart1 = cartService.addToCart(sessionId1, input);
+        CartType cart1 = cartService.addToCart(sessionId1, input);
         cartService.addToCart(sessionId2, input);
         UUID itemFromCart1 = UUID.fromString(cart1.items.get(0).id);
 
         // When - Try to update item from cart1 while using session2
-        Cart cart2AfterUpdate = cartService.updateQuantity(sessionId2, itemFromCart1, 10);
+        CartType cart2AfterUpdate = cartService.updateQuantity(sessionId2, itemFromCart1, 10);
 
         // Then - Cart2 should be unchanged (item belongs to different cart)
         assertEquals(1, cart2AfterUpdate.itemCount);

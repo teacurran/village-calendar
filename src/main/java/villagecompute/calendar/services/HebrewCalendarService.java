@@ -1,11 +1,12 @@
 package villagecompute.calendar.services;
 
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.*;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+
+import villagecompute.calendar.types.CalendarConfigType;
 
 @ApplicationScoped
 public class HebrewCalendarService {
@@ -46,7 +47,7 @@ public class HebrewCalendarService {
     };
 
     // Hebrew calendar configuration
-    public static class HebrewCalendarConfig extends CalendarRenderingService.CalendarConfig {
+    public static class HebrewCalendarConfig extends CalendarConfigType {
         public int hebrewYear = 5784; // Current Hebrew year (2023-2024)
         public boolean showHebrewDate = true;
         public boolean showGregorianDate = false;
@@ -302,7 +303,6 @@ public class HebrewCalendarService {
             String monthName = getHebrewMonthName(month, config.hebrewYear);
             int daysInMonth = getDaysInHebrewMonth(month, config.hebrewYear);
             int rowY = (month - 1) * cellHeight + headerHeight;
-            YearMonth yearMonth = YearMonth.of(config.hebrewYear, month);
 
             // Draw month name (rotated if configured)
             if (config.rotateMonthNames) {
@@ -321,12 +321,6 @@ public class HebrewCalendarService {
             for (int day = 1; day <= 30; day++) {
                 int cellX = monthLabelWidth + (day - 1) * cellWidth;
                 int cellY = rowY;
-                LocalDate date;
-                try {
-                    date = yearMonth.atDay(day);
-                } catch (Exception e) {
-                    date = null;
-                }
 
                 // Draw cell background
                 int weekendIndex = 0; // Track weekend index for Vermont colors
