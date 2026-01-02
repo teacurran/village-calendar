@@ -24,30 +24,55 @@ import io.quarkus.hibernate.orm.panache.PanacheQuery;
  * </ul>
  */
 @Entity
-@Table(name = "page_views", indexes = {@Index(name = "idx_page_views_session", columnList = "session_id, created DESC"),
-        @Index(name = "idx_page_views_user", columnList = "user_id, created DESC"),
-        @Index(name = "idx_page_views_path", columnList = "path, created DESC"),
-        @Index(name = "idx_page_views_created", columnList = "created DESC")})
+@Table(
+        name = "page_views",
+        indexes = {@Index(
+                name = "idx_page_views_session",
+                columnList = "session_id, created DESC"),
+                @Index(
+                        name = "idx_page_views_user",
+                        columnList = "user_id, created DESC"),
+                @Index(
+                        name = "idx_page_views_path",
+                        columnList = "path, created DESC"),
+                @Index(
+                        name = "idx_page_views_created",
+                        columnList = "created DESC")})
 public class PageView extends DefaultPanacheEntityWithTimestamps {
 
-    @NotNull @Size(max = 255)
-    @Column(name = "session_id", nullable = false, length = 255)
+    @NotNull @Size(
+            max = 255)
+    @Column(
+            name = "session_id",
+            nullable = false,
+            length = 255)
     public String sessionId;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_page_views_user"))
+    @JoinColumn(
+            name = "user_id",
+            foreignKey = @ForeignKey(
+                    name = "fk_page_views_user"))
     public CalendarUser user;
 
-    @NotNull @Size(max = 500)
-    @Column(nullable = false, length = 500)
+    @NotNull @Size(
+            max = 500)
+    @Column(
+            nullable = false,
+            length = 500)
     public String path;
 
-    @Size(max = 500)
-    @Column(length = 500)
+    @Size(
+            max = 500)
+    @Column(
+            length = 500)
     public String referrer;
 
-    @Size(max = 1000)
-    @Column(name = "user_agent", length = 1000)
+    @Size(
+            max = 1000)
+    @Column(
+            name = "user_agent",
+            length = 1000)
     public String userAgent;
 
     // Static finder methods (ActiveRecord pattern)

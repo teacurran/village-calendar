@@ -64,6 +64,13 @@
         <!-- Wrapping -->
         <setting id="org.eclipse.jdt.core.formatter.alignment_for_arguments_in_method_invocation" value="16"/>
         <setting id="org.eclipse.jdt.core.formatter.alignment_for_parameters_in_method_declaration" value="16"/>
+        <!-- Annotation formatting: wrap each element, indent by 4 spaces -->
+        <setting id="org.eclipse.jdt.core.formatter.alignment_for_arguments_in_annotation" value="49"/>
+        <setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_type" value="insert"/>
+        <setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_method" value="insert"/>
+        <setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_field" value="insert"/>
+        <setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_parameter" value="do not insert"/>
+        <setting id="org.eclipse.jdt.core.formatter.insert_new_line_after_annotation_on_local_variable" value="insert"/>
         <setting id="org.eclipse.jdt.core.formatter.alignment_for_throws_clause_in_method_declaration" value="16"/>
         <setting id="org.eclipse.jdt.core.formatter.alignment_for_binary_expression" value="16"/>
         <setting id="org.eclipse.jdt.core.formatter.alignment_for_conditional_expression" value="80"/>

@@ -112,7 +112,9 @@ public class DelayedJobService {
      * @param jobId
      *            Job ID to process
      */
-    @ConsumeEvent(value = DELAYED_JOB_RUN, blocking = true)
+    @ConsumeEvent(
+            value = DELAYED_JOB_RUN,
+            blocking = true)
     @Transactional
     @WithSpan("DelayedJobService.handleDelayedJobRun")
     public void handleDelayedJobRun(String jobId) {
@@ -206,7 +208,8 @@ public class DelayedJobService {
      * Scheduled processor - runs every 30 seconds to catch any jobs that need retry or were missed during immediate
      * processing.
      */
-    @Scheduled(every = "30s")
+    @Scheduled(
+            every = "30s")
     @Transactional
     @WithSpan("DelayedJobService.processScheduledJobs")
     public void processScheduledJobs() {

@@ -19,7 +19,8 @@ import villagecompute.calendar.util.Colors;
  * Calendar configuration type used for JSON serialization/deserialization. This class contains all configuration
  * options for calendar rendering.
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonIgnoreProperties(
+        ignoreUnknown = true)
 public class CalendarConfigType {
     public int year = LocalDate.now().getYear();
     public String theme = "default";

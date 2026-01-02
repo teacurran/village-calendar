@@ -8,7 +8,9 @@ import io.quarkiverse.roq.data.runtime.annotations.DataMapping;
  * Data mapping for calendar products loaded from data/calendars.json. ROQ will automatically load this data and make it
  * available in templates via cdi:calendars.
  */
-@DataMapping(value = "calendars", parentArray = true)
+@DataMapping(
+        value = "calendars",
+        parentArray = true)
 public record CalendarProductData(List<CalendarProduct> list) {
 
     /**

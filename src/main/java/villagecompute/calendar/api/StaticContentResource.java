@@ -53,7 +53,9 @@ public class StaticContentResource {
     @Inject
     ObjectMapper objectMapper;
 
-    @ConfigProperty(name = "site.url", defaultValue = "http://localhost:8080")
+    @ConfigProperty(
+            name = "site.url",
+            defaultValue = "http://localhost:8080")
     String siteUrl;
 
     // Cache generated SVGs within a single request lifecycle to avoid regenerating for PNG

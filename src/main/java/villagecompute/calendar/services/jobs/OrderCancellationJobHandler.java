@@ -24,7 +24,9 @@ import io.quarkus.qute.TemplateInstance;
  * EmailService.
  */
 @ApplicationScoped
-@DelayedJobConfig(priority = 5, description = "Order cancellation email sender")
+@DelayedJobConfig(
+        priority = 5,
+        description = "Order cancellation email sender")
 public class OrderCancellationJobHandler implements DelayedJobHandler {
 
     private static final Logger LOG = Logger.getLogger(OrderCancellationJobHandler.class);
@@ -32,14 +34,19 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
     @Inject
     EmailService emailService;
 
-    @ConfigProperty(name = "email.order.from", defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
+    @ConfigProperty(
+            name = "email.order.from",
+            defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
     String orderFromEmail;
 
-    @ConfigProperty(name = "app.base-url", defaultValue = "https://calendar.villagecompute.com")
+    @ConfigProperty(
+            name = "app.base-url",
+            defaultValue = "https://calendar.villagecompute.com")
     String baseUrl;
 
     /** Type-safe Qute templates for cancellation emails. */
-    @CheckedTemplate(basePath = "email-templates/OrderCancellationJobHandler")
+    @CheckedTemplate(
+            basePath = "email-templates/OrderCancellationJobHandler")
     public static class Templates {
         /**
          * Order cancellation email template.

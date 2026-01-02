@@ -69,10 +69,14 @@ public class OrderResolver {
     @Inject
     ObjectMapper objectMapper;
 
-    @ConfigProperty(name = "stripe.checkout.success.url", defaultValue = "http://localhost:3000/checkout/success")
+    @ConfigProperty(
+            name = "stripe.checkout.success.url",
+            defaultValue = "http://localhost:3000/checkout/success")
     String checkoutSuccessUrl;
 
-    @ConfigProperty(name = "stripe.checkout.cancel.url", defaultValue = "http://localhost:3000/checkout/cancel")
+    @ConfigProperty(
+            name = "stripe.checkout.cancel.url",
+            defaultValue = "http://localhost:3000/checkout/cancel")
     String checkoutCancelUrl;
 
     // ==================================================================

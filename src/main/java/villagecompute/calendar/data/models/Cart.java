@@ -13,22 +13,37 @@ import org.eclipse.microprofile.graphql.Ignore;
  * user.
  */
 @Entity
-@Table(name = "carts", indexes = {@Index(name = "idx_carts_user", columnList = "user_id"),
-        @Index(name = "idx_carts_session", columnList = "session_id")})
+@Table(
+        name = "carts",
+        indexes = {@Index(
+                name = "idx_carts_user",
+                columnList = "user_id"),
+                @Index(
+                        name = "idx_carts_session",
+                        columnList = "session_id")})
 public class Cart extends DefaultPanacheEntityWithTimestamps {
 
     /** User who owns this cart (null for guest carts) */
     @ManyToOne
-    @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_carts_user"))
+    @JoinColumn(
+            name = "user_id",
+            foreignKey = @ForeignKey(
+                    name = "fk_carts_user"))
     @Ignore
     public CalendarUser user;
 
     /** Session ID for guest carts (null for authenticated user carts) */
-    @Column(name = "session_id", length = 255)
+    @Column(
+            name = "session_id",
+            length = 255)
     public String sessionId;
 
     /** Cart items */
-    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @OneToMany(
+            mappedBy = "cart",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.EAGER)
     public List<CartItem> items = new ArrayList<>();
 
     /** Get cart for authenticated user, create if doesn't exist */

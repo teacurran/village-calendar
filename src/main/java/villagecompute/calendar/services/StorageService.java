@@ -25,19 +25,24 @@ public class StorageService {
 
     private static final Logger LOG = Logger.getLogger(StorageService.class);
 
-    @ConfigProperty(name = "calendar.r2.endpoint")
+    @ConfigProperty(
+            name = "calendar.r2.endpoint")
     String r2Endpoint;
 
-    @ConfigProperty(name = "calendar.r2.access-key")
+    @ConfigProperty(
+            name = "calendar.r2.access-key")
     String r2AccessKey;
 
-    @ConfigProperty(name = "calendar.r2.secret-key")
+    @ConfigProperty(
+            name = "calendar.r2.secret-key")
     String r2SecretKey;
 
-    @ConfigProperty(name = "calendar.r2.bucket")
+    @ConfigProperty(
+            name = "calendar.r2.bucket")
     String r2Bucket;
 
-    @ConfigProperty(name = "calendar.r2.public-url")
+    @ConfigProperty(
+            name = "calendar.r2.public-url")
     String publicUrlBase;
 
     private S3Client s3Client;

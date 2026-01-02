@@ -56,12 +56,15 @@ public class CalendarRenderingService {
 
     public static final String DEFAULT_THEME = "default";
 
+    /** Emoji font constant for monochrome (black & white outline) emoji style. */
+    public static final String EMOJI_FONT_NOTO_MONO = "noto-mono";
+
     /**
      * Returns the CSS font-family string for emoji rendering based on config. Noto Color Emoji is the default (Apache
      * 2.0 licensed, safe for commercial printing). Noto Emoji (monochrome) is available for a text-only look.
      */
-    private static String getEmojiFontFamily(CalendarConfigType config) {
-        if ("noto-mono".equals(config.emojiFont)) {
+    static String getEmojiFontFamily(CalendarConfigType config) {
+        if (EMOJI_FONT_NOTO_MONO.equals(config.emojiFont)) {
             // Noto Emoji (monochrome version) - black and white outline style
             // Include DejaVu Sans as fallback which has wide Unicode coverage on Linux servers
             return "'Noto Emoji', 'DejaVu Sans', 'Segoe UI Symbol', 'Symbola', sans-serif";
@@ -119,9 +122,9 @@ public class CalendarRenderingService {
      * Substitutes emojis that aren't available in Noto Emoji monochrome font with compatible alternatives. Also applies
      * to colored monochrome variants.
      */
-    private static String substituteEmojiForMonochrome(String emoji, CalendarConfigType config) {
+    static String substituteEmojiForMonochrome(String emoji, CalendarConfigType config) {
         // Apply substitutions for noto-mono and all mono-* color variants
-        boolean needsSubstitution = "noto-mono".equals(config.emojiFont)
+        boolean needsSubstitution = EMOJI_FONT_NOTO_MONO.equals(config.emojiFont)
                 || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
         if (!needsSubstitution) {
             return emoji; // No substitution needed for color mode
@@ -150,7 +153,7 @@ public class CalendarRenderingService {
     private String renderEmoji(String emoji, double x, double y, int size, CalendarConfigType config,
             boolean centered) {
         // Check if monochrome mode is enabled (noto-mono or any mono-* color variant)
-        boolean isMonochrome = "noto-mono".equals(config.emojiFont)
+        boolean isMonochrome = EMOJI_FONT_NOTO_MONO.equals(config.emojiFont)
                 || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
         // Get color for colored monochrome variants
         String colorHex = EMOJI_COLOR_MAP.get(config.emojiFont);

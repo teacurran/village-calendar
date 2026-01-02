@@ -457,7 +457,8 @@ class CalendarRenderingServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"default", "dark", "minimal", "colorful"})
+    @ValueSource(
+            strings = {"default", "dark", "minimal", "colorful"})
     void testGenerateCalendarSVG_DifferentThemes(String theme) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
@@ -470,7 +471,8 @@ class CalendarRenderingServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {2020, 2025, 2030, 2050})
+    @ValueSource(
+            ints = {2020, 2025, 2030, 2050})
     void testGenerateCalendarSVG_DifferentYears(int year) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = year;
@@ -739,6 +741,70 @@ class CalendarRenderingServiceTest {
     void testDefaultTheme_NotNull() {
         assertNotNull(CalendarRenderingService.DEFAULT_THEME);
         assertEquals("default", CalendarRenderingService.DEFAULT_THEME);
+    }
+
+    // ========== EMOJI FONT TESTS ==========
+
+    @Test
+    void testGetEmojiFontFamily_DefaultReturnsNotoColorEmoji() {
+        CalendarConfigType config = new CalendarConfigType();
+        // Default emojiFont is null
+
+        String fontFamily = CalendarRenderingService.getEmojiFontFamily(config);
+
+        assertNotNull(fontFamily);
+        assertTrue(fontFamily.contains("Noto Color Emoji"));
+        assertTrue(fontFamily.contains("Noto Emoji")); // Fallback
+    }
+
+    @Test
+    void testGetEmojiFontFamily_NotoMonoReturnsMonochromeFonts() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.emojiFont = CalendarRenderingService.EMOJI_FONT_NOTO_MONO;
+
+        String fontFamily = CalendarRenderingService.getEmojiFontFamily(config);
+
+        assertNotNull(fontFamily);
+        assertTrue(fontFamily.contains("Noto Emoji"));
+        assertTrue(fontFamily.contains("DejaVu Sans"));
+        assertFalse(fontFamily.contains("Noto Color Emoji"));
+    }
+
+    @Test
+    void testSubstituteEmojiForMonochrome_NoSubstitutionForColorMode() {
+        CalendarConfigType config = new CalendarConfigType();
+        // Default is color mode (not noto-mono)
+
+        String result = CalendarRenderingService.substituteEmojiForMonochrome("🕎", config);
+
+        assertEquals("🕎", result); // No substitution in color mode
+    }
+
+    @Test
+    void testSubstituteEmojiForMonochrome_SubstitutesForNotoMono() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.emojiFont = CalendarRenderingService.EMOJI_FONT_NOTO_MONO;
+
+        // Menorah -> Star of David
+        assertEquals("✡️", CalendarRenderingService.substituteEmojiForMonochrome("🕎", config));
+
+        // Diya Lamp -> Candle (Diwali)
+        assertEquals("🕯️", CalendarRenderingService.substituteEmojiForMonochrome("🪔", config));
+
+        // Red Envelope -> Lantern (Chinese New Year)
+        assertEquals("🏮", CalendarRenderingService.substituteEmojiForMonochrome("🧧", config));
+
+        // Unknown emoji passes through unchanged
+        assertEquals("🎉", CalendarRenderingService.substituteEmojiForMonochrome("🎉", config));
+    }
+
+    @Test
+    void testSubstituteEmojiForMonochrome_SubstitutesForMonoColorVariants() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.emojiFont = "mono-red";
+
+        // Should substitute just like noto-mono
+        assertEquals("✡️", CalendarRenderingService.substituteEmojiForMonochrome("🕎", config));
     }
 
     // ========== EDGE CASE TESTS ==========

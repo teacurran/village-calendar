@@ -24,7 +24,9 @@ import io.quarkus.qute.TemplateInstance;
  * EmailService.
  */
 @ApplicationScoped
-@DelayedJobConfig(priority = 10, description = "Shipping notification email sender")
+@DelayedJobConfig(
+        priority = 10,
+        description = "Shipping notification email sender")
 public class ShippingNotificationJobHandler implements DelayedJobHandler {
 
     private static final Logger LOG = Logger.getLogger(ShippingNotificationJobHandler.class);
@@ -32,14 +34,19 @@ public class ShippingNotificationJobHandler implements DelayedJobHandler {
     @Inject
     EmailService emailService;
 
-    @ConfigProperty(name = "email.order.from", defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
+    @ConfigProperty(
+            name = "email.order.from",
+            defaultValue = "Village Compute Calendar <orders@villagecompute.com>")
     String orderFromEmail;
 
-    @ConfigProperty(name = "app.base-url", defaultValue = "https://calendar.villagecompute.com")
+    @ConfigProperty(
+            name = "app.base-url",
+            defaultValue = "https://calendar.villagecompute.com")
     String baseUrl;
 
     /** Type-safe Qute templates for shipping emails. */
-    @CheckedTemplate(basePath = "email-templates/ShippingNotificationJobHandler")
+    @CheckedTemplate(
+            basePath = "email-templates/ShippingNotificationJobHandler")
     public static class Templates {
         /**
          * Shipping notification email template.

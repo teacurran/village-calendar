@@ -29,7 +29,9 @@ public class SessionCleanupJob {
      * Deletes all calendars that: - Have a sessionId (guest calendars not converted to user) - Last updated more than
      * 30 days ago
      */
-    @Scheduled(cron = "0 0 2 * * ?", identity = "session-cleanup")
+    @Scheduled(
+            cron = "0 0 2 * * ?",
+            identity = "session-cleanup")
     @Transactional
     public void cleanupExpiredSessions() {
         LOG.info("Starting scheduled cleanup of expired guest session calendars");

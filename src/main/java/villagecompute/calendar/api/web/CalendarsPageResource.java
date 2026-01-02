@@ -31,7 +31,9 @@ import io.vertx.ext.web.RoutingContext;
  * Serves dynamically rendered calendar product pages using Qute templates. These pages are rendered at runtime from the
  * database, making development easier.
  */
-@RouteBase(path = "/calendars", produces = "text/html")
+@RouteBase(
+        path = "/calendars",
+        produces = "text/html")
 public class CalendarsPageResource {
 
     private static final Logger LOG = Logger.getLogger(CalendarsPageResource.class);
@@ -55,13 +57,17 @@ public class CalendarsPageResource {
     ObjectMapper objectMapper;
 
     /** Redirect /calendars to /calendars/ for consistency */
-    @Route(path = "", methods = Route.HttpMethod.GET)
+    @Route(
+            path = "",
+            methods = Route.HttpMethod.GET)
     public void indexRedirect(RoutingContext rc) {
         rc.response().setStatusCode(301).putHeader("Location", "/calendars/").end();
     }
 
     /** Calendar product index page at /calendars/ */
-    @Route(path = "/", methods = Route.HttpMethod.GET)
+    @Route(
+            path = "/",
+            methods = Route.HttpMethod.GET)
     @Blocking
     public void index(RoutingContext rc) {
         List<CalendarTemplate> calendars = CalendarTemplate.findActiveWithSlug();
@@ -80,7 +86,9 @@ public class CalendarsPageResource {
     private static final java.util.Set<String> SPA_ROUTES = java.util.Set.of("generator", "new", "edit");
 
     /** Individual calendar product page at /calendars/{slug} */
-    @Route(path = "/:slug", methods = Route.HttpMethod.GET)
+    @Route(
+            path = "/:slug",
+            methods = Route.HttpMethod.GET)
     @Blocking
     public void product(RoutingContext rc) {
         String slug = rc.pathParam("slug");
@@ -120,7 +128,9 @@ public class CalendarsPageResource {
     }
 
     /** Serve SVG content for a calendar at /calendars/{slug}/{slug}.svg */
-    @Route(path = "/:slug/:filename", methods = Route.HttpMethod.GET)
+    @Route(
+            path = "/:slug/:filename",
+            methods = Route.HttpMethod.GET)
     @Blocking
     public void asset(RoutingContext rc) {
         String slug = rc.pathParam("slug");

@@ -59,15 +59,22 @@ class AuthResourceSecurityTest {
     }
 
     @Test
-    @TestSecurity(user = "testuser", roles = "USER")
-    @JwtSecurity(claims = {@Claim(key = "sub", value = "00000000-0000-0000-0000-000000000099")})
+    @TestSecurity(
+            user = "testuser",
+            roles = "USER")
+    @JwtSecurity(
+            claims = {@Claim(
+                    key = "sub",
+                    value = "00000000-0000-0000-0000-000000000099")})
     void testGetMe_UserNotFound_Returns404() {
         given().when().get("/api/auth/me").then().statusCode(404).contentType(ContentType.JSON).body("error",
                 equalTo("User not found"));
     }
 
     @Test
-    @TestSecurity(user = "testuser", roles = "USER")
+    @TestSecurity(
+            user = "testuser",
+            roles = "USER")
     void testGetMe_ValidUser_ReturnsUserInfo() {
         // Need to use the actual user ID in the JWT claim
         // Create user within test and use dynamic claim
@@ -111,7 +118,9 @@ class AuthResourceSecurityTest {
     // ========== OAuth Callback Tests ==========
 
     @Test
-    @TestSecurity(user = "testuser", roles = "USER")
+    @TestSecurity(
+            user = "testuser",
+            roles = "USER")
     void testGoogleCallback_Authenticated_Returns303OrError() {
         // When authenticated, callback should process and redirect
         given().redirects().follow(false).when().get("/api/auth/google/callback").then()
@@ -119,21 +128,27 @@ class AuthResourceSecurityTest {
     }
 
     @Test
-    @TestSecurity(user = "testuser", roles = "USER")
+    @TestSecurity(
+            user = "testuser",
+            roles = "USER")
     void testGoogleCallback_WithSessionId_Returns303OrError() {
         given().redirects().follow(false).queryParam("sessionId", "test-session-123").when()
                 .get("/api/auth/google/callback").then().statusCode(anyOf(is(303), is(500)));
     }
 
     @Test
-    @TestSecurity(user = "testuser", roles = "USER")
+    @TestSecurity(
+            user = "testuser",
+            roles = "USER")
     void testFacebookCallback_Authenticated_Returns303OrError() {
         given().redirects().follow(false).when().get("/api/auth/facebook/callback").then()
                 .statusCode(anyOf(is(303), is(500)));
     }
 
     @Test
-    @TestSecurity(user = "testuser", roles = "USER")
+    @TestSecurity(
+            user = "testuser",
+            roles = "USER")
     void testAppleCallback_Authenticated_Returns303OrError() {
         given().redirects().follow(false).when().get("/api/auth/apple/callback").then()
                 .statusCode(anyOf(is(303), is(500)));
@@ -142,8 +157,13 @@ class AuthResourceSecurityTest {
     // ========== Error Response Tests ==========
 
     @Test
-    @TestSecurity(user = "testuser", roles = "USER")
-    @JwtSecurity(claims = {@Claim(key = "sub", value = "invalid-uuid-format")})
+    @TestSecurity(
+            user = "testuser",
+            roles = "USER")
+    @JwtSecurity(
+            claims = {@Claim(
+                    key = "sub",
+                    value = "invalid-uuid-format")})
     void testGetMe_InvalidUuidFormat_Returns500() {
         given().when().get("/api/auth/me").then().statusCode(500).contentType(ContentType.JSON).body("error",
                 containsString("Failed to fetch user"));

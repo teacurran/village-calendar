@@ -7,15 +7,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * Response object returned after successful OAuth authentication. Contains the JWT token and basic user information.
  */
-@Schema(description = "Authentication response containing JWT token and user information")
+@Schema(
+        description = "Authentication response containing JWT token and user information")
 public class AuthResponse {
 
     @JsonProperty("token")
-    @Schema(description = "JWT token for API authentication", example = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...")
+    @Schema(
+            description = "JWT token for API authentication",
+            examples = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...")
     public String token;
 
     @JsonProperty("user")
-    @Schema(description = "Basic user information")
+    @Schema(
+            description = "Basic user information")
     public UserInfo user;
 
     public AuthResponse() {

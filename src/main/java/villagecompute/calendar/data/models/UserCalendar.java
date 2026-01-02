@@ -16,54 +16,94 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 
 @Entity
-@Table(name = "user_calendars", indexes = {
-        @Index(name = "idx_user_calendars_user", columnList = "user_id, `year` DESC"),
-        @Index(name = "idx_user_calendars_session", columnList = "session_id, updated DESC"),
-        @Index(name = "idx_user_calendars_template", columnList = "template_id"),
-        @Index(name = "idx_user_calendars_public", columnList = "is_public, updated DESC")})
+@Table(
+        name = "user_calendars",
+        indexes = {@Index(
+                name = "idx_user_calendars_user",
+                columnList = "user_id, `year` DESC"),
+                @Index(
+                        name = "idx_user_calendars_session",
+                        columnList = "session_id, updated DESC"),
+                @Index(
+                        name = "idx_user_calendars_template",
+                        columnList = "template_id"),
+                @Index(
+                        name = "idx_user_calendars_public",
+                        columnList = "is_public, updated DESC")})
 public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_user_calendars_user"))
+    @ManyToOne(
+            fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "user_id",
+            foreignKey = @ForeignKey(
+                    name = "fk_user_calendars_user"))
     @Ignore
     public CalendarUser user;
 
-    @Size(max = 255)
-    @Column(name = "session_id", length = 255)
+    @Size(
+            max = 255)
+    @Column(
+            name = "session_id",
+            length = 255)
     public String sessionId;
 
-    @Column(name = "is_public", nullable = false)
+    @Column(
+            name = "is_public",
+            nullable = false)
     public boolean isPublic = true;
 
-    @NotNull @Size(max = 255)
-    @Column(nullable = false, length = 255)
+    @NotNull @Size(
+            max = 255)
+    @Column(
+            nullable = false,
+            length = 255)
     public String name;
 
-    @NotNull @Column(name = "`year`", nullable = false)
+    @NotNull @Column(
+            name = "`year`",
+            nullable = false)
     public Integer year;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb", nullable = true)
+    @Column(
+            columnDefinition = "jsonb",
+            nullable = true)
     @io.smallrye.graphql.api.AdaptWith(villagecompute.calendar.api.graphql.scalars.JsonNodeAdapter.class)
     public JsonNode configuration;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "template_id", foreignKey = @ForeignKey(name = "fk_user_calendars_template"))
+    @ManyToOne(
+            fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "template_id",
+            foreignKey = @ForeignKey(
+                    name = "fk_user_calendars_template"))
     @Ignore
     public CalendarTemplate template;
 
-    @Column(name = "generated_svg", columnDefinition = "TEXT")
+    @Column(
+            name = "generated_svg",
+            columnDefinition = "TEXT")
     public String generatedSvg;
 
-    @Size(max = 500)
-    @Column(name = "generated_pdf_url", length = 500)
+    @Size(
+            max = 500)
+    @Column(
+            name = "generated_pdf_url",
+            length = 500)
     public String generatedPdfUrl;
 
     // Relationships
-    @OneToMany(mappedBy = "calendar", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(
+            mappedBy = "calendar",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
     public List<CalendarOrder> orders;
 
-    @OneToMany(mappedBy = "calendar", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(
+            mappedBy = "calendar",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
     public List<Event> events;
 
     // Helper methods (ActiveRecord pattern)

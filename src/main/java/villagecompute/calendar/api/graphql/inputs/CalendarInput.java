@@ -12,17 +12,30 @@ import com.fasterxml.jackson.databind.JsonNode;
 @Description("Input for creating a new calendar.")
 public class CalendarInput {
 
-    @NotNull(message = "Calendar name is required") @NotBlank(message = "Calendar name cannot be blank")
-    @Size(max = 255, message = "Calendar name must not exceed 255 characters")
+    @NotNull(
+            message = "Calendar name is required")
+    @NotBlank(
+            message = "Calendar name cannot be blank")
+    @Size(
+            max = 255,
+            message = "Calendar name must not exceed 255 characters")
     @Description("Calendar name")
     public String name;
 
-    @NotNull(message = "Year is required") @Min(value = 2020, message = "Year must be 2020 or later")
-    @Max(value = 2099, message = "Year must be 2099 or earlier")
+    @NotNull(
+            message = "Year is required")
+    @Min(
+            value = 2020,
+            message = "Year must be 2020 or later")
+    @Max(
+            value = 2099,
+            message = "Year must be 2099 or earlier")
     @Description("Calendar year")
     public Integer year;
 
-    @NotNull(message = "Template ID is required") @Description("Template to base calendar on")
+    @NotNull(
+            message = "Template ID is required")
+    @Description("Template to base calendar on")
     public String templateId;
 
     @Description("User customization overrides (JSONB)")

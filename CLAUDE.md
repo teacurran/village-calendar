@@ -93,3 +93,50 @@ entity.configuration = objectMapper.readTree(configJson);
 - All API/serialization types should be in `villagecompute.calendar.types` package
 - Type names should end with `Type` suffix (e.g., `CalendarConfigType`, `CartType`, `ErrorType`)
 - Avoid `Response` suffix - use `Type` instead (e.g., `PaymentIntentType` not `PaymentIntentResponse`)
+
+## OpenAPI Annotation Standards
+
+Use multi-line formatting for `@APIResponse` and related OpenAPI annotations. Since Java 8+, repeatable annotations don't require wrapper annotations like `@APIResponses({...})`.
+
+**Preferred format:**
+```java
+@APIResponse(
+    responseCode = "200",
+    description = "Success response",
+    content = @Content(
+        mediaType = MediaType.APPLICATION_JSON,
+        schema = @Schema(implementation = MyType.class),
+        examples = @ExampleObject(value = "{\"status\": \"ok\"}")
+    )
+)
+@APIResponse(
+    responseCode = "400",
+    description = "Bad request",
+    content = @Content(
+        mediaType = MediaType.APPLICATION_JSON,
+        schema = @Schema(implementation = ErrorType.class)
+    )
+)
+public Response myEndpoint() { ... }
+```
+
+Key points:
+- Use separate `@APIResponse` annotations instead of `@APIResponses({...})` wrapper
+- Each annotation attribute on its own line with 4-space indent
+- Nested annotations (`@Content`, `@Schema`, `@ExampleObject`) also use multi-line format
+- Closing parenthesis aligns with the opening annotation
+- Keep each line short and readable (under 80-100 chars when possible)
+
+**Avoid this format:**
+```java
+// DON'T: Long single lines and wrapper annotation
+@APIResponses({
+        @APIResponse(responseCode = "200", description = "...", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = MyType.class))),
+        @APIResponse(responseCode = "400", description = "...", content = @Content(...))})
+```
+
+**For simple responses without content:**
+```java
+@APIResponse(responseCode = "303", description = "Redirect to OAuth page")
+@APIResponse(responseCode = "401", description = "Authentication required")
+```

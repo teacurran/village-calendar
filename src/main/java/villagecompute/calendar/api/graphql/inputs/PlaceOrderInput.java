@@ -13,12 +13,22 @@ import villagecompute.calendar.data.models.enums.ProductType;
 @Input("PlaceOrderInput")
 public class PlaceOrderInput {
 
-    @NotNull(message = "Calendar ID is required") public String calendarId;
+    @NotNull(
+            message = "Calendar ID is required")
+    public String calendarId;
 
-    @NotNull(message = "Product type is required") public ProductType productType;
+    @NotNull(
+            message = "Product type is required")
+    public ProductType productType;
 
-    @NotNull(message = "Quantity is required") @Min(value = 1, message = "Quantity must be at least 1")
+    @NotNull(
+            message = "Quantity is required")
+    @Min(
+            value = 1,
+            message = "Quantity must be at least 1")
     public Integer quantity;
 
-    @NotNull(message = "Shipping address is required") public AddressInput shippingAddress;
+    @NotNull(
+            message = "Shipping address is required")
+    public AddressInput shippingAddress;
 }

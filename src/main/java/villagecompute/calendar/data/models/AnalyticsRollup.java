@@ -34,33 +34,57 @@ import io.quarkus.hibernate.orm.panache.PanacheQuery;
  * </ul>
  */
 @Entity
-@Table(name = "analytics_rollups", indexes = {
-        @Index(name = "idx_analytics_rollups_metric", columnList = "metric_name, period_start, dimension_key"),
-        @Index(name = "idx_analytics_rollups_period", columnList = "period_start, period_end")}, uniqueConstraints = {
-                @UniqueConstraint(name = "uk_analytics_rollups_unique", columnNames = {"metric_name", "dimension_key",
-                        "dimension_value", "period_start", "period_end"})})
+@Table(
+        name = "analytics_rollups",
+        indexes = {@Index(
+                name = "idx_analytics_rollups_metric",
+                columnList = "metric_name, period_start, dimension_key"),
+                @Index(
+                        name = "idx_analytics_rollups_period",
+                        columnList = "period_start, period_end")},
+        uniqueConstraints = {@UniqueConstraint(
+                name = "uk_analytics_rollups_unique",
+                columnNames = {"metric_name", "dimension_key", "dimension_value", "period_start", "period_end"})})
 public class AnalyticsRollup extends DefaultPanacheEntityWithTimestamps {
 
-    @NotNull @Size(max = 255)
-    @Column(name = "metric_name", nullable = false, length = 255)
+    @NotNull @Size(
+            max = 255)
+    @Column(
+            name = "metric_name",
+            nullable = false,
+            length = 255)
     public String metricName;
 
-    @Size(max = 255)
-    @Column(name = "dimension_key", length = 255)
+    @Size(
+            max = 255)
+    @Column(
+            name = "dimension_key",
+            length = 255)
     public String dimensionKey;
 
-    @Size(max = 500)
-    @Column(name = "dimension_value", length = 500)
+    @Size(
+            max = 500)
+    @Column(
+            name = "dimension_value",
+            length = 500)
     public String dimensionValue;
 
     @NotNull @DecimalMin("0.00")
-    @Column(name = "metric_value", nullable = false, precision = 15, scale = 2)
+    @Column(
+            name = "metric_value",
+            nullable = false,
+            precision = 15,
+            scale = 2)
     public BigDecimal value;
 
-    @NotNull @Column(name = "period_start", nullable = false)
+    @NotNull @Column(
+            name = "period_start",
+            nullable = false)
     public Instant periodStart;
 
-    @NotNull @Column(name = "period_end", nullable = false)
+    @NotNull @Column(
+            name = "period_end",
+            nullable = false)
     public Instant periodEnd;
 
     // Static finder methods (ActiveRecord pattern)
