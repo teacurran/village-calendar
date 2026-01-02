@@ -364,14 +364,21 @@ public class CalendarResource {
     private CalendarConfigType buildConfig(CalendarRequest request) {
         CalendarConfigType config = new CalendarConfigType();
 
+        applyBasicSettings(request, config);
+        applyDisplaySettings(request, config);
+        applyMoonSettings(request, config);
+        applyColorSettings(request, config);
+        applyEventSettings(request, config);
+
+        return config;
+    }
+
+    private void applyBasicSettings(CalendarRequest request, CalendarConfigType config) {
         if (request.year != null) {
             config.year = request.year;
         }
         if (request.theme != null) {
             config.theme = request.theme;
-        }
-        if (request.moonDisplayMode != null) {
-            config.moonDisplayMode = request.moonDisplayMode;
         }
         if (request.latitude != null) {
             config.latitude = request.latitude;
@@ -379,6 +386,29 @@ public class CalendarResource {
         if (request.longitude != null) {
             config.longitude = request.longitude;
         }
+        if (request.locale != null) {
+            config.locale = request.locale;
+        }
+        if (request.timeZone != null) {
+            config.timeZone = request.timeZone;
+        }
+        if (request.firstDayOfWeek != null) {
+            try {
+                config.firstDayOfWeek = DayOfWeek.valueOf(request.firstDayOfWeek.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                config.firstDayOfWeek = DayOfWeek.SUNDAY;
+            }
+        }
+        if (request.observationTime != null) {
+            try {
+                config.observationTime = java.time.LocalTime.parse(request.observationTime);
+            } catch (Exception e) {
+                // Keep default if parsing fails
+            }
+        }
+    }
+
+    private void applyDisplaySettings(CalendarRequest request, CalendarConfigType config) {
         if (request.showWeekNumbers != null) {
             config.showWeekNumbers = request.showWeekNumbers;
         }
@@ -403,25 +433,11 @@ public class CalendarResource {
         if (request.layoutStyle != null) {
             config.layoutStyle = request.layoutStyle;
         }
-        if (request.customDates != null) {
-            config.customDates = request.customDates;
-        }
-        if (request.eventTitles != null) {
-            config.eventTitles = request.eventTitles;
-        }
-        if (request.holidays != null) {
-            config.holidays = request.holidays;
-        }
-        if (request.locale != null) {
-            config.locale = request.locale;
-        }
-        if (request.firstDayOfWeek != null) {
-            try {
-                config.firstDayOfWeek = DayOfWeek.valueOf(request.firstDayOfWeek.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                // Default to Sunday if invalid
-                config.firstDayOfWeek = DayOfWeek.SUNDAY;
-            }
+    }
+
+    private void applyMoonSettings(CalendarRequest request, CalendarConfigType config) {
+        if (request.moonDisplayMode != null) {
+            config.moonDisplayMode = request.moonDisplayMode;
         }
         if (request.moonSize != null) {
             config.moonSize = request.moonSize;
@@ -438,6 +454,15 @@ public class CalendarResource {
         if (request.moonBorderWidth != null) {
             config.moonBorderWidth = request.moonBorderWidth;
         }
+        if (request.moonDarkColor != null) {
+            config.moonDarkColor = request.moonDarkColor;
+        }
+        if (request.moonLightColor != null) {
+            config.moonLightColor = request.moonLightColor;
+        }
+    }
+
+    private void applyColorSettings(CalendarRequest request, CalendarConfigType config) {
         if (request.yearColor != null) {
             config.yearColor = request.yearColor;
         }
@@ -462,14 +487,17 @@ public class CalendarResource {
         if (request.customDateColor != null) {
             config.customDateColor = request.customDateColor;
         }
-        if (request.moonDarkColor != null) {
-            config.moonDarkColor = request.moonDarkColor;
+    }
+
+    private void applyEventSettings(CalendarRequest request, CalendarConfigType config) {
+        if (request.customDates != null) {
+            config.customDates = request.customDates;
         }
-        if (request.moonLightColor != null) {
-            config.moonLightColor = request.moonLightColor;
+        if (request.eventTitles != null) {
+            config.eventTitles = request.eventTitles;
         }
-        if (request.emojiPosition != null) {
-            config.emojiPosition = request.emojiPosition;
+        if (request.holidays != null) {
+            config.holidays = request.holidays;
         }
         if (request.holidaySets != null) {
             config.holidaySets = request.holidaySets;
@@ -477,20 +505,11 @@ public class CalendarResource {
         if (request.eventDisplayMode != null) {
             config.eventDisplayMode = request.eventDisplayMode;
         }
+        if (request.emojiPosition != null) {
+            config.emojiPosition = request.emojiPosition;
+        }
         if (request.emojiFont != null) {
             config.emojiFont = request.emojiFont;
         }
-        if (request.observationTime != null) {
-            try {
-                config.observationTime = java.time.LocalTime.parse(request.observationTime);
-            } catch (Exception e) {
-                // Keep default if parsing fails
-            }
-        }
-        if (request.timeZone != null) {
-            config.timeZone = request.timeZone;
-        }
-
-        return config;
     }
 }

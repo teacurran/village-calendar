@@ -48,6 +48,8 @@ public class WebhookResource {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public static final String STRIPE_OBJECT_PROPERTY = "object";
+    private static final String STRIPE_PAYMENT_INTENT_PROPERTY = "payment_intent";
+    private static final String STRIPE_METADATA_PROPERTY = "metadata";
 
     @Inject
     PaymentService paymentService;
@@ -190,14 +192,15 @@ public class WebhookResource {
                 session.setId(sessionId);
 
                 // Set payment intent if present
-                if (sessionData.has("payment_intent") && !sessionData.get("payment_intent").isNull()) {
-                    session.setPaymentIntent(sessionData.get("payment_intent").asText());
+                if (sessionData.has(STRIPE_PAYMENT_INTENT_PROPERTY)
+                        && !sessionData.get(STRIPE_PAYMENT_INTENT_PROPERTY).isNull()) {
+                    session.setPaymentIntent(sessionData.get(STRIPE_PAYMENT_INTENT_PROPERTY).asText());
                 }
 
                 // Set metadata if present
-                if (sessionData.has("metadata") && !sessionData.get("metadata").isNull()) {
+                if (sessionData.has(STRIPE_METADATA_PROPERTY) && !sessionData.get(STRIPE_METADATA_PROPERTY).isNull()) {
                     java.util.Map<String, String> metadata = new java.util.HashMap<>();
-                    sessionData.get("metadata").fields()
+                    sessionData.get(STRIPE_METADATA_PROPERTY).fields()
                             .forEachRemaining(field -> metadata.put(field.getKey(), field.getValue().asText()));
                     session.setMetadata(metadata);
                 }

@@ -46,6 +46,11 @@ public class AuthResource {
     private static final Logger LOG = Logger.getLogger(AuthResource.class);
     private static final String ERROR_REDIRECT_PATH = "/?error=";
 
+    // Error codes for frontend translation - don't expose internal exception messages
+    private static final String ERROR_CODE_AUTH_FAILED = "auth_failed";
+    private static final String AUTH_CALLBACK_PATH = "/auth/callback?token=";
+    private static final String LOG_AUTH_SUCCESS = "Successfully authenticated user: %s";
+
     @org.eclipse.microprofile.config.inject.ConfigProperty(name = "app.frontend.url")
     java.util.Optional<String> frontendUrl;
 
@@ -121,19 +126,19 @@ public class AuthResource {
             // Issue JWT token for the user
             String jwtToken = authenticationService.issueJWT(user);
 
-            LOG.infof("Successfully authenticated user: %s", user.email);
+            LOG.infof(LOG_AUTH_SUCCESS, user.email);
 
             // Redirect to frontend OAuth callback page with token
             // Build absolute URL to avoid JAX-RS path prefix issues
-            String redirectUrl = buildFrontendUrl("/auth/callback?token=" + jwtToken);
+            String redirectUrl = buildFrontendUrl(AUTH_CALLBACK_PATH + jwtToken);
             LOG.infof("Redirecting to: %s", redirectUrl);
             return Response.seeOther(URI.create(redirectUrl)).build();
 
         } catch (Exception e) {
             LOG.errorf(e, "Error handling Google OAuth callback");
             // Redirect to home with error
-            String errorUrl = buildFrontendUrl(ERROR_REDIRECT_PATH + java.net.URLEncoder
-                    .encode("Authentication failed: " + e.getMessage(), java.nio.charset.StandardCharsets.UTF_8));
+            // Log the full error for debugging but only send error code to frontend
+            String errorUrl = buildFrontendUrl(ERROR_REDIRECT_PATH + ERROR_CODE_AUTH_FAILED);
             return Response.seeOther(URI.create(errorUrl)).build();
         }
     }
@@ -213,17 +218,17 @@ public class AuthResource {
             // Issue JWT token for the user
             String jwtToken = authenticationService.issueJWT(user);
 
-            LOG.infof("Successfully authenticated user: %s", user.email);
+            LOG.infof(LOG_AUTH_SUCCESS, user.email);
 
             // Redirect to frontend OAuth callback page with token
-            String redirectUrl = buildFrontendUrl("/auth/callback?token=" + jwtToken);
+            String redirectUrl = buildFrontendUrl(AUTH_CALLBACK_PATH + jwtToken);
             return Response.seeOther(URI.create(redirectUrl)).build();
 
         } catch (Exception e) {
             LOG.errorf(e, "Error handling Facebook OAuth callback");
             // Redirect to home with error
-            String errorUrl = buildFrontendUrl(ERROR_REDIRECT_PATH + java.net.URLEncoder
-                    .encode("Authentication failed: " + e.getMessage(), java.nio.charset.StandardCharsets.UTF_8));
+            // Log the full error for debugging but only send error code to frontend
+            String errorUrl = buildFrontendUrl(ERROR_REDIRECT_PATH + ERROR_CODE_AUTH_FAILED);
             return Response.seeOther(URI.create(errorUrl)).build();
         }
     }
@@ -287,17 +292,17 @@ public class AuthResource {
             // Issue JWT token for the user
             String jwtToken = authenticationService.issueJWT(user);
 
-            LOG.infof("Successfully authenticated user: %s", user.email);
+            LOG.infof(LOG_AUTH_SUCCESS, user.email);
 
             // Redirect to frontend OAuth callback page with token
-            String redirectUrl = buildFrontendUrl("/auth/callback?token=" + jwtToken);
+            String redirectUrl = buildFrontendUrl(AUTH_CALLBACK_PATH + jwtToken);
             return Response.seeOther(URI.create(redirectUrl)).build();
 
         } catch (Exception e) {
             LOG.errorf(e, "Error handling Apple OAuth callback");
             // Redirect to home with error
-            String errorUrl = buildFrontendUrl(ERROR_REDIRECT_PATH + java.net.URLEncoder
-                    .encode("Authentication failed: " + e.getMessage(), java.nio.charset.StandardCharsets.UTF_8));
+            // Log the full error for debugging but only send error code to frontend
+            String errorUrl = buildFrontendUrl(ERROR_REDIRECT_PATH + ERROR_CODE_AUTH_FAILED);
             return Response.seeOther(URI.create(errorUrl)).build();
         }
     }
