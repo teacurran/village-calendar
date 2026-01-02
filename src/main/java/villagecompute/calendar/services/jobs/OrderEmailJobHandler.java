@@ -1,7 +1,6 @@
 package villagecompute.calendar.services.jobs;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -18,6 +17,7 @@ import villagecompute.calendar.data.models.ItemAsset;
 import villagecompute.calendar.services.EmailService;
 import villagecompute.calendar.services.PDFRenderingService;
 import villagecompute.calendar.services.exceptions.DelayedJobException;
+import villagecompute.calendar.util.ResourceLoader;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -120,7 +120,7 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
 
         try {
             // Load CSS from resources
-            String css = loadResourceAsString("css/email.css");
+            String css = ResourceLoader.loadAsString("css/email.css");
 
             // Generate preview images for each order item's calendar
             List<String> previewImages = generatePreviewImages(order);
@@ -189,21 +189,4 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
         return previews;
     }
 
-    /**
-     * Load a resource file as a string.
-     *
-     * @param resourcePath
-     *            Resource path
-     * @return File contents
-     * @throws IOException
-     *             if resource cannot be loaded
-     */
-    private String loadResourceAsString(String resourcePath) throws IOException {
-        try (var inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
-            if (inputStream == null) {
-                throw new IOException("Resource not found: " + resourcePath);
-            }
-            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-        }
-    }
 }

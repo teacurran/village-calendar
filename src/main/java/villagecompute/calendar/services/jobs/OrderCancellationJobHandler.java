@@ -1,7 +1,6 @@
 package villagecompute.calendar.services.jobs;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -13,6 +12,7 @@ import org.jboss.logging.Logger;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.services.EmailService;
 import villagecompute.calendar.services.exceptions.DelayedJobException;
+import villagecompute.calendar.util.ResourceLoader;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -82,7 +82,7 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
 
         try {
             // Load CSS from resources
-            String css = loadResourceAsString("css/email.css");
+            String css = ResourceLoader.loadAsString("css/email.css");
 
             // Determine if refund note should be included
             // Refunds are needed if order was paid and has a payment intent
@@ -107,21 +107,4 @@ public class OrderCancellationJobHandler implements DelayedJobHandler {
         }
     }
 
-    /**
-     * Load a resource file as a string.
-     *
-     * @param resourcePath
-     *            Resource path
-     * @return File contents
-     * @throws IOException
-     *             if resource cannot be loaded
-     */
-    private String loadResourceAsString(String resourcePath) throws IOException {
-        try (var inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
-            if (inputStream == null) {
-                throw new IOException("Resource not found: " + resourcePath);
-            }
-            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-        }
-    }
 }
