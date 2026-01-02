@@ -19,6 +19,10 @@ public final class MimeTypes {
     public static final String HEADER_X_SESSION_ID = "X-Session-ID";
     public static final String HEADER_STRIPE_SIGNATURE = "Stripe-Signature";
 
+    // Content-Disposition value prefixes
+    public static final String DISPOSITION_INLINE_PREFIX = "inline; filename=\"";
+    public static final String DISPOSITION_ATTACHMENT_PREFIX = "attachment; filename=\"";
+
     // Re-export common JAX-RS types for convenience
     public static final String APPLICATION_JSON = MediaType.APPLICATION_JSON;
     public static final String TEXT_HTML = MediaType.TEXT_HTML;

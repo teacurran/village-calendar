@@ -1,5 +1,6 @@
 package villagecompute.calendar.api;
 
+import static villagecompute.calendar.util.MimeTypes.DISPOSITION_INLINE_PREFIX;
 import static villagecompute.calendar.util.MimeTypes.HEADER_CACHE_CONTROL;
 import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
 
@@ -121,7 +122,7 @@ public class StaticContentResource {
         CalendarTemplate template = getTemplateBySlug(slug);
         String svgContent = generateSvgForTemplate(template);
 
-        return Response.ok(svgContent).header(HEADER_CONTENT_DISPOSITION, "inline; filename=\"" + slug + ".svg\"")
+        return Response.ok(svgContent).header(HEADER_CONTENT_DISPOSITION, DISPOSITION_INLINE_PREFIX + slug + ".svg\"")
                 .build();
     }
 
@@ -149,7 +150,7 @@ public class StaticContentResource {
             // Generate PNG thumbnail (1200px width for social sharing)
             byte[] pngBytes = pdfRenderingService.renderSVGToPNG(wrappedSvg, 1200);
 
-            return Response.ok(pngBytes).header(HEADER_CONTENT_DISPOSITION, "inline; filename=\"" + slug + ".png\"")
+            return Response.ok(pngBytes).header(HEADER_CONTENT_DISPOSITION, DISPOSITION_INLINE_PREFIX + slug + ".png\"")
                     .build();
         } catch (Exception e) {
             LOG.errorf(e, "Failed to generate PNG for calendar: %s", slug);
@@ -173,8 +174,8 @@ public class StaticContentResource {
         CalendarTemplate template = getTemplateById(templateId);
         String svgContent = generateSvgForTemplateById(template);
 
-        return Response.ok(svgContent).header(HEADER_CONTENT_DISPOSITION, "inline; filename=\"" + templateId + ".svg\"")
-                .build();
+        return Response.ok(svgContent)
+                .header(HEADER_CONTENT_DISPOSITION, DISPOSITION_INLINE_PREFIX + templateId + ".svg\"").build();
     }
 
     /**
@@ -201,7 +202,7 @@ public class StaticContentResource {
             byte[] pngBytes = pdfRenderingService.renderSVGToPNG(wrappedSvg, 400);
 
             return Response.ok(pngBytes)
-                    .header(HEADER_CONTENT_DISPOSITION, "inline; filename=\"" + templateId + ".png\"")
+                    .header(HEADER_CONTENT_DISPOSITION, DISPOSITION_INLINE_PREFIX + templateId + ".png\"")
                     .header(HEADER_CACHE_CONTROL, "public, max-age=86400") // Cache for 1 day
                     .build();
         } catch (Exception e) {
