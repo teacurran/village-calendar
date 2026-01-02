@@ -13,6 +13,7 @@ import org.jboss.logging.Logger;
 
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
+import villagecompute.calendar.util.MimeTypes;
 
 import io.vertx.core.http.HttpServerRequest;
 
@@ -41,7 +42,7 @@ public class SessionService {
     public String getCurrentSessionId() {
         try {
             if (request != null) {
-                String sessionId = request.getHeader("X-Session-ID");
+                String sessionId = request.getHeader(MimeTypes.HEADER_X_SESSION_ID);
                 if (sessionId != null && !sessionId.isEmpty()) {
                     LOG.debugf("Found session ID in header: %s", sessionId);
                     return sessionId;

@@ -28,6 +28,9 @@ public class CartResource {
 
     private static final Logger LOG = Logger.getLogger(CartResource.class);
 
+    // JSON field name constants
+    private static final String FIELD_QUANTITY = "quantity";
+
     @Inject
     CartService cartService;
 
@@ -80,7 +83,8 @@ public class CartResource {
         input.description = requestBody.get("description") != null ? (String) requestBody.get("description")
                 : (String) requestBody.get("templateName");
 
-        input.quantity = requestBody.get("quantity") != null ? ((Number) requestBody.get("quantity")).intValue() : 1;
+        input.quantity = requestBody.get(FIELD_QUANTITY) != null ? ((Number) requestBody.get(FIELD_QUANTITY)).intValue()
+                : 1;
 
         input.productCode = requestBody.get("productCode") != null ? (String) requestBody.get("productCode") : null;
 
@@ -135,7 +139,8 @@ public class CartResource {
     @Transactional
     public Response updateQuantity(@PathParam("itemId") String itemId, Map<String, Object> requestBody) {
         String sessionId = sessionService.getCurrentSessionId();
-        Integer quantity = requestBody.get("quantity") != null ? ((Number) requestBody.get("quantity")).intValue()
+        Integer quantity = requestBody.get(FIELD_QUANTITY) != null
+                ? ((Number) requestBody.get(FIELD_QUANTITY)).intValue()
                 : null;
 
         LOG.infof("REST: Updating item %s quantity to %d for session: %s", itemId, quantity, sessionId);

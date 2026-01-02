@@ -141,7 +141,7 @@ public class OrderGraphQL {
                 throw new SecurityException("Unauthorized: ADMIN role required to access other users' orders");
             }
 
-            targetUserId = UuidUtil.parse(userId, "user ID");
+            targetUserId = UuidUtil.parse(userId, UuidUtil.FIELD_USER_ID);
             LOG.infof("Admin %s accessing orders for user %s", user.email, userId);
         } else {
             // No userId provided - return current user's orders
@@ -178,7 +178,7 @@ public class OrderGraphQL {
 
         CalendarUser user = authService.requireCurrentUser(jwt);
 
-        UUID orderId = UuidUtil.parse(id, "order ID");
+        UUID orderId = UuidUtil.parse(id, UuidUtil.FIELD_ORDER_ID);
 
         // Find the order
         Optional<CalendarOrder> orderOpt = orderService.getOrderById(orderId);
@@ -384,7 +384,7 @@ public class OrderGraphQL {
         CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Validate and find the calendar
-        UUID calendarId = UuidUtil.parse(input.calendarId, "calendar ID");
+        UUID calendarId = UuidUtil.parse(input.calendarId, UuidUtil.FIELD_CALENDAR_ID);
         UserCalendar calendar = findAndVerifyCalendarOwnership(calendarId, user);
 
         // Convert shipping address to JSON and create the order
@@ -439,7 +439,7 @@ public class OrderGraphQL {
         CalendarUser user = authService.requireCurrentUser(jwt);
 
         // Validate and find the calendar
-        UUID calendarId = UuidUtil.parse(input.calendarId, "calendar ID");
+        UUID calendarId = UuidUtil.parse(input.calendarId, UuidUtil.FIELD_CALENDAR_ID);
         UserCalendar calendar = findAndVerifyCalendarOwnership(calendarId, user);
 
         // Get price from product catalog using ProductType
@@ -493,7 +493,7 @@ public class OrderGraphQL {
     public CalendarOrder updateOrderStatus(
             @Name("input") @Description("Order status update data") @NotNull @Valid OrderStatusUpdateInput input) {
         LOG.infof("Mutation: updateOrderStatus(orderId=%s, status=%s)", input.orderId, input.status);
-        UUID orderId = UuidUtil.parse(input.orderId, "order ID");
+        UUID orderId = UuidUtil.parse(input.orderId, UuidUtil.FIELD_ORDER_ID);
         return orderService.updateOrderStatus(orderId, input.status, input.notes);
     }
 
@@ -516,7 +516,7 @@ public class OrderGraphQL {
         LOG.infof("Mutation: cancelOrder(orderId=%s, reason=%s)", orderId, reason);
 
         CalendarUser user = authService.requireCurrentUser(jwt);
-        UUID orderIdUuid = UuidUtil.parse(orderId, "order ID");
+        UUID orderIdUuid = UuidUtil.parse(orderId, UuidUtil.FIELD_ORDER_ID);
         boolean isAdmin = isCurrentUserAdmin();
 
         // Cancel the order (service handles authorization and status validation)

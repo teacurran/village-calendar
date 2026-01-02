@@ -22,6 +22,8 @@ import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.services.SessionService;
 import villagecompute.calendar.types.CalendarConfigType;
 import villagecompute.calendar.types.ErrorType;
+import villagecompute.calendar.util.ErrorMessages;
+import villagecompute.calendar.util.MimeTypes;
 
 import io.quarkus.logging.Log;
 
@@ -76,9 +78,10 @@ public class SessionCalendarResource {
     /** Get the current session's active calendar */
     @GET
     @Path("/current")
-    public Response getCurrentCalendar(@HeaderParam("X-Session-ID") String sessionId) {
+    public Response getCurrentCalendar(@HeaderParam(MimeTypes.HEADER_X_SESSION_ID) String sessionId) {
         if (sessionId == null || sessionId.isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of("No session found")).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of(ErrorMessages.NO_SESSION_FOUND))
+                    .build();
         }
 
         UserCalendar calendar = UserCalendar.find("sessionId", sessionId).firstResult();
@@ -95,9 +98,11 @@ public class SessionCalendarResource {
     @POST
     @Path("/save")
     @Transactional
-    public Response saveSessionCalendar(@HeaderParam("X-Session-ID") String sessionId, UpdateCalendarRequest request) {
+    public Response saveSessionCalendar(@HeaderParam(MimeTypes.HEADER_X_SESSION_ID) String sessionId,
+            UpdateCalendarRequest request) {
         if (sessionId == null || sessionId.isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of("No session found")).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of(ErrorMessages.NO_SESSION_FOUND))
+                    .build();
         }
 
         // Check if this session already has a working calendar
@@ -153,15 +158,17 @@ public class SessionCalendarResource {
     @POST
     @Path("/from-template/{templateId}")
     @Transactional
-    public Response createFromTemplate(@HeaderParam("X-Session-ID") String sessionId,
+    public Response createFromTemplate(@HeaderParam(MimeTypes.HEADER_X_SESSION_ID) String sessionId,
             @PathParam("templateId") UUID templateId) {
         if (sessionId == null || sessionId.isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of("No session found")).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of(ErrorMessages.NO_SESSION_FOUND))
+                    .build();
         }
 
         CalendarTemplate template = CalendarTemplate.findById(templateId);
         if (template == null || !template.isActive) {
-            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of("Template not found")).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of(ErrorMessages.TEMPLATE_NOT_FOUND))
+                    .build();
         }
 
         // Create new calendar from template
@@ -200,11 +207,13 @@ public class SessionCalendarResource {
     /** Get a calendar by ID Returns the calendar and whether it belongs to the current session */
     @GET
     @Path("/{id}")
-    public Response getCalendar(@HeaderParam("X-Session-ID") String sessionId, @PathParam("id") UUID id) {
+    public Response getCalendar(@HeaderParam(MimeTypes.HEADER_X_SESSION_ID) String sessionId,
+            @PathParam("id") UUID id) {
 
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
-            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of("Calendar not found")).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of(ErrorMessages.CALENDAR_NOT_FOUND))
+                    .build();
         }
 
         // Check if this is the session's own calendar
@@ -212,7 +221,8 @@ public class SessionCalendarResource {
 
         // Only allow viewing if it's public or belongs to the session
         if (!calendar.isPublic && !isOwnCalendar) {
-            return Response.status(Response.Status.FORBIDDEN).entity(ErrorType.of("Calendar is not public")).build();
+            return Response.status(Response.Status.FORBIDDEN).entity(ErrorType.of(ErrorMessages.CALENDAR_NOT_PUBLIC))
+                    .build();
         }
 
         Map<String, Object> response = new HashMap<>();
@@ -229,20 +239,24 @@ public class SessionCalendarResource {
     @POST
     @Path("/{id}/copy-to-session")
     @Transactional
-    public Response copyToSession(@HeaderParam("X-Session-ID") String sessionId, @PathParam("id") UUID id) {
+    public Response copyToSession(@HeaderParam(MimeTypes.HEADER_X_SESSION_ID) String sessionId,
+            @PathParam("id") UUID id) {
         if (sessionId == null || sessionId.isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of("No session found")).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of(ErrorMessages.NO_SESSION_FOUND))
+                    .build();
         }
 
         UserCalendar sourceCalendar = UserCalendar.findById(id);
         if (sourceCalendar == null) {
-            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of("Calendar not found")).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of(ErrorMessages.CALENDAR_NOT_FOUND))
+                    .build();
         }
 
         // Only allow copying public calendars or calendars that belong to the session
         boolean isOwnCalendar = sessionId.equals(sourceCalendar.sessionId);
         if (!sourceCalendar.isPublic && !isOwnCalendar) {
-            return Response.status(Response.Status.FORBIDDEN).entity(ErrorType.of("Calendar is not public")).build();
+            return Response.status(Response.Status.FORBIDDEN).entity(ErrorType.of(ErrorMessages.CALENDAR_NOT_PUBLIC))
+                    .build();
         }
 
         // If already owns this calendar, just return it
@@ -294,22 +308,25 @@ public class SessionCalendarResource {
     @PUT
     @Path("/{id}/autosave")
     @Transactional
-    public Response autosaveCalendar(@HeaderParam("X-Session-ID") String sessionId, @PathParam("id") UUID id,
-            UpdateCalendarRequest request) {
+    public Response autosaveCalendar(@HeaderParam(MimeTypes.HEADER_X_SESSION_ID) String sessionId,
+            @PathParam("id") UUID id, UpdateCalendarRequest request) {
         if (sessionId == null || sessionId.isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of("No session found")).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of(ErrorMessages.NO_SESSION_FOUND))
+                    .build();
         }
 
         // Use pessimistic lock to serialize concurrent autosaves for the same calendar
         UserCalendar calendar = UserCalendar.getEntityManager().find(UserCalendar.class, id,
                 LockModeType.PESSIMISTIC_WRITE);
         if (calendar == null) {
-            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of("Calendar not found")).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of(ErrorMessages.CALENDAR_NOT_FOUND))
+                    .build();
         }
 
         // Verify calendar belongs to current session
         if (calendar.sessionId == null || !calendar.sessionId.equals(sessionId)) {
-            return Response.status(Response.Status.FORBIDDEN).entity(ErrorType.of("Cannot edit this calendar")).build();
+            return Response.status(Response.Status.FORBIDDEN).entity(ErrorType.of(ErrorMessages.CANNOT_EDIT_CALENDAR))
+                    .build();
         }
 
         // Update configuration
@@ -354,9 +371,10 @@ public class SessionCalendarResource {
     @POST
     @Path("/new")
     @Transactional
-    public Response createNewCalendar(@HeaderParam("X-Session-ID") String sessionId) {
+    public Response createNewCalendar(@HeaderParam(MimeTypes.HEADER_X_SESSION_ID) String sessionId) {
         if (sessionId == null || sessionId.isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of("No session found")).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ErrorType.of(ErrorMessages.NO_SESSION_FOUND))
+                    .build();
         }
 
         // Check if this session already has a calendar - return existing one

@@ -12,6 +12,12 @@ public final class UuidUtil {
 
     private static final Logger LOG = Logger.getLogger(UuidUtil.class);
 
+    // Field name constants for use with parse() method
+    public static final String FIELD_CALENDAR_ID = "calendar ID";
+    public static final String FIELD_ORDER_ID = "order ID";
+    public static final String FIELD_USER_ID = "user ID";
+    public static final String FIELD_TEMPLATE_ID = "template ID";
+
     private UuidUtil() {
         // Utility class
     }

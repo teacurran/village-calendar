@@ -181,7 +181,7 @@ public class CalendarGraphQL {
                 throw new SecurityException("Unauthorized: ADMIN role required to access other users' calendars");
             }
 
-            targetUserId = UuidUtil.parse(userId, "user ID");
+            targetUserId = UuidUtil.parse(userId, UuidUtil.FIELD_USER_ID);
 
             LOG.infof("Admin %s accessing calendars for user %s", user.email, userId);
         } else {
@@ -213,7 +213,7 @@ public class CalendarGraphQL {
         LOG.infof("Query: calendar(id=%s)", id);
 
         try {
-            UUID calendarId = UuidUtil.parse(id, "calendar ID");
+            UUID calendarId = UuidUtil.parse(id, UuidUtil.FIELD_CALENDAR_ID);
 
             // Get current user (may be null for anonymous access)
             CalendarUser currentUser = null;
@@ -291,7 +291,7 @@ public class CalendarGraphQL {
 
         CalendarUser user = authService.requireCurrentUser(jwt);
 
-        UUID templateId = UuidUtil.parse(input.templateId, "template ID");
+        UUID templateId = UuidUtil.parse(input.templateId, UuidUtil.FIELD_TEMPLATE_ID);
 
         // Create calendar using service
         UserCalendar calendar = calendarService.createCalendar(input.name, input.year, templateId, input.configuration,
@@ -321,7 +321,7 @@ public class CalendarGraphQL {
         LOG.infof("Mutation: updateCalendar(id=%s)", id);
 
         CalendarUser user = authService.requireCurrentUser(jwt);
-        UUID calendarId = UuidUtil.parse(id, "calendar ID");
+        UUID calendarId = UuidUtil.parse(id, UuidUtil.FIELD_CALENDAR_ID);
 
         // Update calendar using service (handles auth and validation)
         UserCalendar calendar = calendarService.updateCalendar(calendarId, input.name, input.configuration,
@@ -348,7 +348,7 @@ public class CalendarGraphQL {
         LOG.infof("Mutation: deleteCalendar(id=%s)", id);
 
         CalendarUser user = authService.requireCurrentUser(jwt);
-        UUID calendarId = UuidUtil.parse(id, "calendar ID");
+        UUID calendarId = UuidUtil.parse(id, UuidUtil.FIELD_CALENDAR_ID);
 
         // Check for paid orders before deletion
         Optional<UserCalendar> calendarOpt = UserCalendar.<UserCalendar>findByIdOptional(calendarId);
@@ -396,7 +396,7 @@ public class CalendarGraphQL {
         LOG.infof("Mutation: updateUserAdmin(userId=%s, isAdmin=%s)", userId, isAdmin);
 
         CalendarUser adminUser = authService.requireCurrentUser(jwt);
-        UUID targetUserId = UuidUtil.parse(userId, "user ID");
+        UUID targetUserId = UuidUtil.parse(userId, UuidUtil.FIELD_USER_ID);
 
         // Prevent removing admin from self (lockout protection)
         if (adminUser.id.equals(targetUserId) && !isAdmin) {

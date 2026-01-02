@@ -25,6 +25,7 @@ import villagecompute.calendar.services.CalendarRenderingService;
 import villagecompute.calendar.types.CalendarConfigType;
 import villagecompute.calendar.types.ErrorType;
 import villagecompute.calendar.types.SuccessType;
+import villagecompute.calendar.util.ErrorMessages;
 import villagecompute.calendar.util.Roles;
 
 import io.quarkus.logging.Log;
@@ -84,8 +85,8 @@ public class UserCalendarResource {
     @Path("/calendars")
     @RolesAllowed(Roles.USER)
     public Response getCalendars() {
-        CalendarUser user = authService.getCurrentUser(jwt)
-                .orElseThrow(() -> new WebApplicationException("User not found", Response.Status.UNAUTHORIZED));
+        CalendarUser user = authService.getCurrentUser(jwt).orElseThrow(
+                () -> new WebApplicationException(ErrorMessages.USER_NOT_FOUND, Response.Status.UNAUTHORIZED));
 
         List<UserCalendar> calendars = UserCalendar.find("user.id = ?1 and sessionId is null", user.id).list();
 
@@ -100,8 +101,8 @@ public class UserCalendarResource {
     @RolesAllowed(Roles.USER)
     @Transactional
     public Response saveCalendar(SaveCalendarRequest request) {
-        CalendarUser user = authService.getCurrentUser(jwt)
-                .orElseThrow(() -> new WebApplicationException("User not found", Response.Status.UNAUTHORIZED));
+        CalendarUser user = authService.getCurrentUser(jwt).orElseThrow(
+                () -> new WebApplicationException(ErrorMessages.USER_NOT_FOUND, Response.Status.UNAUTHORIZED));
 
         UserCalendar calendar;
 
@@ -109,13 +110,14 @@ public class UserCalendarResource {
             // Update existing calendar
             calendar = UserCalendar.findById(request.id);
             if (calendar == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of("Calendar not found")).build();
+                return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of(ErrorMessages.CALENDAR_NOT_FOUND))
+                        .build();
             }
 
             // Verify ownership
             if (!calendar.user.id.equals(user.id)) {
                 return Response.status(Response.Status.FORBIDDEN)
-                        .entity(ErrorType.of("Not authorized to update this calendar")).build();
+                        .entity(ErrorType.of(ErrorMessages.NOT_AUTHORIZED_UPDATE)).build();
             }
         } else {
             // Create new calendar
@@ -174,18 +176,19 @@ public class UserCalendarResource {
     @Path("/calendars/{id}/preview")
     @RolesAllowed(Roles.USER)
     public Response getCalendarPreview(@PathParam("id") UUID id) {
-        CalendarUser user = authService.getCurrentUser(jwt)
-                .orElseThrow(() -> new WebApplicationException("User not found", Response.Status.UNAUTHORIZED));
+        CalendarUser user = authService.getCurrentUser(jwt).orElseThrow(
+                () -> new WebApplicationException(ErrorMessages.USER_NOT_FOUND, Response.Status.UNAUTHORIZED));
 
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
-            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of("Calendar not found")).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of(ErrorMessages.CALENDAR_NOT_FOUND))
+                    .build();
         }
 
         // Verify ownership
         if (!calendar.user.id.equals(user.id)) {
-            return Response.status(Response.Status.FORBIDDEN)
-                    .entity(ErrorType.of("Not authorized to view this calendar")).build();
+            return Response.status(Response.Status.FORBIDDEN).entity(ErrorType.of(ErrorMessages.NOT_AUTHORIZED_VIEW))
+                    .build();
         }
 
         if (calendar.generatedSvg == null) {
@@ -201,18 +204,19 @@ public class UserCalendarResource {
     @RolesAllowed(Roles.USER)
     @Transactional
     public Response deleteCalendar(@PathParam("id") UUID id) {
-        CalendarUser user = authService.getCurrentUser(jwt)
-                .orElseThrow(() -> new WebApplicationException("User not found", Response.Status.UNAUTHORIZED));
+        CalendarUser user = authService.getCurrentUser(jwt).orElseThrow(
+                () -> new WebApplicationException(ErrorMessages.USER_NOT_FOUND, Response.Status.UNAUTHORIZED));
 
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
-            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of("Calendar not found")).build();
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of(ErrorMessages.CALENDAR_NOT_FOUND))
+                    .build();
         }
 
         // Verify ownership
         if (!calendar.user.id.equals(user.id)) {
-            return Response.status(Response.Status.FORBIDDEN)
-                    .entity(ErrorType.of("Not authorized to delete this calendar")).build();
+            return Response.status(Response.Status.FORBIDDEN).entity(ErrorType.of(ErrorMessages.NOT_AUTHORIZED_DELETE))
+                    .build();
         }
 
         calendar.delete();
