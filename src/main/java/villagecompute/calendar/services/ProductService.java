@@ -13,6 +13,12 @@ import jakarta.enterprise.context.ApplicationScoped;
 @ApplicationScoped
 public class ProductService {
 
+    /** Product code for printed calendar poster */
+    public static final String PRODUCT_CODE_PRINT = "print";
+
+    /** Product code for digital PDF download */
+    public static final String PRODUCT_CODE_PDF = "pdf";
+
     /** Product definition with all attributes */
     public static class Product {
         public final String code;
@@ -38,14 +44,14 @@ public class ProductService {
     }
 
     // Product catalog - single source of truth for pricing
-    private static final Map<String, Product> PRODUCTS = Map.of("print",
-            new Product("print", "Printed 35\" x 23\" Poster",
+    private static final Map<String, Product> PRODUCTS = Map.of(PRODUCT_CODE_PRINT,
+            new Product(PRODUCT_CODE_PRINT, "Printed 35\" x 23\" Poster",
                     "Beautiful printed calendar shipped directly to your door.", new BigDecimal("25.00"),
                     List.of("Premium quality paper stock", "Vibrant, long-lasting colors", "PDF download included free",
                             "Ships within 3-5 business days"),
                     "pi-print", "Most Popular", 1),
-            "pdf",
-            new Product("pdf", "Digital PDF Download",
+            PRODUCT_CODE_PDF,
+            new Product(PRODUCT_CODE_PDF, "Digital PDF Download",
                     "High-resolution PDF file ready for printing at home or any" + " print shop.",
                     new BigDecimal("5.00"), List.of("Instant download after purchase", "Unlimited personal prints"),
                     "pi-file-pdf", null, 2));
@@ -81,6 +87,6 @@ public class ProductService {
 
     /** Get the default product code */
     public String getDefaultProductCode() {
-        return "print";
+        return PRODUCT_CODE_PRINT;
     }
 }

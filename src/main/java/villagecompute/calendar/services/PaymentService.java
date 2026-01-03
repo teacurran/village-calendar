@@ -36,6 +36,9 @@ public class PaymentService {
 
     private static final Logger LOG = Logger.getLogger(PaymentService.class);
 
+    /** Metadata key for order ID in Stripe payment intents and checkout sessions */
+    private static final String METADATA_ORDER_ID = "orderId";
+
     @ConfigProperty(
             name = "stripe.api.key")
     String stripeApiKey;
@@ -159,7 +162,7 @@ public class PaymentService {
 
         PaymentIntentCreateParams.Builder paramsBuilder = PaymentIntentCreateParams.builder().setAmount(amountInCents)
                 .setCurrency(currency != null ? currency : "usd").setDescription(description)
-                .putMetadata("orderId", orderId).setAutomaticPaymentMethods(
+                .putMetadata(METADATA_ORDER_ID, orderId).setAutomaticPaymentMethods(
                         PaymentIntentCreateParams.AutomaticPaymentMethods.builder().setEnabled(true).build());
 
         // Add order number to metadata if available
@@ -220,7 +223,7 @@ public class PaymentService {
         params.put("description", description);
 
         Map<String, String> metadata = new HashMap<>();
-        metadata.put("orderId", order.id.toString());
+        metadata.put(METADATA_ORDER_ID, order.id.toString());
         metadata.put("itemCount", String.valueOf(order.items.size()));
         metadata.put("totalQuantity", String.valueOf(order.getTotalItemCount()));
         params.put("metadata", metadata);
@@ -476,7 +479,7 @@ public class PaymentService {
 
         SessionCreateParams.Builder paramsBuilder = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT).setUiMode(SessionCreateParams.UiMode.EMBEDDED)
-                .setReturnUrl(successUrl + "?session_id={CHECKOUT_SESSION_ID}").putMetadata("orderId", orderId);
+                .setReturnUrl(successUrl + "?session_id={CHECKOUT_SESSION_ID}").putMetadata(METADATA_ORDER_ID, orderId);
 
         if (orderNumber != null) {
             paramsBuilder.putMetadata("orderNumber", orderNumber);
@@ -644,7 +647,7 @@ public class PaymentService {
         LOG.infof("Processing checkout.session.completed for session: %s", sessionId);
 
         Map<String, String> metadata = session.getMetadata();
-        String orderId = metadata != null ? metadata.get("orderId") : null;
+        String orderId = metadata != null ? metadata.get(METADATA_ORDER_ID) : null;
 
         if (orderId == null) {
             LOG.warnf("No orderId in session metadata for session: %s", sessionId);

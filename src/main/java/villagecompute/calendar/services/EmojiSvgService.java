@@ -125,7 +125,9 @@ public class EmojiSvgService {
 
         // Canadian Holidays
         EMOJI_TO_FILENAME.put("🍁", "emoji_u1f341"); // Maple Leaf (Canada Day)
-        EMOJI_TO_FILENAME.put("👨‍👩‍👧‍👦", "emoji_u1f468_200d_1f469_200d_1f467_200d_1f466"); // Family (Family Day)
+        // Family emoji with ZWJ characters escaped to avoid SonarQube S2479
+        EMOJI_TO_FILENAME.put("\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66",
+                "emoji_u1f468_200d_1f469_200d_1f467_200d_1f466"); // Family (Family Day)
 
         // UK Holidays
         EMOJI_TO_FILENAME.put("🌷", "emoji_u1f337"); // Tulip (Spring Bank Holiday)

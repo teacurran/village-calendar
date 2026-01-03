@@ -3,6 +3,9 @@ package villagecompute.calendar.services.maze;
 /** Renders a MazeGrid to SVG format. Designed for 35" x 23" page with 1" margins on all sides. */
 public class MazeSvgRenderer {
 
+    /** SVG closing tag for groups */
+    private static final String SVG_GROUP_CLOSE = "  </g>";
+
     // Page dimensions at 100 DPI
     private static final int PAGE_WIDTH = 3500; // 35 inches
     private static final int PAGE_HEIGHT = 2300; // 23 inches
@@ -122,7 +125,7 @@ public class MazeSvgRenderer {
                     }
                 }
             }
-            svg.append("  </g>").append(System.lineSeparator());
+            svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
         }
 
         // Draw solution path if enabled
@@ -142,7 +145,7 @@ public class MazeSvgRenderer {
                                 + " stroke-width=\"%d\" stroke-linecap=\"round\"" + " opacity=\"0.6\"/>%n",
                         x1, y1, x2, y2, pathColor, pathWidth));
             }
-            svg.append("  </g>").append(System.lineSeparator());
+            svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
         }
 
         // Draw internal walls first (thin)
@@ -172,7 +175,7 @@ public class MazeSvgRenderer {
                 }
             }
         }
-        svg.append("  </g>").append(System.lineSeparator());
+        svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
 
         // Draw outer border (thick rectangle)
         svg.append("  <g class=\"outer-border\">").append(System.lineSeparator());
@@ -180,7 +183,7 @@ public class MazeSvgRenderer {
                 "    <rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\""
                         + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
                 offsetX, offsetY, mazeWidth, mazeHeight, outerWallColor, OUTER_WALL_THICKNESS));
-        svg.append("  </g>").append(System.lineSeparator());
+        svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
 
         // Calculate marker size based on cell size
         int markerRadius = Math.max(cellSize / 5, 8);
@@ -249,7 +252,7 @@ public class MazeSvgRenderer {
                     "    <line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke=\"%s\"" + " stroke-width=\"%d\"/>%n",
                     centerX, centerY, x2, y2, innerWallColor, INNER_WALL_THICKNESS));
         }
-        svg.append("  </g>").append(System.lineSeparator());
+        svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
 
         // Marker size
         int markerRadius = Math.max(ringSpacing / 4, 12);

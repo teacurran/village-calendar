@@ -56,6 +56,12 @@ public class CalendarRenderingService {
 
     public static final String DEFAULT_THEME = "default";
 
+    /** JSON key for emoji field in custom data */
+    private static final String KEY_EMOJI = "emoji";
+
+    /** JSON key for display settings in custom data */
+    private static final String KEY_DISPLAY_SETTINGS = "displaySettings";
+
     /** Emoji font constant for monochrome (black & white outline) emoji style. */
     public static final String EMOJI_FONT_NOTO_MONO = "noto-mono";
 
@@ -367,10 +373,10 @@ public class CalendarRenderingService {
                 customEmoji = substituteEmojiForMonochrome((String) customData, config);
             } else if (customData instanceof Map) {
                 Map<String, Object> dataMap = (Map<String, Object>) customData;
-                if (dataMap.containsKey("emoji")) {
-                    customEmoji = substituteEmojiForMonochrome((String) dataMap.get("emoji"), config);
-                    if (dataMap.containsKey("displaySettings") && dataMap.get("displaySettings") instanceof Map) {
-                        Map<String, Object> settings = (Map<String, Object>) dataMap.get("displaySettings");
+                if (dataMap.containsKey(KEY_EMOJI)) {
+                    customEmoji = substituteEmojiForMonochrome((String) dataMap.get(KEY_EMOJI), config);
+                    if (dataMap.containsKey(KEY_DISPLAY_SETTINGS) && dataMap.get(KEY_DISPLAY_SETTINGS) instanceof Map) {
+                        Map<String, Object> settings = (Map<String, Object>) dataMap.get(KEY_DISPLAY_SETTINGS);
                         eventDisplay = new CustomEventDisplay(customEmoji, settings);
                     } else {
                         eventDisplay = new CustomEventDisplay(customEmoji);
