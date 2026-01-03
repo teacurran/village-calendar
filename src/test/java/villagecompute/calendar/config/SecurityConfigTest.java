@@ -35,15 +35,6 @@ class SecurityConfigTest {
     // ========== isAuthenticated Tests ==========
 
     @Test
-    void testIsAuthenticated_WhenSecurityIdentityIsNull_ReturnsFalse() {
-        // Quarkus doesn't allow null SecurityIdentity in managed context
-        // So we test the anonymous case instead
-        when(securityIdentity.isAnonymous()).thenReturn(true);
-
-        assertFalse(securityConfig.isAuthenticated());
-    }
-
-    @Test
     void testIsAuthenticated_WhenAnonymous_ReturnsFalse() {
         when(securityIdentity.isAnonymous()).thenReturn(true);
 

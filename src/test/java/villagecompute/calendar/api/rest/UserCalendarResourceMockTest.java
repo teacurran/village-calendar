@@ -174,7 +174,7 @@ class UserCalendarResourceMockTest {
 
     @Test
     @TestSecurity(user = "testuser", roles = "USER")
-    void testSaveCalendar_WithConfiguration_ReturnsSuccess() throws Exception {
+    void testSaveCalendar_WithConfiguration_ReturnsSuccess() {
         when(authService.getCurrentUser(any())).thenReturn(Optional.of(testUser));
 
         Map<String, Object> config = new HashMap<>();
