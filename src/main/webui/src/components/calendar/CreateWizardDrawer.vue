@@ -1495,13 +1495,11 @@ onMounted(() => {
           </StepPanel>
         </StepItem>
 
-        <!-- Step 5: Colors -->
+        <!-- Step 5: Weekend Colors -->
         <StepItem value="5">
-          <Step>Colors</Step>
+          <Step>Weekend Colors</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
-              <!-- Weekend Colors -->
-              <h4 class="subsection-title">Weekend Colors</h4>
               <div class="weekend-color-controls">
                 <!-- Theme Selection as Inline Swatches -->
                 <div class="weekend-theme-section">
@@ -1556,8 +1554,29 @@ onMounted(() => {
                 </div>
               </div>
 
-              <!-- Color Swatches -->
-              <h4 class="subsection-title">Text Colors</h4>
+              <div class="step-navigation">
+                <Button
+                  label="Previous"
+                  icon="pi pi-arrow-left"
+                  outlined
+                  @click="activateCallback('4')"
+                />
+                <Button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  icon-pos="right"
+                  @click="activateCallback('6')"
+                />
+              </div>
+            </div>
+          </StepPanel>
+        </StepItem>
+
+        <!-- Step 6: Text Colors -->
+        <StepItem value="6">
+          <Step>Text Colors</Step>
+          <StepPanel v-slot="{ activateCallback }">
+            <div class="step-content">
               <div class="color-options">
                 <div class="color-option">
                   <label class="color-label">Year Color</label>
@@ -1675,21 +1694,21 @@ onMounted(() => {
                   label="Previous"
                   icon="pi pi-arrow-left"
                   outlined
-                  @click="activateCallback('4')"
+                  @click="activateCallback('5')"
                 />
                 <Button
                   label="Next"
                   icon="pi pi-arrow-right"
                   icon-pos="right"
-                  @click="activateCallback('6')"
+                  @click="activateCallback('7')"
                 />
               </div>
             </div>
           </StepPanel>
         </StepItem>
 
-        <!-- Step 6: Finish -->
-        <StepItem value="6">
+        <!-- Step 7: Finish -->
+        <StepItem value="7">
           <Step>Your Calendar is Ready!</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
@@ -1742,7 +1761,7 @@ onMounted(() => {
                   label="Previous"
                   icon="pi pi-arrow-left"
                   outlined
-                  @click="activateCallback('5')"
+                  @click="activateCallback('6')"
                 />
                 <Button label="Done" icon="pi pi-check" @click="handleClose" />
               </div>
