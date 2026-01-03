@@ -394,11 +394,8 @@ public class OrderGraphQL {
 
         // Create Stripe PaymentIntent with full breakdown for tax reporting
         try {
-            // Calculate subtotal (unit price * quantity)
-            BigDecimal subtotal = order.unitPrice.multiply(BigDecimal.valueOf(order.quantity));
-
             Map<String, String> paymentDetails = paymentService.createPaymentIntent(order.totalPrice, CURRENCY_USD,
-                    order.id.toString(), subtotal, order.taxAmount, order.shippingCost, order.orderNumber);
+                    order.id.toString(), order.subtotal, order.taxAmount, order.shippingCost, order.orderNumber);
 
             // Update order with Stripe payment intent ID
             order.stripePaymentIntentId = paymentDetails.get(KEY_PAYMENT_INTENT_ID);
@@ -599,13 +596,11 @@ public class OrderGraphQL {
 
             // Set order details
             order.status = CalendarOrder.STATUS_PENDING;
-            order.quantity = lineItems.stream().mapToInt(i -> (int) i.quantity).sum();
 
             // Calculate totals from line items
             BigDecimal subtotal = lineItems.stream()
                     .map(i -> BigDecimal.valueOf(i.unitAmountCents * i.quantity).divide(BigDecimal.valueOf(100)))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            order.unitPrice = subtotal.divide(BigDecimal.valueOf(order.quantity), 2, java.math.RoundingMode.HALF_UP);
             order.subtotal = subtotal;
             order.totalPrice = subtotal; // Will be updated with tax/shipping from Stripe
 
@@ -626,7 +621,8 @@ public class OrderGraphQL {
                     orderItem.productType = "pdf".equalsIgnoreCase(productCode) ? CalendarOrderItem.TYPE_PDF
                             : CalendarOrderItem.TYPE_PRINT;
 
-                    orderItem.productName = itemInput.name;
+                    orderItem.description = itemInput.name;
+                    orderItem.generatorType = CalendarOrderItem.GENERATOR_CALENDAR;
                     orderItem.setYear(itemInput.year != null ? itemInput.year : java.time.Year.now().getValue());
                     orderItem.quantity = itemInput.quantity != null ? itemInput.quantity : 1;
 
@@ -653,7 +649,7 @@ public class OrderGraphQL {
                     orderItem.persist();
                     order.items.add(orderItem);
 
-                    LOG.infof("Created order item: %s (%s) x%d @ $%.2f", orderItem.productName, orderItem.productType,
+                    LOG.infof("Created order item: %s (%s) x%d @ $%.2f", orderItem.description, orderItem.productType,
                             orderItem.quantity, orderItem.unitPrice);
                 }
             }

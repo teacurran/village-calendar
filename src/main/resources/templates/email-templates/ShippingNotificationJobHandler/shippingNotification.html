@@ -25,15 +25,11 @@
 
         <h2>📋 Order Summary</h2>
 
+        {#for item in order.items}
         <div class="detail-box">
-            <strong>Calendar:</strong>
-            {order.calendar.name} ({order.calendar.year})
+            <strong>{item.description}</strong> ({item.getYear()}) x {item.quantity}
         </div>
-
-        <div class="detail-box">
-            <strong>Quantity:</strong>
-            {order.quantity} {#if order.quantity > 1}calendars{#else}calendar{/if}
-        </div>
+        {/for}
 
         <div class="detail-box">
             <strong>Shipped Date:</strong>

@@ -149,6 +149,8 @@ class AdminOrderWorkflowTest {
         // Delete all delayed jobs first
         DelayedJob.deleteAll();
 
+        // Delete order items before orders (FK constraint)
+        CalendarOrderItem.deleteAll();
         // Delete all orders
         CalendarOrder.deleteAll();
 
@@ -201,8 +203,7 @@ class AdminOrderWorkflowTest {
         String paymentIntentId = "pi_test_shipped_" + System.currentTimeMillis();
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("25.00");
+        order.subtotal = new BigDecimal("25.00");
         order.totalPrice = new BigDecimal("25.00");
         order.status = CalendarOrder.STATUS_PAID;
         order.stripePaymentIntentId = paymentIntentId;
@@ -237,9 +238,7 @@ class AdminOrderWorkflowTest {
         String paymentIntentId = "pi_test_email_shipped_" + System.currentTimeMillis();
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("25.00");
+        order.subtotal = new BigDecimal("25.00");
         order.totalPrice = new BigDecimal("25.00");
         order.status = CalendarOrder.STATUS_PAID;
         order.stripePaymentIntentId = paymentIntentId;
@@ -267,9 +266,7 @@ class AdminOrderWorkflowTest {
         String paymentIntentId = "pi_test_processing_" + System.currentTimeMillis();
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("25.00");
+        order.subtotal = new BigDecimal("25.00");
         order.totalPrice = new BigDecimal("25.00");
         order.status = CalendarOrder.STATUS_PAID;
         order.stripePaymentIntentId = paymentIntentId;
@@ -298,9 +295,7 @@ class AdminOrderWorkflowTest {
         String paymentIntentId = "pi_test_delivered_" + System.currentTimeMillis();
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("25.00");
+        order.subtotal = new BigDecimal("25.00");
         order.totalPrice = new BigDecimal("25.00");
         order.status = CalendarOrder.STATUS_SHIPPED;
         order.stripePaymentIntentId = paymentIntentId;
@@ -329,9 +324,7 @@ class AdminOrderWorkflowTest {
         String paymentIntentId = "pi_test_terminal_" + System.currentTimeMillis();
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("25.00");
+        order.subtotal = new BigDecimal("25.00");
         order.totalPrice = new BigDecimal("25.00");
         order.status = CalendarOrder.STATUS_DELIVERED;
         order.stripePaymentIntentId = paymentIntentId;
@@ -361,9 +354,7 @@ class AdminOrderWorkflowTest {
         String pi1 = "pi_test_query1_" + System.currentTimeMillis();
         CalendarOrder order1 = new CalendarOrder();
         order1.user = testUser;
-        order1.calendar = testCalendar;
-        order1.quantity = 1;
-        order1.unitPrice = new BigDecimal("25.00");
+        order1.subtotal = new BigDecimal("25.00");
         order1.totalPrice = new BigDecimal("25.00");
         order1.status = CalendarOrder.STATUS_PAID;
         order1.stripePaymentIntentId = pi1;
@@ -374,9 +365,7 @@ class AdminOrderWorkflowTest {
         String pi2 = "pi_test_query2_" + System.currentTimeMillis();
         CalendarOrder order2 = new CalendarOrder();
         order2.user = testUser2;
-        order2.calendar = testCalendar2;
-        order2.quantity = 2;
-        order2.unitPrice = new BigDecimal("25.00");
+        order2.subtotal = new BigDecimal("50.00");
         order2.totalPrice = new BigDecimal("50.00");
         order2.status = CalendarOrder.STATUS_PROCESSING;
         order2.stripePaymentIntentId = pi2;
@@ -407,9 +396,7 @@ class AdminOrderWorkflowTest {
         String pi1 = "pi_test_status1_" + System.currentTimeMillis();
         CalendarOrder paidOrder = new CalendarOrder();
         paidOrder.user = testUser;
-        paidOrder.calendar = testCalendar;
-        paidOrder.quantity = 1;
-        paidOrder.unitPrice = new BigDecimal("25.00");
+        paidOrder.subtotal = new BigDecimal("25.00");
         paidOrder.totalPrice = new BigDecimal("25.00");
         paidOrder.status = CalendarOrder.STATUS_PAID;
         paidOrder.stripePaymentIntentId = pi1;
@@ -420,9 +407,7 @@ class AdminOrderWorkflowTest {
         String pi2 = "pi_test_status2_" + System.currentTimeMillis();
         CalendarOrder shippedOrder = new CalendarOrder();
         shippedOrder.user = testUser;
-        shippedOrder.calendar = testCalendar;
-        shippedOrder.quantity = 1;
-        shippedOrder.unitPrice = new BigDecimal("25.00");
+        shippedOrder.subtotal = new BigDecimal("25.00");
         shippedOrder.totalPrice = new BigDecimal("25.00");
         shippedOrder.status = CalendarOrder.STATUS_SHIPPED;
         shippedOrder.stripePaymentIntentId = pi2;
@@ -461,9 +446,7 @@ class AdminOrderWorkflowTest {
         String paymentIntentId = "pi_test_own_cancel_" + System.currentTimeMillis();
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("25.00");
+        order.subtotal = new BigDecimal("25.00");
         order.totalPrice = new BigDecimal("25.00");
         order.status = CalendarOrder.STATUS_PENDING;
         order.stripePaymentIntentId = paymentIntentId;
@@ -488,9 +471,7 @@ class AdminOrderWorkflowTest {
         String paymentIntentId = "pi_test_other_cancel_" + System.currentTimeMillis();
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("25.00");
+        order.subtotal = new BigDecimal("25.00");
         order.totalPrice = new BigDecimal("25.00");
         order.status = CalendarOrder.STATUS_PENDING;
         order.stripePaymentIntentId = paymentIntentId;
@@ -520,9 +501,7 @@ class AdminOrderWorkflowTest {
         String paymentIntentId = "pi_test_admin_cancel_" + System.currentTimeMillis();
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("25.00");
+        order.subtotal = new BigDecimal("25.00");
         order.totalPrice = new BigDecimal("25.00");
         order.status = CalendarOrder.STATUS_PAID;
         order.stripePaymentIntentId = paymentIntentId;
@@ -547,9 +526,7 @@ class AdminOrderWorkflowTest {
         String paymentIntentId = "pi_test_transition_" + System.currentTimeMillis();
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("25.00");
+        order.subtotal = new BigDecimal("25.00");
         order.totalPrice = new BigDecimal("25.00");
         order.status = CalendarOrder.STATUS_PAID;
         order.stripePaymentIntentId = paymentIntentId;

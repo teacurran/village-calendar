@@ -442,7 +442,7 @@ class OrderEmailJobHandlerTemplateTest {
         // Add a test item
         CalendarOrderItem item = new CalendarOrderItem();
         item.order = order;
-        item.productName = "Test Calendar 2025";
+        item.description = "Test Calendar 2025";
         item.productType = CalendarOrderItem.TYPE_PRINT;
         item.setYear(2025);
         item.quantity = 1;

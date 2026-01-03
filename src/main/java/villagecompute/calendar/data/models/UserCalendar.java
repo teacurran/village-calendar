@@ -98,12 +98,6 @@ public class UserCalendar extends DefaultPanacheEntityWithTimestamps {
             mappedBy = "calendar",
             cascade = CascadeType.ALL,
             orphanRemoval = true)
-    public List<CalendarOrder> orders;
-
-    @OneToMany(
-            mappedBy = "calendar",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true)
     public List<Event> events;
 
     // Helper methods (ActiveRecord pattern)

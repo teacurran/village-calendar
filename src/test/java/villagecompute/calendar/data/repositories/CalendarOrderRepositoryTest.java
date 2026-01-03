@@ -118,21 +118,8 @@ class CalendarOrderRepositoryTest {
         assertTrue(orders.stream().allMatch(o -> o.user.id.equals(testUser.id)));
     }
 
-    @Test
-    @Transactional
-    void testFindByCalendar() {
-        // Given
-        orderRepository.persist(createOrder(CalendarOrder.STATUS_PENDING, "pi_1"));
-        orderRepository.persist(createOrder(CalendarOrder.STATUS_PAID, "pi_2"));
-        entityManager.flush();
-
-        // When
-        List<CalendarOrder> orders = orderRepository.findByCalendar(testCalendar.id);
-
-        // Then
-        assertEquals(2, orders.size());
-        assertTrue(orders.stream().allMatch(o -> o.calendar.id.equals(testCalendar.id)));
-    }
+    // testFindByCalendar removed - the findByCalendar method was deprecated and removed
+    // Orders now use items to track calendars instead of a direct calendar reference
 
     @Test
     @Transactional
@@ -283,9 +270,7 @@ class CalendarOrderRepositoryTest {
     private CalendarOrder createOrder(String status, String paymentIntentId) {
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = new BigDecimal("29.99");
+        order.subtotal = new BigDecimal("29.99");
         order.totalPrice = new BigDecimal("29.99");
         order.status = status;
         order.stripePaymentIntentId = paymentIntentId;

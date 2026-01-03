@@ -27,9 +27,6 @@ import com.fasterxml.jackson.databind.JsonNode;
                 name = "idx_order_items_order",
                 columnList = "order_id"),
                 @Index(
-                        name = "idx_order_items_calendar",
-                        columnList = "calendar_id"),
-                @Index(
                         name = "idx_order_items_shipment",
                         columnList = "shipment_id")})
 public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
@@ -61,22 +58,6 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
             length = 500)
     public String description;
 
-    /**
-     * @deprecated since 1.0, use generatorType instead. Kept for backward compatibility. The calendar design for this
-     *             line item (optional - may be null for non-calendar products)
-     */
-    @Deprecated(
-            since = "1.0",
-            forRemoval = false)
-    @ManyToOne(
-            fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "calendar_id",
-            foreignKey = @ForeignKey(
-                    name = "fk_order_items_calendar"))
-    @Ignore
-    public UserCalendar calendar;
-
     /** Product type: PRINT, PDF, etc. */
     @NotNull @Size(
             max = 50)
@@ -85,31 +66,6 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
             nullable = false,
             length = 50)
     public String productType = TYPE_PRINT;
-
-    /**
-     * @deprecated since 1.0, use description instead. Kept for backward compatibility. Product name/description for
-     *             display
-     */
-    @Deprecated(
-            since = "1.0",
-            forRemoval = false)
-    @Size(
-            max = 255)
-    @Column(
-            name = "product_name",
-            length = 255)
-    public String productName;
-
-    /**
-     * @deprecated since 1.0, use configuration JSON instead. Kept for backward compatibility. Calendar year (for
-     *             calendar products)
-     */
-    @Deprecated(
-            since = "1.0",
-            forRemoval = false)
-    @Column(
-            name = "calendar_year")
-    public Integer calendarYear;
 
     @NotNull @Min(1)
     @Column(
@@ -221,34 +177,24 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Get the year from configuration, falling back to deprecated calendarYear field.
+     * Get the year from configuration.
      *
      * @return The year, or current year if not set
      */
-    @SuppressWarnings("deprecation")
     public int getYear() {
-        // First try configuration JSON
         if (configuration != null && configuration.has("year")) {
             return configuration.get("year").asInt();
         }
-        // Fall back to deprecated field for backward compatibility
-        if (calendarYear != null) {
-            return calendarYear;
-        }
-        // Default to current year
         return java.time.Year.now().getValue();
     }
 
     /**
-     * Set the year in configuration JSON. Also sets deprecated calendarYear field for backward compatibility with older
-     * code.
+     * Set the year in configuration JSON.
      *
      * @param year
      *            The year to set
      */
-    @SuppressWarnings("deprecation")
     public void setYear(int year) {
-        // Set in configuration JSON (preferred)
         if (configuration == null) {
             try {
                 configuration = new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode();
@@ -259,7 +205,5 @@ public class CalendarOrderItem extends DefaultPanacheEntityWithTimestamps {
         if (configuration != null && configuration.isObject()) {
             ((com.fasterxml.jackson.databind.node.ObjectNode) configuration).put("year", year);
         }
-        // Also set deprecated field for backward compatibility
-        this.calendarYear = year;
     }
 }

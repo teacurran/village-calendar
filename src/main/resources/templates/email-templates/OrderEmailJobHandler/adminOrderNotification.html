@@ -75,13 +75,10 @@
                 <img src="{previewImages.get(item_index)}" alt="Calendar Preview" style="max-width: 100%; height: auto; border: 1px solid #e5e7eb; border-radius: 4px;" />
             </div>
             {/if}
-            <strong>{item.productName ?: 'Calendar'}</strong>
+            <strong>{item.description ?: 'Calendar'}</strong> ({item.getYear()})
             <div style="margin-top: 5px;">
                 Type: {item.productType} | Quantity: {item.quantity} | Unit Price: ${item.unitPrice}
             </div>
-            {#if item.calendarYear}
-            <div>Year: {item.calendarYear}</div>
-            {/if}
         </div>
         {/for}
 

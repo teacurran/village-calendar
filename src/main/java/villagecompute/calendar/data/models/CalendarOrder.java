@@ -8,7 +8,6 @@ import java.util.UUID;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -37,9 +36,6 @@ import io.quarkus.panache.common.Parameters;
                 @Index(
                         name = "idx_calendar_orders_status",
                         columnList = "status, created DESC"),
-                @Index(
-                        name = "idx_calendar_orders_calendar",
-                        columnList = "calendar_id"),
                 @Index(
                         name = "idx_calendar_orders_stripe_payment",
                         columnList = "stripe_payment_intent_id"),
@@ -86,42 +82,6 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
             orphanRemoval = true,
             fetch = FetchType.LAZY)
     public List<Shipment> shipments = new ArrayList<>();
-
-    // ==================== Legacy Single-Item Fields (for backwards compatibility)
-    // ====================
-
-    /**
-     * @deprecated Use items list instead. Kept for backwards compatibility with existing orders.
-     */
-    @Deprecated
-    @ManyToOne(
-            optional = true)
-    @JoinColumn(
-            name = "calendar_id",
-            foreignKey = @ForeignKey(
-                    name = "fk_calendar_orders_calendar"))
-    @Ignore
-    public UserCalendar calendar;
-
-    /**
-     * @deprecated Use items list instead. Kept for backwards compatibility.
-     */
-    @Deprecated
-    @Min(1)
-    @Column(
-            nullable = true)
-    public Integer quantity = 1;
-
-    /**
-     * @deprecated Use items list instead. Kept for backwards compatibility.
-     */
-    @Deprecated
-    @DecimalMin("0.00")
-    @Column(
-            name = "unit_price",
-            precision = 10,
-            scale = 2)
-    public BigDecimal unitPrice;
 
     // ==================== Order Totals ====================
 
@@ -255,17 +215,6 @@ public class CalendarOrder extends DefaultPanacheEntityWithTimestamps {
      */
     public static List<CalendarOrder> findByStatusOrderByCreatedDesc(String status) {
         return find("status = ?1 ORDER BY created DESC", status).list();
-    }
-
-    /**
-     * Find all orders for a specific calendar.
-     *
-     * @param calendarId
-     *            Calendar ID
-     * @return Query of orders
-     */
-    public static PanacheQuery<CalendarOrder> findByCalendar(UUID calendarId) {
-        return find("calendar.id = ?1 ORDER BY created DESC", calendarId);
     }
 
     /**

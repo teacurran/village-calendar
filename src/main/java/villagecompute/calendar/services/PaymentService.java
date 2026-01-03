@@ -214,12 +214,15 @@ public class PaymentService {
         PaymentIntent intent = PaymentIntent.retrieve(paymentIntentId);
 
         Map<String, Object> params = new HashMap<>();
-        params.put("description", String.format("Calendar Order - %s", order.calendar.name));
+        // Build description from items
+        String description = order.items.isEmpty() ? "Calendar Order"
+                : String.format("Calendar Order - %s", order.items.get(0).description);
+        params.put("description", description);
 
         Map<String, String> metadata = new HashMap<>();
         metadata.put("orderId", order.id.toString());
-        metadata.put("calendarId", order.calendar.id.toString());
-        metadata.put("quantity", order.quantity.toString());
+        metadata.put("itemCount", String.valueOf(order.items.size()));
+        metadata.put("totalQuantity", String.valueOf(order.getTotalItemCount()));
         params.put("metadata", metadata);
 
         return intent.update(params);

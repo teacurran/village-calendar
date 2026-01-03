@@ -374,44 +374,6 @@ public class OrderResolver {
     // ==================================================================
 
     /**
-     * Batched field resolver for CalendarOrder.calendar relationship. Prevents N+1 queries by batch-loading calendars
-     * for multiple orders. SmallRye GraphQL automatically batches field resolvers annotated with @Source when the
-     * parameter is a List.
-     *
-     * @param orders
-     *            List of orders to resolve calendars for
-     * @return List of calendars in the same order as input orders
-     */
-    @Name("calendar")
-    @Description("Get the calendar associated with this order")
-    public List<UserCalendar> batchLoadCalendars(@Source final List<CalendarOrder> orders) {
-        LOG.debugf("Batch loading calendars for %d orders", orders.size());
-
-        // Extract unique calendar IDs from orders
-        List<UUID> calendarIds = orders.stream().map(o -> o.calendar != null ? o.calendar.id : null)
-                .filter(Objects::nonNull).distinct().toList();
-
-        if (calendarIds.isEmpty()) {
-            LOG.debug("No calendar IDs to load");
-            return orders.stream().map(o -> (UserCalendar) null).toList();
-        }
-
-        // Batch load calendars in a single query
-        List<UserCalendar> calendars = UserCalendar.list("id in ?1", calendarIds);
-        LOG.debugf("Loaded %d calendars in batch", calendars.size());
-
-        // Create lookup map for O(1) access
-        Map<UUID, UserCalendar> calendarMap = calendars.stream().collect(Collectors.toMap(c -> c.id, c -> c));
-
-        // Return calendars in same order as input orders (DataLoader contract)
-        List<UserCalendar> result = orders.stream().map(o -> o.calendar != null ? calendarMap.get(o.calendar.id) : null)
-                .toList();
-
-        LOG.debugf("Returning %d calendars for %d orders", result.size(), orders.size());
-        return result;
-    }
-
-    /**
      * Batched field resolver for CalendarOrder.user relationship. Prevents N+1 queries by batch-loading users for
      * multiple orders. SmallRye GraphQL automatically batches field resolvers annotated with @Source when the parameter
      * is a List.

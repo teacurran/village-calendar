@@ -14,7 +14,6 @@ class StorageServiceTest {
 
     private static final String VALID_FILENAME = "test-file.pdf";
     private static final String VALID_CONTENT_TYPE = "application/pdf";
-    private static final String VALID_PUBLIC_URL = "https://example.com/calendar-pdfs/test.pdf";
 
     // ========== UPLOAD FILE VALIDATION TESTS ==========
 

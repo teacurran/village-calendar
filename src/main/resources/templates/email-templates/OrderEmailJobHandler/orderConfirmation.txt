@@ -11,11 +11,13 @@ Order Number: {order.orderNumber}
 Order Total: ${order.totalPrice}
 Order Date: {order.paidAt.toString()}
 
-CALENDAR DETAILS
+ORDER ITEMS
 ------------------------------------
-Calendar: {order.calendar.name} ({order.calendar.year})
-Quantity: {order.quantity} {#if order.quantity > 1}calendars{#else}calendar{/if}
-Unit Price: ${order.unitPrice}
+{#for item in order.items}
+{item.description} ({item.getYear()}) x {item.quantity}
+Unit Price: ${item.unitPrice} | Line Total: ${item.lineTotal}
+{/for}
+Subtotal: ${order.subtotal}
 
 SHIPPING ADDRESS
 ------------------------------------

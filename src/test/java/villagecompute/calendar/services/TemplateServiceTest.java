@@ -65,7 +65,12 @@ class TemplateServiceTest {
     @Transactional
     void tearDown() {
         // Clean up test data in proper order (delete child records first to avoid FK violations)
-        // Order: CalendarOrder -> UserCalendar -> CalendarTemplate
+        // Order: CalendarOrderItem -> CalendarOrder -> UserCalendar -> CalendarTemplate
+        try {
+            villagecompute.calendar.data.models.CalendarOrderItem.deleteAll();
+        } catch (Exception e) {
+            // Ignore if table doesn't exist or other cleanup issues
+        }
         try {
             villagecompute.calendar.data.models.CalendarOrder.deleteAll();
         } catch (Exception e) {

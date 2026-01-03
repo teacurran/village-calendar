@@ -43,33 +43,7 @@ class CalendarOrderItemTest {
     }
 
     @Test
-    void testGetYear_WithNoConfiguration_FallsBackToDeprecatedField() {
-        // Given
-        item.configuration = null;
-        item.calendarYear = 2024;
-
-        // When
-        int year = item.getYear();
-
-        // Then
-        assertEquals(2024, year);
-    }
-
-    @Test
-    void testGetYear_WithEmptyConfiguration_FallsBackToDeprecatedField() {
-        // Given
-        item.configuration = objectMapper.createObjectNode(); // Empty config, no year
-        item.calendarYear = 2023;
-
-        // When
-        int year = item.getYear();
-
-        // Then
-        assertEquals(2023, year);
-    }
-
-    @Test
-    void testGetYear_WithNeitherConfigNorDeprecatedField_ReturnsCurrentYear() {
+    void testGetYear_WithNoConfiguration_ReturnsCurrentYear() {
         // Given
         item.configuration = null;
 
@@ -81,8 +55,32 @@ class CalendarOrderItemTest {
     }
 
     @Test
-    void testGetYear_ConfigurationTakesPrecedenceOverDeprecatedField() {
-        // Given - both are set, configuration should win
+    void testGetYear_WithEmptyConfiguration_ReturnsCurrentYear() {
+        // Given
+        item.configuration = objectMapper.createObjectNode(); // Empty config, no year
+
+        // When
+        int year = item.getYear();
+
+        // Then
+        assertEquals(Year.now().getValue(), year);
+    }
+
+    @Test
+    void testGetYear_WithNeitherConfigNorYear_ReturnsCurrentYear() {
+        // Given
+        item.configuration = null;
+
+        // When
+        int year = item.getYear();
+
+        // Then
+        assertEquals(Year.now().getValue(), year);
+    }
+
+    @Test
+    void testGetYear_ConfigurationWithDifferentYear_ReturnsConfigYear() {
+        // Given - configuration has year set
         ObjectNode config = objectMapper.createObjectNode();
         config.put("year", 2026);
         item.configuration = config;
@@ -112,18 +110,6 @@ class CalendarOrderItemTest {
     }
 
     @Test
-    void testSetYear_AlsoSetsDeprecatedFieldForBackwardCompatibility() {
-        // Given
-        item.configuration = objectMapper.createObjectNode();
-
-        // When
-        item.setYear(2025);
-
-        // Then
-        assertEquals(2025, item.calendarYear);
-    }
-
-    @Test
     void testSetYear_CreatesConfigurationIfNull() {
         // Given
         item.configuration = null;
@@ -134,7 +120,6 @@ class CalendarOrderItemTest {
         // Then
         assertNotNull(item.configuration);
         assertEquals(2025, item.configuration.get("year").asInt());
-        assertEquals(2025, item.calendarYear);
     }
 
     @Test

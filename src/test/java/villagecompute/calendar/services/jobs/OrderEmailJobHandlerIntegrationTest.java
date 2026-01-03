@@ -97,8 +97,7 @@ class OrderEmailJobHandlerIntegrationTest {
 
         // Reload with eager fetching (simulating what OrderEmailJobHandler does)
         order = CalendarOrder.find("SELECT o FROM CalendarOrder o " + "LEFT JOIN FETCH o.user "
-                + "LEFT JOIN FETCH o.items " + "LEFT JOIN FETCH o.calendar " + "WHERE o.id = ?1", order.id)
-                .firstResult();
+                + "LEFT JOIN FETCH o.items " + "WHERE o.id = ?1", order.id).firstResult();
 
         // When - Render the order confirmation template
         String html = OrderEmailJobHandler.Templates
@@ -133,8 +132,7 @@ class OrderEmailJobHandlerIntegrationTest {
 
         // Reload with eager fetching
         order = CalendarOrder.find("SELECT o FROM CalendarOrder o " + "LEFT JOIN FETCH o.user "
-                + "LEFT JOIN FETCH o.items " + "LEFT JOIN FETCH o.calendar " + "WHERE o.id = ?1", order.id)
-                .firstResult();
+                + "LEFT JOIN FETCH o.items " + "WHERE o.id = ?1", order.id).firstResult();
 
         String baseUrl = "https://calendar.villagecompute.com";
 
@@ -170,8 +168,7 @@ class OrderEmailJobHandlerIntegrationTest {
 
         // Reload with eager fetching
         order = CalendarOrder.find("SELECT o FROM CalendarOrder o " + "LEFT JOIN FETCH o.user "
-                + "LEFT JOIN FETCH o.items " + "LEFT JOIN FETCH o.calendar " + "WHERE o.id = ?1", order.id)
-                .firstResult();
+                + "LEFT JOIN FETCH o.items " + "WHERE o.id = ?1", order.id).firstResult();
 
         // When
         String html = OrderEmailJobHandler.Templates

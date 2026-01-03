@@ -175,8 +175,8 @@ class OrderWorkflowTest {
         assertNotNull(order, "Order should be created");
         assertEquals(CalendarOrder.STATUS_PENDING, order.status, "Order should be in PENDING status");
         assertEquals(testUser.id, order.user.id, "Order should belong to test user");
-        assertEquals(testCalendar.id, order.calendar.id, "Order should reference test calendar");
-        assertEquals(1, order.quantity, "Order quantity should be 1");
+        assertFalse(order.items.isEmpty(), "Order should have items");
+        assertEquals(1, order.getTotalItemCount(), "Order should have 1 item");
 
         // Verify total price includes base price + tax + shipping
         assertNotNull(order.totalPrice, "Total price should be calculated");
@@ -200,9 +200,7 @@ class OrderWorkflowTest {
         CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder newOrder = new CalendarOrder();
             newOrder.user = testUser;
-            newOrder.calendar = testCalendar;
-            newOrder.quantity = 1;
-            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.subtotal = new BigDecimal("25.00");
             newOrder.totalPrice = new BigDecimal("25.00");
             newOrder.status = CalendarOrder.STATUS_PENDING;
             newOrder.stripePaymentIntentId = testPaymentIntentId;
@@ -258,9 +256,7 @@ class OrderWorkflowTest {
         CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder newOrder = new CalendarOrder();
             newOrder.user = testUser;
-            newOrder.calendar = testCalendar;
-            newOrder.quantity = 1;
-            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.subtotal = new BigDecimal("25.00");
             newOrder.totalPrice = new BigDecimal("25.00");
             newOrder.status = CalendarOrder.STATUS_PENDING;
             newOrder.stripePaymentIntentId = testPaymentIntentId;
@@ -317,9 +313,7 @@ class OrderWorkflowTest {
         CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder newOrder = new CalendarOrder();
             newOrder.user = testUser;
-            newOrder.calendar = testCalendar;
-            newOrder.quantity = 1;
-            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.subtotal = new BigDecimal("25.00");
             newOrder.totalPrice = new BigDecimal("25.00");
             newOrder.status = CalendarOrder.STATUS_PENDING;
             newOrder.stripePaymentIntentId = testPaymentIntentId;
@@ -396,11 +390,11 @@ class OrderWorkflowTest {
 
         // Then: Verify order total includes shipping cost
         assertNotNull(order, "Order should exist");
-        assertEquals(2, order.quantity, "Quantity should be 2");
+        assertEquals(2, order.getTotalItemCount(), "Total item count should be 2");
 
         // Shipping should be calculated (not zero for 2 items)
         // Note: ShippingService calculates based on weight and destination
-        assertTrue(order.totalPrice.compareTo(order.unitPrice.multiply(BigDecimal.valueOf(2))) >= 0,
+        assertTrue(order.totalPrice.compareTo(order.subtotal) >= 0,
                 "Total should be at least subtotal (may include shipping)");
     }
 
@@ -415,9 +409,7 @@ class OrderWorkflowTest {
         CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder newOrder = new CalendarOrder();
             newOrder.user = testUser;
-            newOrder.calendar = testCalendar;
-            newOrder.quantity = 1;
-            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.subtotal = new BigDecimal("25.00");
             newOrder.totalPrice = new BigDecimal("25.00");
             newOrder.status = CalendarOrder.STATUS_PENDING;
             newOrder.orderNumber = "VC-TEST-YEAR";
@@ -432,7 +424,7 @@ class OrderWorkflowTest {
             CalendarOrderItem item = new CalendarOrderItem();
             item.order = newOrder;
             item.productType = CalendarOrderItem.TYPE_PRINT;
-            item.productName = "Test Calendar 2026";
+            item.description = "Test Calendar 2026";
             item.setYear(2026); // Use the new setYear method
             item.quantity = 1;
             item.unitPrice = new BigDecimal("25.00");
@@ -468,9 +460,7 @@ class OrderWorkflowTest {
         CalendarOrderItem item = QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder newOrder = new CalendarOrder();
             newOrder.user = testUser;
-            newOrder.calendar = testCalendar;
-            newOrder.quantity = 1;
-            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.subtotal = new BigDecimal("25.00");
             newOrder.totalPrice = new BigDecimal("25.00");
             newOrder.status = CalendarOrder.STATUS_PENDING;
             newOrder.orderNumber = "VC-TEST-DFLT";
@@ -484,7 +474,7 @@ class OrderWorkflowTest {
             CalendarOrderItem newItem = new CalendarOrderItem();
             newItem.order = newOrder;
             newItem.productType = CalendarOrderItem.TYPE_PRINT;
-            newItem.productName = "Test Calendar Default Year";
+            newItem.description = "Test Calendar Default Year";
             // Don't set year - it should default to current year
             newItem.quantity = 1;
             newItem.unitPrice = new BigDecimal("25.00");
