@@ -403,9 +403,6 @@ public class CalendarRenderingService {
                 emojiY += cellHeight - 5;
                 break;
             case "bottom-left" :
-                emojiX += 5;
-                emojiY += cellHeight - 5;
-                break;
             default :
                 // Fall through to bottom-left positioning for unknown values
                 emojiX += 5;
@@ -1626,6 +1623,7 @@ public class CalendarRenderingService {
                             g = 0;
                             b = c;
                             break;
+                        case 5 :
                         default :
                             r = c;
                             g = 0;
