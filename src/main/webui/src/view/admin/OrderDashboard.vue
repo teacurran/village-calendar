@@ -150,7 +150,9 @@ function getCalendarSvg(order: CalendarOrder | null): string | null {
     for (const item of order.items) {
       // Try item assets first
       if (item.assets && item.assets.length > 0) {
-        const mainAsset = item.assets.find((a: { assetKey: string }) => a.assetKey === "main");
+        const mainAsset = item.assets.find(
+          (a: { assetKey: string }) => a.assetKey === "main",
+        );
         if (mainAsset?.svgContent) {
           return mainAsset.svgContent;
         }

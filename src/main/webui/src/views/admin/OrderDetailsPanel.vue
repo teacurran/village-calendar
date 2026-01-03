@@ -147,7 +147,9 @@ function getCalendarSvg(): string | null {
   }
   // Try assets
   if (item.assets?.length) {
-    const mainAsset = item.assets.find((a: { assetKey: string }) => a.assetKey === "main");
+    const mainAsset = item.assets.find(
+      (a: { assetKey: string }) => a.assetKey === "main",
+    );
     if (mainAsset?.svgContent) return mainAsset.svgContent;
   }
   return null;
@@ -296,10 +298,17 @@ function downloadPdf() {
         <!-- Order Items -->
         <div class="flex-1">
           <div class="grid grid-cols-2 gap-3 text-sm">
-            <div v-for="item in order.items" :key="item.id" class="col-span-2 border-b pb-2 mb-2">
-              <div class="font-semibold">{{ item.description || "Calendar" }}</div>
+            <div
+              v-for="item in order.items"
+              :key="item.id"
+              class="col-span-2 border-b pb-2 mb-2"
+            >
+              <div class="font-semibold">
+                {{ item.description || "Calendar" }}
+              </div>
               <div class="text-surface-600">
-                {{ item.quantity }} x {{ formatCurrency(item.unitPrice) }} = {{ formatCurrency(item.lineTotal) }}
+                {{ item.quantity }} x {{ formatCurrency(item.unitPrice) }} =
+                {{ formatCurrency(item.lineTotal) }}
               </div>
             </div>
             <div class="col-span-2">
