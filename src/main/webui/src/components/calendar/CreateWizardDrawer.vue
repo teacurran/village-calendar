@@ -355,42 +355,84 @@ const moonDisplayModeOptions = [
   },
 ];
 
-// Weekend style options for dropdown (alphabetical, with None first)
+// Weekend style options with preview colors for inline swatch display
 const weekendStyleOptions = [
   {
     id: "none" as const,
     name: "None",
     theme: "none",
-  },
-  {
-    id: "forest" as const,
-    name: "Forest",
-    theme: "forestWeekends",
+    previewColors: ["transparent"],
   },
   {
     id: "greyscale" as const,
     name: "Greyscale",
     theme: "default",
-  },
-  {
-    id: "lakeshore" as const,
-    name: "Lakeshore",
-    theme: "lakeshoreWeekends",
+    previewColors: ["#f0f0f0"],
   },
   {
     id: "rainbow" as const,
     name: "Rainbow",
     theme: "rainbowWeekends",
+    previewColors: [
+      "hsl(0, 100%, 90%)",
+      "hsl(60, 100%, 90%)",
+      "hsl(120, 100%, 90%)",
+      "hsl(180, 100%, 90%)",
+      "hsl(240, 100%, 90%)",
+      "hsl(300, 100%, 90%)",
+    ],
+  },
+  {
+    id: "vermont" as const,
+    name: "Vermont",
+    theme: "vermontWeekends",
+    previewColors: [
+      "#E8F4FA",
+      "#7CFC00",
+      "#58D68D",
+      "#FAD7A0",
+      "#FF4500",
+      "#C0C0C0",
+    ],
+  },
+  {
+    id: "lakeshore" as const,
+    name: "Lakeshore",
+    theme: "lakeshoreWeekends",
+    previewColors: [
+      "#e3f2fd",
+      "#b3e5fc",
+      "#80deea",
+      "#a7ffeb",
+      "#b2dfdb",
+      "#bbdefb",
+    ],
   },
   {
     id: "sunset" as const,
     name: "Sunset",
     theme: "sunsetWeekends",
+    previewColors: [
+      "#fce4ec",
+      "#ffcdd2",
+      "#ffe0b2",
+      "#ffecb3",
+      "#ffd180",
+      "#f8bbd0",
+    ],
   },
   {
-    id: "vermont" as const,
-    name: "Vermont Seasons",
-    theme: "vermontWeekends",
+    id: "forest" as const,
+    name: "Forest",
+    theme: "forestWeekends",
+    previewColors: [
+      "#e8f5e9",
+      "#dcedc8",
+      "#aed581",
+      "#a5d6a7",
+      "#d7ccc8",
+      "#efebe9",
+    ],
   },
 ];
 
@@ -794,19 +836,17 @@ const emitDisplayOptions = () => {
   emitMoonSettings();
 };
 
-// Handle weekend style dropdown change
-const handleWeekendStyleChange = () => {
-  // Clear solid color when selecting a theme
+// Select weekend theme from inline swatches
+const selectWeekendTheme = (themeId: WeekendStyleType) => {
+  selectedWeekendStyle.value = themeId;
   solidWeekendColor.value = null;
   emitDisplayOptions();
 };
 
-// Handle solid weekend color change
-const handleSolidWeekendColorChange = () => {
-  // Clear theme selection when picking a solid color
-  if (solidWeekendColor.value) {
-    selectedWeekendStyle.value = null;
-  }
+// Select solid weekend color from inline swatches
+const selectSolidWeekendColor = (color: string) => {
+  solidWeekendColor.value = color;
+  selectedWeekendStyle.value = null;
   emitDisplayOptions();
 };
 
@@ -1463,29 +1503,56 @@ onMounted(() => {
               <!-- Weekend Colors -->
               <h4 class="subsection-title">Weekend Colors</h4>
               <div class="weekend-color-controls">
-                <div class="weekend-theme-select">
+                <!-- Theme Selection as Inline Swatches -->
+                <div class="weekend-theme-section">
                   <label class="color-label">Color Theme</label>
-                  <Select
-                    v-model="selectedWeekendStyle"
-                    :options="weekendStyleOptions"
-                    option-label="name"
-                    option-value="id"
-                    placeholder="Select a theme"
-                    class="w-full"
-                    @change="handleWeekendStyleChange"
-                  />
+                  <div class="weekend-theme-swatches">
+                    <div
+                      v-for="option in weekendStyleOptions"
+                      :key="option.id"
+                      class="weekend-theme-swatch"
+                      :class="{
+                        selected:
+                          selectedWeekendStyle === option.id &&
+                          !solidWeekendColor,
+                        'is-none': option.id === 'none',
+                      }"
+                      :title="option.name"
+                      @click="selectWeekendTheme(option.id)"
+                    >
+                      <div
+                        v-if="option.previewColors.length === 1"
+                        class="theme-preview-single"
+                        :style="{
+                          backgroundColor: option.previewColors[0],
+                        }"
+                      />
+                      <div
+                        v-else
+                        class="theme-preview-gradient"
+                        :style="{
+                          background: `linear-gradient(to right, ${option.previewColors.join(', ')})`,
+                        }"
+                      />
+                      <span class="theme-label">{{ option.name }}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="weekend-solid-color">
+                <!-- Solid Color Selection as Inline Swatches -->
+                <div class="weekend-solid-section">
                   <label class="color-label">Or Solid Color</label>
-                  <VSwatches
-                    v-model="solidWeekendColor"
-                    :swatches="weekendColorSwatches"
-                    :swatch-size="24"
-                    :row-length="9"
-                    popover-x="left"
-                    @update:model-value="handleSolidWeekendColorChange"
-                  />
+                  <div class="weekend-solid-swatches">
+                    <div
+                      v-for="color in weekendColorSwatches"
+                      :key="color"
+                      class="weekend-solid-swatch"
+                      :class="{ selected: solidWeekendColor === color }"
+                      :style="{ backgroundColor: color }"
+                      :title="color"
+                      @click="selectSolidWeekendColor(color)"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -2029,20 +2096,117 @@ onMounted(() => {
 .weekend-color-controls {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
   margin-bottom: 0.5rem;
 }
 
-.weekend-theme-select,
-.weekend-solid-color {
+.weekend-theme-section,
+.weekend-solid-section {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.weekend-theme-select :deep(.p-select) {
-  min-width: 180px;
+/* Weekend theme inline swatches */
+.weekend-theme-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.weekend-theme-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.weekend-theme-swatch:hover {
+  background-color: var(--surface-hover);
+}
+
+.weekend-theme-swatch.selected {
+  border-color: var(--primary-color);
+  background-color: var(--primary-50);
+}
+
+.weekend-theme-swatch.is-none .theme-preview-single {
+  background-image: linear-gradient(
+    45deg,
+    #ccc 25%,
+    transparent 25%,
+    transparent 75%,
+    #ccc 75%
+  );
+  background-size: 8px 8px;
+  background-position:
+    0 0,
+    4px 4px;
+  position: relative;
+}
+
+.weekend-theme-swatch.is-none .theme-preview-single::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    45deg,
+    transparent 25%,
+    #eee 25%,
+    #eee 75%,
+    transparent 75%
+  );
+  background-size: 8px 8px;
+  background-position: 4px 0;
+}
+
+.theme-preview-single,
+.theme-preview-gradient {
+  width: 48px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid var(--surface-border);
+}
+
+.theme-label {
+  font-size: 0.7rem;
+  color: var(--text-color-secondary);
+  text-align: center;
+  max-width: 52px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Weekend solid color inline swatches */
+.weekend-solid-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.weekend-solid-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 2px solid var(--surface-border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.weekend-solid-swatch:hover {
+  transform: scale(1.1);
+  border-color: var(--text-color-secondary);
+}
+
+.weekend-solid-swatch.selected {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-color);
 }
 
 /* Color options */
