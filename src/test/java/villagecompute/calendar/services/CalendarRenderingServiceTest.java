@@ -869,4 +869,757 @@ class CalendarRenderingServiceTest {
             assertNotNull(svg, "SVG should be generated for locale: " + locale);
         }
     }
+
+    // ========== MONOCHROME MODE BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_WithMonochromeEmoji_NotoMono() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.emojiFont = CalendarRenderingService.EMOJI_FONT_NOTO_MONO;
+        config.customDates.put("2025-01-15", "🕎"); // Menorah - will be substituted
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_WithColorEmoji_Default() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        // emojiFont is null by default - uses color emoji
+        config.customDates.put("2025-01-15", "🕎");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {"mono-red", "mono-blue", "mono-green", "mono-orange", "mono-purple", "mono-pink", "mono-teal",
+                    "mono-brown", "mono-navy", "mono-coral"})
+    void testGenerateCalendarSVG_WithMonochromeColorVariants(String emojiFont) {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.emojiFont = emojiFont;
+        config.customDates.put("2025-01-15", "🎉");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testSubstituteEmojiForMonochrome_AllSubstitutions() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.emojiFont = CalendarRenderingService.EMOJI_FONT_NOTO_MONO;
+
+        // Test all substitutions
+        assertEquals("✡️", CalendarRenderingService.substituteEmojiForMonochrome("🕎", config)); // Menorah
+        assertEquals("⭐", CalendarRenderingService.substituteEmojiForMonochrome("🎖️", config)); // Military Medal
+        assertEquals("☀️", CalendarRenderingService.substituteEmojiForMonochrome("🪁", config)); // Kite
+        assertEquals("🎵", CalendarRenderingService.substituteEmojiForMonochrome("🪈", config)); // Flute
+        assertEquals("🕯️", CalendarRenderingService.substituteEmojiForMonochrome("🪔", config)); // Diya Lamp
+        assertEquals("🙏", CalendarRenderingService.substituteEmojiForMonochrome("🤲", config)); // Palms Up
+        assertEquals("🌙", CalendarRenderingService.substituteEmojiForMonochrome("☪️", config)); // Star and Crescent
+        assertEquals("🏮", CalendarRenderingService.substituteEmojiForMonochrome("🧧", config)); // Red Envelope
+        assertEquals("🌸", CalendarRenderingService.substituteEmojiForMonochrome("🪦", config)); // Headstone
+        assertEquals("🌕", CalendarRenderingService.substituteEmojiForMonochrome("🥮", config)); // Moon Cake
+        assertEquals("⛰️", CalendarRenderingService.substituteEmojiForMonochrome("🏔️", config)); // Snow Mountain
+        assertEquals("🐿️", CalendarRenderingService.substituteEmojiForMonochrome("🦫", config)); // Beaver
+        assertEquals("🌈", CalendarRenderingService.substituteEmojiForMonochrome("🏳️‍🌈", config)); // Pride Flag
+    }
+
+    @Test
+    void testIsMonochrome_FalseForNullEmojiFont() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.emojiFont = null; // Null means color mode
+
+        // substituteEmojiForMonochrome should return emoji unchanged
+        String result = CalendarRenderingService.substituteEmojiForMonochrome("🕎", config);
+        assertEquals("🕎", result);
+    }
+
+    @Test
+    void testIsMonochrome_FalseForNonMonoFont() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.emojiFont = "noto-color"; // Not noto-mono or mono-*
+
+        String result = CalendarRenderingService.substituteEmojiForMonochrome("🕎", config);
+        assertEquals("🕎", result);
+    }
+
+    // ========== EVENT DISPLAY MODE BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_EventDisplayMode_None() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "none";
+        config.customDates.put("2025-01-15", "🎂");
+        config.eventTitles.put("2025-01-15", "Birthday");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_EventDisplayMode_Large() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "large";
+        config.customDates.put("2025-01-15", "🎂");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_EventDisplayMode_LargeText() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "large-text";
+        config.customDates.put("2025-01-15", "🎂");
+        config.eventTitles.put("2025-01-15", "Birthday Party");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_EventDisplayMode_Small() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "small";
+        config.customDates.put("2025-01-15", "🎂");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== MOON DISPLAY MODE BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_MoonDisplayMode_None() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.moonDisplayMode = "none";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_MoonDisplayMode_Illumination() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.moonDisplayMode = "illumination";
+        config.latitude = 40.7128;
+        config.longitude = -74.0060;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_MoonDisplayMode_Phases() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.moonDisplayMode = "phases";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_MoonDisplayMode_FullOnly() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.moonDisplayMode = "full-only";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== ROTATE MONTH NAMES BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_RotateMonthNames_True() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.rotateMonthNames = true;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("rotate"));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_RotateMonthNames_False() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.rotateMonthNames = false;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== SHOW DAY NAMES BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_ShowDayNames_True() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.showDayNames = true;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        // Should contain day abbreviations like Sun, Mon, etc.
+        assertTrue(svg.contains("Sun") || svg.contains("Mon") || svg.contains("S") || svg.contains("M"));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_ShowDayNames_False() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.showDayNames = false;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== SHOW GRID BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_ShowGrid_True() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.showGrid = true;
+        config.gridLineColor = "#cccccc";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(RECT_TAG) || svg.contains("<line"));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_ShowGrid_False() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.showGrid = false;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== HIGHLIGHT WEEKENDS BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_HighlightWeekends_True() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.highlightWeekends = true;
+        config.weekendBgColor = "#f0f0f0";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_HighlightWeekends_False() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.highlightWeekends = false;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== FIRST DAY OF WEEK BRANCH TESTS ==========
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {"SUNDAY", "MONDAY", "SATURDAY"})
+    void testGenerateCalendarSVG_DifferentFirstDayOfWeek(String dayOfWeek) {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.firstDayOfWeek = DayOfWeek.valueOf(dayOfWeek);
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== LAYOUT STYLE BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_LayoutStyle_Default() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.layoutStyle = "default";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_LayoutStyle_WeekdayGrid() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.layoutStyle = "weekday-grid";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== EMOJI POSITION BRANCH TESTS ==========
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {"top-left", "top-center", "top-right", "middle-left", "middle-center", "middle-right",
+                    "bottom-left", "bottom-center", "bottom-right"})
+    void testGenerateCalendarSVG_DifferentEmojiPositions(String position) {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.emojiPosition = position;
+        config.customDates.put("2025-01-15", "🎂");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== HOLIDAY COLOR BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_WithHolidayColor() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.holidayColor = "#ff0000";
+        config.holidaySets.add("us-federal");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_WithCustomDateColor() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.customDateColor = "#00ff00";
+        config.customDates.put("2025-01-15", "🎂");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== MOON WITH HOLIDAY BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_MoonWithHoliday() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.moonDisplayMode = "illumination";
+        config.eventDisplayMode = "large";
+        config.holidaySets.add("us-federal");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_MoonWithCustomDate() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.moonDisplayMode = "phases";
+        config.eventDisplayMode = "small";
+        config.customDates.put("2025-01-13", "🎂"); // Near full moon date
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== CUSTOM EVENT DISPLAY SETTINGS BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_CustomEventWithDisplaySettings() throws Exception {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        // Create custom date with display settings
+        java.util.Map<String, Object> customData = new java.util.HashMap<>();
+        customData.put("emoji", "🎂");
+        java.util.Map<String, Object> displaySettings = new java.util.HashMap<>();
+        displaySettings.put("position", "top-right");
+        displaySettings.put("size", 24);
+        customData.put("displaySettings", displaySettings);
+        config.customDates.put("2025-01-15", customData);
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_CustomEventWithTextWrap() throws Exception {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        java.util.Map<String, Object> customData = new java.util.HashMap<>();
+        customData.put("emoji", "🎂");
+        java.util.Map<String, Object> displaySettings = new java.util.HashMap<>();
+        displaySettings.put("textWrap", true);
+        customData.put("displaySettings", displaySettings);
+        config.customDates.put("2025-01-15", customData);
+        config.eventTitles.put("2025-01-15", "A Very Long Birthday Party Title");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== TEXT ALIGNMENT BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_EventWithLeftAlignment() throws Exception {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        java.util.Map<String, Object> customData = new java.util.HashMap<>();
+        customData.put("emoji", "🎂");
+        java.util.Map<String, Object> displaySettings = new java.util.HashMap<>();
+        displaySettings.put("textAlign", "left");
+        customData.put("displaySettings", displaySettings);
+        config.customDates.put("2025-01-15", customData);
+        config.eventTitles.put("2025-01-15", "Birthday");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_EventWithRightAlignment() throws Exception {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        java.util.Map<String, Object> customData = new java.util.HashMap<>();
+        customData.put("emoji", "🎂");
+        java.util.Map<String, Object> displaySettings = new java.util.HashMap<>();
+        displaySettings.put("textAlign", "right");
+        customData.put("displaySettings", displaySettings);
+        config.customDates.put("2025-01-15", customData);
+        config.eventTitles.put("2025-01-15", "Birthday");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_EventWithCenterAlignment() throws Exception {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        java.util.Map<String, Object> customData = new java.util.HashMap<>();
+        customData.put("emoji", "🎂");
+        java.util.Map<String, Object> displaySettings = new java.util.HashMap<>();
+        displaySettings.put("textAlign", "center");
+        customData.put("displaySettings", displaySettings);
+        config.customDates.put("2025-01-15", customData);
+        config.eventTitles.put("2025-01-15", "Birthday");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== LOCATION-BASED MOON CALCULATION BRANCH TESTS ==========
+
+    @Test
+    void testGenerateMoonIlluminationSVG_NorthernHemisphere() {
+        LocalDate date = LocalDate.of(2025, 6, 15);
+        CalendarConfigType config = new CalendarConfigType();
+        config.moonSize = 24;
+
+        // Northern hemisphere location (New York)
+        String svg = calendarRenderingService.generateMoonIlluminationSVG(date, 50, 50, 40.7128, -74.0060, config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testGenerateMoonIlluminationSVG_SouthernHemisphere() {
+        LocalDate date = LocalDate.of(2025, 6, 15);
+        CalendarConfigType config = new CalendarConfigType();
+        config.moonSize = 24;
+
+        // Southern hemisphere location (Sydney)
+        String svg = calendarRenderingService.generateMoonIlluminationSVG(date, 50, 50, -33.8688, 151.2093, config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testGenerateMoonIlluminationSVG_Equator() {
+        LocalDate date = LocalDate.of(2025, 6, 15);
+        CalendarConfigType config = new CalendarConfigType();
+        config.moonSize = 24;
+
+        // Near equator location
+        String svg = calendarRenderingService.generateMoonIlluminationSVG(date, 50, 50, 0.0, 0.0, config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testGenerateMoonIlluminationSVG_NewMoon() {
+        // Approximate new moon date
+        LocalDate date = LocalDate.of(2025, 1, 29);
+        CalendarConfigType config = new CalendarConfigType();
+        config.moonSize = 24;
+
+        String svg = calendarRenderingService.generateMoonIlluminationSVG(date, 50, 50, 40.7128, -74.0060, config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testGenerateMoonIlluminationSVG_FullMoon() {
+        // Approximate full moon date
+        LocalDate date = LocalDate.of(2025, 1, 13);
+        CalendarConfigType config = new CalendarConfigType();
+        config.moonSize = 24;
+
+        String svg = calendarRenderingService.generateMoonIlluminationSVG(date, 50, 50, 40.7128, -74.0060, config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testGenerateMoonIlluminationSVG_FirstQuarter() {
+        // Approximate first quarter date
+        LocalDate date = LocalDate.of(2025, 1, 6);
+        CalendarConfigType config = new CalendarConfigType();
+        config.moonSize = 24;
+
+        String svg = calendarRenderingService.generateMoonIlluminationSVG(date, 50, 50, 40.7128, -74.0060, config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testGenerateMoonIlluminationSVG_LastQuarter() {
+        // Approximate last quarter date
+        LocalDate date = LocalDate.of(2025, 1, 21);
+        CalendarConfigType config = new CalendarConfigType();
+        config.moonSize = 24;
+
+        String svg = calendarRenderingService.generateMoonIlluminationSVG(date, 50, 50, 40.7128, -74.0060, config);
+
+        assertNotNull(svg);
+    }
+
+    // ========== CELL BACKGROUND COLOR BRANCH TESTS ==========
+
+    @Test
+    void testGetCellBackgroundColor_WeekendWithColor() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.highlightWeekends = true;
+        config.weekendBgColor = "#f0f0f0";
+
+        // Saturday
+        LocalDate saturday = LocalDate.of(2025, 1, 4);
+        String color = CalendarRenderingService.getCellBackgroundColor(config, saturday, 1, 4, true, 0);
+
+        assertNotNull(color);
+    }
+
+    @Test
+    void testGetCellBackgroundColor_WeekdayNoHighlight() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.highlightWeekends = false;
+
+        // Wednesday
+        LocalDate wednesday = LocalDate.of(2025, 1, 8);
+        String color = CalendarRenderingService.getCellBackgroundColor(config, wednesday, 1, 8, false, 0);
+
+        assertNotNull(color);
+    }
+
+    @Test
+    void testGetCellBackgroundColor_DifferentMonths() {
+        CalendarConfigType config = new CalendarConfigType();
+
+        // January
+        LocalDate jan = LocalDate.of(2025, 1, 15);
+        String color1 = CalendarRenderingService.getCellBackgroundColor(config, jan, 1, 15, false, 0);
+
+        // February
+        LocalDate feb = LocalDate.of(2025, 2, 15);
+        String color2 = CalendarRenderingService.getCellBackgroundColor(config, feb, 2, 15, false, 0);
+
+        assertNotNull(color1);
+        assertNotNull(color2);
+    }
+
+    // ========== COMPACT MODE BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_CompactMode_True() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.compactMode = true;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_CompactMode_False() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.compactMode = false;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== WEEK NUMBERS BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_ShowWeekNumbers_True() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.showWeekNumbers = true;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_ShowWeekNumbers_False() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.showWeekNumbers = false;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    // ========== COMBINATION BRANCH TESTS ==========
+
+    @Test
+    void testGenerateCalendarSVG_MonochromeWithMoon() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.emojiFont = CalendarRenderingService.EMOJI_FONT_NOTO_MONO;
+        config.moonDisplayMode = "illumination";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_ColoredMonoWithHolidays() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.emojiFont = "mono-red";
+        config.holidaySets.add("us-federal");
+        config.eventDisplayMode = "large";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_WeekdayGridWithMoon() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.layoutStyle = "weekday-grid";
+        config.moonDisplayMode = "phases";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testGenerateCalendarSVG_RotatedMonthsWithWeekNumbers() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.rotateMonthNames = true;
+        config.showWeekNumbers = true;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("rotate"));
+    }
 }
