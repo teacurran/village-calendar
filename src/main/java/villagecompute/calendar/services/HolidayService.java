@@ -40,6 +40,21 @@ public class HolidayService {
     public static final String SET_SECULAR = "SECULAR";
     public static final String SET_FUN = "FUN"; // Alias for SECULAR
 
+    // ========================================
+    // Holiday Name Constants
+    // ========================================
+    private static final String HOLIDAY_NEW_YEARS_DAY = "New Year's Day";
+    private static final String HOLIDAY_GOOD_FRIDAY = "Good Friday";
+    private static final String HOLIDAY_CHRISTMAS = "Christmas";
+
+    // ========================================
+    // Emoji Constants (with ZWJ characters escaped for SonarQube S2479)
+    // ========================================
+    // Family emoji (U+1F468 U+200D U+1F469 U+200D U+1F467 U+200D U+1F466)
+    private static final String EMOJI_FAMILY = "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66";
+    // Pride rainbow flag (U+1F3F3 U+FE0F U+200D U+1F308)
+    private static final String EMOJI_RAINBOW_FLAG = "\uD83C\uDFF3\uFE0F\u200D\uD83C\uDF08";
+
     /**
      * Map frontend holiday set IDs to canonical backend set names. Handles case-insensitive matching and various
      * aliases.
@@ -135,7 +150,7 @@ public class HolidayService {
         Map<String, String> holidays = new HashMap<>();
 
         // New Year's Day - January 1
-        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 1)), "New Year's Day");
+        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 1)), HOLIDAY_NEW_YEARS_DAY);
 
         // Martin Luther King Jr. Day - 3rd Monday in January
         LocalDate mlkDay = LocalDate.of(year, Month.JANUARY, 1)
@@ -1138,7 +1153,7 @@ public class HolidayService {
                 .with(TemporalAdjusters.dayOfWeekInMonth(3, DayOfWeek.SUNDAY));
         holidayEmojis.put(fathersDay.toString(), "👔"); // Father's Day
 
-        holidayEmojis.put(LocalDate.of(year, Month.JUNE, 1).toString(), "🏳️‍🌈"); // Pride Month
+        holidayEmojis.put(LocalDate.of(year, Month.JUNE, 1).toString(), EMOJI_RAINBOW_FLAG); // Pride Month
         holidayEmojis.put(LocalDate.of(year, Month.OCTOBER, 31).toString(), "🎃"); // Halloween
 
         holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 31).toString(), "🍾"); // New Year's Eve
@@ -1269,12 +1284,12 @@ public class HolidayService {
 
         LocalDate easter = calculateEasterSunday(year);
         holidays.put(formatDate(easter), "Easter");
-        holidays.put(formatDate(easter.minusDays(2)), "Good Friday");
+        holidays.put(formatDate(easter.minusDays(2)), HOLIDAY_GOOD_FRIDAY);
         holidays.put(formatDate(easter.minusDays(7)), "Palm Sunday");
         holidays.put(formatDate(easter.minusDays(46)), "Ash Wednesday");
         holidays.put(formatDate(easter.plusDays(39)), "Ascension");
         holidays.put(formatDate(easter.plusDays(49)), "Pentecost");
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), "Christmas");
+        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), HOLIDAY_CHRISTMAS);
         holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 24)), "Christmas Eve");
         holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 6)), "Epiphany");
         holidays.put(formatDate(LocalDate.of(year, Month.NOVEMBER, 1)), "All Saints");
@@ -1328,11 +1343,11 @@ public class HolidayService {
     public Map<String, String> getCanadianHolidays(int year) {
         Map<String, String> holidays = new HashMap<>();
 
-        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 1)), "New Year's Day");
+        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 1)), HOLIDAY_NEW_YEARS_DAY);
         LocalDate familyDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
         holidays.put(formatDate(familyDay), "Family Day");
         LocalDate easter = calculateEasterSunday(year);
-        holidays.put(formatDate(easter.minusDays(2)), "Good Friday");
+        holidays.put(formatDate(easter.minusDays(2)), HOLIDAY_GOOD_FRIDAY);
         LocalDate victoriaDay = calculateVictoriaDay(year);
         holidays.put(formatDate(victoriaDay), "Victoria Day");
         holidays.put(formatDate(LocalDate.of(year, Month.JULY, 1)), "Canada Day");
@@ -1341,7 +1356,7 @@ public class HolidayService {
         LocalDate thanksgiving = getNthWeekdayOfMonth(year, Month.OCTOBER, DayOfWeek.MONDAY, 2);
         holidays.put(formatDate(thanksgiving), "Thanksgiving");
         holidays.put(formatDate(LocalDate.of(year, Month.NOVEMBER, 11)), "Remembrance Day");
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), "Christmas");
+        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), HOLIDAY_CHRISTMAS);
         holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 26)), "Boxing Day");
 
         return holidays;
@@ -1353,7 +1368,7 @@ public class HolidayService {
 
         holidayEmojis.put(LocalDate.of(year, Month.JANUARY, 1).toString(), "🎉"); // New Year's Day
         LocalDate familyDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
-        holidayEmojis.put(familyDay.toString(), "👨‍👩‍👧‍👦"); // Family Day
+        holidayEmojis.put(familyDay.toString(), EMOJI_FAMILY); // Family Day
         LocalDate easter = calculateEasterSunday(year);
         holidayEmojis.put(easter.minusDays(2).toString(), "🐟"); // Good Friday
         LocalDate victoriaDay = calculateVictoriaDay(year);
@@ -1387,9 +1402,9 @@ public class HolidayService {
     public Map<String, String> getUKHolidays(int year) {
         Map<String, String> holidays = new HashMap<>();
 
-        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 1)), "New Year's Day");
+        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 1)), HOLIDAY_NEW_YEARS_DAY);
         LocalDate easter = calculateEasterSunday(year);
-        holidays.put(formatDate(easter.minusDays(2)), "Good Friday");
+        holidays.put(formatDate(easter.minusDays(2)), HOLIDAY_GOOD_FRIDAY);
         holidays.put(formatDate(easter.plusDays(1)), "Easter Monday");
         LocalDate earlyMay = getNthWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY, 1);
         holidays.put(formatDate(earlyMay), "Early May");
@@ -1397,7 +1412,7 @@ public class HolidayService {
         holidays.put(formatDate(springBank), "Spring Bank");
         LocalDate summerBank = getLastWeekdayOfMonth(year, Month.AUGUST, DayOfWeek.MONDAY);
         holidays.put(formatDate(summerBank), "Summer Bank");
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), "Christmas");
+        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), HOLIDAY_CHRISTMAS);
         holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 26)), "Boxing Day");
 
         return holidays;
@@ -1431,13 +1446,13 @@ public class HolidayService {
     public Map<String, String> getMajorWorldHolidays(int year) {
         Map<String, String> holidays = new HashMap<>();
 
-        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 1)), "New Year's Day");
+        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 1)), HOLIDAY_NEW_YEARS_DAY);
         holidays.put(formatDate(LocalDate.of(year, Month.FEBRUARY, 14)), "Valentine's Day");
         holidays.put(formatDate(LocalDate.of(year, Month.MARCH, 17)), "St. Patrick's");
         holidays.put(formatDate(LocalDate.of(year, Month.APRIL, 22)), "Earth Day");
         holidays.put(formatDate(LocalDate.of(year, Month.MAY, 1)), "Workers' Day");
         holidays.put(formatDate(LocalDate.of(year, Month.OCTOBER, 31)), "Halloween");
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), "Christmas");
+        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), HOLIDAY_CHRISTMAS);
         holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 31)), "New Year's Eve");
         LocalDate easter = calculateEasterSunday(year);
         holidays.put(formatDate(easter), "Easter");

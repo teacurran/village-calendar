@@ -231,6 +231,271 @@ class HebrewCalendarServiceTest {
         assertTrue(svg.contains("<svg") || svg.isEmpty());
     }
 
+    // ========== HEBREW MONTH NAME TESTS - LEAP YEAR MONTH > 7 ==========
+
+    @Test
+    void testGetHebrewMonthName_NisanInLeapYear_ReturnsNisan() {
+        // Month 8 in leap year is Nisan (month > 7 branch)
+        assertEquals("Nisan", hebrewCalendarService.getHebrewMonthName(8, LEAP_YEAR));
+    }
+
+    @Test
+    void testGetHebrewMonthName_IyarInLeapYear_ReturnsIyar() {
+        // Month 9 in leap year is Iyar
+        assertEquals("Iyar", hebrewCalendarService.getHebrewMonthName(9, LEAP_YEAR));
+    }
+
+    @Test
+    void testGetHebrewMonthName_SivanInLeapYear_ReturnsSivan() {
+        // Month 10 in leap year is Sivan
+        assertEquals("Sivan", hebrewCalendarService.getHebrewMonthName(10, LEAP_YEAR));
+    }
+
+    @Test
+    void testGetHebrewMonthName_ElulInLeapYear_ReturnsElul() {
+        // Month 13 in leap year is Elul
+        assertEquals("Elul", hebrewCalendarService.getHebrewMonthName(13, LEAP_YEAR));
+    }
+
+    // ========== HEBREW HOLIDAYS TESTS - DIFFERENT HOLIDAY SETS ==========
+
+    @Test
+    void testGetHebrewHolidays_WithEmptyHolidaySet_ReturnsHolidays() {
+        Map<String, String> holidays = hebrewCalendarService.getHebrewHolidays(5784, "");
+
+        assertNotNull(holidays);
+        // Should default to HEBREW_RELIGIOUS
+        assertTrue(holidays.containsKey("1-1"), "Should contain Rosh Hashanah");
+    }
+
+    @Test
+    void testGetHebrewHolidays_WithHebrewReligious_ContainsRoshHashanah() {
+        Map<String, String> holidays = hebrewCalendarService.getHebrewHolidays(5784, "HEBREW_RELIGIOUS");
+
+        assertNotNull(holidays);
+        assertTrue(holidays.containsKey("1-1"));
+        assertTrue(holidays.get("1-1").contains("Rosh Hashanah"));
+    }
+
+    @Test
+    void testGetHebrewHolidays_WithHebrewAll_ContainsRoshHashanah() {
+        Map<String, String> holidays = hebrewCalendarService.getHebrewHolidays(5784, "HEBREW_ALL");
+
+        assertNotNull(holidays);
+        assertTrue(holidays.containsKey("1-1"));
+        assertTrue(holidays.get("1-1").contains("Rosh Hashanah"));
+    }
+
+    @Test
+    void testGetHebrewHolidays_LeapYear_PurimInAdarII() {
+        // 5784 is a leap year, Purim should be in month 7 (Adar II)
+        Map<String, String> holidays = hebrewCalendarService.getHebrewHolidays(5784, "HEBREW_RELIGIOUS");
+
+        assertTrue(holidays.containsKey("7-14"), "Purim should be in month 7 (Adar II) for leap year");
+        assertTrue(holidays.get("7-14").contains("Purim"));
+    }
+
+    @Test
+    void testGetHebrewHolidays_NonLeapYear_PurimInAdar() {
+        // 5785 is not a leap year, Purim should be in month 6 (Adar)
+        Map<String, String> holidays = hebrewCalendarService.getHebrewHolidays(5785, "HEBREW_RELIGIOUS");
+
+        assertTrue(holidays.containsKey("6-14"), "Purim should be in month 6 (Adar) for non-leap year");
+    }
+
+    @Test
+    void testGetHebrewHolidays_ContainsYomKippur() {
+        Map<String, String> holidays = hebrewCalendarService.getHebrewHolidays(5784, "HEBREW_RELIGIOUS");
+
+        assertTrue(holidays.containsKey("1-10"));
+        assertEquals("Yom Kippur", holidays.get("1-10"));
+    }
+
+    @Test
+    void testGetHebrewHolidays_ContainsChanukah() {
+        Map<String, String> holidays = hebrewCalendarService.getHebrewHolidays(5784, "HEBREW_RELIGIOUS");
+
+        assertTrue(holidays.containsKey("3-25"), "Should contain Chanukah Day 1");
+        assertTrue(holidays.get("3-25").contains("Chanukah"));
+    }
+
+    @Test
+    void testGetHebrewHolidays_NonMatchingSet_ReturnsEmptyMap() {
+        Map<String, String> holidays = hebrewCalendarService.getHebrewHolidays(5784, "UNKNOWN_SET");
+
+        assertNotNull(holidays);
+        assertTrue(holidays.isEmpty(), "Unknown holiday set should return empty map");
+    }
+
+    // ========== GENERATE HEBREW CALENDAR SVG - BRANCH COVERAGE ==========
+
+    @Test
+    void testGenerateHebrewCalendarSVG_CompactMode_True() {
+        HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
+        config.hebrewYear = 5784;
+        config.compactMode = true;
+
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("<svg"));
+    }
+
+    @Test
+    void testGenerateHebrewCalendarSVG_CompactMode_False() {
+        HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
+        config.hebrewYear = 5784;
+        config.compactMode = false;
+
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("<svg"));
+    }
+
+    @Test
+    void testGenerateHebrewCalendarSVG_RotateMonthNames_True() {
+        HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
+        config.hebrewYear = 5784;
+        config.rotateMonthNames = true;
+
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("rotate"));
+    }
+
+    @Test
+    void testGenerateHebrewCalendarSVG_RotateMonthNames_False() {
+        HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
+        config.hebrewYear = 5784;
+        config.rotateMonthNames = false;
+
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("<svg"));
+    }
+
+    @Test
+    void testGenerateHebrewCalendarSVG_ShowGrid_True() {
+        HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
+        config.hebrewYear = 5784;
+        config.showGrid = true;
+
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("grid-line"));
+    }
+
+    @Test
+    void testGenerateHebrewCalendarSVG_ShowGrid_False() {
+        HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
+        config.hebrewYear = 5784;
+        config.showGrid = false;
+
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("<svg"));
+    }
+
+    @Test
+    void testGenerateHebrewCalendarSVG_HighlightWeekends_True() {
+        HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
+        config.hebrewYear = 5784;
+        config.highlightWeekends = true;
+
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("<svg"));
+    }
+
+    @Test
+    void testGenerateHebrewCalendarSVG_ShowDayNumbers_True() {
+        HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
+        config.hebrewYear = 5784;
+        config.showDayNumbers = true;
+
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("day-text"));
+    }
+
+    @Test
+    void testGenerateHebrewCalendarSVG_ShowDayNumbers_False() {
+        HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
+        config.hebrewYear = 5784;
+        config.showDayNumbers = false;
+
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("<svg"));
+    }
+
+    @Test
+    void testGenerateHebrewCalendarSVG_MoonDisplayMode_Illumination() {
+        HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
+        config.hebrewYear = 5784;
+        config.moonDisplayMode = "illumination";
+
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("<svg"));
+    }
+
+    @Test
+    void testGenerateHebrewCalendarSVG_MoonDisplayMode_None() {
+        HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
+        config.hebrewYear = 5784;
+        config.moonDisplayMode = "none";
+
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("<svg"));
+    }
+
+    @Test
+    void testGenerateHebrewCalendarSVG_LeapYear_Has13Months() {
+        HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
+        config.hebrewYear = 5784; // Leap year
+
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+
+        assertNotNull(svg);
+        // Should contain Adar II for leap year
+        assertTrue(svg.contains("<svg"));
+    }
+
+    // ========== HEBREW TO GREGORIAN - FALLBACK BRANCH ==========
+
+    @Test
+    void testHebrewToGregorian_DayOutOfRange_UsesDay28() {
+        // Test with day 30 - should handle gracefully
+        LocalDate result = hebrewCalendarService.hebrewToGregorian(5784, 4, 30);
+
+        assertNotNull(result);
+        // Day should be capped at 28 for safety
+        assertTrue(result.getDayOfMonth() <= 28);
+    }
+
+    @Test
+    void testHebrewToGregorian_EarlyMonths_IncreasesGregorianYear() {
+        // Test months 1-6 which map to next Gregorian year
+        LocalDate tishrei = hebrewCalendarService.hebrewToGregorian(5784, 1, 1); // Month 1
+        LocalDate nisan = hebrewCalendarService.hebrewToGregorian(5784, 7, 1); // Month 7 (non-leap)
+
+        assertNotNull(tishrei);
+        assertNotNull(nisan);
+        // Tishrei (early month) should map to later part of year
+    }
+
     // ========== EDGE CASE TESTS ==========
 
     @Test

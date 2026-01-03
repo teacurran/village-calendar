@@ -30,6 +30,11 @@ public class CartResource {
 
     // JSON field name constants
     private static final String FIELD_QUANTITY = "quantity";
+    private static final String FIELD_ITEM_COUNT = "itemCount";
+    private static final String FIELD_SUCCESS = "success";
+    private static final String FIELD_GENERATOR_TYPE = "generatorType";
+    private static final String FIELD_MESSAGE = "message";
+    private static final String FIELD_CART = "cart";
 
     @Inject
     CartService cartService;
@@ -51,7 +56,7 @@ public class CartResource {
         response.put("total", cart.totalAmount);
         response.put("subtotal", cart.subtotal);
         response.put("taxAmount", cart.taxAmount);
-        response.put("itemCount", cart.itemCount);
+        response.put(FIELD_ITEM_COUNT, cart.itemCount);
 
         return Response.ok(response).build();
     }
@@ -65,10 +70,10 @@ public class CartResource {
         LOG.infof("REST: Adding to cart for session: %s, body: %s", sessionId, requestBody);
 
         // Validate required fields - need generatorType or productId
-        if (requestBody.get("generatorType") == null && requestBody.get("productId") == null) {
+        if (requestBody.get(FIELD_GENERATOR_TYPE) == null && requestBody.get("productId") == null) {
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("message", "generatorType or productId is required");
+            errorResponse.put(FIELD_SUCCESS, false);
+            errorResponse.put(FIELD_MESSAGE, FIELD_GENERATOR_TYPE + " or productId is required");
             return Response.status(Response.Status.BAD_REQUEST).entity(errorResponse).build();
         }
 
@@ -76,7 +81,8 @@ public class CartResource {
         AddToCartInput input = new AddToCartInput();
 
         // Map generatorType (or productId for backwards compatibility)
-        input.generatorType = requestBody.get("generatorType") != null ? (String) requestBody.get("generatorType")
+        input.generatorType = requestBody.get(FIELD_GENERATOR_TYPE) != null
+                ? (String) requestBody.get(FIELD_GENERATOR_TYPE)
                 : (String) requestBody.get("productId");
 
         // Map description (or templateName for backwards compatibility)
@@ -107,10 +113,10 @@ public class CartResource {
         CartType cart = cartService.addToCart(sessionId, input);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "Item added to cart");
-        response.put("itemCount", cart.itemCount);
-        response.put("cart", cart);
+        response.put(FIELD_SUCCESS, true);
+        response.put(FIELD_MESSAGE, "Item added to cart");
+        response.put(FIELD_ITEM_COUNT, cart.itemCount);
+        response.put(FIELD_CART, cart);
 
         return Response.ok(response).build();
     }
@@ -126,9 +132,9 @@ public class CartResource {
         CartType cart = cartService.removeItem(sessionId, UUID.fromString(itemId));
 
         Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("itemCount", cart.itemCount);
-        response.put("cart", cart);
+        response.put(FIELD_SUCCESS, true);
+        response.put(FIELD_ITEM_COUNT, cart.itemCount);
+        response.put(FIELD_CART, cart);
 
         return Response.ok(response).build();
     }
@@ -148,9 +154,9 @@ public class CartResource {
         CartType cart = cartService.updateQuantity(sessionId, UUID.fromString(itemId), quantity);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("itemCount", cart.itemCount);
-        response.put("cart", cart);
+        response.put(FIELD_SUCCESS, true);
+        response.put(FIELD_ITEM_COUNT, cart.itemCount);
+        response.put(FIELD_CART, cart);
 
         return Response.ok(response).build();
     }
@@ -166,9 +172,9 @@ public class CartResource {
         CartType cart = cartService.clearCart(sessionId);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("itemCount", cart.itemCount);
-        response.put("cart", cart);
+        response.put(FIELD_SUCCESS, true);
+        response.put(FIELD_ITEM_COUNT, cart.itemCount);
+        response.put(FIELD_CART, cart);
 
         return Response.ok(response).build();
     }

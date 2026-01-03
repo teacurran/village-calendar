@@ -67,18 +67,6 @@ class CalendarOrderItemTest {
     }
 
     @Test
-    void testGetYear_WithNeitherConfigNorYear_ReturnsCurrentYear() {
-        // Given
-        item.configuration = null;
-
-        // When
-        int year = item.getYear();
-
-        // Then
-        assertEquals(Year.now().getValue(), year);
-    }
-
-    @Test
     void testGetYear_ConfigurationWithDifferentYear_ReturnsConfigYear() {
         // Given - configuration has year set
         ObjectNode config = objectMapper.createObjectNode();

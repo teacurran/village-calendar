@@ -763,8 +763,8 @@ public class OrderService {
             productType = CalendarOrderItem.TYPE_PDF;
         }
 
-        // Create a UserCalendar to store the calendar configuration
-        UserCalendar calendar = createCalendarFromConfig(order.user, description, year, configurationStr);
+        // Create a UserCalendar to store the calendar configuration (result not needed - persisted as side effect)
+        createCalendarFromConfig(order.user, description, year, configurationStr);
 
         // Create the order item
         CalendarOrderItem item = new CalendarOrderItem();

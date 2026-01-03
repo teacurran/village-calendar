@@ -206,7 +206,7 @@ public class AstronomicalCalculationService {
         double refLongitude = 0.0;
 
         // Calculate Spring Equinox (around March 20)
-        LocalDate springEquinoxDate = findEquinoxOrSolstice(year, 3, 19, 22, refLatitude, refLongitude, true);
+        LocalDate springEquinoxDate = findEquinoxOrSolstice(year, 3, 19, 22, refLatitude, refLongitude);
         events.add(new SeasonalEvent(springEquinoxDate, "Spring Equinox", SeasonalEventType.SPRING_EQUINOX));
 
         // Calculate Summer Solstice (around June 21)
@@ -214,7 +214,7 @@ public class AstronomicalCalculationService {
         events.add(new SeasonalEvent(summerSolsticeDate, "Summer Solstice", SeasonalEventType.SUMMER_SOLSTICE));
 
         // Calculate Autumn Equinox (around September 22)
-        LocalDate autumnEquinoxDate = findEquinoxOrSolstice(year, 9, 21, 24, refLatitude, refLongitude, false);
+        LocalDate autumnEquinoxDate = findEquinoxOrSolstice(year, 9, 21, 24, refLatitude, refLongitude);
         events.add(new SeasonalEvent(autumnEquinoxDate, "Autumn Equinox", SeasonalEventType.AUTUMN_EQUINOX));
 
         // Calculate Winter Solstice (around December 21)
@@ -226,7 +226,7 @@ public class AstronomicalCalculationService {
 
     /** Find the exact date of an equinox by searching for equal day/night. */
     private LocalDate findEquinoxOrSolstice(int year, int month, int startDay, int endDay, double latitude,
-            double longitude, boolean isSpring) {
+            double longitude) {
         // Simple search: find the day with closest to 12 hours of daylight
         LocalDate closestDate = LocalDate.of(year, month, startDay);
         long closestDiff = Long.MAX_VALUE;

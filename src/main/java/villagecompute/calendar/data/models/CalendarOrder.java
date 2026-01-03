@@ -24,10 +24,10 @@ import io.quarkus.panache.common.Parameters;
  * Entity representing an e-commerce order for printed calendars. Integrates with Stripe for payment processing.
  */
 @Entity
-@NamedQueries({@NamedQuery(
+@NamedQuery(
         name = CalendarOrder.QUERY_FIND_BY_ORDER_NUMBER_WITH_ITEMS,
         query = "SELECT DISTINCT o FROM CalendarOrder o " + "LEFT JOIN FETCH o.items i " + "LEFT JOIN FETCH i.assets "
-                + "WHERE o.orderNumber = :orderNumber")})
+                + "WHERE o.orderNumber = :orderNumber")
 @Table(
         name = "calendar_orders",
         indexes = {@Index(
