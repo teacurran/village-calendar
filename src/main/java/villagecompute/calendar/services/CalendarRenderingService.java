@@ -758,98 +758,102 @@ public class CalendarRenderingService {
         int cellHeight = config.compactMode ? 60 : 75;
         int headerHeight = 100;
 
-        // Calculate SVG dimensions based on layout mode
-        int svgWidth;
-        int svgHeight;
-        if (weekdayAligned) {
-            int totalCols = 37; // 7 days * 5 weeks + 2 extra for months that span 6 weeks
-            svgWidth = cellWidth * (totalCols + 1) + 20;
-            svgHeight = cellHeight * 12 + headerHeight + 20;
-        } else {
-            svgWidth = 32 * cellWidth; // 1 for month name + 31 for days
-            svgHeight = 12 * cellHeight + headerHeight;
-        }
+        int[] dimensions = calculateGridDimensions(weekdayAligned, cellWidth, cellHeight, headerHeight);
+        int svgWidth = dimensions[0];
+        int svgHeight = dimensions[1];
 
         StringBuilder svg = new StringBuilder();
-
-        // SVG header
         appendSvgHeader(svg, svgWidth, svgHeight);
-
-        // Styles
         appendGridStyles(svg, config, theme);
-
-        // Year title
-        String yearFill = config.yearColor != null ? config.yearColor : theme.monthHeader;
-        svg.append(String.format("<text x=\"50\" y=\"80\" fill=\"%s\" font-family=\"Helvetica, Arial,"
-                + " sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n", yearFill, year));
+        appendYearTitle(svg, config, theme, year);
 
         // Generate each month row
         Locale locale = Locale.forLanguageTag(config.locale);
         for (int monthNum = 1; monthNum <= 12; monthNum++) {
-            YearMonth yearMonth = YearMonth.of(year, monthNum);
-            int daysInMonth = yearMonth.lengthOfMonth();
-            int rowY = (monthNum - 1) * cellHeight + headerHeight;
-
-            // Month label - position differs by layout
-            String monthName = Month.of(monthNum).getDisplayName(TextStyle.SHORT, locale);
-            String monthFill = config.monthColor != null ? config.monthColor : theme.monthHeader;
-            if (weekdayAligned) {
-                svg.append(renderMonthName(monthName, cellWidth - 5, rowY + cellHeight / 2 + 4, cellWidth,
-                        config.rotateMonthNames, "end", monthFill));
-            } else {
-                svg.append(renderMonthName(monthName, 5, rowY + cellHeight / 2 + 5, cellWidth, config.rotateMonthNames,
-                        "start", monthFill));
-            }
-
-            // Calculate starting column for weekday-aligned layout
-            int startCol = weekdayAligned ? yearMonth.atDay(1).getDayOfWeek().getValue() % 7 : 0;
-
-            // Generate day cells
-            int weekendIndex = 0;
-            int maxDay = weekdayAligned ? daysInMonth : 31;
-
-            for (int day = 1; day <= maxDay; day++) {
-                // Calculate cell position based on layout
-                int cellX;
-                int cellY;
-                if (weekdayAligned) {
-                    int col = startCol + day - 1;
-                    cellX = cellWidth + col * cellWidth;
-                    cellY = rowY;
-                } else {
-                    cellX = day * cellWidth;
-                    cellY = rowY;
-                }
-
-                // Handle days that don't exist in this month (only for fixed grid)
-                if (!weekdayAligned && day > daysInMonth) {
-                    renderEmptyCell(svg, cellX, cellY, cellWidth, cellHeight, config);
-                    continue;
-                }
-
-                LocalDate date = yearMonth.atDay(day);
-                DayOfWeek dayOfWeek = date.getDayOfWeek();
-                boolean isWeekend = dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY;
-
-                if (isWeekend) {
-                    weekendIndex++;
-                }
-
-                renderDayCell(svg, cellX, cellY, cellWidth, cellHeight, date, dayOfWeek, isWeekend, monthNum,
-                        weekendIndex - 1, locale, config, theme);
-            }
+            generateMonthRow(svg, year, monthNum, cellWidth, cellHeight, headerHeight, weekdayAligned, locale, config,
+                    theme);
         }
 
-        // Outer border (fixed grid only)
+        appendOuterBorder(svg, weekdayAligned, config, cellWidth, cellHeight, headerHeight);
+        svg.append("</svg>");
+        return svg.toString();
+    }
+
+    private int[] calculateGridDimensions(boolean weekdayAligned, int cellWidth, int cellHeight, int headerHeight) {
+        if (weekdayAligned) {
+            int totalCols = 37; // 7 days * 5 weeks + 2 extra for months that span 6 weeks
+            return new int[]{cellWidth * (totalCols + 1) + 20, cellHeight * 12 + headerHeight + 20};
+        }
+        return new int[]{32 * cellWidth, 12 * cellHeight + headerHeight};
+    }
+
+    private void appendYearTitle(StringBuilder svg, CalendarConfigType config, ThemeColors theme, int year) {
+        String yearFill = config.yearColor != null ? config.yearColor : theme.monthHeader;
+        svg.append(String.format("<text x=\"50\" y=\"80\" fill=\"%s\" font-family=\"Helvetica, Arial,"
+                + " sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n", yearFill, year));
+    }
+
+    private void generateMonthRow(StringBuilder svg, int year, int monthNum, int cellWidth, int cellHeight,
+            int headerHeight, boolean weekdayAligned, Locale locale, CalendarConfigType config, ThemeColors theme) {
+        YearMonth yearMonth = YearMonth.of(year, monthNum);
+        int daysInMonth = yearMonth.lengthOfMonth();
+        int rowY = (monthNum - 1) * cellHeight + headerHeight;
+
+        appendMonthLabel(svg, monthNum, cellWidth, cellHeight, rowY, weekdayAligned, locale, config, theme);
+
+        int startCol = weekdayAligned ? yearMonth.atDay(1).getDayOfWeek().getValue() % 7 : 0;
+        int maxDay = weekdayAligned ? daysInMonth : 31;
+        int weekendIndex = 0;
+
+        for (int day = 1; day <= maxDay; day++) {
+            int cellX = calculateCellX(weekdayAligned, day, startCol, cellWidth);
+            int cellY = rowY;
+
+            if (!weekdayAligned && day > daysInMonth) {
+                renderEmptyCell(svg, cellX, cellY, cellWidth, cellHeight, config);
+                continue;
+            }
+
+            LocalDate date = yearMonth.atDay(day);
+            DayOfWeek dayOfWeek = date.getDayOfWeek();
+            boolean isWeekend = dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY;
+            if (isWeekend) {
+                weekendIndex++;
+            }
+            renderDayCell(svg, cellX, cellY, cellWidth, cellHeight, date, dayOfWeek, isWeekend, monthNum,
+                    weekendIndex - 1, locale, config, theme);
+        }
+    }
+
+    private void appendMonthLabel(StringBuilder svg, int monthNum, int cellWidth, int cellHeight, int rowY,
+            boolean weekdayAligned, Locale locale, CalendarConfigType config, ThemeColors theme) {
+        String monthName = Month.of(monthNum).getDisplayName(TextStyle.SHORT, locale);
+        String monthFill = config.monthColor != null ? config.monthColor : theme.monthHeader;
+        if (weekdayAligned) {
+            svg.append(renderMonthName(monthName, cellWidth - 5, rowY + cellHeight / 2 + 4, cellWidth,
+                    config.rotateMonthNames, "end", monthFill));
+        } else {
+            svg.append(renderMonthName(monthName, 5, rowY + cellHeight / 2 + 5, cellWidth, config.rotateMonthNames,
+                    "start", monthFill));
+        }
+    }
+
+    private int calculateCellX(boolean weekdayAligned, int day, int startCol, int cellWidth) {
+        if (weekdayAligned) {
+            int col = startCol + day - 1;
+            return cellWidth + col * cellWidth;
+        }
+        return day * cellWidth;
+    }
+
+    private void appendOuterBorder(StringBuilder svg, boolean weekdayAligned, CalendarConfigType config, int cellWidth,
+            int cellHeight, int headerHeight) {
         if (!weekdayAligned && config.showGrid) {
             svg.append(String.format(
                     "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\""
                             + " stroke=\"%s\" stroke-width=\"2\"/>%n",
                     cellWidth, headerHeight - 1, cellWidth * 31, cellHeight * 12 + 2, config.gridLineColor));
         }
-
-        svg.append("</svg>");
-        return svg.toString();
     }
 
     private void appendSvgHeader(StringBuilder svg, int width, int height) {

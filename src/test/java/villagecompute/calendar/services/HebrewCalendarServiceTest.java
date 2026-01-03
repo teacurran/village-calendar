@@ -47,15 +47,6 @@ class HebrewCalendarServiceTest {
         assertEquals(7, leapCount, "19-year cycle should have exactly 7 leap years");
     }
 
-    private boolean containsValue(int[] array, int value) {
-        for (int i : array) {
-            if (i == value) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     // ========== MONTHS IN YEAR TESTS ==========
 
     @Test

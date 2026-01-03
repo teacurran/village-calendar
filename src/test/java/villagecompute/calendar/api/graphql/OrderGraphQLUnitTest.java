@@ -508,14 +508,6 @@ class OrderGraphQLUnitTest {
             assertThrows(IllegalArgumentException.class, () -> orderGraphQL.createOrder(input));
         }
 
-        private OrderInput createOrderInput() {
-            OrderInput input = new OrderInput();
-            input.calendarId = testCalendar.id.toString();
-            input.quantity = 1;
-            input.shippingAddress = createShippingAddress();
-            return input;
-        }
-
         private AddressInput createShippingAddress() {
             AddressInput address = new AddressInput();
             address.street = "123 Test St";

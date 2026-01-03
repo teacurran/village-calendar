@@ -3,8 +3,6 @@ package villagecompute.calendar.api.rest;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
-import java.util.UUID;
-
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -30,12 +28,11 @@ class AuthResourceSecurityTest {
     @Inject
     ObjectMapper objectMapper;
 
-    private UUID testUserId;
     private static final String TEST_EMAIL = "authtest@example.com";
 
     @BeforeEach
     void setUp() {
-        testUserId = QuarkusTransaction.requiringNew().call(() -> {
+        QuarkusTransaction.requiringNew().call(() -> {
             // Clean up existing test user
             CalendarUser.delete("email", TEST_EMAIL);
 
@@ -76,9 +73,9 @@ class AuthResourceSecurityTest {
             user = "testuser",
             roles = "USER")
     void testGetMe_ValidUser_ReturnsUserInfo() {
-        // Need to use the actual user ID in the JWT claim
-        // Create user within test and use dynamic claim
-        UUID userId = QuarkusTransaction.requiringNew().call(() -> {
+        // Create user within test - we can't use dynamic UUID in @JwtSecurity claims
+        // since those are compile-time constants
+        QuarkusTransaction.requiringNew().call(() -> {
             CalendarUser user = new CalendarUser();
             user.email = "dynamic-test-" + System.currentTimeMillis() + "@example.com";
             user.displayName = "Dynamic Test User";

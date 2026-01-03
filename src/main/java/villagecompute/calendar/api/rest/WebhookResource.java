@@ -229,8 +229,9 @@ public class WebhookResource {
                 // Set metadata if present
                 if (sessionData.has(STRIPE_METADATA_PROPERTY) && !sessionData.get(STRIPE_METADATA_PROPERTY).isNull()) {
                     java.util.Map<String, String> metadata = new java.util.HashMap<>();
-                    sessionData.get(STRIPE_METADATA_PROPERTY).fields()
-                            .forEachRemaining(field -> metadata.put(field.getKey(), field.getValue().asText()));
+                    JsonNode metadataNode = sessionData.get(STRIPE_METADATA_PROPERTY);
+                    metadataNode.fieldNames()
+                            .forEachRemaining(name -> metadata.put(name, metadataNode.get(name).asText()));
                     session.setMetadata(metadata);
                 }
             }
