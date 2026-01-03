@@ -25,6 +25,10 @@ public class ShippingResource {
     private static final String CA_COUNTRY_CODE = "CA";
     private static final String MX_COUNTRY_CODE = "MX";
 
+    // JSON field name constants
+    private static final String FIELD_DESCRIPTION = "description";
+    private static final String FIELD_PRICE = "price";
+
     @ConfigProperty(
             name = "calendar.shipping.domestic.standard",
             defaultValue = "5.99")
@@ -69,24 +73,24 @@ public class ShippingResource {
         Map<String, Object> standard = new HashMap<>();
         standard.put("id", "standard");
         standard.put("name", "Standard Shipping");
-        standard.put("description", "5-7 business days");
-        standard.put("price", domesticStandardRate);
+        standard.put(FIELD_DESCRIPTION, "5-7 business days");
+        standard.put(FIELD_PRICE, domesticStandardRate);
         options.add(standard);
 
         // Priority shipping
         Map<String, Object> priority = new HashMap<>();
         priority.put("id", "priority");
         priority.put("name", "Priority Shipping");
-        priority.put("description", "2-3 business days");
-        priority.put("price", domesticPriorityRate);
+        priority.put(FIELD_DESCRIPTION, "2-3 business days");
+        priority.put(FIELD_PRICE, domesticPriorityRate);
         options.add(priority);
 
         // Express shipping
         Map<String, Object> express = new HashMap<>();
         express.put("id", "express");
         express.put("name", "Express Shipping");
-        express.put("description", "1-2 business days");
-        express.put("price", domesticExpressRate);
+        express.put(FIELD_DESCRIPTION, "1-2 business days");
+        express.put(FIELD_PRICE, domesticExpressRate);
         options.add(express);
 
         Map<String, Object> response = new HashMap<>();

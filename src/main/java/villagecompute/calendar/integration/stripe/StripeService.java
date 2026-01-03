@@ -47,8 +47,13 @@ public class StripeService {
         // Initialize Stripe SDK with API key
         // Note: Stripe.apiKey is static, so this may be redundant if PaymentService already sets it
         // However, this makes StripeService independently usable
-        Stripe.apiKey = stripeApiKey;
+        initStripeApiKey(stripeApiKey);
         LOG.info("StripeService initialized with Stripe Checkout API");
+    }
+
+    /** Thread-safe static initialization of Stripe API key */
+    private static synchronized void initStripeApiKey(String apiKey) {
+        Stripe.apiKey = apiKey;
     }
 
     /**

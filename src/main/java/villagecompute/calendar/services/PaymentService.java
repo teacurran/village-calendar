@@ -82,8 +82,13 @@ public class PaymentService {
 
     @PostConstruct
     void init() {
-        Stripe.apiKey = stripeApiKey;
+        initStripeApiKey(stripeApiKey);
         LOG.info("Payment service initialized with Stripe API");
+    }
+
+    /** Thread-safe static initialization of Stripe API key */
+    private static synchronized void initStripeApiKey(String apiKey) {
+        Stripe.apiKey = apiKey;
     }
 
     /**

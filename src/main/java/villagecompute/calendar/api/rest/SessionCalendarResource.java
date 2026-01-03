@@ -36,6 +36,7 @@ public class SessionCalendarResource {
     private static final String CONFIGURATION = "configuration";
     private static final String COLOR_GRAY = "#c1c1c1";
     private static final String COLOR_BLACK = "#000000";
+    private static final String FIELD_SESSION_ID = "sessionId";
 
     @Inject
     SessionService sessionService;
@@ -84,7 +85,7 @@ public class SessionCalendarResource {
                     .build();
         }
 
-        UserCalendar calendar = UserCalendar.find("sessionId", sessionId).firstResult();
+        UserCalendar calendar = UserCalendar.find(FIELD_SESSION_ID, sessionId).firstResult();
 
         if (calendar == null) {
             return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of("No calendar for this session"))
@@ -106,7 +107,7 @@ public class SessionCalendarResource {
         }
 
         // Check if this session already has a working calendar
-        UserCalendar calendar = UserCalendar.<UserCalendar>find("sessionId", sessionId).firstResult();
+        UserCalendar calendar = UserCalendar.<UserCalendar>find(FIELD_SESSION_ID, sessionId).firstResult();
 
         if (calendar == null) {
             // Create new calendar for this session
@@ -149,7 +150,7 @@ public class SessionCalendarResource {
 
         Map<String, Object> response = new HashMap<>();
         response.put("id", calendar.id);
-        response.put("sessionId", sessionId);
+        response.put(FIELD_SESSION_ID, sessionId);
 
         return Response.ok(response).build();
     }
@@ -270,7 +271,7 @@ public class SessionCalendarResource {
         }
 
         // Check if session already has a calendar - if so, update it with source config
-        UserCalendar existingCalendar = UserCalendar.<UserCalendar>find("sessionId", sessionId).firstResult();
+        UserCalendar existingCalendar = UserCalendar.<UserCalendar>find(FIELD_SESSION_ID, sessionId).firstResult();
         UserCalendar targetCalendar;
 
         if (existingCalendar != null) {
@@ -378,7 +379,7 @@ public class SessionCalendarResource {
         }
 
         // Check if this session already has a calendar - return existing one
-        UserCalendar existingCalendar = UserCalendar.<UserCalendar>find("sessionId", sessionId).firstResult();
+        UserCalendar existingCalendar = UserCalendar.<UserCalendar>find(FIELD_SESSION_ID, sessionId).firstResult();
 
         if (existingCalendar != null) {
             Map<String, Object> response = new HashMap<>();
