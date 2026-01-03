@@ -33,6 +33,8 @@ public class CartResource {
     private static final String FIELD_ITEM_COUNT = "itemCount";
     private static final String FIELD_SUCCESS = "success";
     private static final String FIELD_GENERATOR_TYPE = "generatorType";
+    private static final String FIELD_MESSAGE = "message";
+    private static final String FIELD_CART = "cart";
 
     @Inject
     CartService cartService;
@@ -71,7 +73,7 @@ public class CartResource {
         if (requestBody.get(FIELD_GENERATOR_TYPE) == null && requestBody.get("productId") == null) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put(FIELD_SUCCESS, false);
-            errorResponse.put("message", FIELD_GENERATOR_TYPE + " or productId is required");
+            errorResponse.put(FIELD_MESSAGE, FIELD_GENERATOR_TYPE + " or productId is required");
             return Response.status(Response.Status.BAD_REQUEST).entity(errorResponse).build();
         }
 
@@ -112,9 +114,9 @@ public class CartResource {
 
         Map<String, Object> response = new HashMap<>();
         response.put(FIELD_SUCCESS, true);
-        response.put("message", "Item added to cart");
+        response.put(FIELD_MESSAGE, "Item added to cart");
         response.put(FIELD_ITEM_COUNT, cart.itemCount);
-        response.put("cart", cart);
+        response.put(FIELD_CART, cart);
 
         return Response.ok(response).build();
     }
@@ -132,7 +134,7 @@ public class CartResource {
         Map<String, Object> response = new HashMap<>();
         response.put(FIELD_SUCCESS, true);
         response.put(FIELD_ITEM_COUNT, cart.itemCount);
-        response.put("cart", cart);
+        response.put(FIELD_CART, cart);
 
         return Response.ok(response).build();
     }
@@ -154,7 +156,7 @@ public class CartResource {
         Map<String, Object> response = new HashMap<>();
         response.put(FIELD_SUCCESS, true);
         response.put(FIELD_ITEM_COUNT, cart.itemCount);
-        response.put("cart", cart);
+        response.put(FIELD_CART, cart);
 
         return Response.ok(response).build();
     }
@@ -172,7 +174,7 @@ public class CartResource {
         Map<String, Object> response = new HashMap<>();
         response.put(FIELD_SUCCESS, true);
         response.put(FIELD_ITEM_COUNT, cart.itemCount);
-        response.put("cart", cart);
+        response.put(FIELD_CART, cart);
 
         return Response.ok(response).build();
     }
