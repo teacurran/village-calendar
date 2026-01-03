@@ -80,9 +80,6 @@ public class OrderService {
         // Create the order (needed for tax/shipping calculation)
         CalendarOrder order = new CalendarOrder();
         order.user = user;
-        order.calendar = calendar;
-        order.quantity = quantity;
-        order.unitPrice = unitPrice;
         order.shippingAddress = shippingAddress;
 
         // Calculate tax and shipping
@@ -109,6 +106,20 @@ public class OrderService {
 
         // Persist the order
         order.persist();
+
+        // Create order item for the calendar
+        CalendarOrderItem item = new CalendarOrderItem();
+        item.order = order;
+        item.generatorType = CalendarOrderItem.GENERATOR_CALENDAR;
+        item.description = calendar.name != null ? calendar.name : "Calendar " + calendar.year;
+        item.productType = CalendarOrderItem.TYPE_PRINT;
+        item.quantity = quantity;
+        item.unitPrice = unitPrice;
+        item.lineTotal = subtotal;
+        item.setYear(calendar.year != null ? calendar.year : Year.now().getValue());
+        item.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        item.persist();
+        order.items.add(item);
 
         LOG.infof("Created order %s (number: %s) with total price $%.2f (subtotal: $%.2f, tax: $%.2f,"
                 + " shipping: $%.2f)", order.id, orderNumber, totalPrice, subtotal, tax, shipping);
@@ -758,9 +769,9 @@ public class OrderService {
         // Create the order item
         CalendarOrderItem item = new CalendarOrderItem();
         item.order = order;
-        item.calendar = calendar;
+        item.generatorType = CalendarOrderItem.GENERATOR_CALENDAR;
+        item.description = description;
         item.productType = productType;
-        item.productName = description;
         item.setYear(year);
         item.quantity = quantity;
         item.unitPrice = BigDecimal.valueOf(unitPrice);

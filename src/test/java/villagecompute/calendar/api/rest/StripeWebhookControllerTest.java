@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import villagecompute.calendar.data.models.CalendarOrder;
+import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.DelayedJob;
@@ -129,6 +130,9 @@ public class StripeWebhookControllerTest {
         if (testUser != null && testUser.id != null) {
             // Delete delayed jobs first
             DelayedJob.delete("actorId = ?1", testOrder != null ? testOrder.id.toString() : "");
+            // Delete order items before orders (FK constraint)
+            CalendarOrderItem.delete("order.id in (select o.id from CalendarOrder o where o.user.id = ?1)",
+                    testUser.id);
             // Delete all orders for this user
             CalendarOrder.delete("user.id", testUser.id);
             // Delete all calendars for this user

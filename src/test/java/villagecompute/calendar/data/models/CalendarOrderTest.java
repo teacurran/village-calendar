@@ -120,74 +120,8 @@ class CalendarOrderTest {
         assertEquals(0, violations.size());
     }
 
-    @Test
-    void testValidEntity_NullCalendar() {
-        // Given - calendar is now nullable (new orders use items list instead)
-        CalendarOrder order = createValidOrder();
-        order.calendar = null;
-
-        // When
-        Set<ConstraintViolation<CalendarOrder>> violations = validator.validate(order);
-
-        // Then - no violations for null calendar
-        assertEquals(0, violations.size());
-    }
-
-    @Test
-    void testValidEntity_NullQuantity() {
-        // Given - quantity is now nullable (new orders use items list instead)
-        CalendarOrder order = createValidOrder();
-        order.quantity = null;
-
-        // When
-        Set<ConstraintViolation<CalendarOrder>> violations = validator.validate(order);
-
-        // Then - no violations for null quantity
-        assertEquals(0, violations.size());
-    }
-
-    @Test
-    void testInvalidEntity_QuantityTooLow() {
-        // Given
-        CalendarOrder order = createValidOrder();
-        order.quantity = 0; // Min is 1
-
-        // When
-        Set<ConstraintViolation<CalendarOrder>> violations = validator.validate(order);
-
-        // Then
-        assertEquals(1, violations.size());
-        ConstraintViolation<CalendarOrder> violation = violations.iterator().next();
-        assertEquals("quantity", violation.getPropertyPath().toString());
-    }
-
-    @Test
-    void testValidEntity_NullUnitPrice() {
-        // Given - unitPrice is now nullable (new orders use items list instead)
-        CalendarOrder order = createValidOrder();
-        order.unitPrice = null;
-
-        // When
-        Set<ConstraintViolation<CalendarOrder>> violations = validator.validate(order);
-
-        // Then - no violations for null unitPrice
-        assertEquals(0, violations.size());
-    }
-
-    @Test
-    void testInvalidEntity_NegativeUnitPrice() {
-        // Given
-        CalendarOrder order = createValidOrder();
-        order.unitPrice = BigDecimal.valueOf(-1.00);
-
-        // When
-        Set<ConstraintViolation<CalendarOrder>> violations = validator.validate(order);
-
-        // Then
-        assertEquals(1, violations.size());
-        ConstraintViolation<CalendarOrder> violation = violations.iterator().next();
-        assertEquals("unitPrice", violation.getPropertyPath().toString());
-    }
+    // Tests for deprecated calendar/quantity/unitPrice fields have been removed
+    // Orders now use the items list instead of these fields
 
     @Test
     void testInvalidEntity_NullStatus() {
@@ -288,23 +222,8 @@ class CalendarOrderTest {
         assertTrue(pendingOrders.stream().allMatch(o -> "PENDING".equals(o.status)));
     }
 
-    @Test
-    @Transactional
-    void testFindByCalendar() {
-        // Given
-        CalendarOrder order1 = createValidOrder();
-        orderRepository.persist(order1);
-        CalendarOrder order2 = createValidOrder();
-        orderRepository.persist(order2);
-        entityManager.flush();
-
-        // When
-        List<CalendarOrder> orders = orderRepository.findByCalendar(testCalendar.id);
-
-        // Then
-        assertEquals(2, orders.size());
-        assertTrue(orders.stream().allMatch(o -> o.calendar.id.equals(testCalendar.id)));
-    }
+    // testFindByCalendar removed - the findByCalendar method was deprecated and removed
+    // Orders now use items to track calendars instead of a direct calendar reference
 
     @Test
     @Transactional
@@ -470,21 +389,8 @@ class CalendarOrderTest {
         assertEquals(testUser.id, found.user.id);
     }
 
-    @Test
-    @Transactional
-    void testRelationships_ManyToOneCalendar() {
-        // Given
-        CalendarOrder order = createValidOrder();
-        orderRepository.persist(order);
-        entityManager.flush();
-
-        // When
-        CalendarOrder found = orderRepository.findById(order.id).orElseThrow();
-
-        // Then
-        assertNotNull(found.calendar);
-        assertEquals(testCalendar.id, found.calendar.id);
-    }
+    // testRelationships_ManyToOneCalendar removed - the calendar field was deprecated and removed
+    // Orders now use items to track calendars instead of a direct calendar reference
 
     @Test
     @Transactional
@@ -492,9 +398,7 @@ class CalendarOrderTest {
         // Given - Create order with ALL fields populated
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 5;
-        order.unitPrice = BigDecimal.valueOf(29.99);
+        order.subtotal = BigDecimal.valueOf(149.95);
         order.totalPrice = BigDecimal.valueOf(149.95);
         order.status = CalendarOrder.STATUS_PAID;
 
@@ -522,9 +426,7 @@ class CalendarOrderTest {
         CalendarOrder found = orderRepository.findById(order.id).orElseThrow();
         assertNotNull(found);
         assertEquals(testUser.id, found.user.id);
-        assertEquals(testCalendar.id, found.calendar.id);
-        assertEquals(5, found.quantity);
-        assertEquals(0, BigDecimal.valueOf(29.99).compareTo(found.unitPrice));
+        assertEquals(0, BigDecimal.valueOf(149.95).compareTo(found.subtotal));
         assertEquals(0, BigDecimal.valueOf(149.95).compareTo(found.totalPrice));
         assertEquals(CalendarOrder.STATUS_PAID, found.status);
         assertNotNull(found.shippingAddress);
@@ -555,7 +457,6 @@ class CalendarOrderTest {
         }
 
         // When
-        order.quantity = 3;
         order.totalPrice = BigDecimal.valueOf(59.97);
         order.notes = "Updated delivery instructions";
         orderRepository.persist(order);
@@ -563,7 +464,6 @@ class CalendarOrderTest {
 
         // Then
         assertTrue(order.updated.isAfter(originalUpdated));
-        assertEquals(3, order.quantity);
         assertEquals(0, BigDecimal.valueOf(59.97).compareTo(order.totalPrice));
         assertEquals("Updated delivery instructions", order.notes);
         assertEquals(1L, order.version);
@@ -789,9 +689,7 @@ class CalendarOrderTest {
         // Given - Order with only required fields
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = BigDecimal.valueOf(19.99);
+        order.subtotal = BigDecimal.valueOf(19.99);
         order.totalPrice = BigDecimal.valueOf(19.99);
         order.status = CalendarOrder.STATUS_PENDING;
         // Leave optional fields null
@@ -828,7 +726,7 @@ class CalendarOrderTest {
 
         CalendarOrderItem item = new CalendarOrderItem();
         item.productType = CalendarOrderItem.TYPE_PRINT;
-        item.productName = "Test Calendar 2025";
+        item.description = "Test Calendar 2025";
         item.quantity = 2;
         item.unitPrice = BigDecimal.valueOf(29.99);
         item.lineTotal = BigDecimal.valueOf(59.98);
@@ -855,7 +753,7 @@ class CalendarOrderTest {
         // Add a print item (physical)
         CalendarOrderItem printItem = new CalendarOrderItem();
         printItem.productType = CalendarOrderItem.TYPE_PRINT;
-        printItem.productName = "Print Calendar";
+        printItem.description = "Print Calendar";
         printItem.quantity = 1;
         printItem.unitPrice = BigDecimal.valueOf(29.99);
         printItem.lineTotal = BigDecimal.valueOf(29.99);
@@ -866,7 +764,7 @@ class CalendarOrderTest {
         // Add a PDF item (digital)
         CalendarOrderItem pdfItem = new CalendarOrderItem();
         pdfItem.productType = CalendarOrderItem.TYPE_PDF;
-        pdfItem.productName = "PDF Calendar";
+        pdfItem.description = "PDF Calendar";
         pdfItem.quantity = 1;
         pdfItem.unitPrice = BigDecimal.valueOf(9.99);
         pdfItem.lineTotal = BigDecimal.valueOf(9.99);
@@ -894,7 +792,7 @@ class CalendarOrderTest {
         // Add a print item
         CalendarOrderItem printItem = new CalendarOrderItem();
         printItem.productType = CalendarOrderItem.TYPE_PRINT;
-        printItem.productName = "Print Calendar";
+        printItem.description = "Print Calendar";
         printItem.quantity = 1;
         printItem.unitPrice = BigDecimal.valueOf(29.99);
         printItem.lineTotal = BigDecimal.valueOf(29.99);
@@ -905,7 +803,7 @@ class CalendarOrderTest {
         // Add two PDF items
         CalendarOrderItem pdfItem1 = new CalendarOrderItem();
         pdfItem1.productType = CalendarOrderItem.TYPE_PDF;
-        pdfItem1.productName = "PDF Calendar 1";
+        pdfItem1.description = "PDF Calendar 1";
         pdfItem1.quantity = 1;
         pdfItem1.unitPrice = BigDecimal.valueOf(9.99);
         pdfItem1.lineTotal = BigDecimal.valueOf(9.99);
@@ -915,7 +813,7 @@ class CalendarOrderTest {
 
         CalendarOrderItem pdfItem2 = new CalendarOrderItem();
         pdfItem2.productType = CalendarOrderItem.TYPE_PDF;
-        pdfItem2.productName = "PDF Calendar 2";
+        pdfItem2.description = "PDF Calendar 2";
         pdfItem2.quantity = 1;
         pdfItem2.unitPrice = BigDecimal.valueOf(9.99);
         pdfItem2.lineTotal = BigDecimal.valueOf(9.99);
@@ -943,7 +841,7 @@ class CalendarOrderTest {
         // Add unshipped print item
         CalendarOrderItem unshippedItem = new CalendarOrderItem();
         unshippedItem.productType = CalendarOrderItem.TYPE_PRINT;
-        unshippedItem.productName = "Unshipped Calendar";
+        unshippedItem.description = "Unshipped Calendar";
         unshippedItem.quantity = 1;
         unshippedItem.unitPrice = BigDecimal.valueOf(29.99);
         unshippedItem.lineTotal = BigDecimal.valueOf(29.99);
@@ -962,7 +860,7 @@ class CalendarOrderTest {
 
         CalendarOrderItem shippedItem = new CalendarOrderItem();
         shippedItem.productType = CalendarOrderItem.TYPE_PRINT;
-        shippedItem.productName = "Shipped Calendar";
+        shippedItem.description = "Shipped Calendar";
         shippedItem.quantity = 1;
         shippedItem.unitPrice = BigDecimal.valueOf(29.99);
         shippedItem.lineTotal = BigDecimal.valueOf(29.99);
@@ -974,7 +872,7 @@ class CalendarOrderTest {
         // Add PDF item (digital, doesn't need shipping)
         CalendarOrderItem pdfItem = new CalendarOrderItem();
         pdfItem.productType = CalendarOrderItem.TYPE_PDF;
-        pdfItem.productName = "PDF Calendar";
+        pdfItem.description = "PDF Calendar";
         pdfItem.quantity = 1;
         pdfItem.unitPrice = BigDecimal.valueOf(9.99);
         pdfItem.lineTotal = BigDecimal.valueOf(9.99);
@@ -989,7 +887,7 @@ class CalendarOrderTest {
 
         // Then
         assertEquals(1, unshippedItems.size());
-        assertEquals("Unshipped Calendar", unshippedItems.get(0).productName);
+        assertEquals("Unshipped Calendar", unshippedItems.get(0).description);
     }
 
     @Test
@@ -1009,7 +907,7 @@ class CalendarOrderTest {
 
         CalendarOrderItem item = new CalendarOrderItem();
         item.productType = CalendarOrderItem.TYPE_PRINT;
-        item.productName = "Shipped Calendar";
+        item.description = "Shipped Calendar";
         item.quantity = 1;
         item.unitPrice = BigDecimal.valueOf(29.99);
         item.lineTotal = BigDecimal.valueOf(29.99);
@@ -1033,7 +931,7 @@ class CalendarOrderTest {
 
         CalendarOrderItem item = new CalendarOrderItem();
         item.productType = CalendarOrderItem.TYPE_PRINT;
-        item.productName = "Pending Calendar";
+        item.description = "Pending Calendar";
         item.quantity = 1;
         item.unitPrice = BigDecimal.valueOf(29.99);
         item.lineTotal = BigDecimal.valueOf(29.99);
@@ -1057,7 +955,7 @@ class CalendarOrderTest {
 
         CalendarOrderItem item1 = new CalendarOrderItem();
         item1.productType = CalendarOrderItem.TYPE_PRINT;
-        item1.productName = "Calendar 1";
+        item1.description = "Calendar 1";
         item1.quantity = 3;
         item1.unitPrice = BigDecimal.valueOf(29.99);
         item1.lineTotal = BigDecimal.valueOf(89.97);
@@ -1067,7 +965,7 @@ class CalendarOrderTest {
 
         CalendarOrderItem item2 = new CalendarOrderItem();
         item2.productType = CalendarOrderItem.TYPE_PDF;
-        item2.productName = "Calendar 2";
+        item2.description = "Calendar 2";
         item2.quantity = 2;
         item2.unitPrice = BigDecimal.valueOf(9.99);
         item2.lineTotal = BigDecimal.valueOf(19.98);
@@ -1094,7 +992,7 @@ class CalendarOrderTest {
 
         CalendarOrderItem item1 = new CalendarOrderItem();
         item1.productType = CalendarOrderItem.TYPE_PRINT;
-        item1.productName = "Calendar 1";
+        item1.description = "Calendar 1";
         item1.quantity = 2;
         item1.unitPrice = BigDecimal.valueOf(29.99);
         item1.lineTotal = BigDecimal.valueOf(59.98);
@@ -1104,7 +1002,7 @@ class CalendarOrderTest {
 
         CalendarOrderItem item2 = new CalendarOrderItem();
         item2.productType = CalendarOrderItem.TYPE_PDF;
-        item2.productName = "Calendar 2";
+        item2.description = "Calendar 2";
         item2.quantity = 1;
         item2.unitPrice = BigDecimal.valueOf(9.99);
         item2.lineTotal = BigDecimal.valueOf(9.99);
@@ -1161,7 +1059,7 @@ class CalendarOrderTest {
 
         CalendarOrderItem item = new CalendarOrderItem();
         item.productType = CalendarOrderItem.TYPE_PRINT;
-        item.productName = "Test Calendar";
+        item.description = "Test Calendar";
         item.quantity = 1;
         item.unitPrice = BigDecimal.valueOf(29.99);
         item.lineTotal = BigDecimal.valueOf(29.99);
@@ -1202,9 +1100,7 @@ class CalendarOrderTest {
     private CalendarOrder createValidOrder() {
         CalendarOrder order = new CalendarOrder();
         order.user = testUser;
-        order.calendar = testCalendar;
-        order.quantity = 1;
-        order.unitPrice = BigDecimal.valueOf(19.99);
+        order.subtotal = BigDecimal.valueOf(19.99);
         order.totalPrice = BigDecimal.valueOf(19.99);
         order.status = "PENDING";
         return order;

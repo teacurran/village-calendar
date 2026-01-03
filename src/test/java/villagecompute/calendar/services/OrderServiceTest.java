@@ -100,9 +100,9 @@ class OrderServiceTest {
         assertNotNull(order);
         assertNotNull(order.id);
         assertEquals(testUser.id, order.user.id);
-        assertEquals(testCalendar.id, order.calendar.id);
-        assertEquals(quantity, order.quantity);
-        assertEquals(unitPrice, order.unitPrice);
+        // Order should have items created from the calendar
+        assertFalse(order.items.isEmpty(), "Order should have items");
+        assertEquals(quantity, order.getTotalItemCount());
         // Total: (2 × $29.99) + $5.99 shipping + $0 tax = $65.97
         assertEquals(new BigDecimal("65.97"), order.totalPrice);
         assertEquals(CalendarOrder.STATUS_PENDING, order.status);
@@ -530,7 +530,7 @@ class OrderServiceTest {
         CalendarOrderItem item = new CalendarOrderItem();
         item.order = order;
         item.productType = CalendarOrderItem.TYPE_PRINT;
-        item.productName = "Test Calendar";
+        item.description = "Test Calendar";
         item.quantity = 1;
         item.unitPrice = new BigDecimal("29.99");
         item.lineTotal = new BigDecimal("29.99");
@@ -566,7 +566,7 @@ class OrderServiceTest {
         CalendarOrderItem item = new CalendarOrderItem();
         item.order = order;
         item.productType = CalendarOrderItem.TYPE_PRINT;
-        item.productName = "Test Calendar";
+        item.description = "Test Calendar";
         item.quantity = 1;
         item.unitPrice = new BigDecimal("29.99");
         item.lineTotal = new BigDecimal("29.99");
@@ -602,7 +602,7 @@ class OrderServiceTest {
         CalendarOrderItem item1 = new CalendarOrderItem();
         item1.order = order;
         item1.productType = CalendarOrderItem.TYPE_PRINT;
-        item1.productName = "Test Calendar 1";
+        item1.description = "Test Calendar 1";
         item1.quantity = 1;
         item1.unitPrice = new BigDecimal("29.99");
         item1.lineTotal = new BigDecimal("29.99");
@@ -613,7 +613,7 @@ class OrderServiceTest {
         CalendarOrderItem item2 = new CalendarOrderItem();
         item2.order = order;
         item2.productType = CalendarOrderItem.TYPE_PRINT;
-        item2.productName = "Test Calendar 2";
+        item2.description = "Test Calendar 2";
         item2.quantity = 1;
         item2.unitPrice = new BigDecimal("29.99");
         item2.lineTotal = new BigDecimal("29.99");
@@ -655,7 +655,7 @@ class OrderServiceTest {
         CalendarOrderItem item = new CalendarOrderItem();
         item.order = order;
         item.productType = CalendarOrderItem.TYPE_PRINT;
-        item.productName = "Test Calendar";
+        item.description = "Test Calendar";
         item.quantity = 1;
         item.unitPrice = new BigDecimal("29.99");
         item.lineTotal = new BigDecimal("29.99");
@@ -696,7 +696,7 @@ class OrderServiceTest {
         CalendarOrderItem pdfItem = new CalendarOrderItem();
         pdfItem.order = order;
         pdfItem.productType = CalendarOrderItem.TYPE_PDF;
-        pdfItem.productName = "PDF Calendar";
+        pdfItem.description = "PDF Calendar";
         pdfItem.quantity = 1;
         pdfItem.unitPrice = new BigDecimal("9.99");
         pdfItem.lineTotal = new BigDecimal("9.99");
@@ -708,7 +708,7 @@ class OrderServiceTest {
         CalendarOrderItem printItem = new CalendarOrderItem();
         printItem.order = order;
         printItem.productType = CalendarOrderItem.TYPE_PRINT;
-        printItem.productName = "Print Calendar";
+        printItem.description = "Print Calendar";
         printItem.quantity = 1;
         printItem.unitPrice = new BigDecimal("29.99");
         printItem.lineTotal = new BigDecimal("29.99");

@@ -78,28 +78,25 @@ public class StripeService {
         // Generate idempotency key to prevent duplicate session creation
         String idempotencyKey = "checkout_order_" + order.id + "_" + System.currentTimeMillis();
 
+        // Build description from items
+        String productName = order.items.isEmpty() ? "Custom Calendar"
+                : "Custom Calendar: " + order.items.get(0).description;
+        int totalQuantity = order.getTotalItemCount();
+
         // Build line items for the checkout session
         SessionCreateParams.LineItem lineItem = SessionCreateParams.LineItem.builder()
-                .setPriceData(
-                        SessionCreateParams.LineItem.PriceData.builder().setCurrency("usd").setUnitAmount(amountInCents)
-                                .setProductData(SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                        .setName("Custom Calendar: " + order.calendar.name)
-                                        .setDescription("Personalized printed calendar").build())
-                                .build())
-                .setQuantity(Long.valueOf(order.quantity)).build();
+                .setPriceData(SessionCreateParams.LineItem.PriceData.builder().setCurrency("usd")
+                        .setUnitAmount(amountInCents / totalQuantity)
+                        .setProductData(SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                                .setName(productName).setDescription("Personalized printed calendar").build())
+                        .build())
+                .setQuantity(Long.valueOf(totalQuantity)).build();
 
         // Build checkout session parameters
-        SessionCreateParams params = SessionCreateParams.builder().setMode(SessionCreateParams.Mode.PAYMENT) // One-time
-                                                                                                             // payment
-                                                                                                             // (not
-                                                                                                             // subscription)
+        SessionCreateParams params = SessionCreateParams.builder().setMode(SessionCreateParams.Mode.PAYMENT)
                 .setSuccessUrl(successUrl).setCancelUrl(cancelUrl).addLineItem(lineItem)
                 .putMetadata("order_id", order.id.toString()).putMetadata("user_id", order.user.id.toString())
-                .putMetadata("calendar_id", order.calendar.id.toString()).setClientReferenceId(order.id.toString()) // For
-                                                                                                                    // easy
-                                                                                                                    // correlation
-                                                                                                                    // in
-                                                                                                                    // webhooks
+                .putMetadata("item_count", String.valueOf(order.items.size())).setClientReferenceId(order.id.toString())
                 .build();
 
         // Create checkout session with idempotency key

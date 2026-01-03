@@ -349,64 +349,9 @@ class UserCalendarTest {
         assertEquals(testTemplate.id, found.template.id);
     }
 
-    @Test
-    @Transactional
-    void testRelationships_OneToManyOrders() {
-        // Given
-        UserCalendar calendar = createValidCalendar("Test Calendar", 2025);
-        calendar.persist();
-
-        CalendarOrder order = new CalendarOrder();
-        order.user = testUser;
-        order.calendar = calendar;
-        order.quantity = 1;
-        order.unitPrice = java.math.BigDecimal.valueOf(19.99);
-        order.totalPrice = java.math.BigDecimal.valueOf(19.99);
-        order.status = "PENDING";
-        order.persist();
-
-        entityManager.flush(); // Flush to ensure all entities are persisted
-        entityManager.clear(); // Clear to force reload
-
-        // When
-        UserCalendar found = UserCalendar.findById(calendar.id);
-        // Access the collection size to trigger lazy loading
-        int size = found.orders.size();
-
-        // Then
-        assertNotNull(found.orders);
-        assertEquals(1, size);
-        assertEquals(1, found.orders.get(0).quantity);
-    }
-
-    @Test
-    @Transactional
-    void testRelationships_CascadeRemoveOrders() {
-        // Given
-        UserCalendar calendar = createValidCalendar("Test Calendar", 2025);
-        calendar.persist();
-
-        CalendarOrder order = new CalendarOrder();
-        order.user = testUser;
-        order.calendar = calendar;
-        order.quantity = 1;
-        order.unitPrice = java.math.BigDecimal.valueOf(19.99);
-        order.totalPrice = java.math.BigDecimal.valueOf(19.99);
-        order.status = "PENDING";
-        order.persist();
-
-        // Flush to ensure all entities are in managed state
-        entityManager.flush();
-        entityManager.clear(); // Clear persistence context to reload fresh
-
-        // When - Reload calendar to ensure it's in managed state with proper relationships
-        UserCalendar managedCalendar = UserCalendar.findById(calendar.id);
-        managedCalendar.delete();
-        entityManager.flush();
-
-        // Then
-        assertEquals(0, CalendarOrder.count());
-    }
+    // testRelationships_OneToManyOrders and testRelationships_CascadeRemoveOrders removed
+    // The orders relationship on UserCalendar was deprecated and removed
+    // Orders now use items to track calendars instead of a direct calendar reference
 
     @Test
     @Transactional

@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import villagecompute.calendar.data.models.CalendarOrder;
+import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
@@ -63,7 +64,8 @@ class OrderResolverTest {
     @BeforeEach
     @Transactional
     void setUp() throws Exception {
-        // Clean up existing test data
+        // Clean up existing test data (order matters due to FK constraints)
+        CalendarOrderItem.deleteAll();
         CalendarOrder.deleteAll();
         UserCalendar.deleteAll();
         CalendarUser.deleteAll();
@@ -167,7 +169,7 @@ class OrderResolverTest {
 
         given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
                 .statusCode(200).body("data.__type.name", equalTo("CalendarOrder"))
-                .body("data.__type.fields.name", hasItems("id", "status", "quantity", "totalPrice", "calendar", "user"))
+                .body("data.__type.fields.name", hasItems("id", "status", "items", "totalPrice", "subtotal", "user"))
                 .body("errors", nullValue());
     }
 
@@ -415,7 +417,7 @@ class OrderResolverTest {
         assertNotNull(order);
         assertNotNull(order.id);
         assertEquals("PENDING", order.status);
-        assertEquals(3, order.quantity);
+        assertEquals(3, order.getTotalItemCount());
         assertNotNull(order.orderNumber);
     }
 

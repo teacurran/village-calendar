@@ -140,19 +140,22 @@ function getFirstPdfItem(order: CalendarOrder | null): any | null {
 
 /**
  * Get calendar SVG content from order
- * Checks calendar.generatedSvg first, then item configurations
+ * Checks item configurations and assets
  */
 function getCalendarSvg(order: CalendarOrder | null): string | null {
   if (!order) return null;
 
-  // Try calendar.generatedSvg first
-  if (order.calendar?.generatedSvg) {
-    return order.calendar.generatedSvg;
-  }
-
-  // Try to find SVG in item configurations
+  // Try to find SVG in item configurations or assets
   if (order.items && order.items.length > 0) {
     for (const item of order.items) {
+      // Try item assets first
+      if (item.assets && item.assets.length > 0) {
+        const mainAsset = item.assets.find((a: { assetKey: string }) => a.assetKey === "main");
+        if (mainAsset?.svgContent) {
+          return mainAsset.svgContent;
+        }
+      }
+      // Try configuration
       const config = item.configuration;
       if (config) {
         // Configuration might be a string or object

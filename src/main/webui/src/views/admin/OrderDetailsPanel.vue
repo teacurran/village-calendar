@@ -136,11 +136,21 @@ const statusTimeline = computed(() => {
 });
 
 /**
- * Get SVG content from calendar
+ * Get SVG content from first order item configuration or item assets
  */
 function getCalendarSvg(): string | null {
-  if (!props.order?.calendar) return null;
-  return props.order.calendar.generatedSvg || null;
+  if (!props.order?.items?.length) return null;
+  const item = props.order.items[0];
+  // Try configuration first
+  if (item.configuration?.generatedSvg) {
+    return item.configuration.generatedSvg;
+  }
+  // Try assets
+  if (item.assets?.length) {
+    const mainAsset = item.assets.find((a: { assetKey: string }) => a.assetKey === "main");
+    if (mainAsset?.svgContent) return mainAsset.svgContent;
+  }
+  return null;
 }
 
 /**
@@ -198,7 +208,8 @@ function downloadPdf() {
 
   const orderNumber = props.order.orderNumber || props.order.id;
   const customerName = getCustomerNameForFilename();
-  const year = props.order.calendar?.year || new Date().getFullYear();
+  const firstItem = props.order.items?.[0];
+  const year = firstItem?.configuration?.year || new Date().getFullYear();
 
   // For now, download as SVG - in production this would call a PDF generation endpoint
   const blob = new Blob([svg], { type: "image/svg+xml" });
@@ -282,26 +293,14 @@ function downloadPdf() {
           </div>
         </div>
 
-        <!-- Calendar Details -->
+        <!-- Order Items -->
         <div class="flex-1">
           <div class="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <span class="text-surface-600">Calendar:</span>
-              <span class="font-semibold ml-2">{{
-                order.calendar?.name || "N/A"
-              }}</span>
-            </div>
-            <div>
-              <span class="text-surface-600">Year:</span>
-              <span class="ml-2">{{ order.calendar?.year || "N/A" }}</span>
-            </div>
-            <div>
-              <span class="text-surface-600">Quantity:</span>
-              <span class="ml-2">{{ order.quantity }}</span>
-            </div>
-            <div>
-              <span class="text-surface-600">Unit Price:</span>
-              <span class="ml-2">{{ formatCurrency(order.unitPrice) }}</span>
+            <div v-for="item in order.items" :key="item.id" class="col-span-2 border-b pb-2 mb-2">
+              <div class="font-semibold">{{ item.description || "Calendar" }}</div>
+              <div class="text-surface-600">
+                {{ item.quantity }} x {{ formatCurrency(item.unitPrice) }} = {{ formatCurrency(item.lineTotal) }}
+              </div>
             </div>
             <div class="col-span-2">
               <span class="text-surface-600">Total Price:</span>

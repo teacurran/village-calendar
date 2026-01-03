@@ -127,7 +127,8 @@ public class OrderResourceTest {
         CalendarOrderItem item = new CalendarOrderItem();
         item.order = order;
         item.productType = CalendarOrderItem.TYPE_PRINT;
-        item.productName = "Test Calendar " + year;
+        item.description = "Test Calendar " + year;
+        item.generatorType = CalendarOrderItem.GENERATOR_CALENDAR;
         item.setYear(year);
         item.quantity = 1;
         item.unitPrice = new BigDecimal("25.00");
@@ -151,8 +152,7 @@ public class OrderResourceTest {
         return QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder order = new CalendarOrder();
             order.user = null; // Guest order
-            order.quantity = 1;
-            order.unitPrice = new BigDecimal("25.00");
+            order.subtotal = new BigDecimal("25.00");
             order.totalPrice = new BigDecimal("25.00");
             order.status = CalendarOrder.STATUS_PAID;
             order.orderNumber = orderNumber;
@@ -171,8 +171,7 @@ public class OrderResourceTest {
         return QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder order = new CalendarOrder();
             order.user = owner;
-            order.quantity = 1;
-            order.unitPrice = new BigDecimal("25.00");
+            order.subtotal = new BigDecimal("25.00");
             order.totalPrice = new BigDecimal("25.00");
             order.status = CalendarOrder.STATUS_PAID;
             order.orderNumber = orderNumber;
@@ -225,8 +224,7 @@ public class OrderResourceTest {
         CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder newOrder = new CalendarOrder();
             newOrder.user = null; // Guest order for simpler testing
-            newOrder.quantity = 1;
-            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.subtotal = new BigDecimal("25.00");
             newOrder.totalPrice = new BigDecimal("25.00");
             newOrder.status = CalendarOrder.STATUS_PAID;
             newOrder.orderNumber = "VC-PDFTEST-" + System.currentTimeMillis();
@@ -252,8 +250,7 @@ public class OrderResourceTest {
         CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder newOrder = new CalendarOrder();
             newOrder.user = null; // Guest order
-            newOrder.quantity = 1;
-            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.subtotal = new BigDecimal("25.00");
             newOrder.totalPrice = new BigDecimal("25.00");
             newOrder.status = CalendarOrder.STATUS_PAID;
             newOrder.orderNumber = "VC-NOSVG-" + System.currentTimeMillis();
@@ -289,8 +286,7 @@ public class OrderResourceTest {
         CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder newOrder = new CalendarOrder();
             newOrder.user = null;
-            newOrder.quantity = 1;
-            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.subtotal = new BigDecimal("25.00");
             newOrder.totalPrice = new BigDecimal("25.00");
             newOrder.status = CalendarOrder.STATUS_PAID;
             newOrder.orderNumber = "VC-NULLEMAIL-" + System.currentTimeMillis();
@@ -344,8 +340,7 @@ public class OrderResourceTest {
         CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder newOrder = new CalendarOrder();
             newOrder.user = null;
-            newOrder.quantity = 1;
-            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.subtotal = new BigDecimal("25.00");
             newOrder.totalPrice = new BigDecimal("25.00");
             newOrder.status = CalendarOrder.STATUS_PAID;
             newOrder.orderNumber = "VC-SPECIAL-" + System.currentTimeMillis();
@@ -370,8 +365,7 @@ public class OrderResourceTest {
         CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder newOrder = new CalendarOrder();
             newOrder.user = null;
-            newOrder.quantity = 1;
-            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.subtotal = new BigDecimal("25.00");
             newOrder.totalPrice = new BigDecimal("25.00");
             newOrder.status = CalendarOrder.STATUS_PAID;
             newOrder.orderNumber = "VC-CONFIGSVG-" + System.currentTimeMillis();
@@ -383,7 +377,7 @@ public class OrderResourceTest {
             CalendarOrderItem item = new CalendarOrderItem();
             item.order = newOrder;
             item.productType = CalendarOrderItem.TYPE_PRINT;
-            item.productName = "Config SVG Test";
+            item.description = "Config SVG Test";
             item.setYear(2025);
             item.quantity = 1;
             item.unitPrice = new BigDecimal("25.00");
@@ -411,8 +405,7 @@ public class OrderResourceTest {
         CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder newOrder = new CalendarOrder();
             newOrder.user = null;
-            newOrder.quantity = 1;
-            newOrder.unitPrice = new BigDecimal("25.00");
+            newOrder.subtotal = new BigDecimal("25.00");
             newOrder.totalPrice = new BigDecimal("25.00");
             newOrder.status = CalendarOrder.STATUS_PAID;
             newOrder.orderNumber = "VC-INVALIDSVG-" + System.currentTimeMillis();

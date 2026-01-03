@@ -99,11 +99,9 @@ class OrderGraphQLUnitTest {
         testOrder = new CalendarOrder();
         testOrder.id = UUID.randomUUID();
         testOrder.user = testUser;
-        testOrder.calendar = testCalendar;
         testOrder.orderNumber = "VC-TEST-1234";
         testOrder.status = CalendarOrder.STATUS_PENDING;
-        testOrder.quantity = 1;
-        testOrder.unitPrice = new BigDecimal("25.00");
+        testOrder.subtotal = new BigDecimal("25.00");
         testOrder.totalPrice = new BigDecimal("30.00");
         testOrder.notes = "";
         testOrder.items = new ArrayList<>();

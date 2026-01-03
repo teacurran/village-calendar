@@ -12,8 +12,9 @@ Order Number: {order.orderNumber}
 
 ORDER SUMMARY
 ------------------------------------
-Calendar: {order.calendar.name} ({order.calendar.year})
-Quantity: {order.quantity} {#if order.quantity > 1}calendars{#else}calendar{/if}
+{#for item in order.items}
+{item.description} ({item.getYear()}) x {item.quantity}
+{/for}
 Shipped Date: {order.shippedAt.toString()}
 
 SHIPPING ADDRESS

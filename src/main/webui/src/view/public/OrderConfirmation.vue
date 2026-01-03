@@ -51,34 +51,18 @@
 
             <Divider />
 
-            <!-- Calendar Info -->
+            <!-- Order Items -->
             <div class="calendar-section">
-              <h3>Calendar Details</h3>
-              <div class="calendar-info">
-                <div class="calendar-preview-small">
-                  <CalendarPreview
-                    v-if="order.calendar"
-                    :calendar-id="order.calendar.id"
-                    :scale-to-fit="true"
-                  />
-                </div>
+              <h3>Order Items</h3>
+              <div v-for="item in order.items" :key="item.id" class="calendar-info mb-3">
                 <div class="calendar-details">
-                  <p class="calendar-name">{{ order.calendar?.name }}</p>
+                  <p class="calendar-name">{{ item.description || "Calendar" }}</p>
                   <p class="calendar-meta">
-                    {{ order.calendar?.year }} Calendar
+                    {{ item.quantity }} x ${{ item.unitPrice?.toFixed(2) || "0.00" }}
                   </p>
                   <p class="calendar-meta">
-                    Template: {{ order.calendar?.template?.name }}
+                    Type: {{ item.productType }}
                   </p>
-                  <Button
-                    v-if="order.calendar?.generatedPdfUrl"
-                    label="Download PDF"
-                    icon="pi pi-download"
-                    outlined
-                    size="small"
-                    class="mt-2"
-                    @click="downloadPDF"
-                  />
                 </div>
               </div>
             </div>
@@ -116,25 +100,21 @@
             <div class="order-summary-section">
               <h3>Order Summary</h3>
               <div class="summary-rows">
+                <div v-for="item in order.items" :key="item.id" class="summary-row">
+                  <span>{{ item.description }} × {{ item.quantity }}</span>
+                  <span>{{ formatCurrency(item.lineTotal) }}</span>
+                </div>
                 <div class="summary-row">
-                  <span>{{ order.calendar?.name }} × {{ order.quantity }}</span>
-                  <span>{{
-                    formatCurrency(order.unitPrice * order.quantity)
-                  }}</span>
+                  <span>Subtotal</span>
+                  <span>{{ formatCurrency(order.subtotal) }}</span>
                 </div>
                 <div class="summary-row">
                   <span>Shipping</span>
-                  <span>{{ formatCurrency(5.99) }}</span>
+                  <span>{{ formatCurrency(order.shippingCost || 0) }}</span>
                 </div>
                 <div class="summary-row">
                   <span>Tax</span>
-                  <span>{{
-                    formatCurrency(
-                      order.totalPrice -
-                        order.unitPrice * order.quantity -
-                        5.99,
-                    )
-                  }}</span>
+                  <span>{{ formatCurrency(order.taxAmount || 0) }}</span>
                 </div>
                 <Divider />
                 <div class="summary-row total">

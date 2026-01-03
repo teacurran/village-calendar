@@ -23,7 +23,6 @@ import org.jboss.logging.Logger;
 
 import villagecompute.calendar.api.graphql.inputs.CalendarInput;
 import villagecompute.calendar.api.graphql.inputs.CalendarUpdateInput;
-import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.AuthenticationService;
@@ -349,25 +348,6 @@ public class CalendarGraphQL {
 
         CalendarUser user = authService.requireCurrentUser(jwt);
         UUID calendarId = UuidUtil.parse(id, UuidUtil.FIELD_CALENDAR_ID);
-
-        // Check for paid orders before deletion
-        Optional<UserCalendar> calendarOpt = UserCalendar.<UserCalendar>findByIdOptional(calendarId);
-        if (calendarOpt.isPresent()) {
-            UserCalendar calendar = calendarOpt.get();
-            // Check for paid orders
-            if (calendar.orders != null && !calendar.orders.isEmpty()) {
-                boolean hasPaidOrders = calendar.orders.stream()
-                        .anyMatch(order -> CalendarOrder.STATUS_PAID.equals(order.status)
-                                || CalendarOrder.STATUS_PROCESSING.equals(order.status)
-                                || CalendarOrder.STATUS_SHIPPED.equals(order.status)
-                                || CalendarOrder.STATUS_DELIVERED.equals(order.status));
-
-                if (hasPaidOrders) {
-                    LOG.errorf("Cannot delete calendar %s: " + "has paid orders", id);
-                    throw new IllegalStateException("Cannot delete calendar with paid orders");
-                }
-            }
-        }
 
         // Delete calendar using service (handles authorization)
         calendarService.deleteCalendar(calendarId, user);

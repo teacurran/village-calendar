@@ -55,7 +55,13 @@ class SessionServiceTest {
     void tearDown() {
         // Clean up test data in proper order due to foreign key constraints
         try {
-            // Delete calendar_orders first (foreign key to user_calendars)
+            // Delete order items first (foreign key to orders)
+            villagecompute.calendar.data.models.CalendarOrderItem.deleteAll();
+        } catch (Exception e) {
+            // Ignore if table doesn't exist or is empty
+        }
+        try {
+            // Delete calendar_orders (foreign key to users)
             villagecompute.calendar.data.models.CalendarOrder.deleteAll();
         } catch (Exception e) {
             // Ignore if table doesn't exist or is empty
