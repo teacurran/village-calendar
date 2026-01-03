@@ -1501,38 +1501,34 @@ onMounted(() => {
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
               <div class="weekend-color-controls">
-                <!-- Theme Selection as Inline Swatches -->
+                <!-- Theme Selection as Radio Buttons -->
                 <div class="weekend-theme-section">
                   <label class="color-label">Color Theme</label>
-                  <div class="weekend-theme-swatches">
+                  <div class="weekend-theme-options">
                     <div
                       v-for="option in weekendStyleOptions"
                       :key="option.id"
-                      class="weekend-theme-swatch"
+                      class="weekend-theme-option"
                       :class="{
                         selected:
                           selectedWeekendStyle === option.id &&
                           !solidWeekendColor,
-                        'is-none': option.id === 'none',
                       }"
-                      :title="option.name"
                       @click="selectWeekendTheme(option.id)"
                     >
-                      <div
-                        v-if="option.previewColors.length === 1"
-                        class="theme-preview-single"
-                        :style="{
-                          backgroundColor: option.previewColors[0],
-                        }"
+                      <RadioButton
+                        v-model="selectedWeekendStyle"
+                        :input-id="'weekend-theme-' + option.id"
+                        :value="option.id"
+                        name="weekendTheme"
+                        :disabled="!!solidWeekendColor"
                       />
-                      <div
-                        v-else
-                        class="theme-preview-gradient"
-                        :style="{
-                          background: `linear-gradient(to right, ${option.previewColors.join(', ')})`,
-                        }"
-                      />
-                      <span class="theme-label">{{ option.name }}</span>
+                      <label
+                        :for="'weekend-theme-' + option.id"
+                        class="weekend-theme-label"
+                      >
+                        {{ option.name }}
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -2126,80 +2122,39 @@ onMounted(() => {
   gap: 0.5rem;
 }
 
-/* Weekend theme inline swatches */
-.weekend-theme-swatches {
+/* Weekend theme radio options */
+.weekend-theme-options {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.5rem;
 }
 
-.weekend-theme-swatch {
+.weekend-theme-option {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border: 2px solid var(--surface-200);
   border-radius: 6px;
   cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  background: var(--surface-0);
 }
 
-.weekend-theme-swatch:hover {
-  background-color: var(--surface-hover);
+.weekend-theme-option:hover {
+  border-color: var(--primary-300);
+  background: var(--surface-50);
 }
 
-.weekend-theme-swatch.selected {
+.weekend-theme-option.selected {
   border-color: var(--primary-color);
-  background-color: var(--primary-50);
+  background: var(--primary-50);
 }
 
-.weekend-theme-swatch.is-none .theme-preview-single {
-  background-image: linear-gradient(
-    45deg,
-    #ccc 25%,
-    transparent 25%,
-    transparent 75%,
-    #ccc 75%
-  );
-  background-size: 8px 8px;
-  background-position:
-    0 0,
-    4px 4px;
-  position: relative;
-}
-
-.weekend-theme-swatch.is-none .theme-preview-single::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    45deg,
-    transparent 25%,
-    #eee 25%,
-    #eee 75%,
-    transparent 75%
-  );
-  background-size: 8px 8px;
-  background-position: 4px 0;
-}
-
-.theme-preview-single,
-.theme-preview-gradient {
-  width: 48px;
-  height: 24px;
-  border-radius: 4px;
-  border: 1px solid var(--surface-border);
-}
-
-.theme-label {
-  font-size: 0.7rem;
-  color: var(--text-color-secondary);
-  text-align: center;
-  max-width: 52px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.weekend-theme-label {
+  font-size: 0.875rem;
+  color: var(--text-color);
+  cursor: pointer;
 }
 
 /* Weekend solid color inline swatches */
