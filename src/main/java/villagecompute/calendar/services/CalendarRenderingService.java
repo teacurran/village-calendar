@@ -301,6 +301,10 @@ public class CalendarRenderingService {
     private record Cell(int x, int y, int width, int height) {
     }
 
+    /** Encapsulates text styling properties for SVG text rendering */
+    private record TextRenderStyle(int size, String color, String fontWeight, String textAnchor, double rotation) {
+    }
+
     /** Renders the cell background color if needed */
     private void renderCellBackground(StringBuilder svg, Cell cell, String cellBackground) {
         String pdfSafeColor = convertColorForPDF(cellBackground);
@@ -455,24 +459,31 @@ public class CalendarRenderingService {
         int scaledSize = (int) (eventDisplay.getTextSize(7) * scaleFactor);
         int textSize = Math.max(5, Math.min(12, scaledSize));
         String textColor = eventDisplay.getTextColor(config.customDateColor);
-        String textAlign = eventDisplay.getTextAlign("center");
-        double rotation = eventDisplay.getTextRotation();
         String fontWeight = eventDisplay.isTextBold() ? "bold" : "normal";
-        String textAnchor = getTextAnchor(textAlign);
+        String textAnchor = getTextAnchor(eventDisplay.getTextAlign("center"));
+        double rotation = eventDisplay.getTextRotation();
+
+        TextRenderStyle style = new TextRenderStyle(textSize, textColor, fontWeight, textAnchor, rotation);
 
         if (eventDisplay.isTextWrap() && title.length() > 8) {
-            renderWrappedText(svg, title, textX, textY, textSize, textColor, fontWeight, textAnchor, rotation);
+            renderWrappedText(svg, title, textX, textY, style);
         } else {
-            String displayTitle = (!eventDisplay.isTextWrap() && title.length() > 10) ? title.substring(0, 9) + "…"
-                    : title;
-            String transform = rotation != 0
-                    ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", rotation, textX, textY)
-                    : "";
-            svg.append(String.format(
-                    "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
-                            + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
-                    textX, textY, textSize, textColor, fontWeight, textAnchor, transform, displayTitle));
+            renderSingleLineText(svg, title, textX, textY, style, eventDisplay.isTextWrap());
         }
+    }
+
+    /** Renders a single line of text, truncating if necessary */
+    private void renderSingleLineText(StringBuilder svg, String title, double textX, double textY,
+            TextRenderStyle style, boolean allowFullTitle) {
+        String displayTitle = (!allowFullTitle && title.length() > 10) ? title.substring(0, 9) + "…" : title;
+        String transform = style.rotation() != 0
+                ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", style.rotation(), textX, textY)
+                : "";
+        svg.append(String.format(
+                "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
+                        + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
+                textX, textY, style.size(), style.color(), style.fontWeight(), style.textAnchor(), transform,
+                displayTitle));
     }
 
     /** Converts text alignment to SVG text-anchor */
@@ -486,8 +497,7 @@ public class CalendarRenderingService {
     }
 
     /** Renders wrapped text on two lines */
-    private void renderWrappedText(StringBuilder svg, String title, double textX, double textY, int textSize,
-            String textColor, String fontWeight, String textAnchor, double rotation) {
+    private void renderWrappedText(StringBuilder svg, String title, double textX, double textY, TextRenderStyle style) {
         String[] words = title.split(" ");
         StringBuilder line1 = new StringBuilder();
         StringBuilder line2 = new StringBuilder();
@@ -508,23 +518,23 @@ public class CalendarRenderingService {
             }
         }
 
-        String transform = rotation != 0
-                ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", rotation, textX, textY)
+        String transform = style.rotation() != 0
+                ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", style.rotation(), textX, textY)
                 : "";
-        double lineHeight = textSize * 1.2;
+        double lineHeight = style.size() * 1.2;
 
         svg.append(String.format(
                 "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
                         + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
-                textX, textY - lineHeight / 2, textSize, textColor, fontWeight, textAnchor, transform,
-                line1.toString()));
+                textX, textY - lineHeight / 2, style.size(), style.color(), style.fontWeight(), style.textAnchor(),
+                transform, line1.toString()));
 
         if (line2.length() > 0) {
             svg.append(String.format(
                     "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
                             + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
-                    textX, textY + lineHeight / 2, textSize, textColor, fontWeight, textAnchor, transform,
-                    line2.toString()));
+                    textX, textY + lineHeight / 2, style.size(), style.color(), style.fontWeight(), style.textAnchor(),
+                    transform, line2.toString()));
         }
     }
 
