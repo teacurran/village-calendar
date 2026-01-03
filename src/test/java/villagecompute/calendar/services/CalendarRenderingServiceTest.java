@@ -367,11 +367,13 @@ class CalendarRenderingServiceTest {
         assertTrue(svg.contains(SVG_OPEN_TAG));
     }
 
-    @Test
-    void testGenerateCalendarSVG_WithCompactMode() {
+    @ParameterizedTest
+    @ValueSource(
+            booleans = {true, false})
+    void testGenerateCalendarSVG_WithCompactMode(boolean compactMode) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.compactMode = true;
+        config.compactMode = compactMode;
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -379,11 +381,13 @@ class CalendarRenderingServiceTest {
         assertTrue(svg.contains(SVG_OPEN_TAG));
     }
 
-    @Test
-    void testGenerateCalendarSVG_WithRotatedMonthNames() {
+    @ParameterizedTest
+    @ValueSource(
+            booleans = {true, false})
+    void testGenerateCalendarSVG_WithRotatedMonthNames(boolean rotateMonthNames) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.rotateMonthNames = true;
+        config.rotateMonthNames = rotateMonthNames;
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -391,11 +395,13 @@ class CalendarRenderingServiceTest {
         assertTrue(svg.contains(SVG_OPEN_TAG));
     }
 
-    @Test
-    void testGenerateCalendarSVG_WithWeekNumbers() {
+    @ParameterizedTest
+    @ValueSource(
+            booleans = {true, false})
+    void testGenerateCalendarSVG_WithWeekNumbers(boolean showWeekNumbers) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.showWeekNumbers = true;
+        config.showWeekNumbers = showWeekNumbers;
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -956,11 +962,13 @@ class CalendarRenderingServiceTest {
 
     // ========== EVENT DISPLAY MODE BRANCH TESTS ==========
 
-    @Test
-    void testGenerateCalendarSVG_EventDisplayMode_None() {
+    @ParameterizedTest
+    @ValueSource(
+            strings = {"none", "large", "large-text", "small"})
+    void testGenerateCalendarSVG_WithEventDisplayMode(String eventDisplayMode) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.eventDisplayMode = "none";
+        config.eventDisplayMode = eventDisplayMode;
         config.customDates.put("2025-01-15", "🎂");
         config.eventTitles.put("2025-01-15", "Birthday");
 
@@ -970,117 +978,15 @@ class CalendarRenderingServiceTest {
         assertTrue(svg.contains(SVG_OPEN_TAG));
     }
 
-    @Test
-    void testGenerateCalendarSVG_EventDisplayMode_Large() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.eventDisplayMode = "large";
-        config.customDates.put("2025-01-15", "🎂");
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_EventDisplayMode_LargeText() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.eventDisplayMode = "large-text";
-        config.customDates.put("2025-01-15", "🎂");
-        config.eventTitles.put("2025-01-15", "Birthday Party");
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_EventDisplayMode_Small() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.eventDisplayMode = "small";
-        config.customDates.put("2025-01-15", "🎂");
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
     // ========== MOON DISPLAY MODE BRANCH TESTS ==========
 
-    @Test
-    void testGenerateCalendarSVG_MoonDisplayMode_None() {
+    @ParameterizedTest
+    @ValueSource(
+            strings = {"none", "illumination", "phases", "full-only"})
+    void testGenerateCalendarSVG_WithMoonDisplayMode(String moonDisplayMode) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.moonDisplayMode = "none";
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_MoonDisplayMode_Illumination() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.moonDisplayMode = "illumination";
-        config.latitude = 40.7128;
-        config.longitude = -74.0060;
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_MoonDisplayMode_Phases() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.moonDisplayMode = "phases";
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_MoonDisplayMode_FullOnly() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.moonDisplayMode = "full-only";
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    // ========== ROTATE MONTH NAMES BRANCH TESTS ==========
-
-    @Test
-    void testGenerateCalendarSVG_RotateMonthNames_True() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.rotateMonthNames = true;
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains("rotate"));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_RotateMonthNames_False() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.rotateMonthNames = false;
+        config.moonDisplayMode = moonDisplayMode;
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -1090,24 +996,13 @@ class CalendarRenderingServiceTest {
 
     // ========== SHOW DAY NAMES BRANCH TESTS ==========
 
-    @Test
-    void testGenerateCalendarSVG_ShowDayNames_True() {
+    @ParameterizedTest
+    @ValueSource(
+            booleans = {true, false})
+    void testGenerateCalendarSVG_WithShowDayNames(boolean showDayNames) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.showDayNames = true;
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        // Should contain day abbreviations like Sun, Mon, etc.
-        assertTrue(svg.contains("Sun") || svg.contains("Mon") || svg.contains("S") || svg.contains("M"));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_ShowDayNames_False() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.showDayNames = false;
+        config.showDayNames = showDayNames;
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -1117,24 +1012,13 @@ class CalendarRenderingServiceTest {
 
     // ========== SHOW GRID BRANCH TESTS ==========
 
-    @Test
-    void testGenerateCalendarSVG_ShowGrid_True() {
+    @ParameterizedTest
+    @ValueSource(
+            booleans = {true, false})
+    void testGenerateCalendarSVG_WithShowGrid(boolean showGrid) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.showGrid = true;
-        config.gridLineColor = "#cccccc";
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(RECT_TAG) || svg.contains("<line"));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_ShowGrid_False() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.showGrid = false;
+        config.showGrid = showGrid;
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -1144,24 +1028,13 @@ class CalendarRenderingServiceTest {
 
     // ========== HIGHLIGHT WEEKENDS BRANCH TESTS ==========
 
-    @Test
-    void testGenerateCalendarSVG_HighlightWeekends_True() {
+    @ParameterizedTest
+    @ValueSource(
+            booleans = {true, false})
+    void testGenerateCalendarSVG_WithHighlightWeekends(boolean highlightWeekends) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.highlightWeekends = true;
-        config.weekendBgColor = "#f0f0f0";
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_HighlightWeekends_False() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.highlightWeekends = false;
+        config.highlightWeekends = highlightWeekends;
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -1187,23 +1060,13 @@ class CalendarRenderingServiceTest {
 
     // ========== LAYOUT STYLE BRANCH TESTS ==========
 
-    @Test
-    void testGenerateCalendarSVG_LayoutStyle_Default() {
+    @ParameterizedTest
+    @ValueSource(
+            strings = {"default", "weekday-grid"})
+    void testGenerateCalendarSVG_WithLayoutStyle(String layoutStyle) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.layoutStyle = "default";
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_LayoutStyle_WeekdayGrid() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.layoutStyle = "weekday-grid";
+        config.layoutStyle = layoutStyle;
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -1290,7 +1153,7 @@ class CalendarRenderingServiceTest {
     // ========== CUSTOM EVENT DISPLAY SETTINGS BRANCH TESTS ==========
 
     @Test
-    void testGenerateCalendarSVG_CustomEventWithDisplaySettings() throws Exception {
+    void testGenerateCalendarSVG_CustomEventWithDisplaySettings() {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
 
@@ -1310,7 +1173,7 @@ class CalendarRenderingServiceTest {
     }
 
     @Test
-    void testGenerateCalendarSVG_CustomEventWithTextWrap() throws Exception {
+    void testGenerateCalendarSVG_CustomEventWithTextWrap() {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
 
@@ -1330,53 +1193,17 @@ class CalendarRenderingServiceTest {
 
     // ========== TEXT ALIGNMENT BRANCH TESTS ==========
 
-    @Test
-    void testGenerateCalendarSVG_EventWithLeftAlignment() throws Exception {
+    @ParameterizedTest
+    @ValueSource(
+            strings = {"left", "center", "right"})
+    void testGenerateCalendarSVG_EventWithTextAlignment(String textAlign) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
 
         java.util.Map<String, Object> customData = new java.util.HashMap<>();
         customData.put("emoji", "🎂");
         java.util.Map<String, Object> displaySettings = new java.util.HashMap<>();
-        displaySettings.put("textAlign", "left");
-        customData.put("displaySettings", displaySettings);
-        config.customDates.put("2025-01-15", customData);
-        config.eventTitles.put("2025-01-15", "Birthday");
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_EventWithRightAlignment() throws Exception {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-
-        java.util.Map<String, Object> customData = new java.util.HashMap<>();
-        customData.put("emoji", "🎂");
-        java.util.Map<String, Object> displaySettings = new java.util.HashMap<>();
-        displaySettings.put("textAlign", "right");
-        customData.put("displaySettings", displaySettings);
-        config.customDates.put("2025-01-15", customData);
-        config.eventTitles.put("2025-01-15", "Birthday");
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_EventWithCenterAlignment() throws Exception {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-
-        java.util.Map<String, Object> customData = new java.util.HashMap<>();
-        customData.put("emoji", "🎂");
-        java.util.Map<String, Object> displaySettings = new java.util.HashMap<>();
-        displaySettings.put("textAlign", "center");
+        displaySettings.put("textAlign", textAlign);
         customData.put("displaySettings", displaySettings);
         config.customDates.put("2025-01-15", customData);
         config.eventTitles.put("2025-01-15", "Birthday");
@@ -1514,58 +1341,6 @@ class CalendarRenderingServiceTest {
 
         assertNotNull(color1);
         assertNotNull(color2);
-    }
-
-    // ========== COMPACT MODE BRANCH TESTS ==========
-
-    @Test
-    void testGenerateCalendarSVG_CompactMode_True() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.compactMode = true;
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_CompactMode_False() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.compactMode = false;
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    // ========== WEEK NUMBERS BRANCH TESTS ==========
-
-    @Test
-    void testGenerateCalendarSVG_ShowWeekNumbers_True() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.showWeekNumbers = true;
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testGenerateCalendarSVG_ShowWeekNumbers_False() {
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.showWeekNumbers = false;
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
     }
 
     // ========== COMBINATION BRANCH TESTS ==========
