@@ -438,23 +438,18 @@ const weekendStyleOptions = [
 
 // Weekend color swatches for solid colors (lighter, suitable for backgrounds)
 const weekendColorSwatches = [
-  // Light grays
-  "#f5f5f5",
-  "#e8e8e8",
-  // Light blue
-  "#e3f2fd",
-  // Light green
-  "#e8f5e9",
-  // Light yellow
-  "#fffde7",
-  // Light orange
-  "#fff3e0",
-  // Light pink
-  "#fce4ec",
-  // Light purple
-  "#f3e5f5",
-  // Light teal
-  "#e0f2f1",
+  // Row 1
+  "#f5f5f5", // Light gray
+  "#e8e8e8", // Medium gray
+  "#e3f2fd", // Light blue
+  "#e8f5e9", // Light green
+  "#fffde7", // Light yellow
+  // Row 2
+  "#fff3e0", // Light orange
+  "#fce4ec", // Light pink
+  "#f3e5f5", // Light purple
+  "#e0f2f1", // Light teal
+  "#ffebee", // Light red
 ];
 
 // Compact color swatches - flat array for inline display
@@ -1273,8 +1268,216 @@ onMounted(() => {
           </StepPanel>
         </StepItem>
 
-        <!-- Step 4: Holidays -->
+        <!-- Step 4: Weekend Colors -->
         <StepItem value="4">
+          <Step>Weekend Colors</Step>
+          <StepPanel v-slot="{ activateCallback }">
+            <div class="step-content">
+              <div class="weekend-color-controls">
+                <!-- Theme Selection as Radio Buttons -->
+                <div class="weekend-theme-section">
+                  <label class="color-label">Color Theme</label>
+                  <div class="weekend-theme-options">
+                    <div
+                      v-for="option in weekendStyleOptions"
+                      :key="option.id"
+                      class="weekend-theme-option"
+                      :class="{
+                        selected:
+                          selectedWeekendStyle === option.id &&
+                          !solidWeekendColor,
+                      }"
+                      @click="selectWeekendTheme(option.id)"
+                    >
+                      <RadioButton
+                        v-model="selectedWeekendStyle"
+                        :input-id="'weekend-theme-' + option.id"
+                        :value="option.id"
+                        name="weekendTheme"
+                        :disabled="!!solidWeekendColor"
+                      />
+                      <label
+                        :for="'weekend-theme-' + option.id"
+                        class="weekend-theme-label"
+                      >
+                        {{ option.name }}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Solid Color Selection as Inline Swatches -->
+                <div class="weekend-solid-section">
+                  <label class="color-label">Or Solid Color</label>
+                  <div class="weekend-solid-swatches">
+                    <div
+                      v-for="color in weekendColorSwatches"
+                      :key="color"
+                      class="weekend-solid-swatch"
+                      :class="{ selected: solidWeekendColor === color }"
+                      :style="{ backgroundColor: color }"
+                      :title="color"
+                      @click="selectSolidWeekendColor(color)"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="step-navigation">
+                <Button
+                  label="Previous"
+                  icon="pi pi-arrow-left"
+                  outlined
+                  @click="activateCallback('3')"
+                />
+                <Button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  icon-pos="right"
+                  @click="activateCallback('5')"
+                />
+              </div>
+            </div>
+          </StepPanel>
+        </StepItem>
+
+        <!-- Step 5: Text Colors -->
+        <StepItem value="5">
+          <Step>Text Colors</Step>
+          <StepPanel v-slot="{ activateCallback }">
+            <div class="step-content">
+              <div class="color-options">
+                <div class="color-option">
+                  <label class="color-label">Year Color</label>
+                  <VSwatches
+                    :model-value="yearColor"
+                    :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="10"
+                    popover-x="left"
+                    @update:model-value="handleYearColorChange"
+                  />
+                </div>
+
+                <div class="color-option">
+                  <label class="color-label">Month Names</label>
+                  <VSwatches
+                    :model-value="monthColor"
+                    :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="10"
+                    popover-x="left"
+                    @update:model-value="handleMonthColorChange"
+                  />
+                </div>
+
+                <div class="color-option">
+                  <label class="color-label">Day Numbers</label>
+                  <VSwatches
+                    :model-value="dayTextColor"
+                    :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="10"
+                    popover-x="left"
+                    @update:model-value="handleDayTextColorChange"
+                  />
+                </div>
+
+                <div class="color-option">
+                  <label class="color-label">Day Names</label>
+                  <VSwatches
+                    :model-value="dayNameColor"
+                    :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="10"
+                    popover-x="left"
+                    @update:model-value="handleDayNameColorChange"
+                  />
+                </div>
+
+                <div class="color-option">
+                  <label class="color-label">Grid Lines</label>
+                  <VSwatches
+                    :model-value="gridLineColor"
+                    :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="10"
+                    popover-x="left"
+                    @update:model-value="handleGridLineColorChange"
+                  />
+                </div>
+
+                <div class="color-option">
+                  <label class="color-label">Holiday text</label>
+                  <VSwatches
+                    :model-value="holidayColor"
+                    :swatches="colorSwatches"
+                    :swatch-size="24"
+                    :row-length="10"
+                    popover-x="left"
+                    @update:model-value="handleHolidayColorChange"
+                  />
+                </div>
+
+                <div class="color-option">
+                  <label class="color-label">Emojis</label>
+                  <div
+                    class="emoji-color-trigger"
+                    :title="currentEmojiStyle.label"
+                    @click="toggleEmojiPopover"
+                  >
+                    <img
+                      :src="`/api/calendar/emoji-preview?emoji=${previewEmoji}&style=${emojiFont}`"
+                      alt="Emoji style preview"
+                      class="emoji-trigger-img"
+                    />
+                  </div>
+                  <Popover
+                    ref="emojiPopover"
+                    :pt="{ root: { class: 'emoji-popover-left' } }"
+                  >
+                    <div class="emoji-popover-content">
+                      <div class="emoji-popover-swatches">
+                        <div
+                          v-for="option in emojiStyleOptions"
+                          :key="option.id"
+                          class="emoji-popover-swatch"
+                          :class="{ selected: emojiFont === option.id }"
+                          :title="option.label"
+                          @click="selectEmojiStyle(option)"
+                        >
+                          <img
+                            :src="`/api/calendar/emoji-preview?emoji=${previewEmoji}&style=${option.id}`"
+                            :alt="option.label"
+                            class="emoji-preview-img"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </Popover>
+                </div>
+              </div>
+
+              <div class="step-navigation">
+                <Button
+                  label="Previous"
+                  icon="pi pi-arrow-left"
+                  outlined
+                  @click="activateCallback('4')"
+                />
+                <Button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  icon-pos="right"
+                  @click="activateCallback('6')"
+                />
+              </div>
+            </div>
+          </StepPanel>
+        </StepItem>
+
+        <!-- Step 6: Holidays -->
+        <StepItem value="6">
           <Step>Holidays</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
@@ -1474,214 +1677,6 @@ onMounted(() => {
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              <div class="step-navigation">
-                <Button
-                  label="Previous"
-                  icon="pi pi-arrow-left"
-                  outlined
-                  @click="activateCallback('3')"
-                />
-                <Button
-                  label="Next"
-                  icon="pi pi-arrow-right"
-                  icon-pos="right"
-                  @click="activateCallback('5')"
-                />
-              </div>
-            </div>
-          </StepPanel>
-        </StepItem>
-
-        <!-- Step 5: Weekend Colors -->
-        <StepItem value="5">
-          <Step>Weekend Colors</Step>
-          <StepPanel v-slot="{ activateCallback }">
-            <div class="step-content">
-              <div class="weekend-color-controls">
-                <!-- Theme Selection as Radio Buttons -->
-                <div class="weekend-theme-section">
-                  <label class="color-label">Color Theme</label>
-                  <div class="weekend-theme-options">
-                    <div
-                      v-for="option in weekendStyleOptions"
-                      :key="option.id"
-                      class="weekend-theme-option"
-                      :class="{
-                        selected:
-                          selectedWeekendStyle === option.id &&
-                          !solidWeekendColor,
-                      }"
-                      @click="selectWeekendTheme(option.id)"
-                    >
-                      <RadioButton
-                        v-model="selectedWeekendStyle"
-                        :input-id="'weekend-theme-' + option.id"
-                        :value="option.id"
-                        name="weekendTheme"
-                        :disabled="!!solidWeekendColor"
-                      />
-                      <label
-                        :for="'weekend-theme-' + option.id"
-                        class="weekend-theme-label"
-                      >
-                        {{ option.name }}
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Solid Color Selection as Inline Swatches -->
-                <div class="weekend-solid-section">
-                  <label class="color-label">Or Solid Color</label>
-                  <div class="weekend-solid-swatches">
-                    <div
-                      v-for="color in weekendColorSwatches"
-                      :key="color"
-                      class="weekend-solid-swatch"
-                      :class="{ selected: solidWeekendColor === color }"
-                      :style="{ backgroundColor: color }"
-                      :title="color"
-                      @click="selectSolidWeekendColor(color)"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div class="step-navigation">
-                <Button
-                  label="Previous"
-                  icon="pi pi-arrow-left"
-                  outlined
-                  @click="activateCallback('4')"
-                />
-                <Button
-                  label="Next"
-                  icon="pi pi-arrow-right"
-                  icon-pos="right"
-                  @click="activateCallback('6')"
-                />
-              </div>
-            </div>
-          </StepPanel>
-        </StepItem>
-
-        <!-- Step 6: Text Colors -->
-        <StepItem value="6">
-          <Step>Text Colors</Step>
-          <StepPanel v-slot="{ activateCallback }">
-            <div class="step-content">
-              <div class="color-options">
-                <div class="color-option">
-                  <label class="color-label">Year Color</label>
-                  <VSwatches
-                    :model-value="yearColor"
-                    :swatches="colorSwatches"
-                    :swatch-size="24"
-                    :row-length="10"
-                    popover-x="left"
-                    @update:model-value="handleYearColorChange"
-                  />
-                </div>
-
-                <div class="color-option">
-                  <label class="color-label">Month Names</label>
-                  <VSwatches
-                    :model-value="monthColor"
-                    :swatches="colorSwatches"
-                    :swatch-size="24"
-                    :row-length="10"
-                    popover-x="left"
-                    @update:model-value="handleMonthColorChange"
-                  />
-                </div>
-
-                <div class="color-option">
-                  <label class="color-label">Day Numbers</label>
-                  <VSwatches
-                    :model-value="dayTextColor"
-                    :swatches="colorSwatches"
-                    :swatch-size="24"
-                    :row-length="10"
-                    popover-x="left"
-                    @update:model-value="handleDayTextColorChange"
-                  />
-                </div>
-
-                <div class="color-option">
-                  <label class="color-label">Day Names</label>
-                  <VSwatches
-                    :model-value="dayNameColor"
-                    :swatches="colorSwatches"
-                    :swatch-size="24"
-                    :row-length="10"
-                    popover-x="left"
-                    @update:model-value="handleDayNameColorChange"
-                  />
-                </div>
-
-                <div class="color-option">
-                  <label class="color-label">Grid Lines</label>
-                  <VSwatches
-                    :model-value="gridLineColor"
-                    :swatches="colorSwatches"
-                    :swatch-size="24"
-                    :row-length="10"
-                    popover-x="left"
-                    @update:model-value="handleGridLineColorChange"
-                  />
-                </div>
-
-                <div class="color-option">
-                  <label class="color-label">Holidays</label>
-                  <VSwatches
-                    :model-value="holidayColor"
-                    :swatches="colorSwatches"
-                    :swatch-size="24"
-                    :row-length="10"
-                    popover-x="left"
-                    @update:model-value="handleHolidayColorChange"
-                  />
-                </div>
-
-                <div class="color-option">
-                  <label class="color-label">Emojis</label>
-                  <div
-                    class="emoji-color-trigger"
-                    :title="currentEmojiStyle.label"
-                    @click="toggleEmojiPopover"
-                  >
-                    <img
-                      :src="`/api/calendar/emoji-preview?emoji=${previewEmoji}&style=${emojiFont}`"
-                      alt="Emoji style preview"
-                      class="emoji-trigger-img"
-                    />
-                  </div>
-                  <Popover
-                    ref="emojiPopover"
-                    :pt="{ root: { class: 'emoji-popover-left' } }"
-                  >
-                    <div class="emoji-popover-content">
-                      <div class="emoji-popover-swatches">
-                        <div
-                          v-for="option in emojiStyleOptions"
-                          :key="option.id"
-                          class="emoji-popover-swatch"
-                          :class="{ selected: emojiFont === option.id }"
-                          :title="option.label"
-                          @click="selectEmojiStyle(option)"
-                        >
-                          <img
-                            :src="`/api/calendar/emoji-preview?emoji=${previewEmoji}&style=${option.id}`"
-                            :alt="option.label"
-                            class="emoji-preview-img"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </Popover>
                 </div>
               </div>
 
@@ -2159,28 +2154,29 @@ onMounted(() => {
 
 /* Weekend solid color inline swatches */
 .weekend-solid-swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
+  max-width: 230px;
+  padding: 4px;
 }
 
 .weekend-solid-swatch {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border-radius: 4px;
-  border: 2px solid var(--surface-border);
+  border: 1px solid #999999;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .weekend-solid-swatch:hover {
-  transform: scale(1.1);
-  border-color: var(--text-color-secondary);
+  border-color: #666666;
 }
 
 .weekend-solid-swatch.selected {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px var(--primary-color);
+  outline: 2px solid #888888;
+  outline-offset: 2px;
 }
 
 /* Color options */
