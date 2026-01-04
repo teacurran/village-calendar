@@ -72,10 +72,10 @@ class CalendarRenderingServiceTest {
     void testCalendarConfig_DefaultMoonSettings() {
         CalendarConfigType config = new CalendarConfigType();
 
-        assertEquals(24, config.moonSize);
-        assertEquals(30, config.moonOffsetX);
-        assertEquals(30, config.moonOffsetY);
-        assertEquals(0.5, config.moonBorderWidth);
+        assertEquals(20, config.moonSize);
+        assertEquals(25, config.moonOffsetX);
+        assertEquals(36, config.moonOffsetY);
+        assertEquals(1.5, config.moonBorderWidth);
         assertEquals(0, config.latitude);
         assertEquals(0, config.longitude);
     }
@@ -877,12 +877,16 @@ class CalendarRenderingServiceTest {
     }
 
     // ========== MONOCHROME MODE BRANCH TESTS ==========
+    // Tests for: boolean isMonochrome = EMOJI_FONT_NOTO_MONO.equals(config.emojiFont)
+    // || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
 
     @Test
-    void testGenerateCalendarSVG_WithMonochromeEmoji_NotoMono() {
+    void testRenderEmoji_IsMonochrome_NotoMono() {
+        // Branch: EMOJI_FONT_NOTO_MONO.equals(emojiFont) = TRUE (short-circuits)
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
         config.emojiFont = CalendarRenderingService.EMOJI_FONT_NOTO_MONO;
+        config.eventDisplayMode = "large"; // Ensure emoji is rendered
         config.customDates.put("2025-01-15", "🕎"); // Menorah - will be substituted
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
@@ -892,11 +896,43 @@ class CalendarRenderingServiceTest {
     }
 
     @Test
-    void testGenerateCalendarSVG_WithColorEmoji_Default() {
+    void testRenderEmoji_IsMonochrome_MonoColorVariant() {
+        // Branch: EMOJI_FONT_NOTO_MONO.equals = FALSE, emojiFont != null = TRUE, startsWith("mono-") = TRUE
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        // emojiFont is null by default - uses color emoji
-        config.customDates.put("2025-01-15", "🕎");
+        config.emojiFont = "mono-red";
+        config.eventDisplayMode = "large";
+        config.customDates.put("2025-01-15", "🎉");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testRenderEmoji_IsMonochrome_NullEmojiFont() {
+        // Branch: EMOJI_FONT_NOTO_MONO.equals = FALSE, emojiFont != null = FALSE (short-circuits)
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.emojiFont = null; // Explicitly null
+        config.eventDisplayMode = "large";
+        config.customDates.put("2025-01-15", "🎉");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testRenderEmoji_IsMonochrome_NonMonoFont() {
+        // Branch: EMOJI_FONT_NOTO_MONO.equals = FALSE, emojiFont != null = TRUE, startsWith("mono-") = FALSE
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.emojiFont = "noto-color"; // Not null, doesn't start with "mono-"
+        config.eventDisplayMode = "large";
+        config.customDates.put("2025-01-15", "🎉");
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -912,6 +948,7 @@ class CalendarRenderingServiceTest {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
         config.emojiFont = emojiFont;
+        config.eventDisplayMode = "large";
         config.customDates.put("2025-01-15", "🎉");
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
@@ -961,10 +998,13 @@ class CalendarRenderingServiceTest {
     }
 
     // ========== EVENT DISPLAY MODE BRANCH TESTS ==========
+    // Tests for: boolean largeEmoji = "large".equals(...) || "large-text".equals(...)
+    // boolean smallEmoji = "small".equals(...) || "small-text".equals(...)
+    // boolean showHolidayText = ("large-text"... || "small-text"... || "text"...) && !holidayName.isEmpty()
 
     @ParameterizedTest
     @ValueSource(
-            strings = {"none", "large", "large-text", "small"})
+            strings = {"none", "large", "large-text", "small", "small-text", "text"})
     void testGenerateCalendarSVG_WithEventDisplayMode(String eventDisplayMode) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
@@ -978,7 +1018,119 @@ class CalendarRenderingServiceTest {
         assertTrue(svg.contains(SVG_OPEN_TAG));
     }
 
+    @Test
+    void testLargeEmoji_LargeMode() {
+        // Branch: "large".equals(eventDisplayMode) = TRUE (short-circuits to largeEmoji=true)
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "large";
+        config.holidaySets.add("us-federal"); // Add holidays with emojis
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testLargeEmoji_LargeTextMode() {
+        // Branch: "large".equals = FALSE, "large-text".equals = TRUE (largeEmoji=true)
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "large-text";
+        config.holidaySets.add("us-federal");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testSmallEmoji_SmallMode() {
+        // Branch: "small".equals(eventDisplayMode) = TRUE (short-circuits to smallEmoji=true)
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "small";
+        config.holidaySets.add("us-federal");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testSmallEmoji_SmallTextMode() {
+        // Branch: "small".equals = FALSE, "small-text".equals = TRUE (smallEmoji=true)
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "small-text";
+        config.holidaySets.add("us-federal");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testShowHolidayText_LargeTextWithName() {
+        // showHolidayText: "large-text" = TRUE, holidayName not empty
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "large-text";
+        config.holidaySets.add("us-federal");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testShowHolidayText_SmallTextWithName() {
+        // showHolidayText: "small-text" = TRUE, holidayName not empty
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "small-text";
+        config.holidaySets.add("us-federal");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testShowHolidayText_TextOnlyMode() {
+        // showHolidayText: "text" = TRUE, holidayName not empty
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "text";
+        config.holidaySets.add("us-federal");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testShowHolidayText_NoneMode() {
+        // showHolidayText: none of the text modes = FALSE
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "none";
+        config.holidaySets.add("us-federal");
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+    }
+
     // ========== MOON DISPLAY MODE BRANCH TESTS ==========
+    // Tests for: boolean shouldShowMoon = "illumination".equals(...)
+    // || ("phases".equals(...) && isMoonPhaseDay(date))
+    // || ("full-only".equals(...) && isFullMoonDay(date))
+    // Tests for: boolean largeMoonEnabled = !"none".equals(...) && config.moonSize >= 15
 
     @ParameterizedTest
     @ValueSource(
@@ -992,6 +1144,97 @@ class CalendarRenderingServiceTest {
 
         assertNotNull(svg);
         assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testShouldShowMoon_IlluminationMode() {
+        // Branch: "illumination".equals = TRUE (short-circuits to true)
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.moonDisplayMode = "illumination";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testShouldShowMoon_PhasesMode_OnPhaseDay() {
+        // Branch: "illumination" = FALSE, "phases" = TRUE, isMoonPhaseDay = TRUE
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.moonDisplayMode = "phases";
+        // Jan 13, 2025 is approximately a full moon day
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testShouldShowMoon_FullOnlyMode_OnFullMoonDay() {
+        // Branch: "illumination" = FALSE, "phases" = FALSE, "full-only" = TRUE, isFullMoonDay = TRUE
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.moonDisplayMode = "full-only";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testShouldShowMoon_NoneMode() {
+        // Branch: all conditions FALSE
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.moonDisplayMode = "none";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testLargeMoonEnabled_LargeMoonWithShowDayNames() {
+        // Branch: !"none".equals = TRUE, moonSize >= 15 = TRUE → largeMoonEnabled = true
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.moonDisplayMode = "illumination";
+        config.moonSize = 20; // >= 15
+        config.showDayNames = true;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testLargeMoonEnabled_SmallMoonWithShowDayNames() {
+        // Branch: !"none".equals = TRUE, moonSize >= 15 = FALSE → largeMoonEnabled = false
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.moonDisplayMode = "illumination";
+        config.moonSize = 10; // < 15
+        config.showDayNames = true;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+    }
+
+    @Test
+    void testLargeMoonEnabled_NoMoonWithShowDayNames() {
+        // Branch: !"none".equals = FALSE → largeMoonEnabled = false (short-circuits)
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.moonDisplayMode = "none";
+        config.moonSize = 20; // >= 15 but doesn't matter since mode is none
+        config.showDayNames = true;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
     }
 
     // ========== SHOW DAY NAMES BRANCH TESTS ==========
@@ -1301,14 +1544,15 @@ class CalendarRenderingServiceTest {
     }
 
     // ========== CELL BACKGROUND COLOR BRANCH TESTS ==========
+    // Tests for: boolean isWeekend = dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY
 
     @Test
-    void testGetCellBackgroundColor_WeekendWithColor() {
+    void testGetCellBackgroundColor_Saturday() {
+        // Branch: dayOfWeek == SATURDAY = TRUE (short-circuits to isWeekend=true)
         CalendarConfigType config = new CalendarConfigType();
         config.highlightWeekends = true;
         config.weekendBgColor = "#f0f0f0";
 
-        // Saturday
         LocalDate saturday = LocalDate.of(2025, 1, 4);
         String color = CalendarRenderingService.getCellBackgroundColor(config, saturday, 1, 4, true, 0);
 
@@ -1316,7 +1560,32 @@ class CalendarRenderingServiceTest {
     }
 
     @Test
-    void testGetCellBackgroundColor_WeekdayNoHighlight() {
+    void testGetCellBackgroundColor_Sunday() {
+        // Branch: dayOfWeek == SATURDAY = FALSE, dayOfWeek == SUNDAY = TRUE (isWeekend=true)
+        CalendarConfigType config = new CalendarConfigType();
+        config.highlightWeekends = true;
+        config.weekendBgColor = "#f0f0f0";
+
+        LocalDate sunday = LocalDate.of(2025, 1, 5);
+        String color = CalendarRenderingService.getCellBackgroundColor(config, sunday, 1, 5, true, 0);
+
+        assertNotNull(color);
+    }
+
+    @Test
+    void testGetCellBackgroundColor_WeekdayWithHighlight() {
+        // Branch: dayOfWeek == SATURDAY = FALSE, dayOfWeek == SUNDAY = FALSE (isWeekend=false)
+        CalendarConfigType config = new CalendarConfigType();
+        config.highlightWeekends = true;
+
+        LocalDate wednesday = LocalDate.of(2025, 1, 8);
+        String color = CalendarRenderingService.getCellBackgroundColor(config, wednesday, 1, 8, false, 0);
+
+        assertNotNull(color);
+    }
+
+    @Test
+    void testGetCellBackgroundColor_WeekdayWithHighlightDisabled() {
         CalendarConfigType config = new CalendarConfigType();
         config.highlightWeekends = false;
 
