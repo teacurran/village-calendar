@@ -245,27 +245,30 @@ public class CalendarRenderingService {
 
         StringBuilder result = new StringBuilder();
         boolean largeEmoji = "large".equals(config.eventDisplayMode) || "large-text".equals(config.eventDisplayMode);
+        boolean smallEmoji = "small".equals(config.eventDisplayMode) || "small-text".equals(config.eventDisplayMode);
 
         // Render emoji based on display mode
         if (largeEmoji && !holidayEmoji.isEmpty()) {
             // Large/large-text mode: centered emoji, positioned higher to leave room for text
             int emojiX = cell.x() + cell.width() / 2;
             int fontSize = Math.max(16, cell.height() / 3);
-            // Always position emoji higher (at ~40% from top) to accommodate potential text below
-            int emojiY = cell.y() + (int) (cell.height() * 0.45);
+            // Position emoji at center
+            int emojiY = cell.y() + (int) (cell.height() * 0.50);
             result.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, true));
             result.append(System.lineSeparator());
-        } else if ("small".equals(config.eventDisplayMode) && !holidayEmoji.isEmpty()) {
-            // Small mode: bottom-left corner, positioned higher to leave room for text
+        } else if (smallEmoji && !holidayEmoji.isEmpty()) {
+            // Small/small-text mode: bottom-left corner, positioned slightly higher to leave room for text
             int emojiX = cell.x() + 5;
-            int emojiY = cell.y() + cell.height() - 12;
+            int emojiY = cell.y() + cell.height() - 8;
             int fontSize = Math.max(10, cell.height() / 6);
             result.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, false));
             result.append(System.lineSeparator());
         }
 
-        // Holiday name text for large-text and text modes
-        boolean showHolidayText = (largeEmoji) && !holidayName.isEmpty();
+        // Holiday name text for large-text, small-text, and text modes only
+        boolean showHolidayText = ("large-text".equals(config.eventDisplayMode)
+                || "small-text".equals(config.eventDisplayMode) || "text".equals(config.eventDisplayMode))
+                && !holidayName.isEmpty();
         if (showHolidayText) {
             int textX = cell.x() + cell.width() / 2;
             int textY = cell.y() + cell.height() - 3;
@@ -319,11 +322,6 @@ public class CalendarRenderingService {
         }
         int moonX = cell.x() + config.moonOffsetX;
         int moonY = cell.y() + config.moonOffsetY;
-        // Move moon up by 3px when text will be displayed below
-        boolean hasTextBelow = "large-text".equals(config.eventDisplayMode) || "text".equals(config.eventDisplayMode);
-        if (hasTextBelow) {
-            moonY -= 3;
-        }
         svg.append(generateMoonIlluminationSVG(date, moonX, moonY, config.latitude, config.longitude, config));
     }
 
@@ -556,8 +554,17 @@ public class CalendarRenderingService {
         }
         String dayName = dayOfWeek.getDisplayName(TextStyle.SHORT, locale).substring(0, 2);
         String dayNameFill = config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader;
-        svg.append(String.format("<text x=\"%d\" y=\"%d\" fill=\"%s\" font-family=\"Arial, sans-serif\""
-                + " font-size=\"8px\">%s</text>%n", cell.x() + 5, cell.y() + 26, dayNameFill, dayName));
+
+        // Check if large moon is enabled - if so, move day name to top-right to avoid overlap
+        boolean largeMoonEnabled = !"none".equals(config.moonDisplayMode) && config.moonSize >= 15;
+        int textX = largeMoonEnabled ? cell.x() + cell.width() - 5 : cell.x() + 5;
+        int textY = largeMoonEnabled ? cell.y() + 14 : cell.y() + 26; // Top-right same as date, or below date
+        String textAnchor = largeMoonEnabled ? "end" : "start";
+
+        svg.append(String.format(
+                "<text x=\"%d\" y=\"%d\" fill=\"%s\" font-family=\"Arial, sans-serif\""
+                        + " font-size=\"8px\" text-anchor=\"%s\">%s</text>%n",
+                textX, textY, dayNameFill, textAnchor, dayName));
     }
 
     /** Renders grid lines around cell */

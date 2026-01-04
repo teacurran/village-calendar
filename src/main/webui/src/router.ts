@@ -115,15 +115,9 @@ const router = createRouter({
     },
     // Admin routes
     ...adminRoutes,
-    // Calendar generator routes
+    // Calendar generator route
     {
       path: "/generator",
-      name: "generator-legacy",
-      redirect: "/calendars/generator",
-      meta: { requiresAuth: false },
-    },
-    {
-      path: "/calendars/generator",
       name: "calendar-generator",
       component: () => import("./view/CalendarGenerator.vue"),
       meta: { requiresAuth: false },
