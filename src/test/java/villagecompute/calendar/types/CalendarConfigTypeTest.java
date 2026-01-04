@@ -37,11 +37,11 @@ class CalendarConfigTypeTest {
         assertEquals(0, config.longitude);
         assertEquals(LocalTime.of(20, 0), config.observationTime);
         assertEquals("America/New_York", config.timeZone);
-        assertEquals(24, config.moonSize);
-        assertEquals(30, config.moonOffsetX);
-        assertEquals(30, config.moonOffsetY);
-        assertEquals("#c1c1c1", config.moonBorderColor);
-        assertEquals(0.5, config.moonBorderWidth);
+        assertEquals(20, config.moonSize);
+        assertEquals(25, config.moonOffsetX);
+        assertEquals(36, config.moonOffsetY);
+        assertEquals("#666666", config.moonBorderColor);
+        assertEquals(1.5, config.moonBorderWidth);
         assertNull(config.yearColor);
         assertNull(config.monthColor);
         assertNull(config.dayTextColor);

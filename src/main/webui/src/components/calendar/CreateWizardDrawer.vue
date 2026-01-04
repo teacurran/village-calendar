@@ -124,6 +124,7 @@ export type EventDisplayMode =
   | "large"
   | "large-text"
   | "small"
+  | "small-text"
   | "text"
   | "none";
 
@@ -182,7 +183,7 @@ const eventDisplayMode = computed<EventDisplayMode>(() => {
   if (emojiSize.value === "prominent") {
     return showHolidayText.value ? "large-text" : "large";
   } else if (emojiSize.value === "compact") {
-    return showHolidayText.value ? "small" : "small";
+    return showHolidayText.value ? "small-text" : "small";
   } else {
     // emojiSize === "none"
     return showHolidayText.value ? "text" : "none";
@@ -315,7 +316,7 @@ const layoutOptions = [
   },
 ];
 
-// Moon size/position presets - positioned higher to leave room for holiday text
+// Moon size/position presets
 const moonSizeOptions = [
   {
     id: "full-size" as const,
@@ -324,7 +325,7 @@ const moonSizeOptions = [
     settings: {
       moonSize: 20,
       moonX: 25,
-      moonY: 38,
+      moonY: 36,
       moonBorderColor: "#666666",
       moonBorderWidth: 1.5,
       moonDarkSideColor: "#dddddd",
@@ -1017,6 +1018,10 @@ const initializeFromConfig = () => {
       case "small":
         emojiSize.value = "compact";
         showHolidayText.value = false;
+        break;
+      case "small-text":
+        emojiSize.value = "compact";
+        showHolidayText.value = true;
         break;
       case "text":
         emojiSize.value = "none";

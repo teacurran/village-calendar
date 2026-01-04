@@ -42,11 +42,11 @@ public class CalendarConfigType {
     public LocalTime observationTime = LocalTime.of(20, 0); // Default: 8:00 PM for moon calculations
 
     public String timeZone = "America/New_York"; // Time zone for calculations
-    public int moonSize = 24; // Default moon radius in pixels
-    public int moonOffsetX = 30; // Horizontal offset in pixels from left edge of cell
-    public int moonOffsetY = 30; // Vertical offset in pixels from top edge of cell
-    public String moonBorderColor = "#c1c1c1"; // Default border color
-    public double moonBorderWidth = 0.5; // Default border width
+    public int moonSize = 20; // Default moon size in pixels (full-size preset)
+    public int moonOffsetX = 25; // Horizontal offset in pixels from left edge of cell
+    public int moonOffsetY = 36; // Vertical offset in pixels from top edge of cell
+    public String moonBorderColor = "#666666"; // Default border color
+    public double moonBorderWidth = 1.5; // Default border width (full-size preset)
 
     // Color customization
     public String yearColor = null; // Will use theme default if null
@@ -57,8 +57,8 @@ public class CalendarConfigType {
     public String weekendBgColor = null; // Will use theme default if null
     public String holidayColor = "#ff5252"; // Default holiday color
     public String customDateColor = Colors.GREEN; // Default custom date color
-    public String moonDarkColor = Colors.GRAY_400; // Default moon dark side
-    public String moonLightColor = Colors.WHITE; // Default moon light side
+    public String moonDarkColor = "#dddddd"; // Default moon dark side
+    public String moonLightColor = "#FFFFFF"; // Default moon light side
 
     public String emojiPosition = "bottom-left"; // Position of emojis in calendar cells
 
