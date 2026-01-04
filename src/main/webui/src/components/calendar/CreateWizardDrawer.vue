@@ -171,7 +171,23 @@ const isInitializing = ref(false);
 // Holiday settings state
 const primaryHolidaySet = ref<string>("none"); // Current dropdown selection
 const additionalHolidaySets = ref<string[]>([]); // Items added via + button
-const eventDisplayMode = ref<EventDisplayMode>("large");
+
+// Simplified holiday display options
+export type EmojiSizeType = "prominent" | "compact" | "none";
+const emojiSize = ref<EmojiSizeType>("prominent");
+const showHolidayText = ref(false);
+
+// Computed eventDisplayMode from the two simpler options
+const eventDisplayMode = computed<EventDisplayMode>(() => {
+  if (emojiSize.value === "prominent") {
+    return showHolidayText.value ? "large-text" : "large";
+  } else if (emojiSize.value === "compact") {
+    return showHolidayText.value ? "small" : "small";
+  } else {
+    // emojiSize === "none"
+    return showHolidayText.value ? "text" : "none";
+  }
+});
 
 // Holiday set options (including "No Holidays" as default, rest alphabetical)
 const holidaySetOptions = [
@@ -299,7 +315,7 @@ const layoutOptions = [
   },
 ];
 
-// Moon size/position presets
+// Moon size/position presets - positioned higher to leave room for holiday text
 const moonSizeOptions = [
   {
     id: "full-size" as const,
@@ -308,7 +324,7 @@ const moonSizeOptions = [
     settings: {
       moonSize: 20,
       moonX: 25,
-      moonY: 45,
+      moonY: 38,
       moonBorderColor: "#666666",
       moonBorderWidth: 1.5,
       moonDarkSideColor: "#dddddd",
@@ -355,64 +371,101 @@ const moonDisplayModeOptions = [
   },
 ];
 
-// Weekend style options for dropdown (alphabetical, with None first)
+// Weekend style options with preview colors for inline swatch display
 const weekendStyleOptions = [
   {
     id: "none" as const,
     name: "None",
     theme: "none",
-  },
-  {
-    id: "forest" as const,
-    name: "Forest",
-    theme: "forestWeekends",
+    previewColors: ["transparent"],
   },
   {
     id: "greyscale" as const,
     name: "Greyscale",
     theme: "default",
-  },
-  {
-    id: "lakeshore" as const,
-    name: "Lakeshore",
-    theme: "lakeshoreWeekends",
+    previewColors: ["#f0f0f0"],
   },
   {
     id: "rainbow" as const,
     name: "Rainbow",
     theme: "rainbowWeekends",
+    previewColors: [
+      "hsl(0, 100%, 90%)",
+      "hsl(60, 100%, 90%)",
+      "hsl(120, 100%, 90%)",
+      "hsl(180, 100%, 90%)",
+      "hsl(240, 100%, 90%)",
+      "hsl(300, 100%, 90%)",
+    ],
+  },
+  {
+    id: "vermont" as const,
+    name: "Vermont",
+    theme: "vermontWeekends",
+    previewColors: [
+      "#E8F4FA",
+      "#7CFC00",
+      "#58D68D",
+      "#FAD7A0",
+      "#FF4500",
+      "#C0C0C0",
+    ],
+  },
+  {
+    id: "lakeshore" as const,
+    name: "Lakeshore",
+    theme: "lakeshoreWeekends",
+    previewColors: [
+      "#e3f2fd",
+      "#b3e5fc",
+      "#80deea",
+      "#a7ffeb",
+      "#b2dfdb",
+      "#bbdefb",
+    ],
   },
   {
     id: "sunset" as const,
     name: "Sunset",
     theme: "sunsetWeekends",
+    previewColors: [
+      "#fce4ec",
+      "#ffcdd2",
+      "#ffe0b2",
+      "#ffecb3",
+      "#ffd180",
+      "#f8bbd0",
+    ],
   },
   {
-    id: "vermont" as const,
-    name: "Vermont Seasons",
-    theme: "vermontWeekends",
+    id: "forest" as const,
+    name: "Forest",
+    theme: "forestWeekends",
+    previewColors: [
+      "#e8f5e9",
+      "#dcedc8",
+      "#aed581",
+      "#a5d6a7",
+      "#d7ccc8",
+      "#efebe9",
+    ],
   },
 ];
 
 // Weekend color swatches for solid colors (lighter, suitable for backgrounds)
 const weekendColorSwatches = [
-  // Light grays
-  "#f5f5f5",
-  "#e8e8e8",
-  // Light blue
-  "#e3f2fd",
-  // Light green
-  "#e8f5e9",
-  // Light yellow
-  "#fffde7",
-  // Light orange
-  "#fff3e0",
-  // Light pink
-  "#fce4ec",
-  // Light purple
-  "#f3e5f5",
-  // Light teal
-  "#e0f2f1",
+  // Row 1
+  "#f5f5f5", // Light gray
+  "#e8e8e8", // Medium gray
+  "#e3f2fd", // Light blue
+  "#e8f5e9", // Light green
+  "#fffde7", // Light yellow
+  // Row 2
+  "#fff3e0", // Light orange
+  "#fce4ec", // Light pink
+  "#f3e5f5", // Light purple
+  "#e0f2f1", // Light teal
+  "#ffebee", // Light red
 ];
 
 // Compact color swatches - flat array for inline display
@@ -741,17 +794,10 @@ const emitMoonSettings = () => {
     illumination: "illumination",
   };
 
-  // Adjust moon Y position if day names are shown and large moon is selected
-  let adjustedMoonY = sizeOption.settings.moonY;
-  if (showDayNames.value && selectedMoonStyle.value === "full-size") {
-    adjustedMoonY += 4;
-  }
-
   emit("moonChange", {
     style: selectedMoonStyle.value,
     displayMode: selectedMoonDisplayMode.value,
     ...sizeOption.settings,
-    moonY: adjustedMoonY,
     moonDisplayMode: displayModeMap[selectedMoonDisplayMode.value],
   });
 };
@@ -789,24 +835,19 @@ const emitDisplayOptions = () => {
     showDayNames: showDayNames.value,
     rotateMonthNames: rotateMonthNames.value,
   });
-
-  // Re-emit moon settings in case day names changed (affects moon Y position)
-  emitMoonSettings();
 };
 
-// Handle weekend style dropdown change
-const handleWeekendStyleChange = () => {
-  // Clear solid color when selecting a theme
+// Select weekend theme from inline swatches
+const selectWeekendTheme = (themeId: WeekendStyleType) => {
+  selectedWeekendStyle.value = themeId;
   solidWeekendColor.value = null;
   emitDisplayOptions();
 };
 
-// Handle solid weekend color change
-const handleSolidWeekendColorChange = () => {
-  // Clear theme selection when picking a solid color
-  if (solidWeekendColor.value) {
-    selectedWeekendStyle.value = null;
-  }
+// Select solid weekend color from inline swatches
+const selectSolidWeekendColor = (color: string) => {
+  solidWeekendColor.value = color;
+  selectedWeekendStyle.value = null;
   emitDisplayOptions();
 };
 
@@ -961,9 +1002,31 @@ const initializeFromConfig = () => {
     additionalHolidaySets.value = [];
   }
 
-  // Initialize event display mode
+  // Initialize event display mode - parse into emojiSize and showHolidayText
   if (props.config.eventDisplayMode) {
-    eventDisplayMode.value = props.config.eventDisplayMode as EventDisplayMode;
+    const mode = props.config.eventDisplayMode as EventDisplayMode;
+    switch (mode) {
+      case "large":
+        emojiSize.value = "prominent";
+        showHolidayText.value = false;
+        break;
+      case "large-text":
+        emojiSize.value = "prominent";
+        showHolidayText.value = true;
+        break;
+      case "small":
+        emojiSize.value = "compact";
+        showHolidayText.value = false;
+        break;
+      case "text":
+        emojiSize.value = "none";
+        showHolidayText.value = true;
+        break;
+      case "none":
+        emojiSize.value = "none";
+        showHolidayText.value = false;
+        break;
+    }
   }
 
   // Clear flag after Vue processes watchers
@@ -1233,206 +1296,57 @@ onMounted(() => {
           </StepPanel>
         </StepItem>
 
-        <!-- Step 4: Holidays -->
+        <!-- Step 4: Weekend Colors -->
         <StepItem value="4">
-          <Step>Holidays</Step>
+          <Step>Weekend Colors</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
-              <p class="step-description">
-                Add holiday sets to your calendar. You can select multiple sets.
-              </p>
-
-              <!-- Holiday Set Selector -->
-              <div class="holiday-selector">
-                <div class="holiday-add-row">
-                  <Select
-                    v-model="primaryHolidaySet"
-                    :options="availableHolidaySets"
-                    option-label="label"
-                    option-value="value"
-                    class="holiday-dropdown"
-                    @change="handlePrimaryHolidayChange"
-                  />
-                  <Button
-                    v-tooltip="'Add to list and select another'"
-                    icon="pi pi-plus"
-                    :disabled="
-                      primaryHolidaySet === 'none' ||
-                      additionalHolidaySets.includes(primaryHolidaySet)
-                    "
-                    @click="addHolidaySet"
-                  />
+              <div class="weekend-color-controls">
+                <!-- Theme Selection as Radio Buttons -->
+                <div class="weekend-theme-section">
+                  <label class="color-label">Color Theme</label>
+                  <div class="weekend-theme-options">
+                    <div
+                      v-for="option in weekendStyleOptions"
+                      :key="option.id"
+                      class="weekend-theme-option"
+                      :class="{
+                        selected:
+                          selectedWeekendStyle === option.id &&
+                          !solidWeekendColor,
+                      }"
+                      @click="selectWeekendTheme(option.id)"
+                    >
+                      <RadioButton
+                        v-model="selectedWeekendStyle"
+                        :input-id="'weekend-theme-' + option.id"
+                        :value="option.id"
+                        name="weekendTheme"
+                        :disabled="!!solidWeekendColor"
+                      />
+                      <label
+                        :for="'weekend-theme-' + option.id"
+                        class="weekend-theme-label"
+                      >
+                        {{ option.name }}
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
-                <!-- Additional Holiday Sets (items added via + button) -->
-                <div
-                  v-if="additionalHolidaySets.length > 0"
-                  class="selected-holidays"
-                >
-                  <p class="additional-label">Also showing:</p>
-                  <div
-                    v-for="setId in additionalHolidaySets"
-                    :key="setId"
-                    class="holiday-chip"
-                  >
-                    <span>{{ getHolidaySetLabel(setId) }}</span>
-                    <Button
-                      v-tooltip="'Remove'"
-                      icon="pi pi-times"
-                      text
-                      rounded
-                      severity="secondary"
-                      size="small"
-                      @click="removeHolidaySet(setId)"
+                <!-- Solid Color Selection as Inline Swatches -->
+                <div class="weekend-solid-section">
+                  <label class="color-label">Or Solid Color</label>
+                  <div class="weekend-solid-swatches">
+                    <div
+                      v-for="color in weekendColorSwatches"
+                      :key="color"
+                      class="weekend-solid-swatch"
+                      :class="{ selected: solidWeekendColor === color }"
+                      :style="{ backgroundColor: color }"
+                      :title="color"
+                      @click="selectSolidWeekendColor(color)"
                     />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Event Display Mode -->
-              <div class="display-mode-section">
-                <h4 class="subsection-title">Event & Holiday Display</h4>
-
-                <div class="event-display-options">
-                  <!-- Prominent (large emoji) - DEFAULT -->
-                  <div
-                    class="event-display-option"
-                    :class="{ selected: eventDisplayMode === 'large' }"
-                    @click="
-                      eventDisplayMode = 'large';
-                      emitHolidaySettings();
-                    "
-                  >
-                    <RadioButton
-                      v-model="eventDisplayMode"
-                      input-id="event-large"
-                      value="large"
-                      name="eventDisplayMode"
-                    />
-                    <div class="event-preview">
-                      <div class="event-preview-cell">
-                        <span class="cell-day">25</span>
-                        <span class="cell-emoji large">🎄</span>
-                      </div>
-                    </div>
-                    <div class="event-info">
-                      <div class="event-name">Prominent</div>
-                      <div class="event-description">Large centered emoji</div>
-                    </div>
-                  </div>
-
-                  <!-- Prominent with text -->
-                  <div
-                    class="event-display-option"
-                    :class="{ selected: eventDisplayMode === 'large-text' }"
-                    @click="
-                      eventDisplayMode = 'large-text';
-                      emitHolidaySettings();
-                    "
-                  >
-                    <RadioButton
-                      v-model="eventDisplayMode"
-                      input-id="event-large-text"
-                      value="large-text"
-                      name="eventDisplayMode"
-                    />
-                    <div class="event-preview">
-                      <div class="event-preview-cell">
-                        <span class="cell-day">25</span>
-                        <span class="cell-emoji large">🎄</span>
-                        <span class="cell-text">Christmas</span>
-                      </div>
-                    </div>
-                    <div class="event-info">
-                      <div class="event-name">Emoji + Text</div>
-                      <div class="event-description">
-                        Emoji with holiday name below
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Compact (small emoji) -->
-                  <div
-                    class="event-display-option"
-                    :class="{ selected: eventDisplayMode === 'small' }"
-                    @click="
-                      eventDisplayMode = 'small';
-                      emitHolidaySettings();
-                    "
-                  >
-                    <RadioButton
-                      v-model="eventDisplayMode"
-                      input-id="event-small"
-                      value="small"
-                      name="eventDisplayMode"
-                    />
-                    <div class="event-preview">
-                      <div class="event-preview-cell">
-                        <span class="cell-day">25</span>
-                        <span class="cell-emoji small">🎄</span>
-                      </div>
-                    </div>
-                    <div class="event-info">
-                      <div class="event-name">Compact</div>
-                      <div class="event-description">Small emoji in corner</div>
-                    </div>
-                  </div>
-
-                  <!-- Text only -->
-                  <div
-                    class="event-display-option"
-                    :class="{ selected: eventDisplayMode === 'text' }"
-                    @click="
-                      eventDisplayMode = 'text';
-                      emitHolidaySettings();
-                    "
-                  >
-                    <RadioButton
-                      v-model="eventDisplayMode"
-                      input-id="event-text"
-                      value="text"
-                      name="eventDisplayMode"
-                    />
-                    <div class="event-preview">
-                      <div class="event-preview-cell">
-                        <span class="cell-day holiday-color">25</span>
-                        <span class="cell-text-only">Christmas</span>
-                      </div>
-                    </div>
-                    <div class="event-info">
-                      <div class="event-name">Text Only</div>
-                      <div class="event-description">
-                        Holiday name, no emoji
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Color only (no emoji, no text) -->
-                  <div
-                    class="event-display-option"
-                    :class="{ selected: eventDisplayMode === 'none' }"
-                    @click="
-                      eventDisplayMode = 'none';
-                      emitHolidaySettings();
-                    "
-                  >
-                    <RadioButton
-                      v-model="eventDisplayMode"
-                      input-id="event-none"
-                      value="none"
-                      name="eventDisplayMode"
-                    />
-                    <div class="event-preview">
-                      <div class="event-preview-cell">
-                        <span class="cell-day holiday-color">25</span>
-                      </div>
-                    </div>
-                    <div class="event-info">
-                      <div class="event-name">Color Only</div>
-                      <div class="event-description">
-                        Date color changes, no emoji or text
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1455,42 +1369,11 @@ onMounted(() => {
           </StepPanel>
         </StepItem>
 
-        <!-- Step 5: Colors -->
+        <!-- Step 5: Text Colors -->
         <StepItem value="5">
-          <Step>Colors</Step>
+          <Step>Text Colors</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
-              <!-- Weekend Colors -->
-              <h4 class="subsection-title">Weekend Colors</h4>
-              <div class="weekend-color-controls">
-                <div class="weekend-theme-select">
-                  <label class="color-label">Color Theme</label>
-                  <Select
-                    v-model="selectedWeekendStyle"
-                    :options="weekendStyleOptions"
-                    option-label="name"
-                    option-value="id"
-                    placeholder="Select a theme"
-                    class="w-full"
-                    @change="handleWeekendStyleChange"
-                  />
-                </div>
-
-                <div class="weekend-solid-color">
-                  <label class="color-label">Or Solid Color</label>
-                  <VSwatches
-                    v-model="solidWeekendColor"
-                    :swatches="weekendColorSwatches"
-                    :swatch-size="24"
-                    :row-length="9"
-                    popover-x="left"
-                    @update:model-value="handleSolidWeekendColorChange"
-                  />
-                </div>
-              </div>
-
-              <!-- Color Swatches -->
-              <h4 class="subsection-title">Text Colors</h4>
               <div class="color-options">
                 <div class="color-option">
                   <label class="color-label">Year Color</label>
@@ -1553,7 +1436,7 @@ onMounted(() => {
                 </div>
 
                 <div class="color-option">
-                  <label class="color-label">Holidays</label>
+                  <label class="color-label">Holiday text</label>
                   <VSwatches
                     :model-value="holidayColor"
                     :swatches="colorSwatches"
@@ -1621,8 +1504,180 @@ onMounted(() => {
           </StepPanel>
         </StepItem>
 
-        <!-- Step 6: Finish -->
+        <!-- Step 6: Holidays -->
         <StepItem value="6">
+          <Step>Holidays</Step>
+          <StepPanel v-slot="{ activateCallback }">
+            <div class="step-content">
+              <p class="step-description">
+                Add holiday sets to your calendar. You can select multiple sets.
+              </p>
+
+              <!-- Holiday Set Selector -->
+              <div class="holiday-selector">
+                <div class="holiday-add-row">
+                  <Select
+                    v-model="primaryHolidaySet"
+                    :options="availableHolidaySets"
+                    option-label="label"
+                    option-value="value"
+                    class="holiday-dropdown"
+                    @change="handlePrimaryHolidayChange"
+                  />
+                  <Button
+                    v-tooltip="'Add to list and select another'"
+                    icon="pi pi-plus"
+                    :disabled="
+                      primaryHolidaySet === 'none' ||
+                      additionalHolidaySets.includes(primaryHolidaySet)
+                    "
+                    @click="addHolidaySet"
+                  />
+                </div>
+
+                <!-- Additional Holiday Sets (items added via + button) -->
+                <div
+                  v-if="additionalHolidaySets.length > 0"
+                  class="selected-holidays"
+                >
+                  <p class="additional-label">Also showing:</p>
+                  <div
+                    v-for="setId in additionalHolidaySets"
+                    :key="setId"
+                    class="holiday-chip"
+                  >
+                    <span>{{ getHolidaySetLabel(setId) }}</span>
+                    <Button
+                      v-tooltip="'Remove'"
+                      icon="pi pi-times"
+                      text
+                      rounded
+                      severity="secondary"
+                      size="small"
+                      @click="removeHolidaySet(setId)"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Event Display Mode - Simplified -->
+              <div class="display-mode-section">
+                <h4 class="subsection-title">Event & Holiday Display</h4>
+
+                <!-- Live Preview -->
+                <div class="event-live-preview">
+                  <div class="event-preview-cell large-preview">
+                    <span class="cell-day" :style="{ color: holidayColor }"
+                      >25</span
+                    >
+                    <span
+                      v-if="emojiSize === 'prominent'"
+                      class="cell-emoji large"
+                      >🎄</span
+                    >
+                    <span
+                      v-if="emojiSize === 'compact'"
+                      class="cell-emoji small"
+                      >🎄</span
+                    >
+                    <span
+                      v-if="showHolidayText"
+                      class="cell-text"
+                      :style="{ color: holidayColor }"
+                      >Christmas</span
+                    >
+                  </div>
+                </div>
+
+                <!-- Emoji Size -->
+                <div class="emoji-size-section">
+                  <label class="subsection-label">Emoji Size</label>
+                  <div class="emoji-size-options">
+                    <div
+                      class="emoji-size-option"
+                      :class="{ selected: emojiSize === 'prominent' }"
+                      @click="
+                        emojiSize = 'prominent';
+                        emitHolidaySettings();
+                      "
+                    >
+                      <RadioButton
+                        v-model="emojiSize"
+                        input-id="emoji-prominent"
+                        value="prominent"
+                        name="emojiSize"
+                      />
+                      <label for="emoji-prominent">Prominent</label>
+                    </div>
+                    <div
+                      class="emoji-size-option"
+                      :class="{ selected: emojiSize === 'compact' }"
+                      @click="
+                        emojiSize = 'compact';
+                        emitHolidaySettings();
+                      "
+                    >
+                      <RadioButton
+                        v-model="emojiSize"
+                        input-id="emoji-compact"
+                        value="compact"
+                        name="emojiSize"
+                      />
+                      <label for="emoji-compact">Compact</label>
+                    </div>
+                    <div
+                      class="emoji-size-option"
+                      :class="{ selected: emojiSize === 'none' }"
+                      @click="
+                        emojiSize = 'none';
+                        emitHolidaySettings();
+                      "
+                    >
+                      <RadioButton
+                        v-model="emojiSize"
+                        input-id="emoji-none"
+                        value="none"
+                        name="emojiSize"
+                      />
+                      <label for="emoji-none">None</label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Show Holiday Text -->
+                <div class="holiday-text-option">
+                  <Checkbox
+                    v-model="showHolidayText"
+                    input-id="showHolidayText"
+                    :binary="true"
+                    @change="emitHolidaySettings()"
+                  />
+                  <label for="showHolidayText" class="checkbox-label">
+                    <span class="checkbox-title">Show holiday name</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="step-navigation">
+                <Button
+                  label="Previous"
+                  icon="pi pi-arrow-left"
+                  outlined
+                  @click="activateCallback('5')"
+                />
+                <Button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  icon-pos="right"
+                  @click="activateCallback('7')"
+                />
+              </div>
+            </div>
+          </StepPanel>
+        </StepItem>
+
+        <!-- Step 7: Finish -->
+        <StepItem value="7">
           <Step>Your Calendar is Ready!</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
@@ -1675,7 +1730,7 @@ onMounted(() => {
                   label="Previous"
                   icon="pi pi-arrow-left"
                   outlined
-                  @click="activateCallback('5')"
+                  @click="activateCallback('6')"
                 />
                 <Button label="Done" icon="pi pi-check" @click="handleClose" />
               </div>
@@ -2029,20 +2084,77 @@ onMounted(() => {
 .weekend-color-controls {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
   margin-bottom: 0.5rem;
 }
 
-.weekend-theme-select,
-.weekend-solid-color {
+.weekend-theme-section,
+.weekend-solid-section {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.weekend-theme-select :deep(.p-select) {
-  min-width: 180px;
+/* Weekend theme radio options */
+.weekend-theme-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.weekend-theme-option {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border: 2px solid var(--surface-200);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--surface-0);
+}
+
+.weekend-theme-option:hover {
+  border-color: var(--primary-300);
+  background: var(--surface-50);
+}
+
+.weekend-theme-option.selected {
+  border-color: var(--primary-color);
+  background: var(--primary-50);
+}
+
+.weekend-theme-label {
+  font-size: 0.875rem;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+/* Weekend solid color inline swatches */
+.weekend-solid-swatches {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
+  max-width: 230px;
+  padding: 4px;
+}
+
+.weekend-solid-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  border: 1px solid #999999;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.weekend-solid-swatch:hover {
+  border-color: #666666;
+}
+
+.weekend-solid-swatch.selected {
+  outline: 2px solid #888888;
+  outline-offset: 2px;
 }
 
 /* Color options */
@@ -2261,18 +2373,44 @@ onMounted(() => {
   margin-bottom: 1rem;
 }
 
-/* Event Display Options - compact layout */
-.event-display-options {
+/* Event Display - Simplified layout */
+.event-live-preview {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.event-preview-cell.large-preview {
+  width: 70px;
+  height: 80px;
+  background: white;
+  border: 2px solid #999999;
+  border-radius: 4px;
+  position: relative;
+}
+
+.emoji-size-section {
+  margin-bottom: 1rem;
+}
+
+.subsection-label {
+  display: block;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+}
+
+.emoji-size-options {
+  display: flex;
   gap: 0.5rem;
 }
 
-.event-display-option {
+.emoji-size-option {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.5rem 0.625rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
   border: 2px solid var(--surface-200);
   border-radius: 6px;
   cursor: pointer;
@@ -2280,53 +2418,34 @@ onMounted(() => {
   background: var(--surface-0);
 }
 
-.event-display-option:hover {
+.emoji-size-option:hover {
   border-color: var(--primary-300);
   background: var(--surface-50);
 }
 
-.event-display-option.selected {
+.emoji-size-option.selected {
   border-color: var(--primary-color);
   background: var(--primary-50);
 }
 
-.event-preview {
-  flex-shrink: 0;
-  width: 50px;
-  height: 58px;
-  border-radius: 3px;
-  overflow: hidden;
-  background: white;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--surface-200);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.emoji-size-option label {
+  cursor: pointer;
+  font-size: 0.875rem;
 }
 
-.event-preview-cell {
-  width: 46px;
-  height: 54px;
-  background: var(--surface-50);
-  border: 1px solid var(--surface-300);
-  border-radius: 2px;
-  position: relative;
+.holiday-text-option {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.75rem;
 }
 
 .cell-day {
   position: absolute;
-  top: 2px;
-  left: 4px;
-  font-size: 11px;
+  top: 4px;
+  left: 6px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-color);
-}
-
-.cell-day.holiday-color {
-  color: #ff5252;
 }
 
 .cell-emoji {
@@ -2334,54 +2453,25 @@ onMounted(() => {
 }
 
 .cell-emoji.small {
-  bottom: 4px;
-  left: 4px;
-  font-size: 12px;
+  bottom: 6px;
+  left: 6px;
+  font-size: 14px;
 }
 
 .cell-emoji.large {
-  top: 45%;
+  top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 18px;
+  font-size: 24px;
 }
 
 .cell-text {
   position: absolute;
-  bottom: 2px;
+  bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 5px;
-  color: var(--text-color-secondary);
+  font-size: 7px;
   white-space: nowrap;
-}
-
-.cell-text-only {
-  position: absolute;
-  top: 55%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 6px;
-  color: var(--text-color);
-  white-space: nowrap;
-  font-weight: 500;
-}
-
-.event-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.event-name {
-  font-weight: 600;
-  font-size: 0.8125rem;
-  color: var(--text-color);
-  margin-bottom: 0.125rem;
-}
-
-.event-description {
-  font-size: 0.6875rem;
-  color: var(--text-color-secondary);
 }
 
 /* Emoji color trigger (inline with other color pickers, matches vue-swatches) */

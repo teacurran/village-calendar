@@ -54,15 +54,21 @@
             <!-- Order Items -->
             <div class="calendar-section">
               <h3>Order Items</h3>
-              <div v-for="item in order.items" :key="item.id" class="calendar-info mb-3">
+              <div
+                v-for="item in order.items"
+                :key="item.id"
+                class="calendar-info mb-3"
+              >
                 <div class="calendar-details">
-                  <p class="calendar-name">{{ item.description || "Calendar" }}</p>
-                  <p class="calendar-meta">
-                    {{ item.quantity }} x ${{ item.unitPrice?.toFixed(2) || "0.00" }}
+                  <p class="calendar-name">
+                    {{ item.description || "Calendar" }}
                   </p>
                   <p class="calendar-meta">
-                    Type: {{ item.productType }}
+                    {{ item.quantity }} x ${{
+                      item.unitPrice?.toFixed(2) || "0.00"
+                    }}
                   </p>
+                  <p class="calendar-meta">Type: {{ item.productType }}</p>
                 </div>
               </div>
             </div>
@@ -100,7 +106,11 @@
             <div class="order-summary-section">
               <h3>Order Summary</h3>
               <div class="summary-rows">
-                <div v-for="item in order.items" :key="item.id" class="summary-row">
+                <div
+                  v-for="item in order.items"
+                  :key="item.id"
+                  class="summary-row"
+                >
                   <span>{{ item.description }} × {{ item.quantity }}</span>
                   <span>{{ formatCurrency(item.lineTotal) }}</span>
                 </div>

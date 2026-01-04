@@ -233,14 +233,11 @@ public class CalendarRenderingService {
      *            The holiday name for text modes (may be empty)
      * @param cell
      *            Cell position and dimensions
-     * @param shouldShowMoon
-     *            Whether moon is displayed (affects large emoji positioning)
      * @param config
      *            Calendar configuration
      * @return SVG string for holiday content
      */
-    private String renderHolidayContent(String holidayEmoji, String holidayName, Cell cell, boolean shouldShowMoon,
-            CalendarConfigType config) {
+    private String renderHolidayContent(String holidayEmoji, String holidayName, Cell cell, CalendarConfigType config) {
 
         if ("none".equals(config.eventDisplayMode)) {
             return "";
@@ -251,24 +248,17 @@ public class CalendarRenderingService {
 
         // Render emoji based on display mode
         if (largeEmoji && !holidayEmoji.isEmpty()) {
-            // Large/large-text mode: centered emoji
+            // Large/large-text mode: centered emoji, positioned higher to leave room for text
             int emojiX = cell.x() + cell.width() / 2;
             int fontSize = Math.max(16, cell.height() / 3);
-            int emojiY;
-            if (shouldShowMoon) {
-                // Position between center and bottom when moon is showing
-                int centerY = cell.y() + cell.height() / 2 + 5;
-                int bottomY = cell.y() + cell.height() - fontSize / 2 - 5;
-                emojiY = (centerY + bottomY) / 2;
-            } else {
-                emojiY = cell.y() + cell.height() / 2 + 5;
-            }
+            // Always position emoji higher (at ~40% from top) to accommodate potential text below
+            int emojiY = cell.y() + (int) (cell.height() * 0.45);
             result.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, true));
             result.append(System.lineSeparator());
         } else if ("small".equals(config.eventDisplayMode) && !holidayEmoji.isEmpty()) {
-            // Small mode: bottom-left corner
+            // Small mode: bottom-left corner, positioned higher to leave room for text
             int emojiX = cell.x() + 5;
-            int emojiY = cell.y() + cell.height() - 5;
+            int emojiY = cell.y() + cell.height() - 12;
             int fontSize = Math.max(10, cell.height() / 6);
             result.append(renderEmoji(holidayEmoji, emojiX, emojiY, fontSize, config, false));
             result.append(System.lineSeparator());
@@ -636,7 +626,7 @@ public class CalendarRenderingService {
 
         // Holiday emoji/text
         String holidayName = config.holidayNames.getOrDefault(dateStr, "");
-        svg.append(renderHolidayContent(holidayEmoji, holidayName, cell, showMoon, config));
+        svg.append(renderHolidayContent(holidayEmoji, holidayName, cell, config));
 
         // Custom emoji - skip if holiday emoji already rendered
         if (holidayEmoji.isEmpty()) {
