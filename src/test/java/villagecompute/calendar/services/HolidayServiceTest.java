@@ -141,8 +141,8 @@ class HolidayServiceTest {
     void testGetUSHolidays_ReturnsCorrectCount() {
         Map<String, String> holidays = holidayService.getUSHolidays(TEST_YEAR);
 
-        // US has 11 federal holidays
-        assertEquals(11, holidays.size());
+        // US has 12 holidays (11 federal + Halloween)
+        assertEquals(12, holidays.size());
     }
 
     // ========== GET HOLIDAYS BY COUNTRY TESTS ==========
@@ -151,7 +151,7 @@ class HolidayServiceTest {
     void testGetHolidays_USCountry_ReturnsUSHolidays() {
         Map<String, String> holidays = holidayService.getHolidays(TEST_YEAR, "US");
 
-        assertEquals(11, holidays.size());
+        assertEquals(12, holidays.size());
         assertTrue(holidays.containsValue("Independence Day"));
     }
 
@@ -159,14 +159,14 @@ class HolidayServiceTest {
     void testGetHolidays_LowercaseUS_ReturnsUSHolidays() {
         Map<String, String> holidays = holidayService.getHolidays(TEST_YEAR, "us");
 
-        assertEquals(11, holidays.size());
+        assertEquals(12, holidays.size());
     }
 
     @Test
     void testGetHolidays_UnknownCountry_DefaultsToUS() {
         Map<String, String> holidays = holidayService.getHolidays(TEST_YEAR, "XX");
 
-        assertEquals(11, holidays.size());
+        assertEquals(12, holidays.size());
         assertTrue(holidays.containsValue("Independence Day"));
     }
 
@@ -203,8 +203,9 @@ class HolidayServiceTest {
         Map<String, String> names = holidayService.getHolidayNames(TEST_YEAR, "us");
 
         assertNotNull(names);
-        assertEquals(11, names.size());
+        assertEquals(12, names.size());
         assertTrue(names.containsValue("Christmas Day"));
+        assertTrue(names.containsValue("Halloween"));
     }
 
     @Test
@@ -278,10 +279,10 @@ class HolidayServiceTest {
         assertEquals("Christmas Day", holidays2025.get(formatDate(2025, 12, 25)));
         assertEquals("Christmas Day", holidays2026.get(formatDate(2026, 12, 25)));
 
-        // Each year should have 11 holidays
-        assertEquals(11, holidays2024.size());
-        assertEquals(11, holidays2025.size());
-        assertEquals(11, holidays2026.size());
+        // Each year should have 12 holidays (11 federal + Halloween)
+        assertEquals(12, holidays2024.size());
+        assertEquals(12, holidays2025.size());
+        assertEquals(12, holidays2026.size());
     }
 
     @Test

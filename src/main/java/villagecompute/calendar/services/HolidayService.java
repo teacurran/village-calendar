@@ -182,6 +182,9 @@ public class HolidayService {
                 .with(TemporalAdjusters.dayOfWeekInMonth(2, DayOfWeek.MONDAY));
         holidays.put(formatDate(columbusDay), "Columbus Day");
 
+        // Halloween - October 31
+        holidays.put(formatDate(LocalDate.of(year, Month.OCTOBER, 31)), "Halloween");
+
         // Veterans Day - November 11
         holidays.put(formatDate(LocalDate.of(year, Month.NOVEMBER, 11)), "Veterans Day");
 
