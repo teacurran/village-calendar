@@ -67,7 +67,7 @@ public class HolidayService {
         if (setId == null)
             return SET_US;
         return switch (setId.toLowerCase()) {
-            case "us" -> SET_US;
+            case "us", "us-federal" -> SET_US;
             case "jewish" -> SET_JEWISH;
             case "christian" -> SET_CHRISTIAN;
             case "muslim", "islamic" -> SET_ISLAMIC;
@@ -1257,10 +1257,15 @@ public class HolidayService {
         LocalDate memorialDay = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
         holidayEmojis.put(memorialDay.toString(), "🎖️"); // Memorial Day
 
+        holidayEmojis.put(LocalDate.of(year, Month.JUNE, 19).toString(), "🎉"); // Juneteenth
+
         holidayEmojis.put(LocalDate.of(year, Month.JULY, 4).toString(), "🇺🇸"); // Independence Day
 
         LocalDate laborDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
         holidayEmojis.put(laborDay.toString(), "👷"); // Labor Day
+
+        LocalDate columbusDay = getNthWeekdayOfMonth(year, Month.OCTOBER, DayOfWeek.MONDAY, 2);
+        holidayEmojis.put(columbusDay.toString(), "🌍"); // Columbus Day
 
         holidayEmojis.put(LocalDate.of(year, Month.OCTOBER, 31).toString(), "🎃"); // Halloween
 
