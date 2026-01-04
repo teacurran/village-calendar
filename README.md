@@ -1,313 +1,130 @@
-# Village Calendar Service
+# Village Calendar
 
-A microservice for generating custom calendars with astronomical events, Hebrew calendar support, and e-commerce functionality. Built with Quarkus and Vue.js as part of the VillageCompute platform.
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=villagecompute_village-calendar&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=villagecompute_village-calendar)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=villagecompute_village-calendar&metric=coverage)](https://sonarcloud.io/summary/new_code?id=villagecompute_village-calendar)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=villagecompute_village-calendar&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=villagecompute_village-calendar)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=villagecompute_village-calendar&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=villagecompute_village-calendar)
 
-## Architecture Overview
+A full-stack web application for creating beautiful, customizable year-at-a-glance calendars with moon phases, holidays, and e-commerce functionality. Built with Quarkus and Vue.js.
 
-The Village Calendar Service is designed as a standalone microservice with OAuth2 authentication, GraphQL-first API design, and cloud storage integration. The service architecture consists of four core service layers:
+**Live Site:** [https://calendar.villagecompute.com](https://calendar.villagecompute.com)
 
-1. **Authentication Service**: OAuth2 integration with Google and Facebook via Quarkus OIDC
-2. **Calendar Generation Service**: PDF rendering with astronomical calculations (moon phases, Hebrew calendar)
-3. **Template Service**: Admin-managed calendar template configurations with JSONB storage
-4. **Order Service**: Stripe payment integration with email notifications
+## What It Does
 
-See the [Component Architecture Diagram](docs/diagrams/component-architecture.puml) for a detailed view of the system design.
+Village Calendar lets users design and order custom wall calendars featuring:
 
-### Key Design Decisions
-
-- **GraphQL Primary API**: SmallRye GraphQL provides the main API interface with GraphiQL UI for development
-- **OAuth2 Authentication**: Replaces session-based auth for better microservice integration
-- **Cloudflare R2 Storage**: S3-compatible object storage for generated PDFs
-- **Separate Database**: Independent PostgreSQL instance from main VillageCMS application
-- **Containerized Deployment**: Docker + Kubernetes (K3s) with health checks and metrics
+- **Moon Phases**: Accurate lunar calculations with configurable display (major phases, full moons only, or daily illumination)
+- **Holiday Sets**: Curated holiday collections including US, Canadian, UK, Jewish, Christian, Islamic, Hindu, Chinese, and more
+- **Custom Styling**: Weekend color themes, text colors, grid options, and emoji customization
+- **Multiple Layouts**: Left-aligned (12x31) or day-of-week aligned (12x37) layouts
+- **PDF Export**: High-quality vector PDFs ready for printing
+- **Print Ordering**: Integrated Stripe payments for professional printing fulfillment
 
 ## Features
 
-- **Custom Calendar Generation**: Configurable themes, sizes, and content options
-- **Astronomical Events**: Moon phases, solar/lunar illumination calculations via SunCalc
-- **Hebrew Calendar**: Full Hebrew calendar support with holiday integration
-- **E-Commerce**: Shopping cart, Stripe payments, order fulfillment workflow
-- **PDF Export**: High-quality PDF generation with Apache PDFBox and Batik
-- **Template Management**: Admin-only template CRUD with preview images
-- **OAuth2 Login**: Google and Facebook authentication
+- **Interactive Calendar Builder**: Step-by-step wizard with live preview
+- **Astronomical Calculations**: Moon phases and illumination via SunCalc
+- **Hebrew Calendar Support**: Full Hebrew date conversion with holidays
+- **OAuth2 Authentication**: Sign in with Google or Facebook
+- **Shopping Cart**: Save calendars, add to cart, checkout with Stripe
+- **Order Management**: Admin dashboard for order fulfillment
 
 ## Tech Stack
 
 ### Backend
-- **Framework**: Quarkus 3.26.2 (Java 21)
-- **ORM**: Hibernate ORM with Panache
-- **Database**: PostgreSQL 15 (separate instance)
-- **API**: GraphQL (SmallRye GraphQL) + REST (JAX-RS)
-- **Authentication**: OAuth2 via Quarkus OIDC (Google, Facebook)
-- **Payments**: Stripe API v29.5.0
-- **PDF Generation**: Apache PDFBox 3.0.3, Apache Batik 1.17
-- **Astronomical**: SunCalc 3.11, Proj4J 1.3.0
-- **Storage**: Cloudflare R2 (S3-compatible, AWS SDK 2.20.162)
-- **Metrics**: Micrometer + Prometheus
-- **Email**: Quarkus Mailer (SMTP)
+- **Framework**: Quarkus 3.x (Java 21)
+- **Database**: PostgreSQL with Hibernate ORM/Panache
+- **API**: REST (JAX-RS) + GraphQL (SmallRye)
+- **Authentication**: OAuth2 via Quarkus OIDC
+- **Payments**: Stripe API
+- **PDF Generation**: Apache PDFBox + Batik SVG
+- **Storage**: Cloudflare R2 (S3-compatible)
 
 ### Frontend
-- **Framework**: Vue 3.5 + TypeScript
-- **Build**: Vite 6.0
-- **UI**: PrimeVue 4.2, TailwindCSS 3.4
-- **Router**: Vue Router 4.5
-- **State**: Pinia 2.3
-- **i18n**: Vue I18n 10.0
-- **Integration**: Quinoa 2.6.2 (Quarkus frontend integration)
+- **Framework**: Vue 3 + TypeScript
+- **Build**: Vite
+- **UI**: PrimeVue + TailwindCSS
+- **State**: Pinia
+- **Integration**: Quarkus Quinoa
 
-## Prerequisites
+## Quick Start
+
+### Prerequisites
 
 - Java 21
 - Maven 3.8+
-- Node.js 22+ and npm 10+
+- Node.js 22+
 - PostgreSQL 14+
 
-## Setup
+### Development
 
-### 1. Database Setup
+```bash
+# Clone and install
+git clone https://github.com/villagecompute/village-calendar.git
+cd village-calendar
 
-Create a PostgreSQL database:
-
-```sql
-CREATE DATABASE village_calendar;
-CREATE USER calendar_user WITH PASSWORD 'calendar_pass';
-GRANT ALL PRIVILEGES ON DATABASE village_calendar TO calendar_user;
+# Start in dev mode (backend + frontend with hot reload)
+./mvnw quarkus:dev
 ```
 
-### 2. Configure Environment Variables
+Access at http://localhost:8030
 
-Create a `.env` file (optional) with:
+### Environment Variables
 
-```
+Create a `.env` file or set these variables:
+
+```bash
+# Required for payments
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
+
+# Required for OAuth (optional for local dev)
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
 ```
-
-### 3. Install Dependencies
-
-```bash
-# Backend dependencies are managed by Maven
-./mvnw install
-
-# Frontend dependencies
-cd src/main/webui
-npm install
-cd ../../..
-```
-
-## Development
-
-### Run in Development Mode
-
-The easiest way to run the application:
-
-```bash
-mvn quarkus:dev
-```
-
-This will:
-- Start Quarkus backend on port **8030**
-- Start Vue dev server on port 5176 (automatically proxied)
-- Enable hot reload for both backend and frontend
-
-Access the application at:
-- **Main Application**: http://localhost:8030
-- **GraphiQL UI**: http://localhost:8030/graphql-ui
-- **Health Check**: http://localhost:8030/q/health
-- **Metrics**: http://localhost:8030/q/metrics
-
-### Frontend-Only Development
-
-To run only the frontend (requires backend running separately):
-
-```bash
-cd src/main/webui
-npm run dev
-```
-
-Access at: http://localhost:5176
-
-## Building for Production
-
-```bash
-# Build everything
-./mvnw package
-
-# The built application will be in target/quarkus-app/
-```
-
-Run the production build:
-
-```bash
-java -jar target/quarkus-app/quarkus-run.jar
-```
-
-## API Overview
-
-### GraphQL API (Primary)
-
-The service provides a GraphQL API as the primary interface. Access the interactive GraphiQL UI at:
-- **Development**: http://localhost:8030/graphql-ui
-- **GraphQL Endpoint**: http://localhost:8030/graphql
-
-The GraphQL schema includes:
-- **Queries**: `templates`, `template(id)`, `myCalendars`, `orders`, `order(id)`
-- **Mutations**: `generateCalendar`, `createTemplate`, `updateTemplate`, `deleteTemplate`, `createOrder`, `confirmPayment`
-
-See the GraphiQL UI for full schema documentation and interactive query building.
-
-### REST Endpoints
-
-REST endpoints are used for specific integrations:
-- `GET /auth/google/callback` - Google OAuth2 callback
-- `GET /auth/facebook/callback` - Facebook OAuth2 callback
-- `POST /webhooks/stripe` - Stripe payment webhook
-- `GET /q/health` - Health check (readiness/liveness)
-- `GET /q/metrics` - Prometheus metrics
-
-### Legacy REST Endpoints (Deprecated)
-
-These endpoints are maintained for backward compatibility but will be removed in future versions:
-- `POST /api/calendar/generate` - Use GraphQL `generateCalendar` mutation instead
-- `POST /api/calendar/generate-json` - Use GraphQL query instead
-- `POST /api/calendar/generate-pdf` - Use GraphQL `generateCalendar` mutation instead
-- `GET /api/calendar/themes` - Use GraphQL `templates` query instead
 
 ## Project Structure
 
 ```
 village-calendar/
-├── src/
-│   ├── main/
-│   │   ├── java/villagecompute/calendar/
-│   │   │   ├── api/              # REST endpoints
-│   │   │   ├── data/models/      # JPA entities
-│   │   │   └── services/         # Business logic
-│   │   ├── resources/
-│   │   │   └── application.properties
-│   │   └── webui/                # Vue.js frontend
-│   │       ├── src/
-│   │       │   ├── view/         # Vue pages
-│   │       │   ├── components/   # Vue components
-│   │       │   ├── stores/       # Pinia stores
-│   │       │   └── i18n/         # Translations
-│   │       ├── package.json
-│   │       └── vite.config.ts
-│   └── test/                     # Tests
-├── pom.xml
-└── README.md
+├── src/main/
+│   ├── java/villagecompute/calendar/
+│   │   ├── api/           # REST endpoints
+│   │   ├── data/models/   # JPA entities
+│   │   └── services/      # Business logic
+│   ├── resources/
+│   └── webui/             # Vue.js frontend
+│       ├── src/
+│       │   ├── view/      # Pages
+│       │   ├── components/
+│       │   └── stores/    # Pinia stores
+│       └── package.json
+└── pom.xml
 ```
 
-## Docker Deployment
-
-### Build Container Image
+## Building for Production
 
 ```bash
-# Build with Jib (optimized layers)
-mvn clean package -Dquarkus.container-image.build=true
-
-# Or use the Dockerfile directly
-docker build -t village-calendar:latest .
+./mvnw package
+java -jar target/quarkus-app/quarkus-run.jar
 ```
 
-### Run with Docker Compose
-
-A `docker-compose.yml` file is provided for local development with all dependencies:
+## Docker
 
 ```bash
+# Build image
+./mvnw package -Dquarkus.container-image.build=true
+
+# Or with Docker Compose
 docker-compose up -d
 ```
 
-This starts:
-- PostgreSQL database (port 5432)
-- Village Calendar service (port 8030)
+## API
 
-### Environment Variables
-
-Key environment variables for production deployment:
-
-```bash
-# Database
-QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://db:5432/village_calendar
-QUARKUS_DATASOURCE_USERNAME=calendar_user
-QUARKUS_DATASOURCE_PASSWORD=<secure-password>
-
-# OAuth2
-GOOGLE_CLIENT_ID=<google-oauth-client-id>
-GOOGLE_CLIENT_SECRET=<google-oauth-secret>
-FACEBOOK_CLIENT_ID=<facebook-oauth-client-id>
-FACEBOOK_CLIENT_SECRET=<facebook-oauth-secret>
-
-# Stripe
-STRIPE_SECRET_KEY=<stripe-secret-key>
-STRIPE_PUBLISHABLE_KEY=<stripe-publishable-key>
-STRIPE_WEBHOOK_SECRET=<stripe-webhook-secret>
-
-# Cloudflare R2
-R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-R2_BUCKET=calendar-pdfs
-R2_ACCESS_KEY=<r2-access-key>
-R2_SECRET_KEY=<r2-secret-key>
-
-# Email
-MAIL_HOST=smtp.sendgrid.net
-MAIL_PORT=587
-MAIL_USERNAME=apikey
-MAIL_PASSWORD=<sendgrid-api-key>
-MAIL_FROM=calendars@villagecompute.com
-MAIL_MOCK=false
-```
-
-## Authentication Flow
-
-The service uses OAuth2 for user authentication:
-
-1. User clicks "Login with Google" or "Login with Facebook"
-2. Frontend redirects to `/auth/{provider}` endpoint
-3. Quarkus OIDC handles OAuth2 flow and callback
-4. JWT token issued and returned to frontend
-5. Frontend includes JWT in `Authorization: Bearer <token>` header for all GraphQL requests
-
-## Development Roadmap
-
-- **Iteration 2 (I2)**: Foundation setup, database schema, OAuth2, GraphQL API ✅ (In Progress)
-- **Iteration 3 (I3)**: Template management UI, calendar customization, order workflow
-- **Iteration 4 (I4)**: Production deployment, monitoring, performance optimization
-
-## Notes
-
-- Microservice extracted from VillageCMS project with architectural improvements
-- OAuth2 authentication replaces session-based auth for scalability
-- GraphQL-first API design for better frontend integration
-- Separate PostgreSQL database instance for data isolation
-- Cloud-native deployment with Docker + Kubernetes (K3s)
-
-## Future Feature Considerations
-
-The following calendar configuration options are available in the backend but not yet exposed in the user-facing wizard. These could be added in future iterations:
-
-### Calendar Type & Basic Settings
-- **Calendar Type**: Hebrew calendar support (currently defaults to Gregorian)
-- **Year Selection**: Manual year input (currently auto-detects)
-- **Theme Selection**: Direct theme picker (wizard uses weekend color themes instead)
-
-### Display Options
-- **Show Week Numbers**: Display ISO week numbers
-- **Compact Mode**: Condensed calendar layout
-- **Emoji Position**: Configure where emojis appear in calendar cells (top-left, top-right, bottom-left, bottom-right)
-- **Show Day Numbers (1-31)**: Toggle day number display
-- **Highlight Weekends**: Toggle weekend highlighting
-
-### Moon & Location Settings
-- **Observer Location**: City selection or manual latitude/longitude for accurate moon rotation
-- **Use Current Location**: Geolocation-based moon positioning
-- **Moon Size**: Configurable moon radius in pixels
-- **Moon X/Y Position**: Fine-tune moon placement within cells
-- **Moon Border Color/Width**: Moon outline customization
-
-### Additional Color Options
-- **Holiday Text Color**: Color for holiday labels
-- **Custom Date Text Color**: Color for user-added event labels
+- **GraphQL**: `/graphql` (interactive UI at `/graphql-ui`)
+- **REST**: `/api/calendar/*` for calendar generation
+- **Health**: `/q/health`
+- **Metrics**: `/q/metrics`
 
 ## License
 

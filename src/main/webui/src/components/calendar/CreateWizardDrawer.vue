@@ -171,7 +171,23 @@ const isInitializing = ref(false);
 // Holiday settings state
 const primaryHolidaySet = ref<string>("none"); // Current dropdown selection
 const additionalHolidaySets = ref<string[]>([]); // Items added via + button
-const eventDisplayMode = ref<EventDisplayMode>("large");
+
+// Simplified holiday display options
+export type EmojiSizeType = "prominent" | "compact" | "none";
+const emojiSize = ref<EmojiSizeType>("prominent");
+const showHolidayText = ref(false);
+
+// Computed eventDisplayMode from the two simpler options
+const eventDisplayMode = computed<EventDisplayMode>(() => {
+  if (emojiSize.value === "prominent") {
+    return showHolidayText.value ? "large-text" : "large";
+  } else if (emojiSize.value === "compact") {
+    return showHolidayText.value ? "small" : "small";
+  } else {
+    // emojiSize === "none"
+    return showHolidayText.value ? "text" : "none";
+  }
+});
 
 // Holiday set options (including "No Holidays" as default, rest alphabetical)
 const holidaySetOptions = [
@@ -299,7 +315,7 @@ const layoutOptions = [
   },
 ];
 
-// Moon size/position presets
+// Moon size/position presets - positioned higher to leave room for holiday text
 const moonSizeOptions = [
   {
     id: "full-size" as const,
@@ -308,7 +324,7 @@ const moonSizeOptions = [
     settings: {
       moonSize: 20,
       moonX: 25,
-      moonY: 45,
+      moonY: 38,
       moonBorderColor: "#666666",
       moonBorderWidth: 1.5,
       moonDarkSideColor: "#dddddd",
@@ -778,17 +794,10 @@ const emitMoonSettings = () => {
     illumination: "illumination",
   };
 
-  // Adjust moon Y position if day names are shown and large moon is selected
-  let adjustedMoonY = sizeOption.settings.moonY;
-  if (showDayNames.value && selectedMoonStyle.value === "full-size") {
-    adjustedMoonY += 4;
-  }
-
   emit("moonChange", {
     style: selectedMoonStyle.value,
     displayMode: selectedMoonDisplayMode.value,
     ...sizeOption.settings,
-    moonY: adjustedMoonY,
     moonDisplayMode: displayModeMap[selectedMoonDisplayMode.value],
   });
 };
@@ -826,9 +835,6 @@ const emitDisplayOptions = () => {
     showDayNames: showDayNames.value,
     rotateMonthNames: rotateMonthNames.value,
   });
-
-  // Re-emit moon settings in case day names changed (affects moon Y position)
-  emitMoonSettings();
 };
 
 // Select weekend theme from inline swatches
@@ -996,9 +1002,31 @@ const initializeFromConfig = () => {
     additionalHolidaySets.value = [];
   }
 
-  // Initialize event display mode
+  // Initialize event display mode - parse into emojiSize and showHolidayText
   if (props.config.eventDisplayMode) {
-    eventDisplayMode.value = props.config.eventDisplayMode as EventDisplayMode;
+    const mode = props.config.eventDisplayMode as EventDisplayMode;
+    switch (mode) {
+      case "large":
+        emojiSize.value = "prominent";
+        showHolidayText.value = false;
+        break;
+      case "large-text":
+        emojiSize.value = "prominent";
+        showHolidayText.value = true;
+        break;
+      case "small":
+        emojiSize.value = "compact";
+        showHolidayText.value = false;
+        break;
+      case "text":
+        emojiSize.value = "none";
+        showHolidayText.value = true;
+        break;
+      case "none":
+        emojiSize.value = "none";
+        showHolidayText.value = false;
+        break;
+    }
   }
 
   // Clear flag after Vue processes watchers
@@ -1532,151 +1560,101 @@ onMounted(() => {
                 </div>
               </div>
 
-              <!-- Event Display Mode -->
+              <!-- Event Display Mode - Simplified -->
               <div class="display-mode-section">
                 <h4 class="subsection-title">Event & Holiday Display</h4>
 
-                <div class="event-display-options">
-                  <!-- Prominent (large emoji) - DEFAULT -->
-                  <div
-                    class="event-display-option"
-                    :class="{ selected: eventDisplayMode === 'large' }"
-                    @click="
-                      eventDisplayMode = 'large';
-                      emitHolidaySettings();
-                    "
-                  >
-                    <RadioButton
-                      v-model="eventDisplayMode"
-                      input-id="event-large"
-                      value="large"
-                      name="eventDisplayMode"
-                    />
-                    <div class="event-preview">
-                      <div class="event-preview-cell">
-                        <span class="cell-day">25</span>
-                        <span class="cell-emoji large">🎄</span>
-                      </div>
-                    </div>
-                    <div class="event-info">
-                      <div class="event-name">Prominent</div>
-                      <div class="event-description">Large centered emoji</div>
-                    </div>
+                <!-- Live Preview -->
+                <div class="event-live-preview">
+                  <div class="event-preview-cell large-preview">
+                    <span class="cell-day" :style="{ color: holidayColor }"
+                      >25</span
+                    >
+                    <span
+                      v-if="emojiSize === 'prominent'"
+                      class="cell-emoji large"
+                      >🎄</span
+                    >
+                    <span
+                      v-if="emojiSize === 'compact'"
+                      class="cell-emoji small"
+                      >🎄</span
+                    >
+                    <span
+                      v-if="showHolidayText"
+                      class="cell-text"
+                      :style="{ color: holidayColor }"
+                      >Christmas</span
+                    >
                   </div>
+                </div>
 
-                  <!-- Prominent with text -->
-                  <div
-                    class="event-display-option"
-                    :class="{ selected: eventDisplayMode === 'large-text' }"
-                    @click="
-                      eventDisplayMode = 'large-text';
-                      emitHolidaySettings();
-                    "
-                  >
-                    <RadioButton
-                      v-model="eventDisplayMode"
-                      input-id="event-large-text"
-                      value="large-text"
-                      name="eventDisplayMode"
-                    />
-                    <div class="event-preview">
-                      <div class="event-preview-cell">
-                        <span class="cell-day">25</span>
-                        <span class="cell-emoji large">🎄</span>
-                        <span class="cell-text">Christmas</span>
-                      </div>
+                <!-- Emoji Size -->
+                <div class="emoji-size-section">
+                  <label class="subsection-label">Emoji Size</label>
+                  <div class="emoji-size-options">
+                    <div
+                      class="emoji-size-option"
+                      :class="{ selected: emojiSize === 'prominent' }"
+                      @click="
+                        emojiSize = 'prominent';
+                        emitHolidaySettings();
+                      "
+                    >
+                      <RadioButton
+                        v-model="emojiSize"
+                        input-id="emoji-prominent"
+                        value="prominent"
+                        name="emojiSize"
+                      />
+                      <label for="emoji-prominent">Prominent</label>
                     </div>
-                    <div class="event-info">
-                      <div class="event-name">Emoji + Text</div>
-                      <div class="event-description">
-                        Emoji with holiday name below
-                      </div>
+                    <div
+                      class="emoji-size-option"
+                      :class="{ selected: emojiSize === 'compact' }"
+                      @click="
+                        emojiSize = 'compact';
+                        emitHolidaySettings();
+                      "
+                    >
+                      <RadioButton
+                        v-model="emojiSize"
+                        input-id="emoji-compact"
+                        value="compact"
+                        name="emojiSize"
+                      />
+                      <label for="emoji-compact">Compact</label>
+                    </div>
+                    <div
+                      class="emoji-size-option"
+                      :class="{ selected: emojiSize === 'none' }"
+                      @click="
+                        emojiSize = 'none';
+                        emitHolidaySettings();
+                      "
+                    >
+                      <RadioButton
+                        v-model="emojiSize"
+                        input-id="emoji-none"
+                        value="none"
+                        name="emojiSize"
+                      />
+                      <label for="emoji-none">None</label>
                     </div>
                   </div>
+                </div>
 
-                  <!-- Compact (small emoji) -->
-                  <div
-                    class="event-display-option"
-                    :class="{ selected: eventDisplayMode === 'small' }"
-                    @click="
-                      eventDisplayMode = 'small';
-                      emitHolidaySettings();
-                    "
-                  >
-                    <RadioButton
-                      v-model="eventDisplayMode"
-                      input-id="event-small"
-                      value="small"
-                      name="eventDisplayMode"
-                    />
-                    <div class="event-preview">
-                      <div class="event-preview-cell">
-                        <span class="cell-day">25</span>
-                        <span class="cell-emoji small">🎄</span>
-                      </div>
-                    </div>
-                    <div class="event-info">
-                      <div class="event-name">Compact</div>
-                      <div class="event-description">Small emoji in corner</div>
-                    </div>
-                  </div>
-
-                  <!-- Text only -->
-                  <div
-                    class="event-display-option"
-                    :class="{ selected: eventDisplayMode === 'text' }"
-                    @click="
-                      eventDisplayMode = 'text';
-                      emitHolidaySettings();
-                    "
-                  >
-                    <RadioButton
-                      v-model="eventDisplayMode"
-                      input-id="event-text"
-                      value="text"
-                      name="eventDisplayMode"
-                    />
-                    <div class="event-preview">
-                      <div class="event-preview-cell">
-                        <span class="cell-day holiday-color">25</span>
-                        <span class="cell-text-only">Christmas</span>
-                      </div>
-                    </div>
-                    <div class="event-info">
-                      <div class="event-name">Text Only</div>
-                      <div class="event-description">
-                        Holiday name, no emoji
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Color only (no emoji, no text) -->
-                  <div
-                    class="event-display-option"
-                    :class="{ selected: eventDisplayMode === 'none' }"
-                    @click="
-                      eventDisplayMode = 'none';
-                      emitHolidaySettings();
-                    "
-                  >
-                    <RadioButton
-                      v-model="eventDisplayMode"
-                      input-id="event-none"
-                      value="none"
-                      name="eventDisplayMode"
-                    />
-                    <div class="event-preview">
-                      <div class="event-preview-cell">
-                        <span class="cell-day holiday-color">25</span>
-                      </div>
-                    </div>
-                    <div class="event-info">
-                      <div class="event-name">Color Only</div>
-                      <div class="event-description">
-                        Date color changes, no emoji or text
-                      </div>
-                    </div>
-                  </div>
+                <!-- Show Holiday Text -->
+                <div class="holiday-text-option">
+                  <Checkbox
+                    v-model="showHolidayText"
+                    input-id="showHolidayText"
+                    :binary="true"
+                    @change="emitHolidaySettings()"
+                  />
+                  <label for="showHolidayText" class="checkbox-label">
+                    <span class="checkbox-title">Show holiday name</span>
+                  </label>
                 </div>
               </div>
 
@@ -2395,18 +2373,44 @@ onMounted(() => {
   margin-bottom: 1rem;
 }
 
-/* Event Display Options - compact layout */
-.event-display-options {
+/* Event Display - Simplified layout */
+.event-live-preview {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.event-preview-cell.large-preview {
+  width: 70px;
+  height: 80px;
+  background: white;
+  border: 2px solid #999999;
+  border-radius: 4px;
+  position: relative;
+}
+
+.emoji-size-section {
+  margin-bottom: 1rem;
+}
+
+.subsection-label {
+  display: block;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+}
+
+.emoji-size-options {
+  display: flex;
   gap: 0.5rem;
 }
 
-.event-display-option {
+.emoji-size-option {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  padding: 0.5rem 0.625rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
   border: 2px solid var(--surface-200);
   border-radius: 6px;
   cursor: pointer;
@@ -2414,53 +2418,34 @@ onMounted(() => {
   background: var(--surface-0);
 }
 
-.event-display-option:hover {
+.emoji-size-option:hover {
   border-color: var(--primary-300);
   background: var(--surface-50);
 }
 
-.event-display-option.selected {
+.emoji-size-option.selected {
   border-color: var(--primary-color);
   background: var(--primary-50);
 }
 
-.event-preview {
-  flex-shrink: 0;
-  width: 50px;
-  height: 58px;
-  border-radius: 3px;
-  overflow: hidden;
-  background: white;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--surface-200);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.emoji-size-option label {
+  cursor: pointer;
+  font-size: 0.875rem;
 }
 
-.event-preview-cell {
-  width: 46px;
-  height: 54px;
-  background: var(--surface-50);
-  border: 1px solid var(--surface-300);
-  border-radius: 2px;
-  position: relative;
+.holiday-text-option {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.75rem;
 }
 
 .cell-day {
   position: absolute;
-  top: 2px;
-  left: 4px;
-  font-size: 11px;
+  top: 4px;
+  left: 6px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-color);
-}
-
-.cell-day.holiday-color {
-  color: #ff5252;
 }
 
 .cell-emoji {
@@ -2468,54 +2453,25 @@ onMounted(() => {
 }
 
 .cell-emoji.small {
-  bottom: 4px;
-  left: 4px;
-  font-size: 12px;
+  bottom: 6px;
+  left: 6px;
+  font-size: 14px;
 }
 
 .cell-emoji.large {
-  top: 45%;
+  top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 18px;
+  font-size: 24px;
 }
 
 .cell-text {
   position: absolute;
-  bottom: 2px;
+  bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 5px;
-  color: var(--text-color-secondary);
+  font-size: 7px;
   white-space: nowrap;
-}
-
-.cell-text-only {
-  position: absolute;
-  top: 55%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 6px;
-  color: var(--text-color);
-  white-space: nowrap;
-  font-weight: 500;
-}
-
-.event-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.event-name {
-  font-weight: 600;
-  font-size: 0.8125rem;
-  color: var(--text-color);
-  margin-bottom: 0.125rem;
-}
-
-.event-description {
-  font-size: 0.6875rem;
-  color: var(--text-color-secondary);
 }
 
 /* Emoji color trigger (inline with other color pickers, matches vue-swatches) */
