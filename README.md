@@ -1,10 +1,10 @@
 # Village Calendar
 
 [![CI](https://github.com/teacurran/village-calendar/actions/workflows/ci.yml/badge.svg)](https://github.com/teacurran/village-calendar/actions/workflows/ci.yml)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=villagecompute_village-calendar&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=villagecompute_village-calendar)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=villagecompute_village-calendar&metric=coverage)](https://sonarcloud.io/summary/new_code?id=villagecompute_village-calendar)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=villagecompute_village-calendar&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=villagecompute_village-calendar)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=villagecompute_village-calendar&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=villagecompute_village-calendar)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=teacurran_village-calendar&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=teacurran_village-calendar)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=teacurran_village-calendar&metric=coverage)](https://sonarcloud.io/summary/new_code?id=teacurran_village-calendar)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=teacurran_village-calendar&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=teacurran_village-calendar)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=teacurran_village-calendar&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=teacurran_village-calendar)
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/)
 [![Quarkus](https://img.shields.io/badge/Quarkus-3.x-blue.svg)](https://quarkus.io/)
 [![Vue](https://img.shields.io/badge/Vue-3-green.svg)](https://vuejs.org/)
