@@ -56,6 +56,13 @@ public class CalendarRenderingService {
     private static final float POINTS_PER_INCH = 72f;
     // ===========================================
 
+    // SVG text element format string for styled text with optional transform
+    private static final String SVG_TEXT_STYLED_FORMAT = "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
+            + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n";
+
+    // SVG closing tag
+    private static final String SVG_CLOSE_TAG = "</svg>";
+
     public static final String DEFAULT_THEME = "default";
 
     /** Emoji font constant for monochrome (black & white outline) emoji style. */
@@ -439,11 +446,8 @@ public class CalendarRenderingService {
         String transform = style.rotation() != 0
                 ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", style.rotation(), textX, textY)
                 : "";
-        svg.append(String.format(
-                "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
-                        + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
-                textX, textY, style.size(), style.color(), style.fontWeight(), style.textAnchor(), transform,
-                displayTitle));
+        svg.append(String.format(SVG_TEXT_STYLED_FORMAT, textX, textY, style.size(), style.color(), style.fontWeight(),
+                style.textAnchor(), transform, displayTitle));
     }
 
     /** Converts text alignment to SVG text-anchor */
@@ -465,12 +469,12 @@ public class CalendarRenderingService {
 
         for (String word : words) {
             if (charCount + word.length() <= 8) {
-                if (line1.length() > 0) {
+                if (!line1.isEmpty()) {
                     line1.append(" ");
                 }
                 line1.append(word);
                 charCount += word.length() + 1;
-            } else if (line2.length() == 0) {
+            } else if (line2.isEmpty()) {
                 line2.append(word);
             } else {
                 line2.append("…");
@@ -483,18 +487,12 @@ public class CalendarRenderingService {
                 : "";
         double lineHeight = style.size() * 1.2;
 
-        svg.append(String.format(
-                "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
-                        + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
-                textX, textY - lineHeight / 2, style.size(), style.color(), style.fontWeight(), style.textAnchor(),
-                transform, line1.toString()));
+        svg.append(String.format(SVG_TEXT_STYLED_FORMAT, textX, textY - lineHeight / 2, style.size(), style.color(),
+                style.fontWeight(), style.textAnchor(), transform, line1));
 
-        if (line2.length() > 0) {
-            svg.append(String.format(
-                    "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
-                            + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
-                    textX, textY + lineHeight / 2, style.size(), style.color(), style.fontWeight(), style.textAnchor(),
-                    transform, line2.toString()));
+        if (!line2.isEmpty()) {
+            svg.append(String.format(SVG_TEXT_STYLED_FORMAT, textX, textY + lineHeight / 2, style.size(), style.color(),
+                    style.fontWeight(), style.textAnchor(), transform, line2));
         }
     }
 
@@ -839,7 +837,7 @@ public class CalendarRenderingService {
         }
 
         appendOuterBorder(svg, weekdayAligned, config, cellWidth, cellHeight, headerHeight);
-        svg.append("</svg>");
+        svg.append(SVG_CLOSE_TAG);
         return svg.toString();
     }
 
@@ -1002,11 +1000,7 @@ public class CalendarRenderingService {
         distToday = Math.abs(phaseToday - 0.75);
         distYesterday = Math.abs(phaseYesterday - 0.75);
         distTomorrow = Math.abs(phaseTomorrow - 0.75);
-        if (distToday < distYesterday && distToday < distTomorrow && distToday < 0.017) {
-            return true;
-        }
-
-        return false;
+        return distToday < distYesterday && distToday < distTomorrow && distToday < 0.017;
     }
 
     // Check if this is a full moon day only
@@ -1039,72 +1033,6 @@ public class CalendarRenderingService {
             phase += 1.0;
 
         return phase;
-    }
-
-    private String getMoonPhaseSymbol(LocalDate date) {
-        MoonPhase phase = calculateMoonPhase(date);
-        return getMoonPhaseSymbol(phase);
-    }
-
-    private String getMoonPhaseSymbol(MoonPhase phase) {
-        switch (phase) {
-            case NEW_MOON :
-                return "🌑";
-            case WAXING_CRESCENT :
-                return "🌒";
-            case FIRST_QUARTER :
-                return "🌓";
-            case WAXING_GIBBOUS :
-                return "🌔";
-            case FULL_MOON :
-                return "🌕";
-            case WANING_GIBBOUS :
-                return "🌖";
-            case LAST_QUARTER :
-                return "🌗";
-            case WANING_CRESCENT :
-                return "🌘";
-            default :
-                return "";
-        }
-    }
-
-    // Moon phase calculation using synodic month
-    private enum MoonPhase {
-        NEW_MOON, WAXING_CRESCENT, FIRST_QUARTER, WAXING_GIBBOUS, FULL_MOON, WANING_GIBBOUS, LAST_QUARTER, WANING_CRESCENT
-    }
-
-    private MoonPhase calculateMoonPhase(LocalDate date) {
-        // Known new moon date (January 6, 2000 at 18:14 UTC)
-        LocalDate knownNewMoon = LocalDate.of(2000, 1, 6);
-
-        // Calculate days since known new moon
-        long daysSince = java.time.temporal.ChronoUnit.DAYS.between(knownNewMoon, date);
-
-        // Synodic month is approximately 29.53059 days
-        double synodicMonth = 29.53059;
-
-        // Calculate phase as a fraction (0 = new moon, 0.5 = full moon)
-        double phase = (daysSince % synodicMonth) / synodicMonth;
-
-        // Determine moon phase based on the fraction
-        if (phase < 0.0625 || phase >= 0.9375) {
-            return MoonPhase.NEW_MOON;
-        } else if (phase < 0.1875) {
-            return MoonPhase.WAXING_CRESCENT;
-        } else if (phase < 0.3125) {
-            return MoonPhase.FIRST_QUARTER;
-        } else if (phase < 0.4375) {
-            return MoonPhase.WAXING_GIBBOUS;
-        } else if (phase < 0.5625) {
-            return MoonPhase.FULL_MOON;
-        } else if (phase < 0.6875) {
-            return MoonPhase.WANING_GIBBOUS;
-        } else if (phase < 0.8125) {
-            return MoonPhase.LAST_QUARTER;
-        } else {
-            return MoonPhase.WANING_CRESCENT;
-        }
     }
 
     // Clean PDF metadata to remove backend technology fingerprints
@@ -1258,7 +1186,7 @@ public class CalendarRenderingService {
 
         wrapper.append(innerContent);
         wrapper.append(String.format("%n  </g>%n"));
-        wrapper.append("</svg>");
+        wrapper.append(SVG_CLOSE_TAG);
 
         return wrapper.toString();
     }
@@ -1330,7 +1258,7 @@ public class CalendarRenderingService {
 
         wrapper.append(innerContent);
         wrapper.append(String.format("%n  </g>%n"));
-        wrapper.append("</svg>");
+        wrapper.append(SVG_CLOSE_TAG);
 
         return wrapper.toString();
     }

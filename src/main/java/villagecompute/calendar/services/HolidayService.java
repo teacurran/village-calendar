@@ -48,6 +48,7 @@ public class HolidayService {
     private static final String HOLIDAY_NEW_YEARS_DAY = "New Year's Day";
     private static final String HOLIDAY_GOOD_FRIDAY = "Good Friday";
     private static final String HOLIDAY_CHRISTMAS = "Christmas";
+    private static final String HOLIDAY_HALLOWEEN = "Halloween";
 
     // ========================================
     // Emoji Constants (with ZWJ characters escaped for SonarQube S2479)
@@ -157,7 +158,7 @@ public class HolidayService {
         holidays.put(columbusDay, new HolidayType("Columbus Day", "🌍"));
 
         // Halloween - October 31
-        holidays.put(LocalDate.of(year, Month.OCTOBER, 31), new HolidayType("Halloween", "🎃"));
+        holidays.put(LocalDate.of(year, Month.OCTOBER, 31), new HolidayType(HOLIDAY_HALLOWEEN, "🎃"));
 
         // Veterans Day - November 11
         holidays.put(LocalDate.of(year, Month.NOVEMBER, 11), new HolidayType("Veterans Day", "🎖️"));
@@ -309,17 +310,9 @@ public class HolidayService {
      */
     private int daysInHebrewMonth(int hebrewYear, int hebrewMonth) {
         switch (hebrewMonth) {
-            case 1 : // Nisan
-            case 3 : // Sivan
-            case 5 : // Av
-            case 7 : // Tishrei
-            case 11 : // Shevat
+            case 1, 3, 5, 7, 11 :
                 return 30;
-            case 2 : // Iyar
-            case 4 : // Tammuz
-            case 6 : // Elul
-            case 10 : // Tevet
-            case 13 : // Adar II
+            case 2, 4, 6, 10, 13 : // Iyar
                 return 29;
             case 8 : // Cheshvan - variable
                 return isLongCheshvan(hebrewYear) ? 30 : 29;
@@ -840,7 +833,7 @@ public class HolidayService {
         holidays.put(LocalDate.of(year, Month.JUNE, 1), new HolidayType("Pride Month", EMOJI_RAINBOW_FLAG));
 
         // Halloween - October 31
-        holidays.put(LocalDate.of(year, Month.OCTOBER, 31), new HolidayType("Halloween", "🎃"));
+        holidays.put(LocalDate.of(year, Month.OCTOBER, 31), new HolidayType(HOLIDAY_HALLOWEEN, "🎃"));
 
         // New Year's Eve - December 31
         holidays.put(LocalDate.of(year, Month.DECEMBER, 31), new HolidayType("New Year's Eve", "🍾"));
@@ -1040,7 +1033,7 @@ public class HolidayService {
         holidays.put(LocalDate.of(year, Month.MARCH, 17), new HolidayType("St. Patrick's", "☘️"));
         holidays.put(LocalDate.of(year, Month.APRIL, 22), new HolidayType("Earth Day", "🌍"));
         holidays.put(LocalDate.of(year, Month.MAY, 1), new HolidayType("Workers' Day", "👷"));
-        holidays.put(LocalDate.of(year, Month.OCTOBER, 31), new HolidayType("Halloween", "🎃"));
+        holidays.put(LocalDate.of(year, Month.OCTOBER, 31), new HolidayType(HOLIDAY_HALLOWEEN, "🎃"));
         holidays.put(LocalDate.of(year, Month.DECEMBER, 25), new HolidayType(HOLIDAY_CHRISTMAS, "🎄"));
         holidays.put(LocalDate.of(year, Month.DECEMBER, 31), new HolidayType("New Year's Eve", "🎉"));
         LocalDate easter = calculateEasterSunday(year);
