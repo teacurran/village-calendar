@@ -24,7 +24,7 @@ Maximum line length is 120 characters.
 
 === Braces
 
-Use K&R style (opening brace on same line):
+Use K&R style (opening brace on same line). **All control flow statements must use braces, even for single-line bodies.**
 
 [source,java]
 ----
@@ -37,7 +37,25 @@ public class MyClass {
         }
     }
 }
+
+// CORRECT: Always use braces, even for single statements
+if (value < 0) {
+    value = 0;
+}
+
+for (Item item : items) {
+    process(item);
+}
+
+// INCORRECT: Never omit braces
+if (value < 0)
+    value = 0;  // DON'T do this
+
+for (Item item : items)
+    process(item);  // DON'T do this
 ----
+
+This applies to all `if`, `else`, `for`, `while`, and `do-while` statements.
 
 == OpenAPI Annotation Standards
 

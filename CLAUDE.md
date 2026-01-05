@@ -140,3 +140,37 @@ Key points:
 @APIResponse(responseCode = "303", description = "Redirect to OAuth page")
 @APIResponse(responseCode = "401", description = "Authentication required")
 ```
+
+## Code Block Standards
+
+All control flow statements must use braces, even for single-line bodies:
+
+```java
+// CORRECT: Always use braces
+if (condition) {
+    doSomething();
+}
+
+if (value < 0) {
+    value = 0;
+}
+
+for (Item item : items) {
+    process(item);
+}
+
+// INCORRECT: Never omit braces
+if (condition)
+    doSomething();
+
+if (value < 0)
+    value = 0;
+
+for (Item item : items)
+    process(item);
+```
+
+Key points:
+- All `if`, `else`, `for`, `while`, `do-while` statements require braces
+- This applies even when the body is a single statement
+- Improves readability and prevents bugs when adding statements later
