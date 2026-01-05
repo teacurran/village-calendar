@@ -98,7 +98,7 @@ public class HolidayService {
      */
     public Map<LocalDate, HolidayType> getHolidaysTyped(int year, String setId) {
         Map<String, String> names = getHolidayNames(year, setId);
-        Map<String, String> emojis = getHolidaysWithEmoji(year, setId);
+        Map<String, String> emojis = getHolidayEmojis(year, setId);
 
         Map<LocalDate, HolidayType> holidays = new HashMap<>();
         for (Map.Entry<String, String> entry : names.entrySet()) {
@@ -118,18 +118,7 @@ public class HolidayService {
         return holidays;
     }
 
-    /**
-     * Get holidays with emoji mappings for a year and holiday set.
-     *
-     * @param year
-     *            The calendar year
-     * @param setId
-     *            The holiday set ID (will be mapped to canonical name)
-     * @return Map of date strings to emoji characters
-     * @deprecated Use {@link #getHolidaysTyped(int, String)} instead
-     */
-    @Deprecated
-    public Map<String, String> getHolidaysWithEmoji(int year, String setId) {
+    private Map<String, String> getHolidayEmojis(int year, String setId) {
         String canonicalSet = mapHolidaySetId(setId);
         return switch (canonicalSet) {
             case SET_US -> getUSHolidaysWithEmoji(year);

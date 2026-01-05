@@ -170,30 +170,32 @@ class HolidayServiceTest {
         assertTrue(holidays.containsValue("Independence Day"));
     }
 
-    // ========== GET HOLIDAYS WITH EMOJI TESTS ==========
+    // ========== GET HOLIDAYS TYPED TESTS ==========
 
     @Test
-    void testGetHolidaysWithEmoji_US_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getHolidaysWithEmoji(TEST_YEAR, "us");
+    void testGetHolidaysTyped_US_ReturnsHolidays() {
+        var holidays = holidayService.getHolidaysTyped(TEST_YEAR, "us");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        // Verify entries have emojis
+        assertTrue(holidays.values().stream().anyMatch(h -> h.emoji != null));
     }
 
     @Test
-    void testGetHolidaysWithEmoji_Jewish_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getHolidaysWithEmoji(TEST_YEAR, "jewish");
+    void testGetHolidaysTyped_Jewish_ReturnsHolidays() {
+        var holidays = holidayService.getHolidaysTyped(TEST_YEAR, "jewish");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
     }
 
     @Test
-    void testGetHolidaysWithEmoji_UnknownSet_ReturnsEmptyMap() {
-        Map<String, String> emojis = holidayService.getHolidaysWithEmoji(TEST_YEAR, "unknown_set");
+    void testGetHolidaysTyped_UnknownSet_ReturnsEmptyMap() {
+        var holidays = holidayService.getHolidaysTyped(TEST_YEAR, "unknown_set");
 
-        assertNotNull(emojis);
-        assertTrue(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertTrue(holidays.isEmpty());
     }
 
     // ========== GET HOLIDAY NAMES TESTS ==========
@@ -592,11 +594,11 @@ class HolidayServiceTest {
     }
 
     @Test
-    void testGetHolidaysWithEmoji_European_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getHolidaysWithEmoji(TEST_YEAR, "european");
+    void testGetHolidaysTyped_European_ReturnsHolidays() {
+        var holidays = holidayService.getHolidaysTyped(TEST_YEAR, "european");
 
         // European may return empty if not implemented - just verify it doesn't throw
-        assertNotNull(emojis);
+        assertNotNull(holidays);
     }
 
     // ========== HELPER METHODS ==========
