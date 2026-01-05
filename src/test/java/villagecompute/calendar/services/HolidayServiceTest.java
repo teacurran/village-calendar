@@ -264,11 +264,13 @@ class HolidayServiceTest {
     }
 
     @Test
-    void testGetJewishHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getJewishHolidaysWithEmoji(TEST_YEAR);
+    void testGetJewishHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidaysTyped(TEST_YEAR, "jewish");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Jewish holidays should have emojis");
     }
 
     // ========== CROSS-YEAR CONSISTENCY TESTS ==========
@@ -340,11 +342,13 @@ class HolidayServiceTest {
     }
 
     @Test
-    void testGetMexicanHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getMexicanHolidaysWithEmoji(TEST_YEAR);
+    void testGetMexicanHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidaysTyped(TEST_YEAR, "mexican");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Mexican holidays should have emojis");
     }
 
     // ========== PAGAN HOLIDAYS TESTS ==========
@@ -380,11 +384,13 @@ class HolidayServiceTest {
     }
 
     @Test
-    void testGetPaganHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getPaganHolidaysWithEmoji(TEST_YEAR);
+    void testGetPaganHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidaysTyped(TEST_YEAR, "pagan");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Pagan holidays should have emojis");
     }
 
     // ========== HINDU HOLIDAYS TESTS ==========
@@ -406,11 +412,13 @@ class HolidayServiceTest {
     }
 
     @Test
-    void testGetHinduHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getHinduHolidaysWithEmoji(TEST_YEAR);
+    void testGetHinduHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidaysTyped(TEST_YEAR, "hindu");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Hindu holidays should have emojis");
     }
 
     // ========== ISLAMIC HOLIDAYS TESTS ==========
@@ -425,11 +433,13 @@ class HolidayServiceTest {
     }
 
     @Test
-    void testGetIslamicHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getIslamicHolidaysWithEmoji(TEST_YEAR);
+    void testGetIslamicHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidaysTyped(TEST_YEAR, "islamic");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Islamic holidays should have emojis");
     }
 
     // ========== CHINESE HOLIDAYS TESTS ==========
@@ -445,11 +455,13 @@ class HolidayServiceTest {
     }
 
     @Test
-    void testGetChineseHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getChineseHolidaysWithEmoji(TEST_YEAR);
+    void testGetChineseHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidaysTyped(TEST_YEAR, "chinese");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Chinese holidays should have emojis");
     }
 
     // ========== CHRISTIAN HOLIDAYS TESTS ==========
@@ -465,11 +477,13 @@ class HolidayServiceTest {
     }
 
     @Test
-    void testGetChristianHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getChristianHolidaysWithEmoji(TEST_YEAR);
+    void testGetChristianHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidaysTyped(TEST_YEAR, "christian");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Christian holidays should have emojis");
     }
 
     // ========== CANADIAN HOLIDAYS TESTS ==========
@@ -491,11 +505,13 @@ class HolidayServiceTest {
     }
 
     @Test
-    void testGetCanadianHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getCanadianHolidaysWithEmoji(TEST_YEAR);
+    void testGetCanadianHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidaysTyped(TEST_YEAR, "canadian");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Canadian holidays should have emojis");
     }
 
     // ========== UK HOLIDAYS TESTS ==========
@@ -517,11 +533,13 @@ class HolidayServiceTest {
     }
 
     @Test
-    void testGetUKHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getUKHolidaysWithEmoji(TEST_YEAR);
+    void testGetUKHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidaysTyped(TEST_YEAR, "uk");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "UK holidays should have emojis");
     }
 
     // ========== SECULAR/FUN HOLIDAYS TESTS ==========
@@ -551,11 +569,13 @@ class HolidayServiceTest {
     }
 
     @Test
-    void testGetSecularHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getSecularHolidaysWithEmoji(TEST_YEAR);
+    void testGetSecularHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidaysTyped(TEST_YEAR, "secular");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Secular holidays should have emojis");
     }
 
     // ========== MAJOR WORLD HOLIDAYS TESTS ==========
@@ -569,11 +589,13 @@ class HolidayServiceTest {
     }
 
     @Test
-    void testGetMajorWorldHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getMajorWorldHolidaysWithEmoji(TEST_YEAR);
+    void testGetMajorWorldHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidaysTyped(TEST_YEAR, "major_world");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Major World holidays should have emojis");
     }
 
     // ========== US HOLIDAYS WITH EMOJI TESTS ==========
