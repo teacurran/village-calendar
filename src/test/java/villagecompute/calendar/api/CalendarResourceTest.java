@@ -106,8 +106,8 @@ class CalendarResourceTest {
         Map<String, Object> request = new HashMap<>();
         request.put("year", TEST_YEAR);
         Map<String, Object> customDates = new HashMap<>();
-        customDates.put("2025-01-15", "🎂");
-        customDates.put("2025-06-20", "🎉");
+        customDates.put("2025-01-15", Map.of("emoji", "🎂"));
+        customDates.put("2025-06-20", Map.of("emoji", "🎉"));
         request.put("customDates", customDates);
 
         given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)

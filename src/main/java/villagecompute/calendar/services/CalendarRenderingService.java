@@ -23,6 +23,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 
 import villagecompute.calendar.types.CalendarConfigType;
+import villagecompute.calendar.types.CustomDateEntryType;
 import villagecompute.calendar.util.Colors;
 
 import io.quarkus.logging.Log;
@@ -55,12 +56,6 @@ public class CalendarRenderingService {
     // ===========================================
 
     public static final String DEFAULT_THEME = "default";
-
-    /** JSON key for emoji field in custom data */
-    private static final String KEY_EMOJI = "emoji";
-
-    /** JSON key for display settings in custom data */
-    private static final String KEY_DISPLAY_SETTINGS = "displaySettings";
 
     /** Emoji font constant for monochrome (black & white outline) emoji style. */
     public static final String EMOJI_FONT_NOTO_MONO = "noto-mono";
@@ -286,10 +281,6 @@ public class CalendarRenderingService {
     // HELPER METHODS FOR renderDayCell (extracted to reduce cognitive complexity)
     // =============================================
 
-    /** Data holder for custom event display settings */
-    private record CustomEventData(String emoji, CustomEventDisplay display) {
-    }
-
     /** Encapsulates cell position and dimensions */
     private record Cell(int x, int y, int width, int height) {
     }
@@ -325,32 +316,12 @@ public class CalendarRenderingService {
         svg.append(generateMoonIlluminationSVG(date, moonX, moonY, config.latitude, config.longitude, config));
     }
 
-    /** Extracts custom event data (emoji and display settings) from config */
-    private CustomEventData extractCustomEventData(String dateStr, CalendarConfigType config) {
-        if (!config.customDates.containsKey(dateStr)) {
-            return new CustomEventData("", null);
+    /** Gets the substituted emoji for a custom date entry */
+    private String getCustomEmoji(CustomDateEntryType entry, CalendarConfigType config) {
+        if (entry == null || entry.emoji == null) {
+            return "";
         }
-
-        Object customData = config.customDates.get(dateStr);
-        if (customData instanceof String) {
-            return new CustomEventData(substituteEmojiForMonochrome((String) customData, config), null);
-        }
-
-        if (customData instanceof Map) {
-            Map<String, Object> dataMap = (Map<String, Object>) customData;
-            if (dataMap.containsKey(KEY_EMOJI)) {
-                String emoji = substituteEmojiForMonochrome((String) dataMap.get(KEY_EMOJI), config);
-                CustomEventDisplay display = null;
-                if (dataMap.containsKey(KEY_DISPLAY_SETTINGS) && dataMap.get(KEY_DISPLAY_SETTINGS) instanceof Map) {
-                    Map<String, Object> settings = (Map<String, Object>) dataMap.get(KEY_DISPLAY_SETTINGS);
-                    display = new CustomEventDisplay(emoji, settings);
-                } else {
-                    display = new CustomEventDisplay(emoji);
-                }
-                return new CustomEventData(emoji, display);
-            }
-        }
-        return new CustomEventData("", null);
+        return substituteEmojiForMonochrome(entry.emoji, config);
     }
 
     /** Calculates emoji position based on position string */
@@ -402,7 +373,7 @@ public class CalendarRenderingService {
     }
 
     /** Renders custom emoji with positioning */
-    private void renderCustomEmoji(StringBuilder svg, String customEmoji, CustomEventDisplay eventDisplay, Cell cell,
+    private void renderCustomEmoji(StringBuilder svg, String customEmoji, CustomDateEntryType eventDisplay, Cell cell,
             CalendarConfigType config) {
         if (customEmoji.isEmpty()) {
             return;
@@ -423,7 +394,7 @@ public class CalendarRenderingService {
     }
 
     /** Renders event title with optional wrapping and rotation */
-    private void renderEventTitle(StringBuilder svg, String title, CustomEventDisplay eventDisplay, Cell cell,
+    private void renderEventTitle(StringBuilder svg, String title, CustomDateEntryType eventDisplay, Cell cell,
             CalendarConfigType config) {
         if (title == null || title.isEmpty()) {
             return;
@@ -439,7 +410,7 @@ public class CalendarRenderingService {
     }
 
     /** Renders event title with custom display settings */
-    private void renderEventTitleWithDisplay(StringBuilder svg, String title, CustomEventDisplay eventDisplay,
+    private void renderEventTitleWithDisplay(StringBuilder svg, String title, CustomDateEntryType eventDisplay,
             Cell cell, CalendarConfigType config) {
         double textX = cell.x() + (cell.width() * eventDisplay.getTextX(50) / 100.0);
         double textY = cell.y() + (cell.height() * eventDisplay.getTextY(70) / 100.0);
@@ -626,10 +597,9 @@ public class CalendarRenderingService {
         boolean isHoliday = config.holidays.contains(dateStr);
         boolean isCustomDate = config.customDates.containsKey(dateStr);
 
-        // Extract custom event data
-        CustomEventData customData = extractCustomEventData(dateStr, config);
-        String customEmoji = customData.emoji();
-        CustomEventDisplay eventDisplay = customData.display();
+        // Get custom date entry and substituted emoji
+        CustomDateEntryType customEntry = config.customDates.get(dateStr);
+        String customEmoji = getCustomEmoji(customEntry, config);
 
         // Holiday emoji/text
         String holidayName = config.holidayNames.getOrDefault(dateStr, "");
@@ -637,12 +607,12 @@ public class CalendarRenderingService {
 
         // Custom emoji - skip if holiday emoji already rendered
         if (holidayEmoji.isEmpty()) {
-            renderCustomEmoji(svg, customEmoji, eventDisplay, cell, config);
+            renderCustomEmoji(svg, customEmoji, customEntry, cell, config);
         }
 
         // Event title
         String title = config.eventTitles.get(dateStr);
-        renderEventTitle(svg, title, eventDisplay, cell, config);
+        renderEventTitle(svg, title, customEntry, cell, config);
 
         // Day number
         renderDayNumber(svg, cell, day, isHoliday, isCustomDate, config, theme);

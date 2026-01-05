@@ -105,7 +105,7 @@ class CalendarConfigTypeTest {
         original.moonDarkColor = "#111111";
         original.moonLightColor = "#eeeeee";
         original.emojiPosition = "top-right";
-        original.customDates.put("2025-01-01", "party");
+        original.customDates.put("2025-01-01", new CustomDateEntryType("party"));
         original.eventTitles.put("2025-01-01", "New Year");
         original.holidays.add("2025-12-25");
         original.holidayEmojis.put("2025-12-25", "tree");
@@ -176,14 +176,14 @@ class CalendarConfigTypeTest {
     @Test
     void copyConstructor_ModifyingCopyDoesNotAffectOriginal() {
         CalendarConfigType original = new CalendarConfigType();
-        original.customDates.put("2025-01-01", "original");
+        original.customDates.put("2025-01-01", new CustomDateEntryType("original"));
         original.holidays.add("2025-12-25");
 
         CalendarConfigType copy = new CalendarConfigType(original);
-        copy.customDates.put("2025-01-01", "modified");
+        copy.customDates.put("2025-01-01", new CustomDateEntryType("modified"));
         copy.holidays.add("2025-07-04");
 
-        assertEquals("original", original.customDates.get("2025-01-01"));
+        assertEquals("original", original.customDates.get("2025-01-01").emoji);
         assertEquals(1, original.holidays.size());
     }
 
@@ -195,7 +195,7 @@ class CalendarConfigTypeTest {
         original.moonDisplayMode = "full-only";
         original.latitude = 40.7128;
         original.longitude = -74.0060;
-        original.customDates.put("2025-01-01", "fireworks");
+        original.customDates.put("2025-01-01", new CustomDateEntryType("fireworks"));
         original.holidays.add("2025-07-04");
 
         String json = objectMapper.writeValueAsString(original);
@@ -254,12 +254,12 @@ class CalendarConfigTypeTest {
     void jsonSerialization_CustomDatesPropertyMapping() throws Exception {
         String json = """
                 {
-                    "customDates": {"2025-01-01": "party"}
+                    "customDates": {"2025-01-01": {"emoji": "party"}}
                 }
                 """;
 
         CalendarConfigType config = objectMapper.readValue(json, CalendarConfigType.class);
-        assertEquals("party", config.customDates.get("2025-01-01"));
+        assertEquals("party", config.customDates.get("2025-01-01").emoji);
     }
 
     @Test

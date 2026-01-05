@@ -63,7 +63,7 @@ public class CalendarConfigType {
     public String emojiPosition = "bottom-left"; // Position of emojis in calendar cells
 
     @JsonProperty("customDates")
-    public Map<String, Object> customDates = new HashMap<>(); // date -> emoji/text or CustomEventDisplay object
+    public Map<String, CustomDateEntryType> customDates = new HashMap<>(); // date -> custom date entry
 
     @JsonProperty("eventTitles")
     public Map<String, String> eventTitles = new HashMap<>(); // date -> title mapping

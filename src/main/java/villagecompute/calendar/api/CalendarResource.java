@@ -24,6 +24,7 @@ import villagecompute.calendar.services.EmojiSvgService;
 import villagecompute.calendar.services.HebrewCalendarService;
 import villagecompute.calendar.services.PDFRenderingService;
 import villagecompute.calendar.types.CalendarConfigType;
+import villagecompute.calendar.types.CustomDateEntryType;
 import villagecompute.calendar.util.MimeTypes;
 
 import io.quarkus.logging.Log;
@@ -81,7 +82,7 @@ public class CalendarResource {
         public String moonDarkColor;
         public String moonLightColor;
         public String emojiPosition; // Position of emojis in calendar cells
-        public Map<String, Object> customDates;
+        public Map<String, CustomDateEntryType> customDates;
         public Map<String, String> eventTitles; // date -> title mapping
         public Set<String> holidays;
         public String holidaySet; // Holiday set to use (e.g., "US", "JEWISH", "HEBREW_RELIGIOUS")
