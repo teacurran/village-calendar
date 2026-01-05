@@ -5,10 +5,8 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -69,13 +67,7 @@ public class CalendarConfigType {
     public Map<String, String> eventTitles = new HashMap<>(); // date -> title mapping
 
     @JsonProperty("holidays")
-    public Set<String> holidays = new HashSet<>();
-
-    @JsonProperty("holidayEmojis")
-    public Map<String, String> holidayEmojis = new HashMap<>(); // date -> emoji for holidays
-
-    @JsonProperty("holidayNames")
-    public Map<String, String> holidayNames = new HashMap<>(); // date -> holiday name for text display
+    public Map<LocalDate, HolidayType> holidays = new HashMap<>(); // date -> holiday entry
 
     @JsonProperty("holidaySets")
     public List<String> holidaySets = new ArrayList<>(); // List of holiday set IDs to include
@@ -125,9 +117,7 @@ public class CalendarConfigType {
         this.emojiPosition = other.emojiPosition;
         this.customDates = new HashMap<>(other.customDates);
         this.eventTitles = new HashMap<>(other.eventTitles);
-        this.holidays = new HashSet<>(other.holidays);
-        this.holidayEmojis = new HashMap<>(other.holidayEmojis);
-        this.holidayNames = new HashMap<>(other.holidayNames);
+        this.holidays = new HashMap<>(other.holidays);
         this.holidaySets = new ArrayList<>(other.holidaySets);
         this.eventDisplayMode = other.eventDisplayMode;
         this.emojiFont = other.emojiFont;

@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
@@ -45,7 +46,7 @@ public class CalendarGenerationServiceTest {
     @Mock
     AstronomicalCalculationService astronomicalService;
 
-    ObjectMapper objectMapper = new ObjectMapper();
+    ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     private UserCalendar testUserCalendar;
     private CalendarTemplate testTemplate;
@@ -588,13 +589,13 @@ public class CalendarGenerationServiceTest {
     }
 
     @Test
-    void testGenerateCalendar_WithHolidayEmojis() {
-        // Arrange: Config has holidayEmojis map
+    void testGenerateCalendar_WithHolidays() {
+        // Arrange: Config has holidays map
         String holidayConfigJson = """
                 {
-                  "holidayEmojis": {
-                    "2025-01-01": "🎉",
-                    "2025-12-25": "🎄"
+                  "holidays": {
+                    "2025-01-01": {"name": "New Year's Day", "emoji": "🎉"},
+                    "2025-12-25": {"name": "Christmas", "emoji": "🎄"}
                   }
                 }
                 """;
@@ -617,24 +618,24 @@ public class CalendarGenerationServiceTest {
         // Act
         calendarGenerationService.generateCalendar(testUserCalendar);
 
-        // Assert: holidayEmojis should be parsed correctly
+        // Assert: holidays should be parsed correctly
         ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
         CalendarConfigType capturedConfig = configCaptor.getValue();
-        assertEquals(2, capturedConfig.holidayEmojis.size());
-        assertEquals("🎉", capturedConfig.holidayEmojis.get("2025-01-01"));
-        assertEquals("🎄", capturedConfig.holidayEmojis.get("2025-12-25"));
+        assertEquals(2, capturedConfig.holidays.size());
+        assertEquals("🎉", capturedConfig.holidays.get(java.time.LocalDate.of(2025, 1, 1)).emoji);
+        assertEquals("🎄", capturedConfig.holidays.get(java.time.LocalDate.of(2025, 12, 25)).emoji);
     }
 
     @Test
-    void testGenerateCalendar_WithHolidayNames() {
-        // Arrange: Config has holidayNames map
+    void testGenerateCalendar_WithHolidayNamesOnly() {
+        // Arrange: Config has holidays with names but no emoji
         String holidayConfigJson = """
                 {
-                  "holidayNames": {
-                    "2025-01-01": "New Year's Day",
-                    "2025-07-04": "Independence Day"
+                  "holidays": {
+                    "2025-01-01": {"name": "New Year's Day"},
+                    "2025-07-04": {"name": "Independence Day"}
                   }
                 }
                 """;
@@ -657,14 +658,14 @@ public class CalendarGenerationServiceTest {
         // Act
         calendarGenerationService.generateCalendar(testUserCalendar);
 
-        // Assert: holidayNames should be parsed correctly
+        // Assert: holidays should be parsed correctly with names
         ArgumentCaptor<CalendarConfigType> configCaptor = ArgumentCaptor.forClass(CalendarConfigType.class);
         verify(calendarRenderingService).generateCalendarSVG(configCaptor.capture());
 
         CalendarConfigType capturedConfig = configCaptor.getValue();
-        assertEquals(2, capturedConfig.holidayNames.size());
-        assertEquals("New Year's Day", capturedConfig.holidayNames.get("2025-01-01"));
-        assertEquals("Independence Day", capturedConfig.holidayNames.get("2025-07-04"));
+        assertEquals(2, capturedConfig.holidays.size());
+        assertEquals("New Year's Day", capturedConfig.holidays.get(java.time.LocalDate.of(2025, 1, 1)).name);
+        assertEquals("Independence Day", capturedConfig.holidays.get(java.time.LocalDate.of(2025, 7, 4)).name);
     }
 
     @Test
@@ -673,11 +674,8 @@ public class CalendarGenerationServiceTest {
         String holidayConfigJson = """
                 {
                   "holidaySets": ["us-federal"],
-                  "holidayEmojis": {
-                    "2025-01-01": "🎉"
-                  },
-                  "holidayNames": {
-                    "2025-01-01": "New Year's Day"
+                  "holidays": {
+                    "2025-01-01": {"name": "New Year's Day", "emoji": "🎉"}
                   }
                 }
                 """;
@@ -707,8 +705,8 @@ public class CalendarGenerationServiceTest {
         CalendarConfigType capturedConfig = configCaptor.getValue();
         assertEquals(1, capturedConfig.holidaySets.size());
         assertTrue(capturedConfig.holidaySets.contains("us-federal"));
-        assertEquals("🎉", capturedConfig.holidayEmojis.get("2025-01-01"));
-        assertEquals("New Year's Day", capturedConfig.holidayNames.get("2025-01-01"));
+        assertEquals("🎉", capturedConfig.holidays.get(java.time.LocalDate.of(2025, 1, 1)).emoji);
+        assertEquals("New Year's Day", capturedConfig.holidays.get(java.time.LocalDate.of(2025, 1, 1)).name);
     }
 
     @Test
@@ -717,8 +715,8 @@ public class CalendarGenerationServiceTest {
         String templateConfigJson = """
                 {
                   "holidaySets": ["us-federal", "us-christian"],
-                  "holidayEmojis": {
-                    "2025-01-01": "🎆"
+                  "holidays": {
+                    "2025-01-01": {"name": "New Year's Day", "emoji": "🎆"}
                   }
                 }
                 """;
@@ -726,7 +724,7 @@ public class CalendarGenerationServiceTest {
         String userConfigJson = """
                 {
                   "holidaySets": [],
-                  "holidayEmojis": {}
+                  "holidays": {}
                 }
                 """;
 
@@ -755,6 +753,6 @@ public class CalendarGenerationServiceTest {
 
         CalendarConfigType capturedConfig = configCaptor.getValue();
         assertTrue(capturedConfig.holidaySets.isEmpty(), "User's empty holidaySets should override template");
-        assertTrue(capturedConfig.holidayEmojis.isEmpty(), "User's empty holidayEmojis should override template");
+        assertTrue(capturedConfig.holidays.isEmpty(), "User's empty holidays should override template");
     }
 }

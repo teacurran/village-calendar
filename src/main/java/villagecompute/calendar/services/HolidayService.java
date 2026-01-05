@@ -9,6 +9,8 @@ import java.util.Map;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import villagecompute.calendar.types.HolidayType;
+
 /**
  * Service for calculating holidays for different countries. Jewish holidays are calculated dynamically using Hebrew
  * calendar algorithms.
@@ -86,6 +88,37 @@ public class HolidayService {
     }
 
     /**
+     * Get holidays with full type information for a year and holiday set.
+     *
+     * @param year
+     *            The calendar year
+     * @param setId
+     *            The holiday set ID (will be mapped to canonical name)
+     * @return Map of LocalDate to HolidayType entries
+     */
+    public Map<LocalDate, HolidayType> getHolidaysTyped(int year, String setId) {
+        Map<String, String> names = getHolidayNames(year, setId);
+        Map<String, String> emojis = getHolidaysWithEmoji(year, setId);
+
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
+        for (Map.Entry<String, String> entry : names.entrySet()) {
+            String dateStr = entry.getKey();
+            LocalDate date = LocalDate.parse(dateStr);
+            String name = entry.getValue();
+            String emoji = emojis.get(dateStr);
+            holidays.put(date, new HolidayType(name, emoji));
+        }
+        // Add any emoji-only entries (dates with emoji but no name)
+        for (Map.Entry<String, String> entry : emojis.entrySet()) {
+            LocalDate date = LocalDate.parse(entry.getKey());
+            if (!holidays.containsKey(date)) {
+                holidays.put(date, new HolidayType(null, entry.getValue()));
+            }
+        }
+        return holidays;
+    }
+
+    /**
      * Get holidays with emoji mappings for a year and holiday set.
      *
      * @param year
@@ -93,7 +126,9 @@ public class HolidayService {
      * @param setId
      *            The holiday set ID (will be mapped to canonical name)
      * @return Map of date strings to emoji characters
+     * @deprecated Use {@link #getHolidaysTyped(int, String)} instead
      */
+    @Deprecated
     public Map<String, String> getHolidaysWithEmoji(int year, String setId) {
         String canonicalSet = mapHolidaySetId(setId);
         return switch (canonicalSet) {

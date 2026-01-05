@@ -4,6 +4,7 @@ import static villagecompute.calendar.util.MimeTypes.HEADER_CACHE_CONTROL;
 import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import villagecompute.calendar.services.HebrewCalendarService;
 import villagecompute.calendar.services.PDFRenderingService;
 import villagecompute.calendar.types.CalendarConfigType;
 import villagecompute.calendar.types.CustomDateEntryType;
+import villagecompute.calendar.types.HolidayType;
 import villagecompute.calendar.util.MimeTypes;
 
 import io.quarkus.logging.Log;
@@ -84,7 +86,7 @@ public class CalendarResource {
         public String emojiPosition; // Position of emojis in calendar cells
         public Map<String, CustomDateEntryType> customDates;
         public Map<String, String> eventTitles; // date -> title mapping
-        public Set<String> holidays;
+        public Map<LocalDate, HolidayType> holidays; // date -> holiday entry
         public String holidaySet; // Holiday set to use (e.g., "US", "JEWISH", "HEBREW_RELIGIOUS")
         public List<String> holidaySets; // List of holiday set IDs to include
         public String eventDisplayMode; // "small" or "large" for event/holiday display

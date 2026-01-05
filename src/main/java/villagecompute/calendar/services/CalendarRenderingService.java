@@ -24,6 +24,7 @@ import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 
 import villagecompute.calendar.types.CalendarConfigType;
 import villagecompute.calendar.types.CustomDateEntryType;
+import villagecompute.calendar.types.HolidayType;
 import villagecompute.calendar.util.Colors;
 
 import io.quarkus.logging.Log;
@@ -593,8 +594,12 @@ public class CalendarRenderingService {
         renderMoonIfNeeded(svg, cell, date, showMoon, config);
 
         // Check for holidays or custom dates
-        String holidayEmoji = substituteEmojiForMonochrome(config.holidayEmojis.getOrDefault(dateStr, ""), config);
-        boolean isHoliday = config.holidays.contains(dateStr);
+        HolidayType holiday = config.holidays.get(date);
+        String holidayEmoji = holiday != null && holiday.emoji != null
+                ? substituteEmojiForMonochrome(holiday.emoji, config)
+                : "";
+        String holidayName = holiday != null && holiday.name != null ? holiday.name : "";
+        boolean isHoliday = holiday != null;
         boolean isCustomDate = config.customDates.containsKey(dateStr);
 
         // Get custom date entry and substituted emoji
@@ -602,7 +607,6 @@ public class CalendarRenderingService {
         String customEmoji = getCustomEmoji(customEntry, config);
 
         // Holiday emoji/text
-        String holidayName = config.holidayNames.getOrDefault(dateStr, "");
         svg.append(renderHolidayContent(holidayEmoji, holidayName, cell, config));
 
         // Custom emoji - skip if holiday emoji already rendered
@@ -775,12 +779,8 @@ public class CalendarRenderingService {
         if (config.holidaySets != null && !config.holidaySets.isEmpty()) {
             for (String setId : config.holidaySets) {
                 // Get holidays from HolidayService (handles ID mapping internally)
-                Map<String, String> setHolidayEmojis = holidayService.getHolidaysWithEmoji(config.year, setId);
-                config.holidays.addAll(setHolidayEmojis.keySet());
-                config.holidayEmojis.putAll(setHolidayEmojis);
-                // Also get holiday names for text display modes
-                Map<String, String> setHolidayNames = holidayService.getHolidayNames(config.year, setId);
-                config.holidayNames.putAll(setHolidayNames);
+                Map<LocalDate, HolidayType> setHolidays = holidayService.getHolidaysTyped(config.year, setId);
+                config.holidays.putAll(setHolidays);
             }
         }
 
