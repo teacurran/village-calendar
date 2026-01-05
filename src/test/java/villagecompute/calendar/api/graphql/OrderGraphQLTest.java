@@ -24,6 +24,7 @@ import villagecompute.calendar.data.models.enums.ProductType;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.ProductService;
 
+import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 
@@ -452,6 +453,32 @@ class OrderGraphQLTest {
                 .statusCode(200).body("data.orderByNumber", nullValue()).body("errors", nullValue());
     }
 
+    @Test
+    @Order(52)
+    void testOrderByNumber_Found() {
+        // Create an order in a separate transaction
+        String orderNumber = QuarkusTransaction.requiringNew().call(() -> {
+            JsonNode shippingAddress = objectMapper.createObjectNode().put("country", "US");
+            CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, productService.getPrice("print"),
+                    shippingAddress);
+            return order.orderNumber;
+        });
+
+        String query = String.format("""
+                query {
+                    orderByNumber(orderNumber: "%s") {
+                        id
+                        orderNumber
+                        status
+                    }
+                }
+                """, orderNumber);
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.orderByNumber.orderNumber", equalTo(orderNumber))
+                .body("data.orderByNumber.status", equalTo("PENDING")).body("errors", nullValue());
+    }
+
     // ==================================================================
     // PUBLIC QUERIES - orderByNumberAndId
     // ==================================================================
@@ -481,6 +508,58 @@ class OrderGraphQLTest {
                     }
                 }
                 """, java.util.UUID.randomUUID());
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.orderByNumberAndId", nullValue()).body("errors", nullValue());
+    }
+
+    @Test
+    @Order(56)
+    void testOrderByNumberAndId_Found() {
+        // Create an order in a separate transaction
+        String[] orderDetails = QuarkusTransaction.requiringNew().call(() -> {
+            JsonNode shippingAddress = objectMapper.createObjectNode().put("country", "US");
+            CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, productService.getPrice("print"),
+                    shippingAddress);
+            return new String[]{order.orderNumber, order.id.toString()};
+        });
+        String orderNumber = orderDetails[0];
+        String orderId = orderDetails[1];
+
+        String query = String.format("""
+                query {
+                    orderByNumberAndId(orderNumber: "%s", orderId: "%s") {
+                        id
+                        orderNumber
+                        status
+                    }
+                }
+                """, orderNumber, orderId);
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.orderByNumberAndId.orderNumber", equalTo(orderNumber))
+                .body("data.orderByNumberAndId.status", equalTo("PENDING")).body("errors", nullValue());
+    }
+
+    @Test
+    @Order(57)
+    void testOrderByNumberAndId_UuidMismatch() {
+        // Create an order in a separate transaction
+        String orderNumber = QuarkusTransaction.requiringNew().call(() -> {
+            JsonNode shippingAddress = objectMapper.createObjectNode().put("country", "US");
+            CalendarOrder order = orderService.createOrder(testUser, testCalendar, 1, productService.getPrice("print"),
+                    shippingAddress);
+            return order.orderNumber;
+        });
+
+        // Use correct order number but wrong UUID
+        String query = String.format("""
+                query {
+                    orderByNumberAndId(orderNumber: "%s", orderId: "%s") {
+                        id
+                    }
+                }
+                """, orderNumber, java.util.UUID.randomUUID());
 
         given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
                 .statusCode(200).body("data.orderByNumberAndId", nullValue()).body("errors", nullValue());
