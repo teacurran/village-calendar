@@ -15,6 +15,9 @@ public class CustomDateEntryType {
     @JsonProperty("emoji")
     public String emoji;
 
+    @JsonProperty("title")
+    public String title;
+
     @JsonProperty("displaySettings")
     public DisplaySettingsType displaySettings;
 
@@ -23,6 +26,17 @@ public class CustomDateEntryType {
 
     public CustomDateEntryType(String emoji) {
         this.emoji = emoji;
+    }
+
+    public CustomDateEntryType(String emoji, String title) {
+        this.emoji = emoji;
+        this.title = title;
+    }
+
+    public CustomDateEntryType(String emoji, String title, DisplaySettingsType displaySettings) {
+        this.emoji = emoji;
+        this.title = title;
+        this.displaySettings = displaySettings;
     }
 
     public CustomDateEntryType(String emoji, DisplaySettingsType displaySettings) {
@@ -82,11 +96,12 @@ public class CustomDateEntryType {
         if (o == null || getClass() != o.getClass())
             return false;
         CustomDateEntryType that = (CustomDateEntryType) o;
-        return Objects.equals(emoji, that.emoji) && Objects.equals(displaySettings, that.displaySettings);
+        return Objects.equals(emoji, that.emoji) && Objects.equals(title, that.title)
+                && Objects.equals(displaySettings, that.displaySettings);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(emoji, displaySettings);
+        return Objects.hash(emoji, title, displaySettings);
     }
 }

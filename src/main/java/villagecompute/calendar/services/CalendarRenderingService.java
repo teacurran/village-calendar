@@ -583,7 +583,6 @@ public class CalendarRenderingService {
             int monthNum, int weekendIndex, Locale locale, CalendarConfigType config, ThemeColors theme) {
 
         int day = date.getDayOfMonth();
-        String dateStr = date.toString();
 
         // Cell background
         String cellBackground = getCellBackgroundColor(config, date, monthNum, day, isWeekend, weekendIndex);
@@ -600,10 +599,10 @@ public class CalendarRenderingService {
                 : "";
         String holidayName = holiday != null && holiday.name != null ? holiday.name : "";
         boolean isHoliday = holiday != null;
-        boolean isCustomDate = config.customDates.containsKey(dateStr);
 
         // Get custom date entry and substituted emoji
-        CustomDateEntryType customEntry = config.customDates.get(dateStr);
+        CustomDateEntryType customEntry = config.customDates.get(date);
+        boolean isCustomDate = customEntry != null;
         String customEmoji = getCustomEmoji(customEntry, config);
 
         // Holiday emoji/text
@@ -614,8 +613,8 @@ public class CalendarRenderingService {
             renderCustomEmoji(svg, customEmoji, customEntry, cell, config);
         }
 
-        // Event title
-        String title = config.eventTitles.get(dateStr);
+        // Event title from custom entry
+        String title = customEntry != null ? customEntry.title : null;
         renderEventTitle(svg, title, customEntry, cell, config);
 
         // Day number

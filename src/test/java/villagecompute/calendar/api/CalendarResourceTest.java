@@ -115,12 +115,12 @@ class CalendarResourceTest {
     }
 
     @Test
-    void testGenerate_WithEventTitles() {
+    void testGenerate_WithCustomDateTitles() {
         Map<String, Object> request = new HashMap<>();
         request.put("year", TEST_YEAR);
-        Map<String, String> eventTitles = new HashMap<>();
-        eventTitles.put("2025-01-15", "Birthday");
-        request.put("eventTitles", eventTitles);
+        Map<String, Object> customDates = new HashMap<>();
+        customDates.put("2025-01-15", Map.of("emoji", "🎂", "title", "Birthday"));
+        request.put("customDates", customDates);
 
         given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
                 .contentType(CONTENT_TYPE_SVG);

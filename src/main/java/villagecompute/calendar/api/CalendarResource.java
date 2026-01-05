@@ -84,8 +84,7 @@ public class CalendarResource {
         public String moonDarkColor;
         public String moonLightColor;
         public String emojiPosition; // Position of emojis in calendar cells
-        public Map<String, CustomDateEntryType> customDates;
-        public Map<String, String> eventTitles; // date -> title mapping
+        public Map<LocalDate, CustomDateEntryType> customDates; // date -> custom date entry
         public Map<LocalDate, HolidayType> holidays; // date -> holiday entry
         public String holidaySet; // Holiday set to use (e.g., "US", "JEWISH", "HEBREW_RELIGIOUS")
         public List<String> holidaySets; // List of holiday set IDs to include
@@ -495,9 +494,6 @@ public class CalendarResource {
     private void applyEventSettings(CalendarRequest request, CalendarConfigType config) {
         if (request.customDates != null) {
             config.customDates = request.customDates;
-        }
-        if (request.eventTitles != null) {
-            config.eventTitles = request.eventTitles;
         }
         if (request.holidays != null) {
             config.holidays = request.holidays;

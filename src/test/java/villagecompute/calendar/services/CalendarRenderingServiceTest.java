@@ -242,12 +242,12 @@ class CalendarRenderingServiceTest {
     }
 
     @Test
-    void testReadValue_EventTitles() throws Exception {
-        String json = "{\"eventTitles\": {\"2025-01-15\": \"Birthday\", \"2025-06-20\": \"Anniversary\"}}";
+    void testReadValue_CustomDatesWithTitles() throws Exception {
+        String json = "{\"customDates\": {\"2025-01-15\": {\"title\": \"Birthday\"}, \"2025-06-20\": {\"title\": \"Anniversary\"}}}";
         CalendarConfigType config = objectMapper.readValue(json, CalendarConfigType.class);
 
-        assertEquals(2, config.eventTitles.size());
-        assertEquals("Birthday", config.eventTitles.get("2025-01-15"));
+        assertEquals(2, config.customDates.size());
+        assertEquals("Birthday", config.customDates.get(java.time.LocalDate.of(2025, 1, 15)).title);
     }
 
     // ========== GENERATE CALENDAR SVG TESTS ==========
@@ -455,8 +455,7 @@ class CalendarRenderingServiceTest {
     void testGenerateCalendarSVG_WithCustomDates() {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.customDates.put("2025-01-15", new CustomDateEntryType("🎂"));
-        config.eventTitles.put("2025-01-15", "Birthday");
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎂", "Birthday"));
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -889,7 +888,8 @@ class CalendarRenderingServiceTest {
         config.year = TEST_YEAR;
         config.emojiFont = CalendarRenderingService.EMOJI_FONT_NOTO_MONO;
         config.eventDisplayMode = "large"; // Ensure emoji is rendered
-        config.customDates.put("2025-01-15", new CustomDateEntryType("🕎")); // Menorah - will be substituted
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🕎")); // Menorah - will be
+                                                                                                    // substituted
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -904,7 +904,7 @@ class CalendarRenderingServiceTest {
         config.year = TEST_YEAR;
         config.emojiFont = "mono-red";
         config.eventDisplayMode = "large";
-        config.customDates.put("2025-01-15", new CustomDateEntryType("🎉"));
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉"));
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -919,7 +919,7 @@ class CalendarRenderingServiceTest {
         config.year = TEST_YEAR;
         config.emojiFont = null; // Explicitly null
         config.eventDisplayMode = "large";
-        config.customDates.put("2025-01-15", new CustomDateEntryType("🎉"));
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉"));
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -934,7 +934,7 @@ class CalendarRenderingServiceTest {
         config.year = TEST_YEAR;
         config.emojiFont = "noto-color"; // Not null, doesn't start with "mono-"
         config.eventDisplayMode = "large";
-        config.customDates.put("2025-01-15", new CustomDateEntryType("🎉"));
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉"));
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -951,7 +951,7 @@ class CalendarRenderingServiceTest {
         config.year = TEST_YEAR;
         config.emojiFont = emojiFont;
         config.eventDisplayMode = "large";
-        config.customDates.put("2025-01-15", new CustomDateEntryType("🎉"));
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉"));
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -1011,8 +1011,7 @@ class CalendarRenderingServiceTest {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
         config.eventDisplayMode = eventDisplayMode;
-        config.customDates.put("2025-01-15", new CustomDateEntryType("🎂"));
-        config.eventTitles.put("2025-01-15", "Birthday");
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎂", "Birthday"));
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -1329,7 +1328,7 @@ class CalendarRenderingServiceTest {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
         config.emojiPosition = position;
-        config.customDates.put("2025-01-15", new CustomDateEntryType("🎂"));
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎂"));
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -1357,7 +1356,7 @@ class CalendarRenderingServiceTest {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
         config.customDateColor = "#00ff00";
-        config.customDates.put("2025-01-15", new CustomDateEntryType("🎂"));
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎂"));
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -1387,7 +1386,8 @@ class CalendarRenderingServiceTest {
         config.year = TEST_YEAR;
         config.moonDisplayMode = "phases";
         config.eventDisplayMode = "small";
-        config.customDates.put("2025-01-13", new CustomDateEntryType("🎂")); // Near full moon date
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 13), new CustomDateEntryType("🎂")); // Near full moon
+                                                                                                    // date
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -1406,7 +1406,7 @@ class CalendarRenderingServiceTest {
         DisplaySettingsType displaySettings = new DisplaySettingsType();
         displaySettings.emojiSize = 24;
         CustomDateEntryType entry = new CustomDateEntryType("🎂", displaySettings);
-        config.customDates.put("2025-01-15", entry);
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), entry);
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -1421,9 +1421,8 @@ class CalendarRenderingServiceTest {
 
         DisplaySettingsType displaySettings = new DisplaySettingsType();
         displaySettings.textWrap = true;
-        CustomDateEntryType entry = new CustomDateEntryType("🎂", displaySettings);
-        config.customDates.put("2025-01-15", entry);
-        config.eventTitles.put("2025-01-15", "A Very Long Birthday Party Title");
+        CustomDateEntryType entry = new CustomDateEntryType("🎂", "A Very Long Birthday Party Title", displaySettings);
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), entry);
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
@@ -1442,9 +1441,8 @@ class CalendarRenderingServiceTest {
 
         DisplaySettingsType displaySettings = new DisplaySettingsType();
         displaySettings.textAlign = textAlign;
-        CustomDateEntryType entry = new CustomDateEntryType("🎂", displaySettings);
-        config.customDates.put("2025-01-15", entry);
-        config.eventTitles.put("2025-01-15", "Birthday");
+        CustomDateEntryType entry = new CustomDateEntryType("🎂", "Birthday", displaySettings);
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), entry);
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 

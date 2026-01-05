@@ -61,10 +61,7 @@ public class CalendarConfigType {
     public String emojiPosition = "bottom-left"; // Position of emojis in calendar cells
 
     @JsonProperty("customDates")
-    public Map<String, CustomDateEntryType> customDates = new HashMap<>(); // date -> custom date entry
-
-    @JsonProperty("eventTitles")
-    public Map<String, String> eventTitles = new HashMap<>(); // date -> title mapping
+    public Map<LocalDate, CustomDateEntryType> customDates = new HashMap<>(); // date -> custom date entry
 
     @JsonProperty("holidays")
     public Map<LocalDate, HolidayType> holidays = new HashMap<>(); // date -> holiday entry
@@ -116,7 +113,6 @@ public class CalendarConfigType {
         this.moonLightColor = other.moonLightColor;
         this.emojiPosition = other.emojiPosition;
         this.customDates = new HashMap<>(other.customDates);
-        this.eventTitles = new HashMap<>(other.eventTitles);
         this.holidays = new HashMap<>(other.holidays);
         this.holidaySets = new ArrayList<>(other.holidaySets);
         this.eventDisplayMode = other.eventDisplayMode;
