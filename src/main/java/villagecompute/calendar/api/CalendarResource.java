@@ -105,7 +105,7 @@ public class CalendarResource {
 
     public static class HolidayResponse {
         public Set<String> holidays;
-        public Map<String, String> holidayNames;
+        public Map<String, HolidayType> holidayData;
     }
 
     /** Request for converting SVG to PDF directly */
@@ -353,12 +353,23 @@ public class CalendarResource {
         // Default to US if country not specified
         String holidayCountry = country != null ? country : "US";
 
-        // Get holidays from service
-        Map<String, String> holidayMap = holidayService.getHolidays(holidayYear, holidayCountry);
+        // Get holidays from service with full type info
+        Map<LocalDate, HolidayType> typedHolidays = holidayService.getHolidays(holidayYear, holidayCountry);
+
+        // Fall back to US if country not found
+        if (typedHolidays.isEmpty()) {
+            typedHolidays = holidayService.getHolidays(holidayYear, "US");
+        }
+
+        // Convert to string-keyed map for JSON serialization
+        Map<String, HolidayType> holidayData = new HashMap<>();
+        for (Map.Entry<LocalDate, HolidayType> entry : typedHolidays.entrySet()) {
+            holidayData.put(entry.getKey().toString(), entry.getValue());
+        }
 
         HolidayResponse response = new HolidayResponse();
-        response.holidays = holidayMap.keySet();
-        response.holidayNames = holidayMap;
+        response.holidays = holidayData.keySet();
+        response.holidayData = holidayData;
 
         return Response.ok(response).build();
     }

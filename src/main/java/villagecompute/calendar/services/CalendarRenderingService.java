@@ -778,7 +778,7 @@ public class CalendarRenderingService {
         if (config.holidaySets != null && !config.holidaySets.isEmpty()) {
             for (String setId : config.holidaySets) {
                 // Get holidays from HolidayService (handles ID mapping internally)
-                Map<LocalDate, HolidayType> setHolidays = holidayService.getHolidaysTyped(config.year, setId);
+                Map<LocalDate, HolidayType> setHolidays = holidayService.getHolidays(config.year, setId);
                 config.holidays.putAll(setHolidays);
             }
         }
