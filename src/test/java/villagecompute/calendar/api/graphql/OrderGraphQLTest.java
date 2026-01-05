@@ -5,9 +5,12 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 import org.junit.jupiter.api.*;
@@ -21,11 +24,15 @@ import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.data.models.enums.ProductType;
+import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.ProductService;
 
 import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
+import io.quarkus.test.security.jwt.Claim;
+import io.quarkus.test.security.jwt.JwtSecurity;
 import io.restassured.http.ContentType;
 
 /**
@@ -46,6 +53,14 @@ class OrderGraphQLTest {
     ProductService productService;
     @Inject
     ObjectMapper objectMapper;
+    @Inject
+    AuthenticationService authService;
+    @Inject
+    EntityManager entityManager;
+
+    // Fixed UUIDs for @JwtSecurity claims (compile-time constants)
+    private static final String AUTH_TEST_USER_ID = "00000000-0000-0000-0000-000000001001";
+    private static final String AUTH_TEST_ADMIN_ID = "00000000-0000-0000-0000-000000001002";
 
     private CalendarUser testUser;
     private CalendarTemplate testTemplate;
@@ -767,6 +782,328 @@ class OrderGraphQLTest {
 
         given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
                 .statusCode(200).body("errors", notNullValue()); // Requires ADMIN role
+    }
+
+    // ==================================================================
+    // AUTHENTICATED TESTS - Using @TestSecurity and @JwtSecurity
+    // ==================================================================
+
+    /**
+     * Helper to ensure a user with a fixed UUID exists in the database. Uses native SQL to bypass Hibernate's @Version
+     * constraints.
+     */
+    private void ensureUserWithFixedId(String id, String email, boolean isAdmin) {
+        QuarkusTransaction.requiringNew().call(() -> {
+            // Delete any existing user with this ID
+            entityManager.createNativeQuery("DELETE FROM calendar_users WHERE id = ?1")
+                    .setParameter(1, UUID.fromString(id)).executeUpdate();
+
+            // Insert user with fixed ID
+            entityManager.createNativeQuery(
+                    "INSERT INTO calendar_users (id, email, display_name, oauth_provider, oauth_subject, is_admin, created, updated, version) "
+                            + "VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)")
+                    .setParameter(1, UUID.fromString(id)).setParameter(2, email)
+                    .setParameter(3, isAdmin ? "Admin User" : "Test User").setParameter(4, "GOOGLE")
+                    .setParameter(5, "test-" + id).setParameter(6, isAdmin).setParameter(7, Instant.now())
+                    .setParameter(8, Instant.now()).setParameter(9, 0L).executeUpdate();
+            return null;
+        });
+    }
+
+    @Test
+    @Order(80)
+    @TestSecurity(
+            user = "testuser",
+            roles = "USER")
+    @JwtSecurity(
+            claims = {@Claim(
+                    key = "sub",
+                    value = AUTH_TEST_USER_ID)})
+    void testMyOrders_Authenticated_ReturnsOrders() {
+        // Ensure user with fixed ID exists
+        ensureUserWithFixedId(AUTH_TEST_USER_ID, "authtest@example.com", false);
+
+        // Create order for the user
+        QuarkusTransaction.requiringNew().call(() -> {
+            CalendarUser user = CalendarUser.findById(UUID.fromString(AUTH_TEST_USER_ID));
+            CalendarTemplate template = CalendarTemplate.findById(testTemplate.id);
+
+            UserCalendar calendar = new UserCalendar();
+            calendar.user = user;
+            calendar.template = template;
+            calendar.name = "Auth Test Calendar";
+            calendar.year = 2025;
+            calendar.isPublic = true;
+            calendar.configuration = objectMapper.createObjectNode();
+            calendar.persist();
+
+            JsonNode address = objectMapper.createObjectNode().put("country", "US");
+            orderService.createOrder(user, calendar, 1, productService.getPrice("print"), address);
+            return null;
+        });
+
+        String query = """
+                query {
+                    myOrders {
+                        id
+                        orderNumber
+                        status
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.myOrders", notNullValue())
+                .body("data.myOrders.size()", greaterThanOrEqualTo(1)).body("errors", nullValue());
+    }
+
+    @Test
+    @Order(81)
+    @TestSecurity(
+            user = "testuser",
+            roles = "USER")
+    @JwtSecurity(
+            claims = {@Claim(
+                    key = "sub",
+                    value = AUTH_TEST_USER_ID)})
+    void testOrder_OwnerAccess_ReturnsOrder() {
+        // Ensure user with fixed ID exists
+        ensureUserWithFixedId(AUTH_TEST_USER_ID, "orderaccess@example.com", false);
+
+        // Create order for the user
+        String orderId = QuarkusTransaction.requiringNew().call(() -> {
+            CalendarUser user = CalendarUser.findById(UUID.fromString(AUTH_TEST_USER_ID));
+            CalendarTemplate template = CalendarTemplate.findById(testTemplate.id);
+
+            UserCalendar calendar = new UserCalendar();
+            calendar.user = user;
+            calendar.template = template;
+            calendar.name = "Order Access Calendar";
+            calendar.year = 2025;
+            calendar.isPublic = true;
+            calendar.configuration = objectMapper.createObjectNode();
+            calendar.persist();
+
+            JsonNode address = objectMapper.createObjectNode().put("country", "US");
+            CalendarOrder order = orderService.createOrder(user, calendar, 1, productService.getPrice("print"),
+                    address);
+            return order.id.toString();
+        });
+
+        String query = String.format("""
+                query {
+                    order(id: "%s") {
+                        id
+                        status
+                        orderNumber
+                    }
+                }
+                """, orderId);
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.order.id", equalTo(orderId)).body("data.order.status", equalTo("PENDING"))
+                .body("errors", nullValue());
+    }
+
+    @Test
+    @Order(82)
+    @TestSecurity(
+            user = "testuser",
+            roles = "USER")
+    @JwtSecurity(
+            claims = {@Claim(
+                    key = "sub",
+                    value = AUTH_TEST_USER_ID)})
+    void testCancelOrder_OwnerAccess_CancelsOrder() {
+        // Ensure user with fixed ID exists
+        ensureUserWithFixedId(AUTH_TEST_USER_ID, "canceltest@example.com", false);
+
+        // Create order for the user
+        String orderId = QuarkusTransaction.requiringNew().call(() -> {
+            CalendarUser user = CalendarUser.findById(UUID.fromString(AUTH_TEST_USER_ID));
+            CalendarTemplate template = CalendarTemplate.findById(testTemplate.id);
+
+            UserCalendar calendar = new UserCalendar();
+            calendar.user = user;
+            calendar.template = template;
+            calendar.name = "Cancel Test Calendar";
+            calendar.year = 2025;
+            calendar.isPublic = true;
+            calendar.configuration = objectMapper.createObjectNode();
+            calendar.persist();
+
+            JsonNode address = objectMapper.createObjectNode().put("country", "US");
+            CalendarOrder order = orderService.createOrder(user, calendar, 1, productService.getPrice("print"),
+                    address);
+            return order.id.toString();
+        });
+
+        String mutation = String.format("""
+                mutation {
+                    cancelOrder(orderId: "%s", reason: "Changed my mind") {
+                        id
+                        status
+                    }
+                }
+                """, orderId);
+
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("data.cancelOrder.status", equalTo("CANCELLED")).body("errors", nullValue());
+    }
+
+    @Test
+    @Order(83)
+    @TestSecurity(
+            user = "admin",
+            roles = {"USER", "ADMIN"})
+    @JwtSecurity(
+            claims = {@Claim(
+                    key = "sub",
+                    value = AUTH_TEST_ADMIN_ID)})
+    void testAllOrders_AdminAccess_ReturnsOrders() {
+        // Ensure admin user with fixed ID exists
+        ensureUserWithFixedId(AUTH_TEST_ADMIN_ID, "admintest@example.com", true);
+
+        String query = """
+                query {
+                    allOrders(limit: 5) {
+                        id
+                        status
+                    }
+                }
+                """;
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.allOrders", notNullValue()).body("errors", nullValue());
+    }
+
+    @Test
+    @Order(84)
+    @TestSecurity(
+            user = "admin",
+            roles = {"USER", "ADMIN"})
+    @JwtSecurity(
+            claims = {@Claim(
+                    key = "sub",
+                    value = AUTH_TEST_ADMIN_ID)})
+    void testUpdateOrderStatus_AdminAccess_UpdatesStatus() {
+        // Ensure admin user with fixed ID exists
+        ensureUserWithFixedId(AUTH_TEST_ADMIN_ID, "adminupdate@example.com", true);
+
+        // Create order for the admin
+        String orderId = QuarkusTransaction.requiringNew().call(() -> {
+            CalendarUser admin = CalendarUser.findById(UUID.fromString(AUTH_TEST_ADMIN_ID));
+            CalendarTemplate template = CalendarTemplate.findById(testTemplate.id);
+
+            UserCalendar calendar = new UserCalendar();
+            calendar.user = admin;
+            calendar.template = template;
+            calendar.name = "Admin Update Calendar";
+            calendar.year = 2025;
+            calendar.isPublic = true;
+            calendar.configuration = objectMapper.createObjectNode();
+            calendar.persist();
+
+            JsonNode address = objectMapper.createObjectNode().put("country", "US");
+            CalendarOrder order = orderService.createOrder(admin, calendar, 1, productService.getPrice("print"),
+                    address);
+            return order.id.toString();
+        });
+
+        // Valid transition: PENDING -> PAID
+        String mutation = String.format("""
+                mutation {
+                    updateOrderStatus(input: {
+                        orderId: "%s"
+                        status: "PAID"
+                        notes: "Payment received"
+                    }) {
+                        id
+                        status
+                    }
+                }
+                """, orderId);
+
+        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
+                .statusCode(200).body("data.updateOrderStatus.status", equalTo("PAID")).body("errors", nullValue());
+    }
+
+    @Test
+    @Order(85)
+    @TestSecurity(
+            user = "testuser",
+            roles = "USER")
+    @JwtSecurity(
+            claims = {@Claim(
+                    key = "sub",
+                    value = AUTH_TEST_USER_ID)})
+    void testOrders_NonAdminAccessingOtherUser_ThrowsSecurityException() {
+        // Ensure user with fixed ID exists
+        ensureUserWithFixedId(AUTH_TEST_USER_ID, "nonadmin@example.com", false);
+
+        // Try to access another user's orders
+        String query = String.format("""
+                query {
+                    orders(userId: "%s") {
+                        id
+                    }
+                }
+                """, java.util.UUID.randomUUID());
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    @Test
+    @Order(86)
+    @TestSecurity(
+            user = "admin",
+            roles = {"USER", "ADMIN"})
+    @JwtSecurity(
+            claims = {@Claim(
+                    key = "sub",
+                    value = AUTH_TEST_ADMIN_ID)})
+    void testOrders_AdminAccessingOtherUser_Succeeds() {
+        // Ensure admin user with fixed ID exists
+        ensureUserWithFixedId(AUTH_TEST_ADMIN_ID, "adminaccess@example.com", true);
+
+        // Create a regular user with an order
+        String targetUserId = QuarkusTransaction.requiringNew().call(() -> {
+            CalendarUser user = new CalendarUser();
+            user.email = "targetuser@example.com";
+            user.displayName = "Target User";
+            user.oauthProvider = "GOOGLE";
+            user.oauthSubject = "target-user-" + System.currentTimeMillis();
+            user.isAdmin = false;
+            user.persist();
+
+            CalendarTemplate template = CalendarTemplate.findById(testTemplate.id);
+
+            UserCalendar calendar = new UserCalendar();
+            calendar.user = user;
+            calendar.template = template;
+            calendar.name = "Target User Calendar";
+            calendar.year = 2025;
+            calendar.isPublic = true;
+            calendar.configuration = objectMapper.createObjectNode();
+            calendar.persist();
+
+            JsonNode address = objectMapper.createObjectNode().put("country", "US");
+            orderService.createOrder(user, calendar, 1, productService.getPrice("print"), address);
+            return user.id.toString();
+        });
+
+        String query = String.format("""
+                query {
+                    orders(userId: "%s") {
+                        id
+                        status
+                    }
+                }
+                """, targetUserId);
+
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("data.orders", notNullValue()).body("errors", nullValue());
     }
 
 }
