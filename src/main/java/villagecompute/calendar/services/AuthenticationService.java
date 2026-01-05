@@ -168,30 +168,16 @@ public class AuthenticationService {
      * @return Optional containing the CalendarUser if found
      */
     public Optional<CalendarUser> getCurrentUser(JsonWebToken jwt) {
-        // First try the provided JWT
-        JsonWebToken effectiveJwt = jwt;
-
-        // Fallback to SecurityIdentity principal if jwt is null or has no subject
-        // This is needed for @TestSecurity/@JwtSecurity in tests
-        if ((effectiveJwt == null || effectiveJwt.getSubject() == null) && securityIdentity != null) {
-            if (securityIdentity.getPrincipal() instanceof JsonWebToken identityJwt) {
-                effectiveJwt = identityJwt;
-                LOG.debug("getCurrentUser: using JWT from SecurityIdentity principal");
-            }
-        }
-
-        if (effectiveJwt == null || effectiveJwt.getSubject() == null) {
-            LOG.debug("getCurrentUser: no JWT with subject available");
+        if (jwt == null || jwt.getSubject() == null) {
             return Optional.empty();
         }
 
         try {
-            String userIdStr = effectiveJwt.getSubject();
-            LOG.debugf("getCurrentUser: looking up user by subject=%s", userIdStr);
+            String userIdStr = jwt.getSubject();
             UUID userId = UUID.fromString(userIdStr);
             return CalendarUser.findByIdOptional(userId);
         } catch (IllegalArgumentException e) {
-            LOG.errorf("Invalid user ID in JWT subject: %s", effectiveJwt.getSubject());
+            LOG.errorf("Invalid user ID in JWT subject: %s", jwt.getSubject());
             return Optional.empty();
         }
     }

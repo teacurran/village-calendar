@@ -65,9 +65,6 @@ public class OrderGraphQL {
     JsonWebToken jwt;
 
     @Inject
-    io.quarkus.security.identity.SecurityIdentity securityIdentity;
-
-    @Inject
     AuthenticationService authService;
 
     @Inject
@@ -776,18 +773,7 @@ public class OrderGraphQL {
 
     /** Check if the current JWT user has ADMIN role. */
     private boolean isCurrentUserAdmin() {
-        // First check the injected JWT
-        if (jwt != null && jwt.getGroups() != null && jwt.getGroups().contains(Roles.ADMIN)) {
-            return true;
-        }
-
-        // Fallback to SecurityIdentity principal (needed for @TestSecurity/@JwtSecurity in tests)
-        if (securityIdentity != null && securityIdentity.getPrincipal() instanceof JsonWebToken identityJwt) {
-            return identityJwt.getGroups() != null && identityJwt.getGroups().contains(Roles.ADMIN);
-        }
-
-        // Also check SecurityIdentity roles directly
-        return securityIdentity != null && securityIdentity.hasRole(Roles.ADMIN);
+        return jwt.getGroups() != null && jwt.getGroups().contains(Roles.ADMIN);
     }
 
     /** Find a calendar by ID and verify the user owns it. */
