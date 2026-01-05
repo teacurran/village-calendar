@@ -665,6 +665,38 @@ class OrderGraphQLUnitTest {
 
             assertThrows(IllegalArgumentException.class, () -> orderGraphQL.cancelOrder("not-a-uuid", "Test reason"));
         }
+
+        @Test
+        void cancelOrder_PaidOrderWithPaymentIntentButNullPaidAt_SkipsRefund() throws Exception {
+            testOrder.stripePaymentIntentId = "pi_test";
+            testOrder.paidAt = null; // Not actually paid yet
+
+            when(authService.requireCurrentUser(jwt)).thenReturn(testUser);
+            when(jwt.getGroups()).thenReturn(Set.of(Roles.USER));
+            when(orderService.cancelOrder(testOrder.id, testUser.id, false, "Test")).thenReturn(testOrder);
+
+            CalendarOrder result = orderGraphQL.cancelOrder(testOrder.id.toString(), "Test");
+
+            assertNotNull(result);
+            // Should not attempt refund when paidAt is null
+            verify(paymentService, never()).processRefund(anyString(), any(), anyString());
+        }
+
+        @Test
+        void cancelOrder_PaidOrderWithNullPaymentIntent_SkipsRefund() throws Exception {
+            testOrder.stripePaymentIntentId = null;
+            testOrder.paidAt = Instant.now(); // Paid but no payment intent (edge case)
+
+            when(authService.requireCurrentUser(jwt)).thenReturn(testUser);
+            when(jwt.getGroups()).thenReturn(Set.of(Roles.USER));
+            when(orderService.cancelOrder(testOrder.id, testUser.id, false, "Test")).thenReturn(testOrder);
+
+            CalendarOrder result = orderGraphQL.cancelOrder(testOrder.id.toString(), "Test");
+
+            assertNotNull(result);
+            // Should not attempt refund when paymentIntentId is null
+            verify(paymentService, never()).processRefund(anyString(), any(), anyString());
+        }
     }
 
     // ============================================================================
