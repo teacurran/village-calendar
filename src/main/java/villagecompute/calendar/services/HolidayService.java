@@ -97,6 +97,14 @@ public class HolidayService {
      * @return Map of LocalDate to HolidayType entries
      */
     public Map<LocalDate, HolidayType> getHolidaysTyped(int year, String setId) {
+        String canonicalSet = mapHolidaySetId(setId);
+
+        // For sets with unified build methods, use them directly
+        if (SET_US.equals(canonicalSet)) {
+            return buildUSHolidays(year);
+        }
+
+        // For other sets, combine names and emojis
         Map<String, String> names = getHolidayNames(year, setId);
         Map<String, String> emojis = getHolidayEmojis(year, setId);
 
@@ -121,7 +129,7 @@ public class HolidayService {
     private Map<String, String> getHolidayEmojis(int year, String setId) {
         String canonicalSet = mapHolidaySetId(setId);
         return switch (canonicalSet) {
-            case SET_US -> getUSHolidaysWithEmoji(year);
+            case SET_US -> extractEmojis(buildUSHolidays(year));
             case SET_JEWISH, SET_HEBREW -> getJewishHolidaysWithEmoji(year);
             case SET_CHRISTIAN -> getChristianHolidaysWithEmoji(year);
             case SET_CANADIAN -> getCanadianHolidaysWithEmoji(year);
@@ -135,6 +143,17 @@ public class HolidayService {
             case SET_SECULAR, SET_FUN -> getSecularHolidaysWithEmoji(year);
             default -> new HashMap<>();
         };
+    }
+
+    /** Extract emoji map from a typed holiday map (for backward compatibility) */
+    private Map<String, String> extractEmojis(Map<LocalDate, HolidayType> holidays) {
+        Map<String, String> emojis = new HashMap<>();
+        for (Map.Entry<LocalDate, HolidayType> entry : holidays.entrySet()) {
+            if (entry.getValue().emoji != null) {
+                emojis.put(formatDate(entry.getKey()), entry.getValue().emoji);
+            }
+        }
+        return emojis;
     }
 
     /**
@@ -169,58 +188,67 @@ public class HolidayService {
     // US Federal Holidays
     // ========================================
 
-    /** Get US Federal Holidays for a given year */
-    public Map<String, String> getUSHolidays(int year) {
-        Map<String, String> holidays = new HashMap<>();
+    /** Get US Federal Holidays for a given year with both name and emoji */
+    private Map<LocalDate, HolidayType> buildUSHolidays(int year) {
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
 
         // New Year's Day - January 1
-        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 1)), HOLIDAY_NEW_YEARS_DAY);
+        holidays.put(LocalDate.of(year, Month.JANUARY, 1), new HolidayType(HOLIDAY_NEW_YEARS_DAY, "🎉"));
 
         // Martin Luther King Jr. Day - 3rd Monday in January
         LocalDate mlkDay = LocalDate.of(year, Month.JANUARY, 1)
                 .with(TemporalAdjusters.dayOfWeekInMonth(3, DayOfWeek.MONDAY));
-        holidays.put(formatDate(mlkDay), "Martin Luther King Jr. Day");
+        holidays.put(mlkDay, new HolidayType("Martin Luther King Jr. Day", "🕊️"));
 
         // Presidents' Day - 3rd Monday in February
         LocalDate presidentsDay = LocalDate.of(year, Month.FEBRUARY, 1)
                 .with(TemporalAdjusters.dayOfWeekInMonth(3, DayOfWeek.MONDAY));
-        holidays.put(formatDate(presidentsDay), "Presidents' Day");
+        holidays.put(presidentsDay, new HolidayType("Presidents' Day", "🏛️"));
 
         // Memorial Day - Last Monday in May
         LocalDate memorialDay = LocalDate.of(year, Month.MAY, 1).with(TemporalAdjusters.lastInMonth(DayOfWeek.MONDAY));
-        holidays.put(formatDate(memorialDay), "Memorial Day");
+        holidays.put(memorialDay, new HolidayType("Memorial Day", "🎖️"));
 
         // Juneteenth - June 19
-        holidays.put(formatDate(LocalDate.of(year, Month.JUNE, 19)), "Juneteenth");
+        holidays.put(LocalDate.of(year, Month.JUNE, 19), new HolidayType("Juneteenth", "🎉"));
 
         // Independence Day - July 4
-        holidays.put(formatDate(LocalDate.of(year, Month.JULY, 4)), "Independence Day");
+        holidays.put(LocalDate.of(year, Month.JULY, 4), new HolidayType("Independence Day", "🇺🇸"));
 
         // Labor Day - 1st Monday in September
         LocalDate laborDay = LocalDate.of(year, Month.SEPTEMBER, 1)
                 .with(TemporalAdjusters.firstInMonth(DayOfWeek.MONDAY));
-        holidays.put(formatDate(laborDay), "Labor Day");
+        holidays.put(laborDay, new HolidayType("Labor Day", "👷"));
 
         // Columbus Day - 2nd Monday in October
         LocalDate columbusDay = LocalDate.of(year, Month.OCTOBER, 1)
                 .with(TemporalAdjusters.dayOfWeekInMonth(2, DayOfWeek.MONDAY));
-        holidays.put(formatDate(columbusDay), "Columbus Day");
+        holidays.put(columbusDay, new HolidayType("Columbus Day", "🌍"));
 
         // Halloween - October 31
-        holidays.put(formatDate(LocalDate.of(year, Month.OCTOBER, 31)), "Halloween");
+        holidays.put(LocalDate.of(year, Month.OCTOBER, 31), new HolidayType("Halloween", "🎃"));
 
         // Veterans Day - November 11
-        holidays.put(formatDate(LocalDate.of(year, Month.NOVEMBER, 11)), "Veterans Day");
+        holidays.put(LocalDate.of(year, Month.NOVEMBER, 11), new HolidayType("Veterans Day", "🎖️"));
 
         // Thanksgiving - 4th Thursday in November
         LocalDate thanksgiving = LocalDate.of(year, Month.NOVEMBER, 1)
                 .with(TemporalAdjusters.dayOfWeekInMonth(4, DayOfWeek.THURSDAY));
-        holidays.put(formatDate(thanksgiving), "Thanksgiving");
+        holidays.put(thanksgiving, new HolidayType("Thanksgiving", "🦃"));
 
         // Christmas Day - December 25
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), "Christmas Day");
+        holidays.put(LocalDate.of(year, Month.DECEMBER, 25), new HolidayType("Christmas Day", "🎄"));
 
         return holidays;
+    }
+
+    /** Get US Federal Holidays for a given year (names only, for backward compatibility) */
+    public Map<String, String> getUSHolidays(int year) {
+        Map<String, String> result = new HashMap<>();
+        for (Map.Entry<LocalDate, HolidayType> entry : buildUSHolidays(year).entrySet()) {
+            result.put(formatDate(entry.getKey()), entry.getValue().name);
+        }
+        return result;
     }
 
     /** Get holidays for any country (currently only supports US) */
@@ -1263,47 +1291,6 @@ public class HolidayService {
         }
 
         return bestDate;
-    }
-
-    // ========================================
-    // US Holidays with Emoji
-    // ========================================
-
-    /** Get US holidays with emoji mappings */
-    public Map<String, String> getUSHolidaysWithEmoji(int year) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        holidayEmojis.put(LocalDate.of(year, Month.JANUARY, 1).toString(), "🎉"); // New Year's Day
-
-        LocalDate mlkDay = getNthWeekdayOfMonth(year, Month.JANUARY, DayOfWeek.MONDAY, 3);
-        holidayEmojis.put(mlkDay.toString(), "🕊️"); // MLK Day
-
-        LocalDate presidentsDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
-        holidayEmojis.put(presidentsDay.toString(), "🏛️"); // Presidents' Day
-
-        LocalDate memorialDay = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
-        holidayEmojis.put(memorialDay.toString(), "🎖️"); // Memorial Day
-
-        holidayEmojis.put(LocalDate.of(year, Month.JUNE, 19).toString(), "🎉"); // Juneteenth
-
-        holidayEmojis.put(LocalDate.of(year, Month.JULY, 4).toString(), "🇺🇸"); // Independence Day
-
-        LocalDate laborDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
-        holidayEmojis.put(laborDay.toString(), "👷"); // Labor Day
-
-        LocalDate columbusDay = getNthWeekdayOfMonth(year, Month.OCTOBER, DayOfWeek.MONDAY, 2);
-        holidayEmojis.put(columbusDay.toString(), "🌍"); // Columbus Day
-
-        holidayEmojis.put(LocalDate.of(year, Month.OCTOBER, 31).toString(), "🎃"); // Halloween
-
-        holidayEmojis.put(LocalDate.of(year, Month.NOVEMBER, 11).toString(), "🎖️"); // Veterans Day
-
-        LocalDate thanksgiving = getNthWeekdayOfMonth(year, Month.NOVEMBER, DayOfWeek.THURSDAY, 4);
-        holidayEmojis.put(thanksgiving.toString(), "🦃"); // Thanksgiving
-
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 25).toString(), "🎄"); // Christmas
-
-        return holidayEmojis;
     }
 
     // ========================================

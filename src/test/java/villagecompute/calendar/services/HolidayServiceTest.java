@@ -2,12 +2,15 @@ package villagecompute.calendar.services;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+
+import villagecompute.calendar.types.HolidayType;
 
 /** Unit tests for HolidayService. Tests holiday calculations and set mappings. */
 class HolidayServiceTest {
@@ -576,11 +579,14 @@ class HolidayServiceTest {
     // ========== US HOLIDAYS WITH EMOJI TESTS ==========
 
     @Test
-    void testGetUSHolidaysWithEmoji_ContainsExpectedEmojis() {
-        Map<String, String> emojis = holidayService.getUSHolidaysWithEmoji(TEST_YEAR);
+    void testGetUSHolidaysTyped_ContainsExpectedEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidaysTyped(TEST_YEAR, "US");
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        // Verify at least some holidays have emojis
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "US holidays should have emojis");
     }
 
     // ========== EUROPEAN HOLIDAYS TESTS ==========
