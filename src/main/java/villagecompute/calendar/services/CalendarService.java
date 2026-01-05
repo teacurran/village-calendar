@@ -151,9 +151,7 @@ public class CalendarService {
             calendar.isPublic = isPublic;
         }
 
-        // Persist and flush (version will be automatically incremented by JPA)
-        calendar.persist();
-        calendar.flush(); // Force immediate flush to increment version
+        calendar.persistAndFlush();
 
         LOG.infof("Updated calendar: id=%s, version=%d", calendar.id, calendar.version);
 
@@ -250,7 +248,7 @@ public class CalendarService {
         if (currentUser == null) {
             throw new SecurityException("Authentication required to list calendars");
         }
-        if (!currentUser.id.equals(userId) && !currentUser.isAdmin) {
+        if (!currentUser.id.equals(userId) && !Boolean.TRUE.equals(currentUser.isAdmin)) {
             LOG.warnf("Unauthorized calendar list access: userId=%s, currentUserId=%s", userId, currentUser.id);
             throw new SecurityException("You can only view your own calendars");
         }
@@ -353,7 +351,7 @@ public class CalendarService {
         }
 
         // Admin can access everything
-        if (currentUser.isAdmin) {
+        if (Boolean.TRUE.equals(currentUser.isAdmin)) {
             return;
         }
 
@@ -389,7 +387,7 @@ public class CalendarService {
         }
 
         // Admin can modify everything
-        if (currentUser.isAdmin) {
+        if (Boolean.TRUE.equals(currentUser.isAdmin)) {
             return;
         }
 

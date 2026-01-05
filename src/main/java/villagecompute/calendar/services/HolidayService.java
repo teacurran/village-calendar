@@ -9,6 +9,8 @@ import java.util.Map;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import villagecompute.calendar.types.HolidayType;
+
 /**
  * Service for calculating holidays for different countries. Jewish holidays are calculated dynamically using Hebrew
  * calendar algorithms.
@@ -46,6 +48,7 @@ public class HolidayService {
     private static final String HOLIDAY_NEW_YEARS_DAY = "New Year's Day";
     private static final String HOLIDAY_GOOD_FRIDAY = "Good Friday";
     private static final String HOLIDAY_CHRISTMAS = "Christmas";
+    private static final String HOLIDAY_HALLOWEEN = "Halloween";
 
     // ========================================
     // Emoji Constants (with ZWJ characters escaped for SonarQube S2479)
@@ -86,57 +89,29 @@ public class HolidayService {
     }
 
     /**
-     * Get holidays with emoji mappings for a year and holiday set.
+     * Get holidays with full type information for a year and holiday set.
      *
      * @param year
      *            The calendar year
      * @param setId
      *            The holiday set ID (will be mapped to canonical name)
-     * @return Map of date strings to emoji characters
+     * @return Map of LocalDate to HolidayType entries
      */
-    public Map<String, String> getHolidaysWithEmoji(int year, String setId) {
+    public Map<LocalDate, HolidayType> getHolidays(int year, String setId) {
         String canonicalSet = mapHolidaySetId(setId);
         return switch (canonicalSet) {
-            case SET_US -> getUSHolidaysWithEmoji(year);
-            case SET_JEWISH, SET_HEBREW -> getJewishHolidaysWithEmoji(year);
-            case SET_CHRISTIAN -> getChristianHolidaysWithEmoji(year);
-            case SET_CANADIAN -> getCanadianHolidaysWithEmoji(year);
-            case SET_UK -> getUKHolidaysWithEmoji(year);
-            case SET_MAJOR_WORLD -> getMajorWorldHolidaysWithEmoji(year);
-            case SET_MEXICAN -> getMexicanHolidaysWithEmoji(year);
-            case SET_PAGAN, SET_WICCAN -> getPaganHolidaysWithEmoji(year);
-            case SET_HINDU -> getHinduHolidaysWithEmoji(year);
-            case SET_ISLAMIC, SET_MUSLIM -> getIslamicHolidaysWithEmoji(year);
-            case SET_CHINESE, SET_LUNAR -> getChineseHolidaysWithEmoji(year);
-            case SET_SECULAR, SET_FUN -> getSecularHolidaysWithEmoji(year);
-            default -> new HashMap<>();
-        };
-    }
-
-    /**
-     * Get holiday names for a year and holiday set.
-     *
-     * @param year
-     *            The calendar year
-     * @param setId
-     *            The holiday set ID (will be mapped to canonical name)
-     * @return Map of date strings to holiday names
-     */
-    public Map<String, String> getHolidayNames(int year, String setId) {
-        String canonicalSet = mapHolidaySetId(setId);
-        return switch (canonicalSet) {
-            case SET_US -> getUSHolidays(year);
-            case SET_JEWISH, SET_HEBREW -> getJewishHolidays(year);
-            case SET_CHRISTIAN -> getChristianHolidays(year);
-            case SET_CANADIAN -> getCanadianHolidays(year);
-            case SET_UK -> getUKHolidays(year);
-            case SET_MAJOR_WORLD -> getMajorWorldHolidays(year);
-            case SET_MEXICAN -> getMexicanHolidays(year);
-            case SET_PAGAN, SET_WICCAN -> getPaganHolidays(year);
-            case SET_HINDU -> getHinduHolidays(year);
-            case SET_ISLAMIC, SET_MUSLIM -> getIslamicHolidays(year);
-            case SET_CHINESE, SET_LUNAR -> getChineseHolidays(year);
-            case SET_SECULAR, SET_FUN -> getSecularHolidays(year);
+            case SET_US -> buildUSHolidays(year);
+            case SET_JEWISH, SET_HEBREW -> buildJewishHolidays(year);
+            case SET_CHRISTIAN -> buildChristianHolidays(year);
+            case SET_CANADIAN -> buildCanadianHolidays(year);
+            case SET_UK -> buildUKHolidays(year);
+            case SET_MAJOR_WORLD -> buildMajorWorldHolidays(year);
+            case SET_MEXICAN -> buildMexicanHolidays(year);
+            case SET_PAGAN, SET_WICCAN -> buildPaganHolidays(year);
+            case SET_HINDU -> buildHinduHolidays(year);
+            case SET_ISLAMIC, SET_MUSLIM -> buildIslamicHolidays(year);
+            case SET_CHINESE, SET_LUNAR -> buildChineseHolidays(year);
+            case SET_SECULAR, SET_FUN -> buildSecularHolidays(year);
             default -> new HashMap<>();
         };
     }
@@ -145,75 +120,66 @@ public class HolidayService {
     // US Federal Holidays
     // ========================================
 
-    /** Get US Federal Holidays for a given year */
-    public Map<String, String> getUSHolidays(int year) {
-        Map<String, String> holidays = new HashMap<>();
+    /** Get US Federal Holidays for a given year with both name and emoji */
+    private Map<LocalDate, HolidayType> buildUSHolidays(int year) {
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
 
         // New Year's Day - January 1
-        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 1)), HOLIDAY_NEW_YEARS_DAY);
+        holidays.put(LocalDate.of(year, Month.JANUARY, 1), new HolidayType(HOLIDAY_NEW_YEARS_DAY, "🎉"));
 
         // Martin Luther King Jr. Day - 3rd Monday in January
         LocalDate mlkDay = LocalDate.of(year, Month.JANUARY, 1)
                 .with(TemporalAdjusters.dayOfWeekInMonth(3, DayOfWeek.MONDAY));
-        holidays.put(formatDate(mlkDay), "Martin Luther King Jr. Day");
+        holidays.put(mlkDay, new HolidayType("Martin Luther King Jr. Day", "🕊️"));
 
         // Presidents' Day - 3rd Monday in February
         LocalDate presidentsDay = LocalDate.of(year, Month.FEBRUARY, 1)
                 .with(TemporalAdjusters.dayOfWeekInMonth(3, DayOfWeek.MONDAY));
-        holidays.put(formatDate(presidentsDay), "Presidents' Day");
+        holidays.put(presidentsDay, new HolidayType("Presidents' Day", "🏛️"));
 
         // Memorial Day - Last Monday in May
         LocalDate memorialDay = LocalDate.of(year, Month.MAY, 1).with(TemporalAdjusters.lastInMonth(DayOfWeek.MONDAY));
-        holidays.put(formatDate(memorialDay), "Memorial Day");
+        holidays.put(memorialDay, new HolidayType("Memorial Day", "🎖️"));
 
         // Juneteenth - June 19
-        holidays.put(formatDate(LocalDate.of(year, Month.JUNE, 19)), "Juneteenth");
+        holidays.put(LocalDate.of(year, Month.JUNE, 19), new HolidayType("Juneteenth", "🎉"));
 
         // Independence Day - July 4
-        holidays.put(formatDate(LocalDate.of(year, Month.JULY, 4)), "Independence Day");
+        holidays.put(LocalDate.of(year, Month.JULY, 4), new HolidayType("Independence Day", "🇺🇸"));
 
         // Labor Day - 1st Monday in September
         LocalDate laborDay = LocalDate.of(year, Month.SEPTEMBER, 1)
                 .with(TemporalAdjusters.firstInMonth(DayOfWeek.MONDAY));
-        holidays.put(formatDate(laborDay), "Labor Day");
+        holidays.put(laborDay, new HolidayType("Labor Day", "👷"));
 
         // Columbus Day - 2nd Monday in October
         LocalDate columbusDay = LocalDate.of(year, Month.OCTOBER, 1)
                 .with(TemporalAdjusters.dayOfWeekInMonth(2, DayOfWeek.MONDAY));
-        holidays.put(formatDate(columbusDay), "Columbus Day");
+        holidays.put(columbusDay, new HolidayType("Columbus Day", "🌍"));
 
         // Halloween - October 31
-        holidays.put(formatDate(LocalDate.of(year, Month.OCTOBER, 31)), "Halloween");
+        holidays.put(LocalDate.of(year, Month.OCTOBER, 31), new HolidayType(HOLIDAY_HALLOWEEN, "🎃"));
 
         // Veterans Day - November 11
-        holidays.put(formatDate(LocalDate.of(year, Month.NOVEMBER, 11)), "Veterans Day");
+        holidays.put(LocalDate.of(year, Month.NOVEMBER, 11), new HolidayType("Veterans Day", "🎖️"));
 
         // Thanksgiving - 4th Thursday in November
         LocalDate thanksgiving = LocalDate.of(year, Month.NOVEMBER, 1)
                 .with(TemporalAdjusters.dayOfWeekInMonth(4, DayOfWeek.THURSDAY));
-        holidays.put(formatDate(thanksgiving), "Thanksgiving");
+        holidays.put(thanksgiving, new HolidayType("Thanksgiving", "🦃"));
 
         // Christmas Day - December 25
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), "Christmas Day");
+        holidays.put(LocalDate.of(year, Month.DECEMBER, 25), new HolidayType("Christmas Day", "🎄"));
 
         return holidays;
     }
 
-    /** Get holidays for any country (currently only supports US) */
-    public Map<String, String> getHolidays(int year, String country) {
-        if ("US".equalsIgnoreCase(country)) {
-            return getUSHolidays(year);
-        }
-
-        // Default to US holidays if country not supported
-        return getUSHolidays(year);
-    }
-
     /**
-     * Get Jewish holidays for a given Gregorian year. Holidays are calculated dynamically based on the Hebrew calendar.
+     * Build Jewish holidays for a given Gregorian year with both name and emoji. Holidays are calculated dynamically
+     * based on the Hebrew calendar.
      */
-    public Map<String, String> getJewishHolidays(int gregorianYear) {
-        Map<String, String> holidays = new HashMap<>();
+    private Map<LocalDate, HolidayType> buildJewishHolidays(int gregorianYear) {
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
 
         // Jewish holidays span two Hebrew years within one Gregorian year
         // For a Gregorian year, we need holidays from:
@@ -224,67 +190,47 @@ public class HolidayService {
         int hebrewYearForFall = gregorianYear + 3761; // Hebrew year starting in fall of gregorianYear
 
         // Spring holidays (from Hebrew year that started previous fall)
-        addPurim(holidays, hebrewYearForSpring);
-        addPassover(holidays, hebrewYearForSpring);
-        addShavuot(holidays, hebrewYearForSpring);
-
-        // Fall holidays (from Hebrew year starting in current fall)
-        addRoshHashanah(holidays, hebrewYearForFall);
-        addYomKippur(holidays, hebrewYearForFall);
-        addSukkot(holidays, hebrewYearForFall);
-        addChanukah(holidays, hebrewYearForFall, gregorianYear);
-
-        return holidays;
-    }
-
-    /** Get Jewish holidays with emoji mappings */
-    public Map<String, String> getJewishHolidaysWithEmoji(int gregorianYear) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        int hebrewYearForSpring = gregorianYear + 3760;
-        int hebrewYearForFall = gregorianYear + 3761;
-
-        // Spring holidays
         LocalDate purim = calculatePurim(hebrewYearForSpring);
-        if (purim != null && purim.getYear() == gregorianYear) {
-            holidayEmojis.put(purim.toString(), "🎭");
+        if (purim.getYear() == gregorianYear) {
+            holidays.put(purim, new HolidayType("Purim", "🎭"));
         }
 
         LocalDate passoverStart = calculatePassoverStart(hebrewYearForSpring);
-        if (passoverStart != null && passoverStart.getYear() == gregorianYear) {
-            holidayEmojis.put(passoverStart.toString(), "🍷");
-            holidayEmojis.put(passoverStart.plusDays(7).toString(), "🍷"); // Last day
+        if (passoverStart.getYear() == gregorianYear) {
+            holidays.put(passoverStart, new HolidayType("Passover", "🍷"));
+            holidays.put(passoverStart.plusDays(7), new HolidayType("Passover", "🍷"));
         }
 
         LocalDate shavuot = calculateShavuot(hebrewYearForSpring);
-        if (shavuot != null && shavuot.getYear() == gregorianYear) {
-            holidayEmojis.put(shavuot.toString(), "📜");
+        if (shavuot.getYear() == gregorianYear) {
+            holidays.put(shavuot, new HolidayType("Shavuot", "📜"));
         }
 
-        // Fall holidays
+        // Fall holidays (from Hebrew year starting in current fall)
         LocalDate roshHashanah = calculateRoshHashanah(hebrewYearForFall);
-        if (roshHashanah != null && roshHashanah.getYear() == gregorianYear) {
-            holidayEmojis.put(roshHashanah.toString(), "🍎");
-            holidayEmojis.put(roshHashanah.plusDays(1).toString(), "🍎");
+        if (roshHashanah.getYear() == gregorianYear) {
+            holidays.put(roshHashanah, new HolidayType("Rosh Hashanah", "🍎"));
+            holidays.put(roshHashanah.plusDays(1), new HolidayType("Rosh Hashanah", "🍎"));
         }
 
         LocalDate yomKippur = calculateYomKippur(hebrewYearForFall);
-        if (yomKippur != null && yomKippur.getYear() == gregorianYear) {
-            holidayEmojis.put(yomKippur.toString(), "✡️");
+        if (yomKippur.getYear() == gregorianYear) {
+            holidays.put(yomKippur, new HolidayType("Yom Kippur", "✡️"));
         }
 
         LocalDate sukkot = calculateSukkotStart(hebrewYearForFall);
-        if (sukkot != null && sukkot.getYear() == gregorianYear) {
-            holidayEmojis.put(sukkot.toString(), "🌿");
-            holidayEmojis.put(sukkot.plusDays(7).toString(), "📜"); // Simchat Torah (diaspora)
+        if (sukkot.getYear() == gregorianYear) {
+            holidays.put(sukkot, new HolidayType("Sukkot", "🌿"));
+            holidays.put(sukkot.plusDays(7), new HolidayType("Shemini Atzeret", "📜"));
+            holidays.put(sukkot.plusDays(8), new HolidayType("Simchat Torah", "📜"));
         }
 
         LocalDate chanukah = calculateChanukahStart(hebrewYearForFall);
-        if (chanukah != null && chanukah.getYear() == gregorianYear) {
-            holidayEmojis.put(chanukah.toString(), "🕎");
+        if (chanukah.getYear() == gregorianYear) {
+            holidays.put(chanukah, new HolidayType("Chanukah", "🕎"));
         }
 
-        return holidayEmojis;
+        return holidays;
     }
 
     // ========================================
@@ -364,17 +310,9 @@ public class HolidayService {
      */
     private int daysInHebrewMonth(int hebrewYear, int hebrewMonth) {
         switch (hebrewMonth) {
-            case 1 : // Nisan
-            case 3 : // Sivan
-            case 5 : // Av
-            case 7 : // Tishrei
-            case 11 : // Shevat
+            case 1, 3, 5, 7, 11 :
                 return 30;
-            case 2 : // Iyar
-            case 4 : // Tammuz
-            case 6 : // Elul
-            case 10 : // Tevet
-            case 13 : // Adar II
+            case 2, 4, 6, 10, 13 : // Iyar
                 return 29;
             case 8 : // Cheshvan - variable
                 return isLongCheshvan(hebrewYear) ? 30 : 29;
@@ -456,179 +394,67 @@ public class HolidayService {
         return hebrewToGregorian(hebrewYear, 3, 6); // 6 Sivan
     }
 
-    private void addRoshHashanah(Map<String, String> holidays, int hebrewYear) {
-        LocalDate date = calculateRoshHashanah(hebrewYear);
-        if (date != null) {
-            holidays.put(formatDate(date), "Rosh Hashanah");
-            holidays.put(formatDate(date.plusDays(1)), "Rosh Hashanah");
-        }
-    }
-
-    private void addYomKippur(Map<String, String> holidays, int hebrewYear) {
-        LocalDate date = calculateYomKippur(hebrewYear);
-        if (date != null) {
-            holidays.put(formatDate(date), "Yom Kippur");
-        }
-    }
-
-    private void addSukkot(Map<String, String> holidays, int hebrewYear) {
-        LocalDate date = calculateSukkotStart(hebrewYear);
-        if (date != null) {
-            holidays.put(formatDate(date), "Sukkot");
-            holidays.put(formatDate(date.plusDays(7)), "Shemini Atzeret");
-            holidays.put(formatDate(date.plusDays(8)), "Simchat Torah");
-        }
-    }
-
-    private void addChanukah(Map<String, String> holidays, int hebrewYear, int gregorianYear) {
-        LocalDate date = calculateChanukahStart(hebrewYear);
-        // Chanukah might fall in December of the current year or next year
-        if (date != null && date.getYear() == gregorianYear) {
-            holidays.put(formatDate(date), "Chanukah");
-        }
-    }
-
-    private void addPurim(Map<String, String> holidays, int hebrewYear) {
-        LocalDate date = calculatePurim(hebrewYear);
-        if (date != null) {
-            holidays.put(formatDate(date), "Purim");
-        }
-    }
-
-    private void addPassover(Map<String, String> holidays, int hebrewYear) {
-        LocalDate date = calculatePassoverStart(hebrewYear);
-        if (date != null) {
-            holidays.put(formatDate(date), "Passover");
-            holidays.put(formatDate(date.plusDays(7)), "Passover");
-        }
-    }
-
-    private void addShavuot(Map<String, String> holidays, int hebrewYear) {
-        LocalDate date = calculateShavuot(hebrewYear);
-        if (date != null) {
-            holidays.put(formatDate(date), "Shavuot");
-        }
-    }
-
-    /** Format date as YYYY-MM-DD */
-    private String formatDate(LocalDate date) {
-        return date.toString();
-    }
-
     // ========================================
     // Mexican/Hispanic Holidays
     // ========================================
 
-    /** Get Mexican holidays for a given year */
-    public Map<String, String> getMexicanHolidays(int year) {
-        Map<String, String> holidays = new HashMap<>();
+    /** Build Mexican holidays for a given year with both name and emoji */
+    private Map<LocalDate, HolidayType> buildMexicanHolidays(int year) {
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
 
-        // Día de los Reyes (Epiphany/Three Kings Day) - January 6
-        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 6)), "Día de los Reyes");
-
-        // Constitution Day - February 5 (observed first Monday of February)
-        holidays.put(formatDate(LocalDate.of(year, Month.FEBRUARY, 5)), "Día de la Constitución");
-
-        // Benito Juárez Birthday - March 21 (observed third Monday of March)
-        holidays.put(formatDate(LocalDate.of(year, Month.MARCH, 21)), "Natalicio de Benito Juárez");
-
-        // Cinco de Mayo - May 5
-        holidays.put(formatDate(LocalDate.of(year, Month.MAY, 5)), "Cinco de Mayo");
-
-        // Mexican Independence Day - September 16
-        holidays.put(formatDate(LocalDate.of(year, Month.SEPTEMBER, 16)), "Día de la Independencia");
-
-        // Día de los Muertos - November 1-2
-        holidays.put(formatDate(LocalDate.of(year, Month.NOVEMBER, 1)), "Día de los Muertos");
-        holidays.put(formatDate(LocalDate.of(year, Month.NOVEMBER, 2)), "Día de los Muertos");
-
-        // Revolution Day - November 20
-        holidays.put(formatDate(LocalDate.of(year, Month.NOVEMBER, 20)), "Día de la Revolución");
-
-        // Día de la Virgen de Guadalupe - December 12
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 12)), "Virgen de Guadalupe");
-
-        // Las Posadas - December 16-24
-        for (int day = 16; day <= 24; day++) {
-            holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, day)), "Las Posadas");
+        holidays.put(LocalDate.of(year, Month.JANUARY, 6), new HolidayType("Día de los Reyes", "👑"));
+        holidays.put(LocalDate.of(year, Month.FEBRUARY, 5), new HolidayType("Día de la Constitución", "📜"));
+        holidays.put(LocalDate.of(year, Month.MARCH, 21), new HolidayType("Natalicio de Benito Juárez", "⚖️"));
+        holidays.put(LocalDate.of(year, Month.MAY, 5), new HolidayType("Cinco de Mayo", "🇲🇽"));
+        holidays.put(LocalDate.of(year, Month.SEPTEMBER, 16), new HolidayType("Día de la Independencia", "🎉"));
+        holidays.put(LocalDate.of(year, Month.NOVEMBER, 1), new HolidayType("Día de los Muertos", "💀"));
+        holidays.put(LocalDate.of(year, Month.NOVEMBER, 2), new HolidayType("Día de los Muertos", "💀"));
+        holidays.put(LocalDate.of(year, Month.NOVEMBER, 20), new HolidayType("Día de la Revolución", "🎖️"));
+        holidays.put(LocalDate.of(year, Month.DECEMBER, 12), new HolidayType("Virgen de Guadalupe", "🌹"));
+        // Las Posadas - December 16-24 (only first day gets emoji)
+        holidays.put(LocalDate.of(year, Month.DECEMBER, 16), new HolidayType("Las Posadas", "🕯️"));
+        for (int day = 17; day <= 24; day++) {
+            holidays.put(LocalDate.of(year, Month.DECEMBER, day), new HolidayType("Las Posadas", null));
         }
 
         return holidays;
-    }
-
-    /** Get Mexican holidays with emoji mappings */
-    public Map<String, String> getMexicanHolidaysWithEmoji(int year) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        holidayEmojis.put(LocalDate.of(year, Month.JANUARY, 6).toString(), "👑"); // Día de los Reyes
-        holidayEmojis.put(LocalDate.of(year, Month.FEBRUARY, 5).toString(), "📜"); // Constitution Day
-        holidayEmojis.put(LocalDate.of(year, Month.MARCH, 21).toString(), "⚖️"); // Benito Juárez
-        holidayEmojis.put(LocalDate.of(year, Month.MAY, 5).toString(), "🇲🇽"); // Cinco de Mayo
-        holidayEmojis.put(LocalDate.of(year, Month.SEPTEMBER, 16).toString(), "🎉"); // Independence Day
-        holidayEmojis.put(LocalDate.of(year, Month.NOVEMBER, 1).toString(), "💀"); // Día de los Muertos
-        holidayEmojis.put(LocalDate.of(year, Month.NOVEMBER, 2).toString(), "💀"); // Día de los Muertos
-        holidayEmojis.put(LocalDate.of(year, Month.NOVEMBER, 20).toString(), "🎖️"); // Revolution Day
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 12).toString(), "🌹"); // Virgen de Guadalupe
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 16).toString(), "🕯️"); // Las Posadas start
-
-        return holidayEmojis;
     }
 
     // ========================================
     // Pagan/Wiccan Holidays (Wheel of the Year)
     // ========================================
 
-    /** Get Pagan/Wiccan holidays for a given year */
-    public Map<String, String> getPaganHolidays(int year) {
-        Map<String, String> holidays = new HashMap<>();
+    /** Build Pagan/Wiccan holidays for a given year with both name and emoji */
+    private Map<LocalDate, HolidayType> buildPaganHolidays(int year) {
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
 
         // Imbolc - February 1-2
-        holidays.put(formatDate(LocalDate.of(year, Month.FEBRUARY, 1)), "Imbolc");
-        holidays.put(formatDate(LocalDate.of(year, Month.FEBRUARY, 2)), "Imbolc");
+        holidays.put(LocalDate.of(year, Month.FEBRUARY, 1), new HolidayType("Imbolc", "🕯️"));
+        holidays.put(LocalDate.of(year, Month.FEBRUARY, 2), new HolidayType("Imbolc", null));
 
-        // Ostara - Spring Equinox (calculated)
-        LocalDate springEquinox = calculateSpringEquinox(year);
-        holidays.put(formatDate(springEquinox), "Ostara");
+        // Ostara - Spring Equinox
+        holidays.put(calculateSpringEquinox(year), new HolidayType("Ostara", "🐣"));
 
         // Beltane - May 1
-        holidays.put(formatDate(LocalDate.of(year, Month.MAY, 1)), "Beltane");
+        holidays.put(LocalDate.of(year, Month.MAY, 1), new HolidayType("Beltane", "🔥"));
 
-        // Litha - Summer Solstice (calculated)
-        LocalDate summerSolstice = calculateSummerSolstice(year);
-        holidays.put(formatDate(summerSolstice), "Litha");
+        // Litha - Summer Solstice
+        holidays.put(calculateSummerSolstice(year), new HolidayType("Litha", "☀️"));
 
         // Lughnasadh/Lammas - August 1
-        holidays.put(formatDate(LocalDate.of(year, Month.AUGUST, 1)), "Lughnasadh");
+        holidays.put(LocalDate.of(year, Month.AUGUST, 1), new HolidayType("Lughnasadh", "🌾"));
 
-        // Mabon - Autumn Equinox (calculated)
-        LocalDate autumnEquinox = calculateAutumnEquinox(year);
-        holidays.put(formatDate(autumnEquinox), "Mabon");
+        // Mabon - Autumn Equinox
+        holidays.put(calculateAutumnEquinox(year), new HolidayType("Mabon", "🍂"));
 
         // Samhain - October 31 - November 1
-        holidays.put(formatDate(LocalDate.of(year, Month.OCTOBER, 31)), "Samhain");
-        holidays.put(formatDate(LocalDate.of(year, Month.NOVEMBER, 1)), "Samhain");
+        holidays.put(LocalDate.of(year, Month.OCTOBER, 31), new HolidayType("Samhain", "🎃"));
+        holidays.put(LocalDate.of(year, Month.NOVEMBER, 1), new HolidayType("Samhain", null));
 
-        // Yule - Winter Solstice (calculated)
-        LocalDate winterSolstice = calculateWinterSolstice(year);
-        holidays.put(formatDate(winterSolstice), "Yule");
+        // Yule - Winter Solstice
+        holidays.put(calculateWinterSolstice(year), new HolidayType("Yule", "🌲"));
 
         return holidays;
-    }
-
-    /** Get Pagan holidays with emoji mappings */
-    public Map<String, String> getPaganHolidaysWithEmoji(int year) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        holidayEmojis.put(LocalDate.of(year, Month.FEBRUARY, 1).toString(), "🕯️"); // Imbolc
-        holidayEmojis.put(calculateSpringEquinox(year).toString(), "🐣"); // Ostara
-        holidayEmojis.put(LocalDate.of(year, Month.MAY, 1).toString(), "🔥"); // Beltane
-        holidayEmojis.put(calculateSummerSolstice(year).toString(), "☀️"); // Litha
-        holidayEmojis.put(LocalDate.of(year, Month.AUGUST, 1).toString(), "🌾"); // Lughnasadh
-        holidayEmojis.put(calculateAutumnEquinox(year).toString(), "🍂"); // Mabon
-        holidayEmojis.put(LocalDate.of(year, Month.OCTOBER, 31).toString(), "🎃"); // Samhain
-        holidayEmojis.put(calculateWinterSolstice(year).toString(), "🌲"); // Yule
-
-        return holidayEmojis;
     }
 
     // ========================================
@@ -704,101 +530,56 @@ public class HolidayService {
     // Uses approximations based on lunar calendar
     // ========================================
 
-    /** Get Hindu holidays for a given year */
-    public Map<String, String> getHinduHolidays(int year) {
-        Map<String, String> holidays = new HashMap<>();
+    /** Build Hindu holidays for a given year with both name and emoji */
+    private Map<LocalDate, HolidayType> buildHinduHolidays(int year) {
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
 
-        // Calculate Hindu holidays based on lunar calendar approximations
-        LocalDate makarSankranti = LocalDate.of(year, Month.JANUARY, 14);
-        holidays.put(formatDate(makarSankranti), "Makar Sankranti");
+        // Makar Sankranti - January 14
+        holidays.put(LocalDate.of(year, Month.JANUARY, 14), new HolidayType("Makar Sankranti", "🪁"));
 
         // Holi - Full moon in Phalguna (Feb-Mar)
         LocalDate holi = calculateHoli(year);
         if (holi != null) {
-            holidays.put(formatDate(holi), "Holi");
+            holidays.put(holi, new HolidayType("Holi", "🎨"));
         }
 
         // Ram Navami - 9th day of Chaitra (Mar-Apr)
         LocalDate ramNavami = calculateRamNavami(year);
         if (ramNavami != null) {
-            holidays.put(formatDate(ramNavami), "Ram Navami");
+            holidays.put(ramNavami, new HolidayType("Ram Navami", "🏹"));
         }
 
         // Janmashtami - 8th day of Bhadrapada (Aug-Sep)
         LocalDate janmashtami = calculateJanmashtami(year);
         if (janmashtami != null) {
-            holidays.put(formatDate(janmashtami), "Janmashtami");
+            holidays.put(janmashtami, new HolidayType("Janmashtami", "🪈"));
         }
 
         // Ganesh Chaturthi - 4th day of Bhadrapada (Aug-Sep)
         LocalDate ganeshChaturthi = calculateGaneshChaturthi(year);
         if (ganeshChaturthi != null) {
-            holidays.put(formatDate(ganeshChaturthi), "Ganesh Chaturthi");
+            holidays.put(ganeshChaturthi, new HolidayType("Ganesh Chaturthi", "🐘"));
         }
 
         // Navaratri - 9 nights starting 1st day of Ashvin (Sep-Oct)
         LocalDate navaratri = calculateNavaratri(year);
         if (navaratri != null) {
-            holidays.put(formatDate(navaratri), "Navaratri");
+            holidays.put(navaratri, new HolidayType("Navaratri", "💃"));
         }
 
         // Dussehra/Vijayadashami - 10th day of Ashvin
         LocalDate dussehra = calculateDussehra(year);
         if (dussehra != null) {
-            holidays.put(formatDate(dussehra), "Dussehra");
+            holidays.put(dussehra, new HolidayType("Dussehra", "🏹"));
         }
 
         // Diwali - New moon in Kartik (Oct-Nov)
         LocalDate diwali = calculateDiwali(year);
         if (diwali != null) {
-            holidays.put(formatDate(diwali), "Diwali");
+            holidays.put(diwali, new HolidayType("Diwali", "🪔"));
         }
 
         return holidays;
-    }
-
-    /** Get Hindu holidays with emoji mappings */
-    public Map<String, String> getHinduHolidaysWithEmoji(int year) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        holidayEmojis.put(LocalDate.of(year, Month.JANUARY, 14).toString(), "🪁"); // Makar Sankranti
-
-        LocalDate holi = calculateHoli(year);
-        if (holi != null) {
-            holidayEmojis.put(holi.toString(), "🎨"); // Holi
-        }
-
-        LocalDate ramNavami = calculateRamNavami(year);
-        if (ramNavami != null) {
-            holidayEmojis.put(ramNavami.toString(), "🏹"); // Ram Navami
-        }
-
-        LocalDate janmashtami = calculateJanmashtami(year);
-        if (janmashtami != null) {
-            holidayEmojis.put(janmashtami.toString(), "🪈"); // Janmashtami
-        }
-
-        LocalDate ganeshChaturthi = calculateGaneshChaturthi(year);
-        if (ganeshChaturthi != null) {
-            holidayEmojis.put(ganeshChaturthi.toString(), "🐘"); // Ganesh Chaturthi
-        }
-
-        LocalDate navaratri = calculateNavaratri(year);
-        if (navaratri != null) {
-            holidayEmojis.put(navaratri.toString(), "💃"); // Navaratri
-        }
-
-        LocalDate dussehra = calculateDussehra(year);
-        if (dussehra != null) {
-            holidayEmojis.put(dussehra.toString(), "🏹"); // Dussehra
-        }
-
-        LocalDate diwali = calculateDiwali(year);
-        if (diwali != null) {
-            holidayEmojis.put(diwali.toString(), "🪔"); // Diwali
-        }
-
-        return holidayEmojis;
     }
 
     // Hindu holiday calculations (approximations based on lunar phases)
@@ -853,9 +634,9 @@ public class HolidayService {
     // Uses Hijri calendar calculations
     // ========================================
 
-    /** Get Islamic holidays for a given Gregorian year */
-    public Map<String, String> getIslamicHolidays(int year) {
-        Map<String, String> holidays = new HashMap<>();
+    /** Build Islamic holidays for a given Gregorian year with both name and emoji */
+    private Map<LocalDate, HolidayType> buildIslamicHolidays(int year) {
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
 
         // Islamic calendar is purely lunar, ~11 days shorter than Gregorian
         // Calculate major holidays for both Islamic years that fall in this Gregorian year
@@ -864,94 +645,48 @@ public class HolidayService {
         for (int hijriYear : hijriYears) {
             // Islamic New Year - 1 Muharram
             LocalDate islamicNewYear = hijriToGregorian(hijriYear, 1, 1);
-            if (islamicNewYear != null && islamicNewYear.getYear() == year) {
-                holidays.put(formatDate(islamicNewYear), "Islamic New Year");
+            if (islamicNewYear.getYear() == year) {
+                holidays.put(islamicNewYear, new HolidayType("Islamic New Year", "🌙"));
             }
 
             // Ashura - 10 Muharram
             LocalDate ashura = hijriToGregorian(hijriYear, 1, 10);
-            if (ashura != null && ashura.getYear() == year) {
-                holidays.put(formatDate(ashura), "Ashura");
+            if (ashura.getYear() == year) {
+                holidays.put(ashura, new HolidayType("Ashura", "🤲"));
             }
 
             // Mawlid al-Nabi (Prophet's Birthday) - 12 Rabi' al-Awwal
             LocalDate mawlid = hijriToGregorian(hijriYear, 3, 12);
-            if (mawlid != null && mawlid.getYear() == year) {
-                holidays.put(formatDate(mawlid), "Mawlid al-Nabi");
+            if (mawlid.getYear() == year) {
+                holidays.put(mawlid, new HolidayType("Mawlid al-Nabi", "☪️"));
             }
 
             // Ramadan Start - 1 Ramadan
             LocalDate ramadanStart = hijriToGregorian(hijriYear, 9, 1);
-            if (ramadanStart != null && ramadanStart.getYear() == year) {
-                holidays.put(formatDate(ramadanStart), "Ramadan Begins");
+            if (ramadanStart.getYear() == year) {
+                holidays.put(ramadanStart, new HolidayType("Ramadan Begins", "🌙"));
             }
 
             // Laylat al-Qadr - 27 Ramadan (Night of Power)
             LocalDate laylatAlQadr = hijriToGregorian(hijriYear, 9, 27);
-            if (laylatAlQadr != null && laylatAlQadr.getYear() == year) {
-                holidays.put(formatDate(laylatAlQadr), "Laylat al-Qadr");
+            if (laylatAlQadr.getYear() == year) {
+                holidays.put(laylatAlQadr, new HolidayType("Laylat al-Qadr", "✨"));
             }
 
             // Eid al-Fitr - 1 Shawwal
             LocalDate eidFitr = hijriToGregorian(hijriYear, 10, 1);
-            if (eidFitr != null && eidFitr.getYear() == year) {
-                holidays.put(formatDate(eidFitr), "Eid al-Fitr");
+            if (eidFitr.getYear() == year) {
+                holidays.put(eidFitr, new HolidayType("Eid al-Fitr", "🎉"));
             }
 
             // Eid al-Adha - 10 Dhul Hijjah
             LocalDate eidAdha = hijriToGregorian(hijriYear, 12, 10);
-            if (eidAdha != null && eidAdha.getYear() == year) {
-                holidays.put(formatDate(eidAdha), "Eid al-Adha");
+            if (eidAdha.getYear() == year) {
+                holidays.put(eidAdha, new HolidayType("Eid al-Adha", "🐑"));
             }
         }
 
         return holidays;
-    }
-
-    /** Get Islamic holidays with emoji mappings */
-    public Map<String, String> getIslamicHolidaysWithEmoji(int year) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        int[] hijriYears = getHijriYearsInGregorianYear(year);
-
-        for (int hijriYear : hijriYears) {
-            LocalDate islamicNewYear = hijriToGregorian(hijriYear, 1, 1);
-            if (islamicNewYear != null && islamicNewYear.getYear() == year) {
-                holidayEmojis.put(islamicNewYear.toString(), "🌙"); // Islamic New Year
-            }
-
-            LocalDate ashura = hijriToGregorian(hijriYear, 1, 10);
-            if (ashura != null && ashura.getYear() == year) {
-                holidayEmojis.put(ashura.toString(), "🤲"); // Ashura
-            }
-
-            LocalDate mawlid = hijriToGregorian(hijriYear, 3, 12);
-            if (mawlid != null && mawlid.getYear() == year) {
-                holidayEmojis.put(mawlid.toString(), "☪️"); // Mawlid
-            }
-
-            LocalDate ramadanStart = hijriToGregorian(hijriYear, 9, 1);
-            if (ramadanStart != null && ramadanStart.getYear() == year) {
-                holidayEmojis.put(ramadanStart.toString(), "🌙"); // Ramadan
-            }
-
-            LocalDate laylatAlQadr = hijriToGregorian(hijriYear, 9, 27);
-            if (laylatAlQadr != null && laylatAlQadr.getYear() == year) {
-                holidayEmojis.put(laylatAlQadr.toString(), "✨"); // Laylat al-Qadr
-            }
-
-            LocalDate eidFitr = hijriToGregorian(hijriYear, 10, 1);
-            if (eidFitr != null && eidFitr.getYear() == year) {
-                holidayEmojis.put(eidFitr.toString(), "🎉"); // Eid al-Fitr
-            }
-
-            LocalDate eidAdha = hijriToGregorian(hijriYear, 12, 10);
-            if (eidAdha != null && eidAdha.getYear() == year) {
-                holidayEmojis.put(eidAdha.toString(), "🐑"); // Eid al-Adha
-            }
-        }
-
-        return holidayEmojis;
     }
 
     // Hijri calendar calculations
@@ -976,71 +711,40 @@ public class HolidayService {
     // Chinese/Lunar New Year Holidays
     // ========================================
 
-    /** Get Chinese holidays for a given year */
-    public Map<String, String> getChineseHolidays(int year) {
-        Map<String, String> holidays = new HashMap<>();
+    /** Build Chinese holidays for a given year with both name and emoji */
+    private Map<LocalDate, HolidayType> buildChineseHolidays(int year) {
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
 
         // Chinese New Year - 2nd new moon after winter solstice
         LocalDate chineseNewYear = calculateChineseNewYear(year);
         if (chineseNewYear != null) {
-            holidays.put(formatDate(chineseNewYear), "Chinese New Year");
-            holidays.put(formatDate(chineseNewYear.plusDays(14)), "Lantern Festival");
+            holidays.put(chineseNewYear, new HolidayType("Chinese New Year", "🧧"));
+            holidays.put(chineseNewYear.plusDays(14), new HolidayType("Lantern Festival", "🏮"));
         }
 
         // Qingming Festival - April 4 or 5 (15 days after spring equinox)
         LocalDate qingming = calculateSpringEquinox(year).plusDays(15);
-        holidays.put(formatDate(qingming), "Qingming Festival");
+        holidays.put(qingming, new HolidayType("Qingming Festival", "🪦"));
 
         // Dragon Boat Festival - 5th day of 5th lunar month
         LocalDate dragonBoat = calculateDragonBoatFestival(year);
         if (dragonBoat != null) {
-            holidays.put(formatDate(dragonBoat), "Dragon Boat Festival");
+            holidays.put(dragonBoat, new HolidayType("Dragon Boat Festival", "🐉"));
         }
 
         // Mid-Autumn Festival - 15th day of 8th lunar month
         LocalDate midAutumn = calculateMidAutumnFestival(year);
         if (midAutumn != null) {
-            holidays.put(formatDate(midAutumn), "Mid-Autumn Festival");
+            holidays.put(midAutumn, new HolidayType("Mid-Autumn Festival", "🥮"));
         }
 
         // Double Ninth Festival - 9th day of 9th lunar month
         LocalDate doubleNinth = calculateDoubleNinthFestival(year);
         if (doubleNinth != null) {
-            holidays.put(formatDate(doubleNinth), "Double Ninth Festival");
+            holidays.put(doubleNinth, new HolidayType("Double Ninth Festival", "🏔️"));
         }
 
         return holidays;
-    }
-
-    /** Get Chinese holidays with emoji mappings */
-    public Map<String, String> getChineseHolidaysWithEmoji(int year) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        LocalDate chineseNewYear = calculateChineseNewYear(year);
-        if (chineseNewYear != null) {
-            holidayEmojis.put(chineseNewYear.toString(), "🧧"); // Chinese New Year
-            holidayEmojis.put(chineseNewYear.plusDays(14).toString(), "🏮"); // Lantern Festival
-        }
-
-        LocalDate qingming = calculateSpringEquinox(year).plusDays(15);
-        holidayEmojis.put(qingming.toString(), "🪦"); // Qingming
-
-        LocalDate dragonBoat = calculateDragonBoatFestival(year);
-        if (dragonBoat != null) {
-            holidayEmojis.put(dragonBoat.toString(), "🐉"); // Dragon Boat
-        }
-
-        LocalDate midAutumn = calculateMidAutumnFestival(year);
-        if (midAutumn != null) {
-            holidayEmojis.put(midAutumn.toString(), "🥮"); // Mid-Autumn
-        }
-
-        LocalDate doubleNinth = calculateDoubleNinthFestival(year);
-        if (doubleNinth != null) {
-            holidayEmojis.put(doubleNinth.toString(), "🏔️"); // Double Ninth
-        }
-
-        return holidayEmojis;
     }
 
     private LocalDate calculateChineseNewYear(int year) {
@@ -1093,75 +797,48 @@ public class HolidayService {
     // Fun/Secular American Holidays
     // ========================================
 
-    /** Get fun secular American holidays for a given year */
-    public Map<String, String> getSecularHolidays(int year) {
-        Map<String, String> holidays = new HashMap<>();
+    /** Build fun secular American holidays for a given year with both name and emoji */
+    private Map<LocalDate, HolidayType> buildSecularHolidays(int year) {
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
 
         // Groundhog Day - February 2
-        holidays.put(formatDate(LocalDate.of(year, Month.FEBRUARY, 2)), "Groundhog Day");
+        holidays.put(LocalDate.of(year, Month.FEBRUARY, 2), new HolidayType("Groundhog Day", "🦫"));
 
         // Valentine's Day - February 14
-        holidays.put(formatDate(LocalDate.of(year, Month.FEBRUARY, 14)), "Valentine's Day");
+        holidays.put(LocalDate.of(year, Month.FEBRUARY, 14), new HolidayType("Valentine's Day", "❤️"));
 
         // St. Patrick's Day - March 17
-        holidays.put(formatDate(LocalDate.of(year, Month.MARCH, 17)), "St. Patrick's Day");
+        holidays.put(LocalDate.of(year, Month.MARCH, 17), new HolidayType("St. Patrick's Day", "☘️"));
 
         // April Fools' Day - April 1
-        holidays.put(formatDate(LocalDate.of(year, Month.APRIL, 1)), "April Fools' Day");
+        holidays.put(LocalDate.of(year, Month.APRIL, 1), new HolidayType("April Fools' Day", "🃏"));
 
         // Earth Day - April 22
-        holidays.put(formatDate(LocalDate.of(year, Month.APRIL, 22)), "Earth Day");
+        holidays.put(LocalDate.of(year, Month.APRIL, 22), new HolidayType("Earth Day", "🌍"));
 
         // Cinco de Mayo - May 5 (popular in US)
-        holidays.put(formatDate(LocalDate.of(year, Month.MAY, 5)), "Cinco de Mayo");
+        holidays.put(LocalDate.of(year, Month.MAY, 5), new HolidayType("Cinco de Mayo", "🌮"));
 
         // Mother's Day - 2nd Sunday in May
         LocalDate mothersDay = LocalDate.of(year, Month.MAY, 1)
                 .with(TemporalAdjusters.dayOfWeekInMonth(2, DayOfWeek.SUNDAY));
-        holidays.put(formatDate(mothersDay), "Mother's Day");
+        holidays.put(mothersDay, new HolidayType("Mother's Day", "💐"));
 
         // Father's Day - 3rd Sunday in June
         LocalDate fathersDay = LocalDate.of(year, Month.JUNE, 1)
                 .with(TemporalAdjusters.dayOfWeekInMonth(3, DayOfWeek.SUNDAY));
-        holidays.put(formatDate(fathersDay), "Father's Day");
+        holidays.put(fathersDay, new HolidayType("Father's Day", "👔"));
 
         // Pride Month start - June 1
-        holidays.put(formatDate(LocalDate.of(year, Month.JUNE, 1)), "Pride Month");
+        holidays.put(LocalDate.of(year, Month.JUNE, 1), new HolidayType("Pride Month", EMOJI_RAINBOW_FLAG));
 
         // Halloween - October 31
-        holidays.put(formatDate(LocalDate.of(year, Month.OCTOBER, 31)), "Halloween");
+        holidays.put(LocalDate.of(year, Month.OCTOBER, 31), new HolidayType(HOLIDAY_HALLOWEEN, "🎃"));
 
         // New Year's Eve - December 31
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 31)), "New Year's Eve");
+        holidays.put(LocalDate.of(year, Month.DECEMBER, 31), new HolidayType("New Year's Eve", "🍾"));
 
         return holidays;
-    }
-
-    /** Get secular holidays with emoji mappings */
-    public Map<String, String> getSecularHolidaysWithEmoji(int year) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        holidayEmojis.put(LocalDate.of(year, Month.FEBRUARY, 2).toString(), "🦫"); // Groundhog Day
-        holidayEmojis.put(LocalDate.of(year, Month.FEBRUARY, 14).toString(), "❤️"); // Valentine's Day
-        holidayEmojis.put(LocalDate.of(year, Month.MARCH, 17).toString(), "☘️"); // St. Patrick's Day
-        holidayEmojis.put(LocalDate.of(year, Month.APRIL, 1).toString(), "🃏"); // April Fools
-        holidayEmojis.put(LocalDate.of(year, Month.APRIL, 22).toString(), "🌍"); // Earth Day
-        holidayEmojis.put(LocalDate.of(year, Month.MAY, 5).toString(), "🌮"); // Cinco de Mayo
-
-        LocalDate mothersDay = LocalDate.of(year, Month.MAY, 1)
-                .with(TemporalAdjusters.dayOfWeekInMonth(2, DayOfWeek.SUNDAY));
-        holidayEmojis.put(mothersDay.toString(), "💐"); // Mother's Day
-
-        LocalDate fathersDay = LocalDate.of(year, Month.JUNE, 1)
-                .with(TemporalAdjusters.dayOfWeekInMonth(3, DayOfWeek.SUNDAY));
-        holidayEmojis.put(fathersDay.toString(), "👔"); // Father's Day
-
-        holidayEmojis.put(LocalDate.of(year, Month.JUNE, 1).toString(), EMOJI_RAINBOW_FLAG); // Pride Month
-        holidayEmojis.put(LocalDate.of(year, Month.OCTOBER, 31).toString(), "🎃"); // Halloween
-
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 31).toString(), "🍾"); // New Year's Eve
-
-        return holidayEmojis;
     }
 
     // ========================================
@@ -1242,90 +919,30 @@ public class HolidayService {
     }
 
     // ========================================
-    // US Holidays with Emoji
-    // ========================================
-
-    /** Get US holidays with emoji mappings */
-    public Map<String, String> getUSHolidaysWithEmoji(int year) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        holidayEmojis.put(LocalDate.of(year, Month.JANUARY, 1).toString(), "🎉"); // New Year's Day
-
-        LocalDate mlkDay = getNthWeekdayOfMonth(year, Month.JANUARY, DayOfWeek.MONDAY, 3);
-        holidayEmojis.put(mlkDay.toString(), "🕊️"); // MLK Day
-
-        LocalDate presidentsDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
-        holidayEmojis.put(presidentsDay.toString(), "🏛️"); // Presidents' Day
-
-        LocalDate memorialDay = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
-        holidayEmojis.put(memorialDay.toString(), "🎖️"); // Memorial Day
-
-        holidayEmojis.put(LocalDate.of(year, Month.JUNE, 19).toString(), "🎉"); // Juneteenth
-
-        holidayEmojis.put(LocalDate.of(year, Month.JULY, 4).toString(), "🇺🇸"); // Independence Day
-
-        LocalDate laborDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
-        holidayEmojis.put(laborDay.toString(), "👷"); // Labor Day
-
-        LocalDate columbusDay = getNthWeekdayOfMonth(year, Month.OCTOBER, DayOfWeek.MONDAY, 2);
-        holidayEmojis.put(columbusDay.toString(), "🌍"); // Columbus Day
-
-        holidayEmojis.put(LocalDate.of(year, Month.OCTOBER, 31).toString(), "🎃"); // Halloween
-
-        holidayEmojis.put(LocalDate.of(year, Month.NOVEMBER, 11).toString(), "🎖️"); // Veterans Day
-
-        LocalDate thanksgiving = getNthWeekdayOfMonth(year, Month.NOVEMBER, DayOfWeek.THURSDAY, 4);
-        holidayEmojis.put(thanksgiving.toString(), "🦃"); // Thanksgiving
-
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 25).toString(), "🎄"); // Christmas
-
-        return holidayEmojis;
-    }
-
-    // ========================================
     // Christian Holidays (Easter-based)
     // ========================================
 
-    /** Get Christian holidays for a given year */
-    public Map<String, String> getChristianHolidays(int year) {
-        Map<String, String> holidays = new HashMap<>();
+    /** Build Christian holidays for a given year with both name and emoji */
+    private Map<LocalDate, HolidayType> buildChristianHolidays(int year) {
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
 
         LocalDate easter = calculateEasterSunday(year);
-        holidays.put(formatDate(easter), "Easter");
-        holidays.put(formatDate(easter.minusDays(2)), HOLIDAY_GOOD_FRIDAY);
-        holidays.put(formatDate(easter.minusDays(7)), "Palm Sunday");
-        holidays.put(formatDate(easter.minusDays(46)), "Ash Wednesday");
-        holidays.put(formatDate(easter.plusDays(39)), "Ascension");
-        holidays.put(formatDate(easter.plusDays(49)), "Pentecost");
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), HOLIDAY_CHRISTMAS);
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 24)), "Christmas Eve");
-        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 6)), "Epiphany");
-        holidays.put(formatDate(LocalDate.of(year, Month.NOVEMBER, 1)), "All Saints");
+        holidays.put(easter, new HolidayType("Easter", "🐑"));
+        holidays.put(easter.minusDays(2), new HolidayType(HOLIDAY_GOOD_FRIDAY, "🐟"));
+        holidays.put(easter.minusDays(7), new HolidayType("Palm Sunday", "🌿"));
+        holidays.put(easter.minusDays(46), new HolidayType("Ash Wednesday", "✝️"));
+        holidays.put(easter.plusDays(39), new HolidayType("Ascension", "☁️"));
+        holidays.put(easter.plusDays(49), new HolidayType("Pentecost", "🕊️"));
+        holidays.put(LocalDate.of(year, Month.DECEMBER, 25), new HolidayType(HOLIDAY_CHRISTMAS, "🎄"));
+        holidays.put(LocalDate.of(year, Month.DECEMBER, 24), new HolidayType("Christmas Eve", "🕯️"));
+        holidays.put(LocalDate.of(year, Month.JANUARY, 6), new HolidayType("Epiphany", "⭐"));
+        holidays.put(LocalDate.of(year, Month.NOVEMBER, 1), new HolidayType("All Saints", "👼"));
 
         return holidays;
     }
 
-    /** Get Christian holidays with emoji mappings */
-    public Map<String, String> getChristianHolidaysWithEmoji(int year) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        LocalDate easter = calculateEasterSunday(year);
-        holidayEmojis.put(easter.toString(), "🐑"); // Easter Sunday (Lamb of God)
-        holidayEmojis.put(easter.minusDays(2).toString(), "🐟"); // Good Friday (Fish)
-        holidayEmojis.put(easter.minusDays(7).toString(), "🌿"); // Palm Sunday
-        holidayEmojis.put(easter.minusDays(46).toString(), "✝️"); // Ash Wednesday
-        holidayEmojis.put(easter.plusDays(39).toString(), "☁️"); // Ascension Day
-        holidayEmojis.put(easter.plusDays(49).toString(), "🕊️"); // Pentecost
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 25).toString(), "🎄"); // Christmas
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 24).toString(), "🕯️"); // Christmas Eve
-        holidayEmojis.put(LocalDate.of(year, Month.JANUARY, 6).toString(), "⭐"); // Epiphany
-        holidayEmojis.put(LocalDate.of(year, Month.NOVEMBER, 1).toString(), "👼"); // All Saints Day
-
-        return holidayEmojis;
-    }
-
     /** Calculate Easter Sunday using the Anonymous Gregorian algorithm */
-    public LocalDate calculateEasterSunday(int year) {
+    private LocalDate calculateEasterSunday(int year) {
         int a = year % 19;
         int b = year / 100;
         int c = year % 100;
@@ -1347,50 +964,27 @@ public class HolidayService {
     // Canadian Holidays
     // ========================================
 
-    /** Get Canadian holidays for a given year */
-    public Map<String, String> getCanadianHolidays(int year) {
-        Map<String, String> holidays = new HashMap<>();
+    /** Build Canadian holidays for a given year with both name and emoji */
+    private Map<LocalDate, HolidayType> buildCanadianHolidays(int year) {
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
 
-        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 1)), HOLIDAY_NEW_YEARS_DAY);
+        holidays.put(LocalDate.of(year, Month.JANUARY, 1), new HolidayType(HOLIDAY_NEW_YEARS_DAY, "🎉"));
         LocalDate familyDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
-        holidays.put(formatDate(familyDay), "Family Day");
+        holidays.put(familyDay, new HolidayType("Family Day", EMOJI_FAMILY));
         LocalDate easter = calculateEasterSunday(year);
-        holidays.put(formatDate(easter.minusDays(2)), HOLIDAY_GOOD_FRIDAY);
+        holidays.put(easter.minusDays(2), new HolidayType(HOLIDAY_GOOD_FRIDAY, "🐟"));
         LocalDate victoriaDay = calculateVictoriaDay(year);
-        holidays.put(formatDate(victoriaDay), "Victoria Day");
-        holidays.put(formatDate(LocalDate.of(year, Month.JULY, 1)), "Canada Day");
+        holidays.put(victoriaDay, new HolidayType("Victoria Day", "👑"));
+        holidays.put(LocalDate.of(year, Month.JULY, 1), new HolidayType("Canada Day", "🍁"));
         LocalDate labourDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
-        holidays.put(formatDate(labourDay), "Labour Day");
+        holidays.put(labourDay, new HolidayType("Labour Day", "👷"));
         LocalDate thanksgiving = getNthWeekdayOfMonth(year, Month.OCTOBER, DayOfWeek.MONDAY, 2);
-        holidays.put(formatDate(thanksgiving), "Thanksgiving");
-        holidays.put(formatDate(LocalDate.of(year, Month.NOVEMBER, 11)), "Remembrance Day");
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), HOLIDAY_CHRISTMAS);
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 26)), "Boxing Day");
+        holidays.put(thanksgiving, new HolidayType("Thanksgiving", "🦃"));
+        holidays.put(LocalDate.of(year, Month.NOVEMBER, 11), new HolidayType("Remembrance Day", "🎖️"));
+        holidays.put(LocalDate.of(year, Month.DECEMBER, 25), new HolidayType(HOLIDAY_CHRISTMAS, "🎄"));
+        holidays.put(LocalDate.of(year, Month.DECEMBER, 26), new HolidayType("Boxing Day", "🎁"));
 
         return holidays;
-    }
-
-    /** Get Canadian holidays with emoji mappings */
-    public Map<String, String> getCanadianHolidaysWithEmoji(int year) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        holidayEmojis.put(LocalDate.of(year, Month.JANUARY, 1).toString(), "🎉"); // New Year's Day
-        LocalDate familyDay = getNthWeekdayOfMonth(year, Month.FEBRUARY, DayOfWeek.MONDAY, 3);
-        holidayEmojis.put(familyDay.toString(), EMOJI_FAMILY); // Family Day
-        LocalDate easter = calculateEasterSunday(year);
-        holidayEmojis.put(easter.minusDays(2).toString(), "🐟"); // Good Friday
-        LocalDate victoriaDay = calculateVictoriaDay(year);
-        holidayEmojis.put(victoriaDay.toString(), "👑"); // Victoria Day
-        holidayEmojis.put(LocalDate.of(year, Month.JULY, 1).toString(), "🍁"); // Canada Day
-        LocalDate labourDay = getNthWeekdayOfMonth(year, Month.SEPTEMBER, DayOfWeek.MONDAY, 1);
-        holidayEmojis.put(labourDay.toString(), "👷"); // Labour Day
-        LocalDate thanksgiving = getNthWeekdayOfMonth(year, Month.OCTOBER, DayOfWeek.MONDAY, 2);
-        holidayEmojis.put(thanksgiving.toString(), "🦃"); // Thanksgiving
-        holidayEmojis.put(LocalDate.of(year, Month.NOVEMBER, 11).toString(), "🎖️"); // Remembrance Day
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 25).toString(), "🎄"); // Christmas
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 26).toString(), "🎁"); // Boxing Day
-
-        return holidayEmojis;
     }
 
     /** Calculate Victoria Day - Monday on or before May 24 */
@@ -1406,84 +1000,46 @@ public class HolidayService {
     // UK Holidays
     // ========================================
 
-    /** Get UK holidays for a given year */
-    public Map<String, String> getUKHolidays(int year) {
-        Map<String, String> holidays = new HashMap<>();
+    /** Build UK holidays for a given year with both name and emoji */
+    private Map<LocalDate, HolidayType> buildUKHolidays(int year) {
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
 
-        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 1)), HOLIDAY_NEW_YEARS_DAY);
+        holidays.put(LocalDate.of(year, Month.JANUARY, 1), new HolidayType(HOLIDAY_NEW_YEARS_DAY, "🎉"));
         LocalDate easter = calculateEasterSunday(year);
-        holidays.put(formatDate(easter.minusDays(2)), HOLIDAY_GOOD_FRIDAY);
-        holidays.put(formatDate(easter.plusDays(1)), "Easter Monday");
+        holidays.put(easter.minusDays(2), new HolidayType(HOLIDAY_GOOD_FRIDAY, "🐟"));
+        holidays.put(easter.plusDays(1), new HolidayType("Easter Monday", "🐰"));
         LocalDate earlyMay = getNthWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY, 1);
-        holidays.put(formatDate(earlyMay), "Early May");
+        holidays.put(earlyMay, new HolidayType("Early May", "🌸"));
         LocalDate springBank = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
-        holidays.put(formatDate(springBank), "Spring Bank");
+        holidays.put(springBank, new HolidayType("Spring Bank", "🌷"));
         LocalDate summerBank = getLastWeekdayOfMonth(year, Month.AUGUST, DayOfWeek.MONDAY);
-        holidays.put(formatDate(summerBank), "Summer Bank");
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), HOLIDAY_CHRISTMAS);
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 26)), "Boxing Day");
+        holidays.put(summerBank, new HolidayType("Summer Bank", "☀️"));
+        holidays.put(LocalDate.of(year, Month.DECEMBER, 25), new HolidayType(HOLIDAY_CHRISTMAS, "🎄"));
+        holidays.put(LocalDate.of(year, Month.DECEMBER, 26), new HolidayType("Boxing Day", "🎁"));
 
         return holidays;
-    }
-
-    /** Get UK holidays with emoji mappings */
-    public Map<String, String> getUKHolidaysWithEmoji(int year) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        holidayEmojis.put(LocalDate.of(year, Month.JANUARY, 1).toString(), "🎉"); // New Year's Day
-        LocalDate easter = calculateEasterSunday(year);
-        holidayEmojis.put(easter.minusDays(2).toString(), "🐟"); // Good Friday
-        holidayEmojis.put(easter.plusDays(1).toString(), "🐰"); // Easter Monday
-        LocalDate earlyMay = getNthWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY, 1);
-        holidayEmojis.put(earlyMay.toString(), "🌸"); // Early May Bank Holiday
-        LocalDate springBank = getLastWeekdayOfMonth(year, Month.MAY, DayOfWeek.MONDAY);
-        holidayEmojis.put(springBank.toString(), "🌷"); // Spring Bank Holiday
-        LocalDate summerBank = getLastWeekdayOfMonth(year, Month.AUGUST, DayOfWeek.MONDAY);
-        holidayEmojis.put(summerBank.toString(), "☀️"); // Summer Bank Holiday
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 25).toString(), "🎄"); // Christmas
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 26).toString(), "🎁"); // Boxing Day
-
-        return holidayEmojis;
     }
 
     // ========================================
     // Major World Holidays
     // ========================================
 
-    /** Get major world holidays for a given year */
-    public Map<String, String> getMajorWorldHolidays(int year) {
-        Map<String, String> holidays = new HashMap<>();
+    /** Build major world holidays for a given year with both name and emoji */
+    private Map<LocalDate, HolidayType> buildMajorWorldHolidays(int year) {
+        Map<LocalDate, HolidayType> holidays = new HashMap<>();
 
-        holidays.put(formatDate(LocalDate.of(year, Month.JANUARY, 1)), HOLIDAY_NEW_YEARS_DAY);
-        holidays.put(formatDate(LocalDate.of(year, Month.FEBRUARY, 14)), "Valentine's Day");
-        holidays.put(formatDate(LocalDate.of(year, Month.MARCH, 17)), "St. Patrick's");
-        holidays.put(formatDate(LocalDate.of(year, Month.APRIL, 22)), "Earth Day");
-        holidays.put(formatDate(LocalDate.of(year, Month.MAY, 1)), "Workers' Day");
-        holidays.put(formatDate(LocalDate.of(year, Month.OCTOBER, 31)), "Halloween");
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 25)), HOLIDAY_CHRISTMAS);
-        holidays.put(formatDate(LocalDate.of(year, Month.DECEMBER, 31)), "New Year's Eve");
+        holidays.put(LocalDate.of(year, Month.JANUARY, 1), new HolidayType(HOLIDAY_NEW_YEARS_DAY, "🎉"));
+        holidays.put(LocalDate.of(year, Month.FEBRUARY, 14), new HolidayType("Valentine's Day", "❤️"));
+        holidays.put(LocalDate.of(year, Month.MARCH, 17), new HolidayType("St. Patrick's", "☘️"));
+        holidays.put(LocalDate.of(year, Month.APRIL, 22), new HolidayType("Earth Day", "🌍"));
+        holidays.put(LocalDate.of(year, Month.MAY, 1), new HolidayType("Workers' Day", "👷"));
+        holidays.put(LocalDate.of(year, Month.OCTOBER, 31), new HolidayType(HOLIDAY_HALLOWEEN, "🎃"));
+        holidays.put(LocalDate.of(year, Month.DECEMBER, 25), new HolidayType(HOLIDAY_CHRISTMAS, "🎄"));
+        holidays.put(LocalDate.of(year, Month.DECEMBER, 31), new HolidayType("New Year's Eve", "🎉"));
         LocalDate easter = calculateEasterSunday(year);
-        holidays.put(formatDate(easter), "Easter");
+        holidays.put(easter, new HolidayType("Easter", "🐰"));
 
         return holidays;
-    }
-
-    /** Get major world holidays with emoji mappings */
-    public Map<String, String> getMajorWorldHolidaysWithEmoji(int year) {
-        Map<String, String> holidayEmojis = new HashMap<>();
-
-        holidayEmojis.put(LocalDate.of(year, Month.JANUARY, 1).toString(), "🎉"); // New Year's Day
-        holidayEmojis.put(LocalDate.of(year, Month.FEBRUARY, 14).toString(), "❤️"); // Valentine's Day
-        holidayEmojis.put(LocalDate.of(year, Month.MARCH, 17).toString(), "☘️"); // St. Patrick's Day
-        holidayEmojis.put(LocalDate.of(year, Month.APRIL, 22).toString(), "🌍"); // Earth Day
-        holidayEmojis.put(LocalDate.of(year, Month.MAY, 1).toString(), "👷"); // International Workers' Day
-        holidayEmojis.put(LocalDate.of(year, Month.OCTOBER, 31).toString(), "🎃"); // Halloween
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 25).toString(), "🎄"); // Christmas
-        holidayEmojis.put(LocalDate.of(year, Month.DECEMBER, 31).toString(), "🎉"); // New Year's Eve
-        LocalDate easter = calculateEasterSunday(year);
-        holidayEmojis.put(easter.toString(), "🐰"); // Easter
-
-        return holidayEmojis;
     }
 
     // ========================================

@@ -1,7 +1,10 @@
 package villagecompute.calendar.services;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static villagecompute.calendar.services.HolidayService.*;
 
+import java.time.LocalDate;
+import java.time.Month;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -9,11 +12,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import villagecompute.calendar.types.HolidayType;
+
 /** Unit tests for HolidayService. Tests holiday calculations and set mappings. */
 class HolidayServiceTest {
 
     private static final int TEST_YEAR = 2025;
-    private static final String DATE_FORMAT = "%d-%02d-%02d";
 
     private HolidayService holidayService;
 
@@ -36,7 +40,7 @@ class HolidayServiceTest {
 
     @Test
     void testMapHolidaySetId_NullInput_ReturnsUS() {
-        assertEquals(HolidayService.SET_US, holidayService.mapHolidaySetId(null));
+        assertEquals(SET_US, holidayService.mapHolidaySetId(null));
     }
 
     @Test
@@ -49,235 +53,220 @@ class HolidayServiceTest {
 
     @Test
     void testGetUSHolidays_ContainsNewYearsDay() {
-        Map<String, String> holidays = holidayService.getUSHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
-        assertTrue(holidays.containsValue("New Year's Day"));
-        assertEquals("New Year's Day", holidays.get(formatDate(TEST_YEAR, 1, 1)));
+        assertTrue(hasHolidayNamed(holidays, "New Year's Day"));
+        assertEquals("New Year's Day", holidays.get(LocalDate.of(TEST_YEAR, Month.JANUARY, 1)).name);
     }
 
     @Test
     void testGetUSHolidays_ContainsMLKDay() {
-        Map<String, String> holidays = holidayService.getUSHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
-        assertTrue(holidays.containsValue("Martin Luther King Jr. Day"));
+        assertTrue(hasHolidayNamed(holidays, "Martin Luther King Jr. Day"));
         // MLK Day is 3rd Monday in January - for 2025 it's January 20
-        assertEquals("Martin Luther King Jr. Day", holidays.get(formatDate(TEST_YEAR, 1, 20)));
+        assertEquals("Martin Luther King Jr. Day", holidays.get(LocalDate.of(TEST_YEAR, Month.JANUARY, 20)).name);
     }
 
     @Test
     void testGetUSHolidays_ContainsPresidentsDay() {
-        Map<String, String> holidays = holidayService.getUSHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
-        assertTrue(holidays.containsValue("Presidents' Day"));
+        assertTrue(hasHolidayNamed(holidays, "Presidents' Day"));
         // Presidents' Day is 3rd Monday in February - for 2025 it's February 17
-        assertEquals("Presidents' Day", holidays.get(formatDate(TEST_YEAR, 2, 17)));
+        assertEquals("Presidents' Day", holidays.get(LocalDate.of(TEST_YEAR, Month.FEBRUARY, 17)).name);
     }
 
     @Test
     void testGetUSHolidays_ContainsMemorialDay() {
-        Map<String, String> holidays = holidayService.getUSHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
-        assertTrue(holidays.containsValue("Memorial Day"));
+        assertTrue(hasHolidayNamed(holidays, "Memorial Day"));
         // Memorial Day is last Monday in May - for 2025 it's May 26
-        assertEquals("Memorial Day", holidays.get(formatDate(TEST_YEAR, 5, 26)));
+        assertEquals("Memorial Day", holidays.get(LocalDate.of(TEST_YEAR, Month.MAY, 26)).name);
     }
 
     @Test
     void testGetUSHolidays_ContainsJuneteenth() {
-        Map<String, String> holidays = holidayService.getUSHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
-        assertEquals("Juneteenth", holidays.get(formatDate(TEST_YEAR, 6, 19)));
+        assertEquals("Juneteenth", holidays.get(LocalDate.of(TEST_YEAR, Month.JUNE, 19)).name);
     }
 
     @Test
     void testGetUSHolidays_ContainsIndependenceDay() {
-        Map<String, String> holidays = holidayService.getUSHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
-        assertEquals("Independence Day", holidays.get(formatDate(TEST_YEAR, 7, 4)));
+        assertEquals("Independence Day", holidays.get(LocalDate.of(TEST_YEAR, Month.JULY, 4)).name);
     }
 
     @Test
     void testGetUSHolidays_ContainsLaborDay() {
-        Map<String, String> holidays = holidayService.getUSHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
-        assertTrue(holidays.containsValue("Labor Day"));
+        assertTrue(hasHolidayNamed(holidays, "Labor Day"));
         // Labor Day is 1st Monday in September - for 2025 it's September 1
-        assertEquals("Labor Day", holidays.get(formatDate(TEST_YEAR, 9, 1)));
+        assertEquals("Labor Day", holidays.get(LocalDate.of(TEST_YEAR, Month.SEPTEMBER, 1)).name);
     }
 
     @Test
     void testGetUSHolidays_ContainsColumbusDay() {
-        Map<String, String> holidays = holidayService.getUSHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
-        assertTrue(holidays.containsValue("Columbus Day"));
+        assertTrue(hasHolidayNamed(holidays, "Columbus Day"));
         // Columbus Day is 2nd Monday in October - for 2025 it's October 13
-        assertEquals("Columbus Day", holidays.get(formatDate(TEST_YEAR, 10, 13)));
+        assertEquals("Columbus Day", holidays.get(LocalDate.of(TEST_YEAR, Month.OCTOBER, 13)).name);
     }
 
     @Test
     void testGetUSHolidays_ContainsVeteransDay() {
-        Map<String, String> holidays = holidayService.getUSHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
-        assertEquals("Veterans Day", holidays.get(formatDate(TEST_YEAR, 11, 11)));
+        assertEquals("Veterans Day", holidays.get(LocalDate.of(TEST_YEAR, Month.NOVEMBER, 11)).name);
     }
 
     @Test
     void testGetUSHolidays_ContainsThanksgiving() {
-        Map<String, String> holidays = holidayService.getUSHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
-        assertTrue(holidays.containsValue("Thanksgiving"));
+        assertTrue(hasHolidayNamed(holidays, "Thanksgiving"));
         // Thanksgiving is 4th Thursday in November - for 2025 it's November 27
-        assertEquals("Thanksgiving", holidays.get(formatDate(TEST_YEAR, 11, 27)));
+        assertEquals("Thanksgiving", holidays.get(LocalDate.of(TEST_YEAR, Month.NOVEMBER, 27)).name);
     }
 
     @Test
     void testGetUSHolidays_ContainsChristmas() {
-        Map<String, String> holidays = holidayService.getUSHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
-        assertEquals("Christmas Day", holidays.get(formatDate(TEST_YEAR, 12, 25)));
+        assertEquals("Christmas Day", holidays.get(LocalDate.of(TEST_YEAR, Month.DECEMBER, 25)).name);
     }
 
     @Test
     void testGetUSHolidays_ReturnsCorrectCount() {
-        Map<String, String> holidays = holidayService.getUSHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
         // US has 12 holidays (11 federal + Halloween)
         assertEquals(12, holidays.size());
     }
 
-    // ========== GET HOLIDAYS BY COUNTRY TESTS ==========
+    // ========== GET HOLIDAYS BY SET ID TESTS ==========
 
     @Test
-    void testGetHolidays_USCountry_ReturnsUSHolidays() {
-        Map<String, String> holidays = holidayService.getHolidays(TEST_YEAR, "US");
+    void testGetHolidaysTyped_USSetId_ReturnsUSHolidays() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
         assertEquals(12, holidays.size());
-        assertTrue(holidays.containsValue("Independence Day"));
+        assertTrue(hasHolidayNamed(holidays, "Independence Day"));
     }
 
     @Test
-    void testGetHolidays_LowercaseUS_ReturnsUSHolidays() {
-        Map<String, String> holidays = holidayService.getHolidays(TEST_YEAR, "us");
+    void testGetHolidaysTyped_LowercaseUS_ReturnsUSHolidays() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, "us");
 
         assertEquals(12, holidays.size());
     }
 
     @Test
-    void testGetHolidays_UnknownCountry_DefaultsToUS() {
-        Map<String, String> holidays = holidayService.getHolidays(TEST_YEAR, "XX");
+    void testGetHolidays_UnknownSetId_ReturnsEmpty() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, "XX");
 
+        assertTrue(holidays.isEmpty());
+    }
+
+    // ========== GET HOLIDAYS TYPED TESTS ==========
+
+    @Test
+    void testGetHolidaysTyped_US_ReturnsHolidays() {
+        var holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
+
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        // Verify entries have emojis
+        assertTrue(holidays.values().stream().anyMatch(h -> h.emoji != null));
+    }
+
+    @Test
+    void testGetHolidaysTyped_Jewish_ReturnsHolidays() {
+        var holidays = holidayService.getHolidays(TEST_YEAR, SET_JEWISH);
+
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+    }
+
+    @Test
+    void testGetHolidays_UnknownSet_ReturnsEmptyMap() {
+        var holidays = holidayService.getHolidays(TEST_YEAR, "unknown_set");
+
+        assertNotNull(holidays);
+        assertTrue(holidays.isEmpty());
+    }
+
+    // ========== US HOLIDAYS CONTENT TESTS ==========
+
+    @Test
+    void testGetHolidaysTyped_US_ContainsExpectedHolidays() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
+
+        assertNotNull(holidays);
         assertEquals(12, holidays.size());
-        assertTrue(holidays.containsValue("Independence Day"));
-    }
-
-    // ========== GET HOLIDAYS WITH EMOJI TESTS ==========
-
-    @Test
-    void testGetHolidaysWithEmoji_US_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getHolidaysWithEmoji(TEST_YEAR, "us");
-
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertTrue(hasHolidayNamed(holidays, "Christmas Day"));
+        assertTrue(hasHolidayNamed(holidays, "Halloween"));
     }
 
     @Test
-    void testGetHolidaysWithEmoji_Jewish_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getHolidaysWithEmoji(TEST_YEAR, "jewish");
+    void testGetHolidaysTyped_Christian_ReturnsHolidays() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_CHRISTIAN);
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
     }
 
     @Test
-    void testGetHolidaysWithEmoji_UnknownSet_ReturnsEmptyMap() {
-        Map<String, String> emojis = holidayService.getHolidaysWithEmoji(TEST_YEAR, "unknown_set");
+    void testGetHolidaysTyped_Canadian_ReturnsHolidays() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_CANADIAN);
 
-        assertNotNull(emojis);
-        assertTrue(emojis.isEmpty());
-    }
-
-    // ========== GET HOLIDAY NAMES TESTS ==========
-
-    @Test
-    void testGetHolidayNames_US_ReturnsNames() {
-        Map<String, String> names = holidayService.getHolidayNames(TEST_YEAR, "us");
-
-        assertNotNull(names);
-        assertEquals(12, names.size());
-        assertTrue(names.containsValue("Christmas Day"));
-        assertTrue(names.containsValue("Halloween"));
-    }
-
-    @Test
-    void testGetHolidayNames_Jewish_ReturnsNames() {
-        Map<String, String> names = holidayService.getHolidayNames(TEST_YEAR, "jewish");
-
-        assertNotNull(names);
-        assertFalse(names.isEmpty());
-        // Jewish holidays vary but should contain major holidays
-        assertTrue(names.values().stream().anyMatch(n -> n.contains("Passover") || n.contains("Rosh Hashanah")));
-    }
-
-    @Test
-    void testGetHolidayNames_Christian_ReturnsNames() {
-        Map<String, String> names = holidayService.getHolidayNames(TEST_YEAR, "christian");
-
-        assertNotNull(names);
-        assertFalse(names.isEmpty());
-    }
-
-    @Test
-    void testGetHolidayNames_Canadian_ReturnsNames() {
-        Map<String, String> names = holidayService.getHolidayNames(TEST_YEAR, "canadian");
-
-        assertNotNull(names);
-        assertFalse(names.isEmpty());
-    }
-
-    @Test
-    void testGetHolidayNames_UnknownSet_ReturnsEmptyMap() {
-        Map<String, String> names = holidayService.getHolidayNames(TEST_YEAR, "unknown_set");
-
-        assertNotNull(names);
-        assertTrue(names.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
     }
 
     // ========== JEWISH HOLIDAYS TESTS ==========
 
     @Test
     void testGetJewishHolidays_ContainsMajorHolidays() {
-        Map<String, String> holidays = holidayService.getJewishHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_JEWISH);
 
         assertNotNull(holidays);
         assertFalse(holidays.isEmpty());
 
         // Check that major holidays are present (names may vary slightly)
-        boolean hasPassover = holidays.values().stream().anyMatch(n -> n.contains("Passover"));
-        boolean hasRoshHashanah = holidays.values().stream().anyMatch(n -> n.contains("Rosh Hashanah"));
+        boolean hasPassover = holidays.values().stream().anyMatch(h -> h.name.contains("Passover"));
+        boolean hasRoshHashanah = holidays.values().stream().anyMatch(h -> h.name.contains("Rosh Hashanah"));
 
         assertTrue(hasPassover || hasRoshHashanah, "Should contain at least one major Jewish holiday");
     }
 
     @Test
-    void testGetJewishHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getJewishHolidaysWithEmoji(TEST_YEAR);
+    void testGetJewishHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_JEWISH);
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Jewish holidays should have emojis");
     }
 
     // ========== CROSS-YEAR CONSISTENCY TESTS ==========
 
     @Test
     void testGetUSHolidays_DifferentYears_HaveCorrectDates() {
-        Map<String, String> holidays2024 = holidayService.getUSHolidays(2024);
-        Map<String, String> holidays2025 = holidayService.getUSHolidays(2025);
-        Map<String, String> holidays2026 = holidayService.getUSHolidays(2026);
+        Map<LocalDate, HolidayType> holidays2024 = holidayService.getHolidays(2024, SET_US);
+        Map<LocalDate, HolidayType> holidays2025 = holidayService.getHolidays(2025, SET_US);
+        Map<LocalDate, HolidayType> holidays2026 = holidayService.getHolidays(2026, SET_US);
 
         // Fixed date holidays should be on same day
-        assertEquals("Christmas Day", holidays2024.get(formatDate(2024, 12, 25)));
-        assertEquals("Christmas Day", holidays2025.get(formatDate(2025, 12, 25)));
-        assertEquals("Christmas Day", holidays2026.get(formatDate(2026, 12, 25)));
+        assertEquals("Christmas Day", holidays2024.get(LocalDate.of(2024, Month.DECEMBER, 25)).name);
+        assertEquals("Christmas Day", holidays2025.get(LocalDate.of(2025, Month.DECEMBER, 25)).name);
+        assertEquals("Christmas Day", holidays2026.get(LocalDate.of(2026, Month.DECEMBER, 25)).name);
 
         // Each year should have 12 holidays (11 federal + Halloween)
         assertEquals(12, holidays2024.size());
@@ -288,131 +277,137 @@ class HolidayServiceTest {
     @Test
     void testGetUSHolidays_MovableHolidays_VaryByYear() {
         // Thanksgiving varies by year (4th Thursday in November)
-        Map<String, String> holidays2024 = holidayService.getUSHolidays(2024);
-        Map<String, String> holidays2025 = holidayService.getUSHolidays(2025);
+        Map<LocalDate, HolidayType> holidays2024 = holidayService.getHolidays(2024, SET_US);
+        Map<LocalDate, HolidayType> holidays2025 = holidayService.getHolidays(2025, SET_US);
 
         // 2024 Thanksgiving is November 28
-        assertEquals("Thanksgiving", holidays2024.get(formatDate(2024, 11, 28)));
+        assertEquals("Thanksgiving", holidays2024.get(LocalDate.of(2024, Month.NOVEMBER, 28)).name);
         // 2025 Thanksgiving is November 27
-        assertEquals("Thanksgiving", holidays2025.get(formatDate(2025, 11, 27)));
+        assertEquals("Thanksgiving", holidays2025.get(LocalDate.of(2025, Month.NOVEMBER, 27)).name);
     }
 
     // ========== MEXICAN HOLIDAYS TESTS ==========
 
     @Test
     void testGetMexicanHolidays_ContainsMajorHolidays() {
-        Map<String, String> holidays = holidayService.getMexicanHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_MEXICAN);
 
         assertNotNull(holidays);
         assertFalse(holidays.isEmpty());
-        assertTrue(holidays.containsValue("Cinco de Mayo"));
-        assertTrue(holidays.containsValue("Día de la Independencia"));
-        assertTrue(holidays.containsValue("Día de los Muertos"));
-        assertTrue(holidays.containsValue("Día de los Reyes"));
+        assertTrue(hasHolidayNamed(holidays, "Cinco de Mayo"));
+        assertTrue(hasHolidayNamed(holidays, "Día de la Independencia"));
+        assertTrue(hasHolidayNamed(holidays, "Día de los Muertos"));
+        assertTrue(hasHolidayNamed(holidays, "Día de los Reyes"));
     }
 
     @Test
     void testGetMexicanHolidays_ContainsCincoMayo() {
-        Map<String, String> holidays = holidayService.getMexicanHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_MEXICAN);
 
-        assertEquals("Cinco de Mayo", holidays.get(formatDate(TEST_YEAR, 5, 5)));
+        assertEquals("Cinco de Mayo", holidays.get(LocalDate.of(TEST_YEAR, Month.MAY, 5)).name);
     }
 
     @Test
     void testGetMexicanHolidays_ContainsDiaDeLosReyes() {
-        Map<String, String> holidays = holidayService.getMexicanHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_MEXICAN);
 
-        assertEquals("Día de los Reyes", holidays.get(formatDate(TEST_YEAR, 1, 6)));
+        assertEquals("Día de los Reyes", holidays.get(LocalDate.of(TEST_YEAR, Month.JANUARY, 6)).name);
     }
 
     @Test
     void testGetMexicanHolidays_ContainsLasPosadas() {
-        Map<String, String> holidays = holidayService.getMexicanHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_MEXICAN);
 
         // Las Posadas runs from Dec 16-24
-        assertEquals("Las Posadas", holidays.get(formatDate(TEST_YEAR, 12, 16)));
-        assertEquals("Las Posadas", holidays.get(formatDate(TEST_YEAR, 12, 24)));
+        assertEquals("Las Posadas", holidays.get(LocalDate.of(TEST_YEAR, Month.DECEMBER, 16)).name);
+        assertEquals("Las Posadas", holidays.get(LocalDate.of(TEST_YEAR, Month.DECEMBER, 24)).name);
     }
 
     @Test
-    void testGetMexicanHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getMexicanHolidaysWithEmoji(TEST_YEAR);
+    void testGetMexicanHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_MEXICAN);
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Mexican holidays should have emojis");
     }
 
     // ========== PAGAN HOLIDAYS TESTS ==========
 
     @Test
     void testGetPaganHolidays_ContainsWheelOfTheYear() {
-        Map<String, String> holidays = holidayService.getPaganHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_PAGAN);
 
         assertNotNull(holidays);
         assertFalse(holidays.isEmpty());
-        assertTrue(holidays.containsValue("Imbolc"));
-        assertTrue(holidays.containsValue("Ostara"));
-        assertTrue(holidays.containsValue("Beltane"));
-        assertTrue(holidays.containsValue("Litha"));
-        assertTrue(holidays.containsValue("Lughnasadh"));
-        assertTrue(holidays.containsValue("Mabon"));
-        assertTrue(holidays.containsValue("Samhain"));
-        assertTrue(holidays.containsValue("Yule"));
+        assertTrue(hasHolidayNamed(holidays, "Imbolc"));
+        assertTrue(hasHolidayNamed(holidays, "Ostara"));
+        assertTrue(hasHolidayNamed(holidays, "Beltane"));
+        assertTrue(hasHolidayNamed(holidays, "Litha"));
+        assertTrue(hasHolidayNamed(holidays, "Lughnasadh"));
+        assertTrue(hasHolidayNamed(holidays, "Mabon"));
+        assertTrue(hasHolidayNamed(holidays, "Samhain"));
+        assertTrue(hasHolidayNamed(holidays, "Yule"));
     }
 
     @Test
     void testGetPaganHolidays_ContainsSamhain() {
-        Map<String, String> holidays = holidayService.getPaganHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_PAGAN);
 
-        assertEquals("Samhain", holidays.get(formatDate(TEST_YEAR, 10, 31)));
+        assertEquals("Samhain", holidays.get(LocalDate.of(TEST_YEAR, Month.OCTOBER, 31)).name);
     }
 
     @Test
     void testGetPaganHolidays_ContainsBeltane() {
-        Map<String, String> holidays = holidayService.getPaganHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_PAGAN);
 
-        assertEquals("Beltane", holidays.get(formatDate(TEST_YEAR, 5, 1)));
+        assertEquals("Beltane", holidays.get(LocalDate.of(TEST_YEAR, Month.MAY, 1)).name);
     }
 
     @Test
-    void testGetPaganHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getPaganHolidaysWithEmoji(TEST_YEAR);
+    void testGetPaganHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_PAGAN);
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Pagan holidays should have emojis");
     }
 
     // ========== HINDU HOLIDAYS TESTS ==========
 
     @Test
     void testGetHinduHolidays_ContainsMajorHolidays() {
-        Map<String, String> holidays = holidayService.getHinduHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_HINDU);
 
         assertNotNull(holidays);
         assertFalse(holidays.isEmpty());
-        assertTrue(holidays.containsValue("Makar Sankranti"));
+        assertTrue(hasHolidayNamed(holidays, "Makar Sankranti"));
     }
 
     @Test
     void testGetHinduHolidays_ContainsMakarSankranti() {
-        Map<String, String> holidays = holidayService.getHinduHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_HINDU);
 
-        assertEquals("Makar Sankranti", holidays.get(formatDate(TEST_YEAR, 1, 14)));
+        assertEquals("Makar Sankranti", holidays.get(LocalDate.of(TEST_YEAR, Month.JANUARY, 14)).name);
     }
 
     @Test
-    void testGetHinduHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getHinduHolidaysWithEmoji(TEST_YEAR);
+    void testGetHinduHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_HINDU);
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Hindu holidays should have emojis");
     }
 
     // ========== ISLAMIC HOLIDAYS TESTS ==========
 
     @Test
     void testGetIslamicHolidays_ContainsMajorHolidays() {
-        Map<String, String> holidays = holidayService.getIslamicHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_ISLAMIC);
 
         assertNotNull(holidays);
         // Islamic holidays vary by year due to lunar calendar - just verify it returns something
@@ -420,188 +415,197 @@ class HolidayServiceTest {
     }
 
     @Test
-    void testGetIslamicHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getIslamicHolidaysWithEmoji(TEST_YEAR);
+    void testGetIslamicHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_ISLAMIC);
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Islamic holidays should have emojis");
     }
 
     // ========== CHINESE HOLIDAYS TESTS ==========
 
     @Test
     void testGetChineseHolidays_ContainsMajorHolidays() {
-        Map<String, String> holidays = holidayService.getChineseHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_CHINESE);
 
         assertNotNull(holidays);
         assertFalse(holidays.isEmpty());
-        assertTrue(holidays.containsValue("Chinese New Year"));
-        assertTrue(holidays.containsValue("Qingming Festival"));
+        assertTrue(hasHolidayNamed(holidays, "Chinese New Year"));
+        assertTrue(hasHolidayNamed(holidays, "Qingming Festival"));
     }
 
     @Test
-    void testGetChineseHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getChineseHolidaysWithEmoji(TEST_YEAR);
+    void testGetChineseHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_CHINESE);
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Chinese holidays should have emojis");
     }
 
     // ========== CHRISTIAN HOLIDAYS TESTS ==========
 
     @Test
     void testGetChristianHolidays_ContainsMajorHolidays() {
-        Map<String, String> holidays = holidayService.getChristianHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_CHRISTIAN);
 
         assertNotNull(holidays);
         assertFalse(holidays.isEmpty());
-        assertTrue(holidays.containsValue("Christmas"));
-        assertTrue(holidays.containsValue("Easter"));
+        assertTrue(hasHolidayNamed(holidays, "Christmas"));
+        assertTrue(hasHolidayNamed(holidays, "Easter"));
     }
 
     @Test
-    void testGetChristianHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getChristianHolidaysWithEmoji(TEST_YEAR);
+    void testGetChristianHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_CHRISTIAN);
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Christian holidays should have emojis");
     }
 
     // ========== CANADIAN HOLIDAYS TESTS ==========
 
     @Test
     void testGetCanadianHolidays_ContainsMajorHolidays() {
-        Map<String, String> holidays = holidayService.getCanadianHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_CANADIAN);
 
         assertNotNull(holidays);
         assertFalse(holidays.isEmpty());
-        assertTrue(holidays.containsValue("Canada Day"));
+        assertTrue(hasHolidayNamed(holidays, "Canada Day"));
     }
 
     @Test
     void testGetCanadianHolidays_ContainsCanadaDay() {
-        Map<String, String> holidays = holidayService.getCanadianHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_CANADIAN);
 
-        assertEquals("Canada Day", holidays.get(formatDate(TEST_YEAR, 7, 1)));
+        assertEquals("Canada Day", holidays.get(LocalDate.of(TEST_YEAR, Month.JULY, 1)).name);
     }
 
     @Test
-    void testGetCanadianHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getCanadianHolidaysWithEmoji(TEST_YEAR);
+    void testGetCanadianHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_CANADIAN);
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Canadian holidays should have emojis");
     }
 
     // ========== UK HOLIDAYS TESTS ==========
 
     @Test
     void testGetUKHolidays_ContainsMajorHolidays() {
-        Map<String, String> holidays = holidayService.getUKHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_UK);
 
         assertNotNull(holidays);
         assertFalse(holidays.isEmpty());
-        assertTrue(holidays.containsValue("Boxing Day"));
+        assertTrue(hasHolidayNamed(holidays, "Boxing Day"));
     }
 
     @Test
     void testGetUKHolidays_ContainsBoxingDay() {
-        Map<String, String> holidays = holidayService.getUKHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_UK);
 
-        assertEquals("Boxing Day", holidays.get(formatDate(TEST_YEAR, 12, 26)));
+        assertEquals("Boxing Day", holidays.get(LocalDate.of(TEST_YEAR, Month.DECEMBER, 26)).name);
     }
 
     @Test
-    void testGetUKHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getUKHolidaysWithEmoji(TEST_YEAR);
+    void testGetUKHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_UK);
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "UK holidays should have emojis");
     }
 
     // ========== SECULAR/FUN HOLIDAYS TESTS ==========
 
     @Test
     void testGetSecularHolidays_ContainsMajorHolidays() {
-        Map<String, String> holidays = holidayService.getSecularHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_SECULAR);
 
         assertNotNull(holidays);
         assertFalse(holidays.isEmpty());
-        assertTrue(holidays.containsValue("Valentine's Day"));
-        assertTrue(holidays.containsValue("Halloween"));
+        assertTrue(hasHolidayNamed(holidays, "Valentine's Day"));
+        assertTrue(hasHolidayNamed(holidays, "Halloween"));
     }
 
     @Test
     void testGetSecularHolidays_ContainsValentinesDay() {
-        Map<String, String> holidays = holidayService.getSecularHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_SECULAR);
 
-        assertEquals("Valentine's Day", holidays.get(formatDate(TEST_YEAR, 2, 14)));
+        assertEquals("Valentine's Day", holidays.get(LocalDate.of(TEST_YEAR, Month.FEBRUARY, 14)).name);
     }
 
     @Test
     void testGetSecularHolidays_ContainsHalloween() {
-        Map<String, String> holidays = holidayService.getSecularHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_SECULAR);
 
-        assertEquals("Halloween", holidays.get(formatDate(TEST_YEAR, 10, 31)));
+        assertEquals("Halloween", holidays.get(LocalDate.of(TEST_YEAR, Month.OCTOBER, 31)).name);
     }
 
     @Test
-    void testGetSecularHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getSecularHolidaysWithEmoji(TEST_YEAR);
+    void testGetSecularHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_SECULAR);
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Secular holidays should have emojis");
     }
 
     // ========== MAJOR WORLD HOLIDAYS TESTS ==========
 
     @Test
     void testGetMajorWorldHolidays_ContainsMajorHolidays() {
-        Map<String, String> holidays = holidayService.getMajorWorldHolidays(TEST_YEAR);
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_MAJOR_WORLD);
 
         assertNotNull(holidays);
         assertFalse(holidays.isEmpty());
     }
 
     @Test
-    void testGetMajorWorldHolidaysWithEmoji_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getMajorWorldHolidaysWithEmoji(TEST_YEAR);
+    void testGetMajorWorldHolidaysTyped_ContainsEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_MAJOR_WORLD);
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "Major World holidays should have emojis");
     }
 
     // ========== US HOLIDAYS WITH EMOJI TESTS ==========
 
     @Test
-    void testGetUSHolidaysWithEmoji_ContainsExpectedEmojis() {
-        Map<String, String> emojis = holidayService.getUSHolidaysWithEmoji(TEST_YEAR);
+    void testGetUSHolidaysTyped_ContainsExpectedEmojis() {
+        Map<LocalDate, HolidayType> holidays = holidayService.getHolidays(TEST_YEAR, SET_US);
 
-        assertNotNull(emojis);
-        assertFalse(emojis.isEmpty());
+        assertNotNull(holidays);
+        assertFalse(holidays.isEmpty());
+        // Verify at least some holidays have emojis
+        long emojisCount = holidays.values().stream().filter(h -> h.emoji != null).count();
+        assertTrue(emojisCount > 0, "US holidays should have emojis");
     }
 
     // ========== EUROPEAN HOLIDAYS TESTS ==========
 
     @Test
-    void testGetHolidayNames_European_ReturnsNames() {
-        Map<String, String> names = holidayService.getHolidayNames(TEST_YEAR, "european");
+    void testGetHolidaysTyped_European_ReturnsHolidays() {
+        var holidays = holidayService.getHolidays(TEST_YEAR, SET_EUROPEAN);
 
         // European may return empty if not implemented - just verify it doesn't throw
-        assertNotNull(names);
-    }
-
-    @Test
-    void testGetHolidaysWithEmoji_European_ReturnsEmojis() {
-        Map<String, String> emojis = holidayService.getHolidaysWithEmoji(TEST_YEAR, "european");
-
-        // European may return empty if not implemented - just verify it doesn't throw
-        assertNotNull(emojis);
+        assertNotNull(holidays);
     }
 
     // ========== HELPER METHODS ==========
 
-    private String formatDate(int year, int month, int day) {
-        return String.format(DATE_FORMAT, year, month, day);
+    private boolean hasHolidayNamed(Map<LocalDate, HolidayType> holidays, String name) {
+        return holidays.values().stream().anyMatch(h -> name.equals(h.name));
     }
 }

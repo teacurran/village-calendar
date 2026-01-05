@@ -23,6 +23,8 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 
 import villagecompute.calendar.types.CalendarConfigType;
+import villagecompute.calendar.types.CustomDateEntryType;
+import villagecompute.calendar.types.HolidayType;
 import villagecompute.calendar.util.Colors;
 
 import io.quarkus.logging.Log;
@@ -54,13 +56,14 @@ public class CalendarRenderingService {
     private static final float POINTS_PER_INCH = 72f;
     // ===========================================
 
+    // SVG text element format string for styled text with optional transform
+    private static final String SVG_TEXT_STYLED_FORMAT = "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
+            + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n";
+
+    // SVG closing tag
+    private static final String SVG_CLOSE_TAG = "</svg>";
+
     public static final String DEFAULT_THEME = "default";
-
-    /** JSON key for emoji field in custom data */
-    private static final String KEY_EMOJI = "emoji";
-
-    /** JSON key for display settings in custom data */
-    private static final String KEY_DISPLAY_SETTINGS = "displaySettings";
 
     /** Emoji font constant for monochrome (black & white outline) emoji style. */
     public static final String EMOJI_FONT_NOTO_MONO = "noto-mono";
@@ -286,10 +289,6 @@ public class CalendarRenderingService {
     // HELPER METHODS FOR renderDayCell (extracted to reduce cognitive complexity)
     // =============================================
 
-    /** Data holder for custom event display settings */
-    private record CustomEventData(String emoji, CustomEventDisplay display) {
-    }
-
     /** Encapsulates cell position and dimensions */
     private record Cell(int x, int y, int width, int height) {
     }
@@ -325,32 +324,12 @@ public class CalendarRenderingService {
         svg.append(generateMoonIlluminationSVG(date, moonX, moonY, config.latitude, config.longitude, config));
     }
 
-    /** Extracts custom event data (emoji and display settings) from config */
-    private CustomEventData extractCustomEventData(String dateStr, CalendarConfigType config) {
-        if (!config.customDates.containsKey(dateStr)) {
-            return new CustomEventData("", null);
+    /** Gets the substituted emoji for a custom date entry */
+    private String getCustomEmoji(CustomDateEntryType entry, CalendarConfigType config) {
+        if (entry == null || entry.emoji == null) {
+            return "";
         }
-
-        Object customData = config.customDates.get(dateStr);
-        if (customData instanceof String) {
-            return new CustomEventData(substituteEmojiForMonochrome((String) customData, config), null);
-        }
-
-        if (customData instanceof Map) {
-            Map<String, Object> dataMap = (Map<String, Object>) customData;
-            if (dataMap.containsKey(KEY_EMOJI)) {
-                String emoji = substituteEmojiForMonochrome((String) dataMap.get(KEY_EMOJI), config);
-                CustomEventDisplay display = null;
-                if (dataMap.containsKey(KEY_DISPLAY_SETTINGS) && dataMap.get(KEY_DISPLAY_SETTINGS) instanceof Map) {
-                    Map<String, Object> settings = (Map<String, Object>) dataMap.get(KEY_DISPLAY_SETTINGS);
-                    display = new CustomEventDisplay(emoji, settings);
-                } else {
-                    display = new CustomEventDisplay(emoji);
-                }
-                return new CustomEventData(emoji, display);
-            }
-        }
-        return new CustomEventData("", null);
+        return substituteEmojiForMonochrome(entry.emoji, config);
     }
 
     /** Calculates emoji position based on position string */
@@ -402,7 +381,7 @@ public class CalendarRenderingService {
     }
 
     /** Renders custom emoji with positioning */
-    private void renderCustomEmoji(StringBuilder svg, String customEmoji, CustomEventDisplay eventDisplay, Cell cell,
+    private void renderCustomEmoji(StringBuilder svg, String customEmoji, CustomDateEntryType eventDisplay, Cell cell,
             CalendarConfigType config) {
         if (customEmoji.isEmpty()) {
             return;
@@ -423,7 +402,7 @@ public class CalendarRenderingService {
     }
 
     /** Renders event title with optional wrapping and rotation */
-    private void renderEventTitle(StringBuilder svg, String title, CustomEventDisplay eventDisplay, Cell cell,
+    private void renderEventTitle(StringBuilder svg, String title, CustomDateEntryType eventDisplay, Cell cell,
             CalendarConfigType config) {
         if (title == null || title.isEmpty()) {
             return;
@@ -439,7 +418,7 @@ public class CalendarRenderingService {
     }
 
     /** Renders event title with custom display settings */
-    private void renderEventTitleWithDisplay(StringBuilder svg, String title, CustomEventDisplay eventDisplay,
+    private void renderEventTitleWithDisplay(StringBuilder svg, String title, CustomDateEntryType eventDisplay,
             Cell cell, CalendarConfigType config) {
         double textX = cell.x() + (cell.width() * eventDisplay.getTextX(50) / 100.0);
         double textY = cell.y() + (cell.height() * eventDisplay.getTextY(70) / 100.0);
@@ -467,11 +446,8 @@ public class CalendarRenderingService {
         String transform = style.rotation() != 0
                 ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", style.rotation(), textX, textY)
                 : "";
-        svg.append(String.format(
-                "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
-                        + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
-                textX, textY, style.size(), style.color(), style.fontWeight(), style.textAnchor(), transform,
-                displayTitle));
+        svg.append(String.format(SVG_TEXT_STYLED_FORMAT, textX, textY, style.size(), style.color(), style.fontWeight(),
+                style.textAnchor(), transform, displayTitle));
     }
 
     /** Converts text alignment to SVG text-anchor */
@@ -493,12 +469,12 @@ public class CalendarRenderingService {
 
         for (String word : words) {
             if (charCount + word.length() <= 8) {
-                if (line1.length() > 0) {
+                if (!line1.isEmpty()) {
                     line1.append(" ");
                 }
                 line1.append(word);
                 charCount += word.length() + 1;
-            } else if (line2.length() == 0) {
+            } else if (line2.isEmpty()) {
                 line2.append(word);
             } else {
                 line2.append("…");
@@ -511,18 +487,12 @@ public class CalendarRenderingService {
                 : "";
         double lineHeight = style.size() * 1.2;
 
-        svg.append(String.format(
-                "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
-                        + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
-                textX, textY - lineHeight / 2, style.size(), style.color(), style.fontWeight(), style.textAnchor(),
-                transform, line1.toString()));
+        svg.append(String.format(SVG_TEXT_STYLED_FORMAT, textX, textY - lineHeight / 2, style.size(), style.color(),
+                style.fontWeight(), style.textAnchor(), transform, line1));
 
-        if (line2.length() > 0) {
-            svg.append(String.format(
-                    "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
-                            + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n",
-                    textX, textY + lineHeight / 2, style.size(), style.color(), style.fontWeight(), style.textAnchor(),
-                    transform, line2.toString()));
+        if (!line2.isEmpty()) {
+            svg.append(String.format(SVG_TEXT_STYLED_FORMAT, textX, textY + lineHeight / 2, style.size(), style.color(),
+                    style.fontWeight(), style.textAnchor(), transform, line2));
         }
     }
 
@@ -611,7 +581,6 @@ public class CalendarRenderingService {
             int monthNum, int weekendIndex, Locale locale, CalendarConfigType config, ThemeColors theme) {
 
         int day = date.getDayOfMonth();
-        String dateStr = date.toString();
 
         // Cell background
         String cellBackground = getCellBackgroundColor(config, date, monthNum, day, isWeekend, weekendIndex);
@@ -622,27 +591,29 @@ public class CalendarRenderingService {
         renderMoonIfNeeded(svg, cell, date, showMoon, config);
 
         // Check for holidays or custom dates
-        String holidayEmoji = substituteEmojiForMonochrome(config.holidayEmojis.getOrDefault(dateStr, ""), config);
-        boolean isHoliday = config.holidays.contains(dateStr);
-        boolean isCustomDate = config.customDates.containsKey(dateStr);
+        HolidayType holiday = config.holidays.get(date);
+        String holidayEmoji = holiday != null && holiday.emoji != null
+                ? substituteEmojiForMonochrome(holiday.emoji, config)
+                : "";
+        String holidayName = holiday != null && holiday.name != null ? holiday.name : "";
+        boolean isHoliday = holiday != null;
 
-        // Extract custom event data
-        CustomEventData customData = extractCustomEventData(dateStr, config);
-        String customEmoji = customData.emoji();
-        CustomEventDisplay eventDisplay = customData.display();
+        // Get custom date entry and substituted emoji
+        CustomDateEntryType customEntry = config.customDates.get(date);
+        boolean isCustomDate = customEntry != null;
+        String customEmoji = getCustomEmoji(customEntry, config);
 
         // Holiday emoji/text
-        String holidayName = config.holidayNames.getOrDefault(dateStr, "");
         svg.append(renderHolidayContent(holidayEmoji, holidayName, cell, config));
 
         // Custom emoji - skip if holiday emoji already rendered
         if (holidayEmoji.isEmpty()) {
-            renderCustomEmoji(svg, customEmoji, eventDisplay, cell, config);
+            renderCustomEmoji(svg, customEmoji, customEntry, cell, config);
         }
 
-        // Event title
-        String title = config.eventTitles.get(dateStr);
-        renderEventTitle(svg, title, eventDisplay, cell, config);
+        // Event title from custom entry
+        String title = customEntry != null ? customEntry.title : null;
+        renderEventTitle(svg, title, customEntry, cell, config);
 
         // Day number
         renderDayNumber(svg, cell, day, isHoliday, isCustomDate, config, theme);
@@ -805,12 +776,8 @@ public class CalendarRenderingService {
         if (config.holidaySets != null && !config.holidaySets.isEmpty()) {
             for (String setId : config.holidaySets) {
                 // Get holidays from HolidayService (handles ID mapping internally)
-                Map<String, String> setHolidayEmojis = holidayService.getHolidaysWithEmoji(config.year, setId);
-                config.holidays.addAll(setHolidayEmojis.keySet());
-                config.holidayEmojis.putAll(setHolidayEmojis);
-                // Also get holiday names for text display modes
-                Map<String, String> setHolidayNames = holidayService.getHolidayNames(config.year, setId);
-                config.holidayNames.putAll(setHolidayNames);
+                Map<LocalDate, HolidayType> setHolidays = holidayService.getHolidays(config.year, setId);
+                config.holidays.putAll(setHolidays);
             }
         }
 
@@ -870,7 +837,7 @@ public class CalendarRenderingService {
         }
 
         appendOuterBorder(svg, weekdayAligned, config, cellWidth, cellHeight, headerHeight);
-        svg.append("</svg>");
+        svg.append(SVG_CLOSE_TAG);
         return svg.toString();
     }
 
@@ -1033,11 +1000,7 @@ public class CalendarRenderingService {
         distToday = Math.abs(phaseToday - 0.75);
         distYesterday = Math.abs(phaseYesterday - 0.75);
         distTomorrow = Math.abs(phaseTomorrow - 0.75);
-        if (distToday < distYesterday && distToday < distTomorrow && distToday < 0.017) {
-            return true;
-        }
-
-        return false;
+        return distToday < distYesterday && distToday < distTomorrow && distToday < 0.017;
     }
 
     // Check if this is a full moon day only
@@ -1070,72 +1033,6 @@ public class CalendarRenderingService {
             phase += 1.0;
 
         return phase;
-    }
-
-    private String getMoonPhaseSymbol(LocalDate date) {
-        MoonPhase phase = calculateMoonPhase(date);
-        return getMoonPhaseSymbol(phase);
-    }
-
-    private String getMoonPhaseSymbol(MoonPhase phase) {
-        switch (phase) {
-            case NEW_MOON :
-                return "🌑";
-            case WAXING_CRESCENT :
-                return "🌒";
-            case FIRST_QUARTER :
-                return "🌓";
-            case WAXING_GIBBOUS :
-                return "🌔";
-            case FULL_MOON :
-                return "🌕";
-            case WANING_GIBBOUS :
-                return "🌖";
-            case LAST_QUARTER :
-                return "🌗";
-            case WANING_CRESCENT :
-                return "🌘";
-            default :
-                return "";
-        }
-    }
-
-    // Moon phase calculation using synodic month
-    private enum MoonPhase {
-        NEW_MOON, WAXING_CRESCENT, FIRST_QUARTER, WAXING_GIBBOUS, FULL_MOON, WANING_GIBBOUS, LAST_QUARTER, WANING_CRESCENT
-    }
-
-    private MoonPhase calculateMoonPhase(LocalDate date) {
-        // Known new moon date (January 6, 2000 at 18:14 UTC)
-        LocalDate knownNewMoon = LocalDate.of(2000, 1, 6);
-
-        // Calculate days since known new moon
-        long daysSince = java.time.temporal.ChronoUnit.DAYS.between(knownNewMoon, date);
-
-        // Synodic month is approximately 29.53059 days
-        double synodicMonth = 29.53059;
-
-        // Calculate phase as a fraction (0 = new moon, 0.5 = full moon)
-        double phase = (daysSince % synodicMonth) / synodicMonth;
-
-        // Determine moon phase based on the fraction
-        if (phase < 0.0625 || phase >= 0.9375) {
-            return MoonPhase.NEW_MOON;
-        } else if (phase < 0.1875) {
-            return MoonPhase.WAXING_CRESCENT;
-        } else if (phase < 0.3125) {
-            return MoonPhase.FIRST_QUARTER;
-        } else if (phase < 0.4375) {
-            return MoonPhase.WAXING_GIBBOUS;
-        } else if (phase < 0.5625) {
-            return MoonPhase.FULL_MOON;
-        } else if (phase < 0.6875) {
-            return MoonPhase.WANING_GIBBOUS;
-        } else if (phase < 0.8125) {
-            return MoonPhase.LAST_QUARTER;
-        } else {
-            return MoonPhase.WANING_CRESCENT;
-        }
     }
 
     // Clean PDF metadata to remove backend technology fingerprints
@@ -1289,7 +1186,7 @@ public class CalendarRenderingService {
 
         wrapper.append(innerContent);
         wrapper.append(String.format("%n  </g>%n"));
-        wrapper.append("</svg>");
+        wrapper.append(SVG_CLOSE_TAG);
 
         return wrapper.toString();
     }
@@ -1361,7 +1258,7 @@ public class CalendarRenderingService {
 
         wrapper.append(innerContent);
         wrapper.append(String.format("%n  </g>%n"));
-        wrapper.append("</svg>");
+        wrapper.append(SVG_CLOSE_TAG);
 
         return wrapper.toString();
     }

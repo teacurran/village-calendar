@@ -9,6 +9,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 import villagecompute.calendar.types.CalendarConfigType;
+import villagecompute.calendar.types.CustomDateEntryType;
 
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -108,7 +109,8 @@ public class PDFRenderingServiceTest {
             config.layoutStyle = "grid";
 
             // Add a custom event with an emoji that uses xlink:href
-            config.customDates.put("2025-05-05", "💃"); // Dancing woman emoji
+            config.customDates.put(java.time.LocalDate.of(2025, 5, 5), new CustomDateEntryType("💃")); // Dancing woman
+                                                                                                       // emoji
 
             String svg = calendarRenderingService.generateCalendarSVG(config);
             assertNotNull(svg, "SVG generation with dancing emoji should succeed");
@@ -133,7 +135,7 @@ public class PDFRenderingServiceTest {
                 config.theme = "default";
                 config.layoutStyle = "grid";
 
-                config.customDates.put("2025-01-15", emoji);
+                config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType(emoji));
 
                 String svg = calendarRenderingService.generateCalendarSVG(config);
                 assertNotNull(svg, "SVG generation with emoji " + emoji + " should succeed");
@@ -190,11 +192,13 @@ public class PDFRenderingServiceTest {
         config.emojiFont = "noto-color";
 
         // Add complex custom dates with various emojis (including known xlink users)
-        config.customDates.put("2025-01-01", "🎉"); // New Year
-        config.customDates.put("2025-02-14", "❤️"); // Valentine's
-        config.customDates.put("2025-10-31", "🎃"); // Halloween (uses xlink)
-        config.customDates.put("2025-05-05", "💃"); // Dancing woman (uses xlink)
-        config.customDates.put("2025-12-25", "🎄"); // Christmas tree
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 1), new CustomDateEntryType("🎉")); // New Year
+        config.customDates.put(java.time.LocalDate.of(2025, 2, 14), new CustomDateEntryType("❤️")); // Valentine's
+        config.customDates.put(java.time.LocalDate.of(2025, 10, 31), new CustomDateEntryType("🎃")); // Halloween (uses
+                                                                                                     // xlink)
+        config.customDates.put(java.time.LocalDate.of(2025, 5, 5), new CustomDateEntryType("💃")); // Dancing woman
+                                                                                                   // (uses xlink)
+        config.customDates.put(java.time.LocalDate.of(2025, 12, 25), new CustomDateEntryType("🎄")); // Christmas tree
 
         // Generate SVG
         String svg = calendarRenderingService.generateCalendarSVG(config);
@@ -231,7 +235,7 @@ public class PDFRenderingServiceTest {
         config.year = 2025;
         config.theme = "default";
         config.emojiFont = "noto-mono"; // Explicitly set to monochrome
-        config.customDates.put("2025-01-01", "🎉");
+        config.customDates.put(java.time.LocalDate.of(2025, 1, 1), new CustomDateEntryType("🎉"));
 
         // Generate SVG with monochrome emoji setting
         String svg = calendarRenderingService.generateCalendarSVG(config);

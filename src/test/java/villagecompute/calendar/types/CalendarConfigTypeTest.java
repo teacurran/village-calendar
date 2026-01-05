@@ -55,14 +55,8 @@ class CalendarConfigTypeTest {
         assertEquals("bottom-left", config.emojiPosition);
         assertNotNull(config.customDates);
         assertTrue(config.customDates.isEmpty());
-        assertNotNull(config.eventTitles);
-        assertTrue(config.eventTitles.isEmpty());
         assertNotNull(config.holidays);
         assertTrue(config.holidays.isEmpty());
-        assertNotNull(config.holidayEmojis);
-        assertTrue(config.holidayEmojis.isEmpty());
-        assertNotNull(config.holidayNames);
-        assertTrue(config.holidayNames.isEmpty());
         assertNotNull(config.holidaySets);
         assertTrue(config.holidaySets.isEmpty());
         assertEquals("large", config.eventDisplayMode);
@@ -105,11 +99,8 @@ class CalendarConfigTypeTest {
         original.moonDarkColor = "#111111";
         original.moonLightColor = "#eeeeee";
         original.emojiPosition = "top-right";
-        original.customDates.put("2025-01-01", "party");
-        original.eventTitles.put("2025-01-01", "New Year");
-        original.holidays.add("2025-12-25");
-        original.holidayEmojis.put("2025-12-25", "tree");
-        original.holidayNames.put("2025-12-25", "Christmas");
+        original.customDates.put(LocalDate.of(2025, 1, 1), new CustomDateEntryType("party", "New Year"));
+        original.holidays.put(LocalDate.of(2025, 12, 25), new HolidayType("Christmas", "tree"));
         original.holidaySets.add("us-federal");
         original.eventDisplayMode = "small";
         original.emojiFont = "noto-mono";
@@ -158,33 +149,28 @@ class CalendarConfigTypeTest {
 
         // Verify collections are copied (not same reference)
         assertNotSame(original.customDates, copy.customDates);
-        assertNotSame(original.eventTitles, copy.eventTitles);
         assertNotSame(original.holidays, copy.holidays);
-        assertNotSame(original.holidayEmojis, copy.holidayEmojis);
-        assertNotSame(original.holidayNames, copy.holidayNames);
         assertNotSame(original.holidaySets, copy.holidaySets);
 
         // Verify collection contents are equal
         assertEquals(original.customDates, copy.customDates);
-        assertEquals(original.eventTitles, copy.eventTitles);
         assertEquals(original.holidays, copy.holidays);
-        assertEquals(original.holidayEmojis, copy.holidayEmojis);
-        assertEquals(original.holidayNames, copy.holidayNames);
         assertEquals(original.holidaySets, copy.holidaySets);
     }
 
     @Test
     void copyConstructor_ModifyingCopyDoesNotAffectOriginal() {
         CalendarConfigType original = new CalendarConfigType();
-        original.customDates.put("2025-01-01", "original");
-        original.holidays.add("2025-12-25");
+        original.customDates.put(LocalDate.of(2025, 1, 1), new CustomDateEntryType("original"));
+        original.holidays.put(LocalDate.of(2025, 12, 25), new HolidayType("Christmas", "tree"));
 
         CalendarConfigType copy = new CalendarConfigType(original);
-        copy.customDates.put("2025-01-01", "modified");
-        copy.holidays.add("2025-07-04");
+        copy.customDates.put(LocalDate.of(2025, 1, 1), new CustomDateEntryType("modified"));
+        copy.holidays.put(LocalDate.of(2025, 7, 4), new HolidayType("Independence Day", "fireworks"));
 
-        assertEquals("original", original.customDates.get("2025-01-01"));
+        assertEquals("original", original.customDates.get(LocalDate.of(2025, 1, 1)).emoji);
         assertEquals(1, original.holidays.size());
+        assertEquals("Christmas", original.holidays.get(LocalDate.of(2025, 12, 25)).name);
     }
 
     @Test
@@ -195,8 +181,8 @@ class CalendarConfigTypeTest {
         original.moonDisplayMode = "full-only";
         original.latitude = 40.7128;
         original.longitude = -74.0060;
-        original.customDates.put("2025-01-01", "fireworks");
-        original.holidays.add("2025-07-04");
+        original.customDates.put(LocalDate.of(2025, 1, 1), new CustomDateEntryType("fireworks", "New Year"));
+        original.holidays.put(LocalDate.of(2025, 7, 4), new HolidayType("Independence Day", "flag"));
 
         String json = objectMapper.writeValueAsString(original);
         CalendarConfigType restored = objectMapper.readValue(json, CalendarConfigType.class);
@@ -254,32 +240,34 @@ class CalendarConfigTypeTest {
     void jsonSerialization_CustomDatesPropertyMapping() throws Exception {
         String json = """
                 {
-                    "customDates": {"2025-01-01": "party"}
+                    "customDates": {"2025-01-01": {"emoji": "party", "title": "New Year"}}
                 }
                 """;
 
         CalendarConfigType config = objectMapper.readValue(json, CalendarConfigType.class);
-        assertEquals("party", config.customDates.get("2025-01-01"));
+        LocalDate newYearDate = LocalDate.of(2025, 1, 1);
+        assertEquals("party", config.customDates.get(newYearDate).emoji);
+        assertEquals("New Year", config.customDates.get(newYearDate).title);
     }
 
     @Test
     void jsonSerialization_AllCollectionsMapping() throws Exception {
         String json = """
                 {
-                    "eventTitles": {"2025-01-01": "New Year"},
-                    "holidays": ["2025-12-25"],
-                    "holidayEmojis": {"2025-12-25": "tree"},
-                    "holidayNames": {"2025-12-25": "Christmas"},
+                    "customDates": {"2025-01-01": {"emoji": "party", "title": "New Year"}},
+                    "holidays": {"2025-12-25": {"name": "Christmas", "emoji": "tree"}},
                     "holidaySets": ["us-federal", "us-observances"]
                 }
                 """;
 
         CalendarConfigType config = objectMapper.readValue(json, CalendarConfigType.class);
 
-        assertEquals("New Year", config.eventTitles.get("2025-01-01"));
-        assertTrue(config.holidays.contains("2025-12-25"));
-        assertEquals("tree", config.holidayEmojis.get("2025-12-25"));
-        assertEquals("Christmas", config.holidayNames.get("2025-12-25"));
+        LocalDate newYearDate = LocalDate.of(2025, 1, 1);
+        assertEquals("New Year", config.customDates.get(newYearDate).title);
+        LocalDate christmasDate = LocalDate.of(2025, 12, 25);
+        assertNotNull(config.holidays.get(christmasDate));
+        assertEquals("tree", config.holidays.get(christmasDate).emoji);
+        assertEquals("Christmas", config.holidays.get(christmasDate).name);
         assertEquals(2, config.holidaySets.size());
         assertTrue(config.holidaySets.contains("us-federal"));
     }
