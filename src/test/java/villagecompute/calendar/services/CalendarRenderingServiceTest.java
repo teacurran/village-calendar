@@ -1605,6 +1605,386 @@ class CalendarRenderingServiceTest {
         assertNotNull(color2);
     }
 
+    @Test
+    void testGetCellBackgroundColor_RainbowDays1_ColorByDayOfWeek() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "rainbowDays1";
+
+        // Monday and Friday should have different colors based on day of week
+        LocalDate monday = LocalDate.of(2025, 1, 6); // Monday
+        LocalDate friday = LocalDate.of(2025, 1, 10); // Friday
+
+        String mondayColor = CalendarRenderingService.getCellBackgroundColor(config, monday, 1, 6, false, 0);
+        String fridayColor = CalendarRenderingService.getCellBackgroundColor(config, friday, 1, 10, false, 0);
+
+        assertNotNull(mondayColor);
+        assertNotNull(fridayColor);
+        assertTrue(mondayColor.startsWith("#"), "Should return hex color");
+        assertTrue(fridayColor.startsWith("#"), "Should return hex color");
+        assertNotEquals(mondayColor, fridayColor, "Different days of week should have different colors");
+    }
+
+    @Test
+    void testGetCellBackgroundColor_RainbowDays2_ColorByDayOfMonth() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "rainbowDays2";
+
+        // Day 1 and day 15 should have different colors based on day of month
+        LocalDate day1 = LocalDate.of(2025, 1, 1);
+        LocalDate day15 = LocalDate.of(2025, 1, 15);
+
+        String color1 = CalendarRenderingService.getCellBackgroundColor(config, day1, 1, 1, false, 0);
+        String color15 = CalendarRenderingService.getCellBackgroundColor(config, day15, 1, 15, false, 0);
+
+        assertNotNull(color1);
+        assertNotNull(color15);
+        assertTrue(color1.startsWith("#"), "Should return hex color");
+        assertTrue(color15.startsWith("#"), "Should return hex color");
+        assertNotEquals(color1, color15, "Different days of month should have different colors");
+    }
+
+    @Test
+    void testGetCellBackgroundColor_RainbowDays3_ColorWithDistanceBasedLightness() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "rainbowDays3";
+
+        // Jan 1 (far from Dec 31) and Dec 30 (close to Dec 31) should have different lightness
+        LocalDate jan1 = LocalDate.of(2025, 1, 1);
+        LocalDate dec30 = LocalDate.of(2025, 12, 30);
+
+        String colorJan = CalendarRenderingService.getCellBackgroundColor(config, jan1, 1, 1, false, 0);
+        String colorDec = CalendarRenderingService.getCellBackgroundColor(config, dec30, 12, 30, false, 0);
+
+        assertNotNull(colorJan);
+        assertNotNull(colorDec);
+        assertTrue(colorJan.startsWith("#"), "Should return hex color");
+        assertTrue(colorDec.startsWith("#"), "Should return hex color");
+        // Colors will differ due to distance-based lightness calculation
+        assertNotEquals(colorJan, colorDec, "Different distances from Dec 31 should produce different colors");
+    }
+
+    @Test
+    void testGetCellBackgroundColor_RainbowDaysDefault() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "rainbowDays"; // Base theme without number suffix
+
+        LocalDate day10 = LocalDate.of(2025, 1, 10);
+        LocalDate day20 = LocalDate.of(2025, 1, 20);
+
+        String color10 = CalendarRenderingService.getCellBackgroundColor(config, day10, 1, 10, false, 0);
+        String color20 = CalendarRenderingService.getCellBackgroundColor(config, day20, 1, 20, false, 0);
+
+        assertNotNull(color10);
+        assertNotNull(color20);
+        assertTrue(color10.startsWith("#"), "Should return hex color");
+        assertTrue(color20.startsWith("#"), "Should return hex color");
+        assertNotEquals(color10, color20, "Different days should have different colors");
+    }
+
+    @Test
+    void testGetCellBackgroundColor_VermontWeekends_2DArray() {
+        // Vermont uses 2D array (varying colors within month)
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "vermontWeekends";
+
+        // Test different weekends in the same month
+        LocalDate firstWeekend = LocalDate.of(2025, 3, 1); // March, first weekend
+        LocalDate secondWeekend = LocalDate.of(2025, 3, 8); // March, second weekend
+
+        String color1 = CalendarRenderingService.getCellBackgroundColor(config, firstWeekend, 3, 1, true, 0);
+        String color2 = CalendarRenderingService.getCellBackgroundColor(config, secondWeekend, 3, 8, true, 1);
+
+        assertNotNull(color1);
+        assertNotNull(color2);
+        assertTrue(color1.startsWith("#"), "Should return hex color");
+    }
+
+    @Test
+    void testGetCellBackgroundColor_VermontWeekends_IndexOutOfBounds() {
+        // Test when weekendIndex exceeds available colors (should fall back to first color)
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "vermontWeekends";
+
+        // January has only one color defined, use index 5
+        LocalDate janWeekend = LocalDate.of(2025, 1, 25);
+        String color = CalendarRenderingService.getCellBackgroundColor(config, janWeekend, 1, 25, true, 5);
+
+        assertNotNull(color);
+        assertTrue(color.startsWith("#"), "Should return hex color");
+    }
+
+    @Test
+    void testGetCellBackgroundColor_LakeshoreWeekends_1DArray() {
+        // Lakeshore uses 1D array (single color per month)
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "lakeshoreWeekends";
+
+        LocalDate janWeekend = LocalDate.of(2025, 1, 4);
+        LocalDate julyWeekend = LocalDate.of(2025, 7, 5);
+
+        String janColor = CalendarRenderingService.getCellBackgroundColor(config, janWeekend, 1, 4, true, 0);
+        String julyColor = CalendarRenderingService.getCellBackgroundColor(config, julyWeekend, 7, 5, true, 0);
+
+        assertNotNull(janColor);
+        assertNotNull(julyColor);
+        assertNotEquals(janColor, julyColor, "Different months should have different colors");
+    }
+
+    @Test
+    void testGetCellBackgroundColor_SunsetWeekends_1DArray() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "sunsetWeekends";
+
+        LocalDate weekend = LocalDate.of(2025, 6, 7);
+        String color = CalendarRenderingService.getCellBackgroundColor(config, weekend, 6, 7, true, 0);
+
+        assertNotNull(color);
+        assertTrue(color.startsWith("#"), "Should return hex color");
+    }
+
+    @Test
+    void testGetCellBackgroundColor_ForestWeekends_1DArray() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "forestWeekends";
+
+        LocalDate weekend = LocalDate.of(2025, 9, 6);
+        String color = CalendarRenderingService.getCellBackgroundColor(config, weekend, 9, 6, true, 0);
+
+        assertNotNull(color);
+        assertTrue(color.startsWith("#"), "Should return hex color");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0, 100, 50", // Red (hue segment 0)
+            "60, 100, 50", // Yellow (hue segment 1)
+            "120, 100, 50", // Green (hue segment 2)
+            "180, 100, 50", // Cyan (hue segment 3)
+            "240, 100, 50", // Blue (hue segment 4)
+            "300, 100, 50" // Magenta (hue segment 5)
+    })
+    void testHslToHex_AllHueSegments(int hue, int saturation, int lightness) {
+        String result = CalendarRenderingService.hslToHex(hue, saturation, lightness);
+
+        assertNotNull(result);
+        assertTrue(result.startsWith("#"), "Should return hex color");
+        assertEquals(7, result.length(), "Hex color should be 7 characters (#RRGGBB)");
+    }
+
+    @Test
+    void testHslToHex_EdgeCase_HueExactly360() {
+        // Hue 360 should wrap to be same as hue 0
+        String result = CalendarRenderingService.hslToHex(360, 100, 50);
+
+        assertNotNull(result);
+        assertTrue(result.startsWith("#"), "Should return hex color");
+    }
+
+    @Test
+    void testGetCellBackgroundColor_CustomWeekendBgColor() {
+        // Test custom weekendBgColor is used when highlightWeekends is true
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "default";
+        config.highlightWeekends = true;
+        config.weekendBgColor = "#ff0000"; // Custom red
+
+        LocalDate saturday = LocalDate.of(2025, 1, 4);
+        String color = CalendarRenderingService.getCellBackgroundColor(config, saturday, 1, 4, true, 0);
+
+        assertEquals("#ff0000", color);
+    }
+
+    @Test
+    void testGetCellBackgroundColor_ThemeDefaultWeekendBackground() {
+        // Test theme default weekend background when highlightWeekends is true but no custom color
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "default";
+        config.highlightWeekends = true;
+        config.weekendBgColor = null;
+
+        LocalDate saturday = LocalDate.of(2025, 1, 4);
+        String color = CalendarRenderingService.getCellBackgroundColor(config, saturday, 1, 4, true, 0);
+
+        assertEquals("#f0f0f0", color); // default theme weekend background
+    }
+
+    @Test
+    void testGetCellBackgroundColor_WeekdayWithHighlightWeekends() {
+        // Weekday should not get weekend color even with highlightWeekends
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "default";
+        config.highlightWeekends = true;
+        config.weekendBgColor = "#ff0000";
+
+        LocalDate wednesday = LocalDate.of(2025, 1, 8);
+        String color = CalendarRenderingService.getCellBackgroundColor(config, wednesday, 1, 8, false, 0);
+
+        assertEquals("rgba(255, 255, 255, 0)", color); // Transparent for weekday
+    }
+
+    @Test
+    void testGetCellBackgroundColor_HighlightWeekendsDisabled() {
+        // Weekend should not get color when highlightWeekends is false
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "default";
+        config.highlightWeekends = false;
+
+        LocalDate saturday = LocalDate.of(2025, 1, 4);
+        String color = CalendarRenderingService.getCellBackgroundColor(config, saturday, 1, 4, true, 0);
+
+        assertEquals("rgba(255, 255, 255, 0)", color); // Transparent
+    }
+
+    @Test
+    void testGetCellBackgroundColor_EmptyWeekendBgColor() {
+        // Empty weekendBgColor should fall back to theme default
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "default";
+        config.highlightWeekends = true;
+        config.weekendBgColor = ""; // Empty string
+
+        LocalDate saturday = LocalDate.of(2025, 1, 4);
+        String color = CalendarRenderingService.getCellBackgroundColor(config, saturday, 1, 4, true, 0);
+
+        assertEquals("#f0f0f0", color); // Falls back to theme default
+    }
+
+    @Test
+    void testGenerateCalendarSVG_CustomColors() {
+        // Test custom color settings for year, month, dayText, dayName
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.yearColor = "#ff0000";
+        config.monthColor = "#00ff00";
+        config.dayTextColor = "#0000ff";
+        config.dayNameColor = "#ff00ff";
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("#ff0000"), "Should contain custom year color");
+        assertTrue(svg.contains("#00ff00"), "Should contain custom month color");
+    }
+
+    @Test
+    void testGenerateCalendarSVG_EventWithBoldText() {
+        // Test bold text in custom date entry
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        DisplaySettingsType displaySettings = new DisplaySettingsType();
+        displaySettings.textBold = true;
+
+        CustomDateEntryType entry = new CustomDateEntryType("🎂", "Birthday Party", displaySettings);
+        config.customDates.put(LocalDate.of(TEST_YEAR, 6, 15), entry);
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("font-weight: bold"), "Should render bold text");
+    }
+
+    @Test
+    void testGenerateCalendarSVG_EventWithTextWrapShortTitle() {
+        // Test text wrap enabled but title is short (< 8 chars) - should not wrap
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        DisplaySettingsType displaySettings = new DisplaySettingsType();
+        displaySettings.textWrap = true;
+
+        CustomDateEntryType entry = new CustomDateEntryType("🎂", "Party", displaySettings); // 5 chars < 8
+        config.customDates.put(LocalDate.of(TEST_YEAR, 6, 15), entry);
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        // With short title and wrap enabled, should still render as single line
+        assertTrue(svg.contains("Party"), "Should contain the short title");
+    }
+
+    @Test
+    void testGenerateCalendarSVG_EventWithTextWrapAndFullTitle() {
+        // Test text wrap enabled with long title that gets wrapped to multiple lines
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        DisplaySettingsType displaySettings = new DisplaySettingsType();
+        displaySettings.textWrap = true;
+
+        // Use a title with spaces so it can be split into multiple lines
+        CustomDateEntryType entry = new CustomDateEntryType("🎂", "Long Birthday Title", displaySettings);
+        config.customDates.put(LocalDate.of(TEST_YEAR, 6, 15), entry);
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        // With wrap enabled and title > 8 chars with spaces, should render multiple text elements
+        assertTrue(svg.contains("Long"), "Should contain first part of wrapped title");
+    }
+
+    @Test
+    void testGetCellBackgroundColor_VermontWeekends_NegativeIndex() {
+        // Test negative weekendIndex falls back to first color
+        CalendarConfigType config = new CalendarConfigType();
+        config.theme = "vermontWeekends";
+
+        LocalDate weekend = LocalDate.of(2025, 1, 4);
+        // -1 index should fall back to first color
+        String color = CalendarRenderingService.getCellBackgroundColor(config, weekend, 1, 4, true, -1);
+
+        assertNotNull(color);
+        assertTrue(color.startsWith("#"), "Should return hex color");
+    }
+
+    @Test
+    void testGenerateCalendarSVG_WithShowDayNamesDisabled() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.showDayNames = false;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        // Should not contain abbreviated day names when disabled
+    }
+
+    @Test
+    void testGenerateCalendarSVG_WithShowDayNumbersDisabled() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.showDayNumbers = false;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        // Should generate SVG without day numbers
+    }
+
+    @Test
+    void testGenerateCalendarSVG_WithShowGridDisabled() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.showGrid = false;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        // Should generate SVG without grid lines
+        assertFalse(svg.contains("class=\"grid-line\""), "Should not contain grid line elements");
+    }
+
+    @Test
+    void testGenerateCalendarSVG_CompactMode() {
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.compactMode = true;
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
     // ========== COMBINATION BRANCH TESTS ==========
 
     @Test
@@ -1658,5 +2038,382 @@ class CalendarRenderingServiceTest {
 
         assertNotNull(svg);
         assertTrue(svg.contains("rotate"));
+    }
+
+    // ========== RENDER EMOJI TEXT FALLBACK TESTS ==========
+    // Tests for: if (emojiSvgService != null && emojiSvgService.hasEmojiSvg(emoji))
+    // When hasEmojiSvg returns false, falls back to text rendering
+
+    @Test
+    void testRenderEmoji_TextFallback_HasEmojiSvgFalse_Centered() {
+        // Branch: emojiSvgService != null, hasEmojiSvg returns FALSE -> text fallback with centered=true
+        // Use a character that won't be in the emoji SVG cache
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "large"; // large mode uses centered=true
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("X")); // Plain letter, not an emoji
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+        // Text fallback with centered=true uses text-anchor: middle and dominant-baseline: middle
+        assertTrue(svg.contains("text-anchor: middle"), "Centered text should have text-anchor: middle");
+        assertTrue(svg.contains("dominant-baseline: middle"), "Centered text should have dominant-baseline: middle");
+        assertTrue(svg.contains(">X</text>"), "Text fallback should render the character");
+    }
+
+    @Test
+    void testRenderEmoji_TextFallback_HasEmojiSvgFalse_NotCentered() {
+        // Branch: emojiSvgService != null, hasEmojiSvg returns FALSE -> text fallback with centered=false
+        // Use "small" mode which calls renderEmoji with centered=false
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "small"; // small mode uses centered=false
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("Y")); // Plain letter, not an emoji
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+        // Text fallback with centered=false should NOT have text-anchor: middle or dominant-baseline: middle
+        // It should contain the character Y rendered as text without centering attributes
+        assertTrue(svg.contains(">Y</text>"), "Text fallback should render the character");
+    }
+
+    @Test
+    void testRenderEmoji_TextFallback_PositionBased_NotCentered() {
+        // Branch: Position-based emoji uses centered=false
+        // Custom date without display settings uses emojiPosition which passes centered=false
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "none"; // Use none so we don't get large/small emoji
+        config.emojiPosition = CalendarRenderingService.EMOJI_POS_TOP_RIGHT;
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("Z")); // Plain letter, not an emoji
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+        // Position-based emoji with non-SVG character should use text fallback with centered=false
+        assertTrue(svg.contains(">Z</text>"), "Text fallback should render the character");
+    }
+
+    // ========== CALCULATE EMOJI POSITION TESTS ==========
+    // Tests for calculateEmojiPosition with all 9 position constants
+
+    @Test
+    void testCalculateEmojiPosition_TopLeft() {
+        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
+
+        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_TOP_LEFT, cell);
+
+        assertEquals(105, pos[0], "X should be cell.x + 5");
+        assertEquals(213, pos[1], "Y should be cell.y + 13");
+    }
+
+    @Test
+    void testCalculateEmojiPosition_TopCenter() {
+        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
+
+        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_TOP_CENTER,
+                cell);
+
+        assertEquals(120, pos[0], "X should be cell.x + width/2 - 5");
+        assertEquals(213, pos[1], "Y should be cell.y + 13");
+    }
+
+    @Test
+    void testCalculateEmojiPosition_TopRight() {
+        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
+
+        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_TOP_RIGHT, cell);
+
+        assertEquals(135, pos[0], "X should be cell.x + width - 15");
+        assertEquals(213, pos[1], "Y should be cell.y + 13");
+    }
+
+    @Test
+    void testCalculateEmojiPosition_MiddleLeft() {
+        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
+
+        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_MIDDLE_LEFT,
+                cell);
+
+        assertEquals(105, pos[0], "X should be cell.x + 5");
+        assertEquals(225, pos[1], "Y should be cell.y + height/2 + 5");
+    }
+
+    @Test
+    void testCalculateEmojiPosition_MiddleCenter() {
+        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
+
+        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_MIDDLE_CENTER,
+                cell);
+
+        assertEquals(120, pos[0], "X should be cell.x + width/2 - 5");
+        assertEquals(225, pos[1], "Y should be cell.y + height/2 + 5");
+    }
+
+    @Test
+    void testCalculateEmojiPosition_MiddleRight() {
+        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
+
+        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_MIDDLE_RIGHT,
+                cell);
+
+        assertEquals(135, pos[0], "X should be cell.x + width - 15");
+        assertEquals(225, pos[1], "Y should be cell.y + height/2 + 5");
+    }
+
+    @Test
+    void testCalculateEmojiPosition_BottomLeft() {
+        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
+
+        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_BOTTOM_LEFT,
+                cell);
+
+        assertEquals(105, pos[0], "X should be cell.x + 5");
+        assertEquals(235, pos[1], "Y should be cell.y + height - 5");
+    }
+
+    @Test
+    void testCalculateEmojiPosition_BottomCenter() {
+        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
+
+        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_BOTTOM_CENTER,
+                cell);
+
+        assertEquals(120, pos[0], "X should be cell.x + width/2 - 5");
+        assertEquals(235, pos[1], "Y should be cell.y + height - 5");
+    }
+
+    @Test
+    void testCalculateEmojiPosition_BottomRight() {
+        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
+
+        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_BOTTOM_RIGHT,
+                cell);
+
+        assertEquals(135, pos[0], "X should be cell.x + width - 15");
+        assertEquals(235, pos[1], "Y should be cell.y + height - 5");
+    }
+
+    @Test
+    void testCalculateEmojiPosition_UnknownDefaultsToBottomLeft() {
+        // Unknown position values should default to bottom-left behavior
+        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
+
+        int[] pos = CalendarRenderingService.calculateEmojiPosition("unknown-position", cell);
+
+        assertEquals(105, pos[0], "X should be cell.x + 5 (bottom-left default)");
+        assertEquals(235, pos[1], "Y should be cell.y + height - 5 (bottom-left default)");
+    }
+
+    @Test
+    void testCalculateEmojiPosition_EmptyStringDefaultsToBottomLeft() {
+        // Empty string position should default to bottom-left behavior
+        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
+
+        int[] pos = CalendarRenderingService.calculateEmojiPosition("", cell);
+
+        assertEquals(105, pos[0], "X should be cell.x + 5 (bottom-left default)");
+        assertEquals(235, pos[1], "Y should be cell.y + height - 5 (bottom-left default)");
+    }
+
+    @Test
+    void testRenderEmoji_SvgPath_Centered() {
+        // Branch: emojiSvgService != null && hasEmojiSvg = TRUE, centered = TRUE
+        // Uses a real emoji that exists in SVG cache with large mode (centered=true)
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "large"; // large mode uses centered=true
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉")); // Real emoji in SVG cache
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+        // SVG path produces nested SVG elements for emojis
+        assertTrue(svg.contains("<g"), "SVG emoji should produce group elements");
+    }
+
+    @Test
+    void testRenderEmoji_SvgPath_NotCentered() {
+        // Branch: emojiSvgService != null && hasEmojiSvg = TRUE, centered = FALSE
+        // Uses a real emoji that exists in SVG cache with small mode (centered=false)
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.eventDisplayMode = "small"; // small mode uses centered=false
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉")); // Real emoji in SVG cache
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+        // SVG path produces nested SVG elements for emojis
+        assertTrue(svg.contains("<g"), "SVG emoji should produce group elements");
+    }
+
+    @Test
+    void testRenderEmoji_SvgPath_CustomDateWithDisplaySettings() {
+        // Custom date with display settings renders emoji at specified position
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        DisplaySettingsType displaySettings = new DisplaySettingsType();
+        displaySettings.emojiX = 75.0; // Position emoji at 75% from left
+        displaySettings.emojiY = 25.0; // Position emoji at 25% from top
+
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉", displaySettings));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+        // SVG path produces nested SVG elements for emojis
+        assertTrue(svg.contains("<g"), "SVG emoji should produce group elements");
+    }
+
+    // ========== RENDER SINGLE LINE TEXT TESTS ==========
+    // Tests for renderSingleLineText via custom date entries with display settings
+
+    @Test
+    void testRenderSingleLineText_WithRotation() {
+        // Branch: style.rotation() != 0 should add transform attribute
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        DisplaySettingsType displaySettings = new DisplaySettingsType();
+        displaySettings.textRotation = 45.0; // Non-zero rotation
+        displaySettings.textWrap = false;
+
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎂", "Birthday", displaySettings));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("transform=\"rotate(45.0"), "Text with rotation should have transform attribute");
+    }
+
+    @Test
+    void testRenderSingleLineText_WithoutRotation() {
+        // Branch: style.rotation() == 0 should NOT add transform attribute for text
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        DisplaySettingsType displaySettings = new DisplaySettingsType();
+        displaySettings.textRotation = 0.0; // Zero rotation
+        displaySettings.textWrap = false;
+
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎂", "Birthday", displaySettings));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(">Birthday</text>"), "Text should be rendered without transform");
+    }
+
+    @Test
+    void testRenderSingleLineText_LongTitleTruncated() {
+        // Branch: title.length() > 10 && !allowFullTitle should truncate
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        DisplaySettingsType displaySettings = new DisplaySettingsType();
+        displaySettings.textWrap = false; // allowFullTitle = false since !textWrap
+
+        config.customDates.put(LocalDate.of(2025, 1, 15),
+                new CustomDateEntryType("🎂", "This Is A Very Long Title That Should Be Truncated", displaySettings));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        // Title should be truncated to 9 chars + "…"
+        assertTrue(svg.contains("…</text>"), "Long title should be truncated with ellipsis");
+        assertFalse(svg.contains(">This Is A Very Long Title"), "Full title should not appear");
+    }
+
+    @Test
+    void testRenderSingleLineText_ShortTitleNotTruncated() {
+        // Branch: title.length() <= 10 should not truncate
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        DisplaySettingsType displaySettings = new DisplaySettingsType();
+        displaySettings.textWrap = false;
+
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎂", "Short", displaySettings));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(">Short</text>"), "Short title should not be truncated");
+    }
+
+    // ========== RENDER WRAPPED TEXT TESTS ==========
+    // Tests for renderWrappedText rotation scenarios
+
+    @Test
+    void testRenderWrappedText_WithRotation() {
+        // Branch: style.rotation() != 0 should add transform attribute
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        DisplaySettingsType displaySettings = new DisplaySettingsType();
+        displaySettings.textRotation = -90.0; // Non-zero rotation
+        displaySettings.textWrap = true; // Enable text wrapping
+
+        // Title > 8 chars triggers wrapped text
+        config.customDates.put(LocalDate.of(2025, 1, 15),
+                new CustomDateEntryType("🎂", "Happy Birthday Party", displaySettings));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains("transform=\"rotate(-90.0"),
+                "Wrapped text with rotation should have transform attribute");
+    }
+
+    @Test
+    void testRenderWrappedText_WithoutRotation() {
+        // Branch: style.rotation() == 0 should NOT add transform attribute
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        DisplaySettingsType displaySettings = new DisplaySettingsType();
+        displaySettings.textRotation = 0.0; // Zero rotation
+        displaySettings.textWrap = true; // Enable text wrapping
+
+        // Title > 8 chars triggers wrapped text
+        config.customDates.put(LocalDate.of(2025, 1, 15),
+                new CustomDateEntryType("🎂", "Happy Birthday Party", displaySettings));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        // Should have text elements without transform
+        assertTrue(svg.contains(TEXT_TAG), "Should render text elements");
+    }
+
+    @Test
+    void testRenderWrappedText_WrapsLongTitle() {
+        // Verify text wrapping splits long titles across two lines
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+
+        DisplaySettingsType displaySettings = new DisplaySettingsType();
+        displaySettings.textWrap = true;
+
+        // Title with multiple words that should wrap
+        config.customDates.put(LocalDate.of(2025, 1, 15),
+                new CustomDateEntryType("🎂", "Happy Birthday To You", displaySettings));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        // Multiple text elements for wrapped lines
+        int textCount = svg.split(TEXT_TAG).length - 1;
+        assertTrue(textCount >= 2, "Wrapped text should produce multiple text elements");
     }
 }

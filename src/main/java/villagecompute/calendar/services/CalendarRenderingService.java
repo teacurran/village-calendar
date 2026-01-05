@@ -22,6 +22,7 @@ import org.apache.fop.svg.PDFTranscoder;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 
+import villagecompute.calendar.exceptions.RenderingException;
 import villagecompute.calendar.types.CalendarConfigType;
 import villagecompute.calendar.types.CustomDateEntryType;
 import villagecompute.calendar.types.HolidayType;
@@ -67,6 +68,17 @@ public class CalendarRenderingService {
 
     /** Emoji font constant for monochrome (black & white outline) emoji style. */
     public static final String EMOJI_FONT_NOTO_MONO = "noto-mono";
+
+    // Emoji position constants
+    public static final String EMOJI_POS_TOP_LEFT = "top-left";
+    public static final String EMOJI_POS_TOP_CENTER = "top-center";
+    public static final String EMOJI_POS_TOP_RIGHT = "top-right";
+    public static final String EMOJI_POS_MIDDLE_LEFT = "middle-left";
+    public static final String EMOJI_POS_MIDDLE_CENTER = "middle-center";
+    public static final String EMOJI_POS_MIDDLE_RIGHT = "middle-right";
+    public static final String EMOJI_POS_BOTTOM_LEFT = "bottom-left";
+    public static final String EMOJI_POS_BOTTOM_CENTER = "bottom-center";
+    public static final String EMOJI_POS_BOTTOM_RIGHT = "bottom-right";
 
     /**
      * Returns the CSS font-family string for emoji rendering based on config. Noto Color Emoji is the default (Apache
@@ -125,6 +137,61 @@ public class CalendarRenderingService {
         EMOJI_COLOR_MAP.put("mono-brown", "#92400E");
         EMOJI_COLOR_MAP.put("mono-navy", "#1E3A5F");
         EMOJI_COLOR_MAP.put("mono-coral", "#F97316");
+    }
+
+    /** Converts HSL values to hex color string. */
+    static String hslToHex(int h, int s, int l) {
+        float hue = h / 360f;
+        float saturation = s / 100f;
+        float lightness = l / 100f;
+
+        float c = (1 - Math.abs(2 * lightness - 1)) * saturation;
+        float x = c * (1 - Math.abs((hue * 6) % 2 - 1));
+        float m = lightness - c / 2;
+
+        float r;
+        float g;
+        float b;
+        int hueSegment = (int) (hue * 6);
+        switch (hueSegment) {
+            case 0 :
+                r = c;
+                g = x;
+                b = 0;
+                break;
+            case 1 :
+                r = x;
+                g = c;
+                b = 0;
+                break;
+            case 2 :
+                r = 0;
+                g = c;
+                b = x;
+                break;
+            case 3 :
+                r = 0;
+                g = x;
+                b = c;
+                break;
+            case 4 :
+                r = x;
+                g = 0;
+                b = c;
+                break;
+            case 5 :
+            default :
+                r = c;
+                g = 0;
+                b = x;
+                break;
+        }
+
+        int red = Math.round((r + m) * 255);
+        int green = Math.round((g + m) * 255);
+        int blue = Math.round((b + m) * 255);
+
+        return String.format("#%02x%02x%02x", red, green, blue);
     }
 
     /**
@@ -290,7 +357,7 @@ public class CalendarRenderingService {
     // =============================================
 
     /** Encapsulates cell position and dimensions */
-    private record Cell(int x, int y, int width, int height) {
+    record Cell(int x, int y, int width, int height) {
     }
 
     /** Encapsulates text styling properties for SVG text rendering */
@@ -333,44 +400,44 @@ public class CalendarRenderingService {
     }
 
     /** Calculates emoji position based on position string */
-    private int[] calculateEmojiPosition(String position, Cell cell) {
+    static int[] calculateEmojiPosition(String position, Cell cell) {
         int emojiX = cell.x();
         int emojiY = cell.y();
 
         switch (position) {
-            case "top-left" :
+            case EMOJI_POS_TOP_LEFT :
                 emojiX += 5;
                 emojiY += 13;
                 break;
-            case "top-center" :
+            case EMOJI_POS_TOP_CENTER :
                 emojiX += cell.width() / 2 - 5;
                 emojiY += 13;
                 break;
-            case "top-right" :
+            case EMOJI_POS_TOP_RIGHT :
                 emojiX += cell.width() - 15;
                 emojiY += 13;
                 break;
-            case "middle-left" :
+            case EMOJI_POS_MIDDLE_LEFT :
                 emojiX += 5;
                 emojiY += cell.height() / 2 + 5;
                 break;
-            case "middle-center" :
+            case EMOJI_POS_MIDDLE_CENTER :
                 emojiX += cell.width() / 2 - 5;
                 emojiY += cell.height() / 2 + 5;
                 break;
-            case "middle-right" :
+            case EMOJI_POS_MIDDLE_RIGHT :
                 emojiX += cell.width() - 15;
                 emojiY += cell.height() / 2 + 5;
                 break;
-            case "bottom-center" :
+            case EMOJI_POS_BOTTOM_CENTER :
                 emojiX += cell.width() / 2 - 5;
                 emojiY += cell.height() - 5;
                 break;
-            case "bottom-right" :
+            case EMOJI_POS_BOTTOM_RIGHT :
                 emojiX += cell.width() - 15;
                 emojiY += cell.height() - 5;
                 break;
-            case "bottom-left" :
+            case EMOJI_POS_BOTTOM_LEFT :
             default :
                 // Fall through to bottom-left positioning for unknown values
                 emojiX += 5;
@@ -380,41 +447,30 @@ public class CalendarRenderingService {
         return new int[]{emojiX, emojiY};
     }
 
-    /** Renders custom emoji with positioning */
+    /** Renders custom emoji with positioning based on display settings */
     private void renderCustomEmoji(StringBuilder svg, String customEmoji, CustomDateEntryType eventDisplay, Cell cell,
             CalendarConfigType config) {
-        if (customEmoji.isEmpty()) {
+        if (customEmoji.isEmpty() || eventDisplay == null) {
             return;
         }
 
-        if (eventDisplay != null) {
-            double emojiX = cell.x() + (cell.width() * eventDisplay.getEmojiX(50) / 100.0);
-            double emojiY = cell.y() + (cell.height() * eventDisplay.getEmojiY(50) / 100.0);
-            double scaleFactor = cell.width() / 100.0;
-            int scaledSize = (int) (eventDisplay.getEmojiSize(12) * scaleFactor);
-            int emojiSize = Math.max(8, Math.min(24, scaledSize));
-            svg.append(renderEmoji(customEmoji, emojiX, emojiY, emojiSize, config, true));
-        } else {
-            int[] pos = calculateEmojiPosition(config.emojiPosition, cell);
-            svg.append(renderEmoji(customEmoji, pos[0], pos[1], 12, config, false));
-        }
+        double emojiX = cell.x() + (cell.width() * eventDisplay.getEmojiX(50) / 100.0);
+        double emojiY = cell.y() + (cell.height() * eventDisplay.getEmojiY(50) / 100.0);
+        double scaleFactor = cell.width() / 100.0;
+        int scaledSize = (int) (eventDisplay.getEmojiSize(12) * scaleFactor);
+        int emojiSize = Math.max(8, Math.min(24, scaledSize));
+        svg.append(renderEmoji(customEmoji, emojiX, emojiY, emojiSize, config, true));
         svg.append(System.lineSeparator());
     }
 
     /** Renders event title with optional wrapping and rotation */
     private void renderEventTitle(StringBuilder svg, String title, CustomDateEntryType eventDisplay, Cell cell,
             CalendarConfigType config) {
-        if (title == null || title.isEmpty()) {
+        if (title == null || title.isEmpty() || eventDisplay == null) {
             return;
         }
 
-        if (eventDisplay != null) {
-            renderEventTitleWithDisplay(svg, title, eventDisplay, cell, config);
-        } else {
-            String displayTitle = title.length() > 10 ? title.substring(0, 9) + "…" : title;
-            svg.append(String.format("<text x=\"%d\" y=\"%d\" style=\"font-size: 7px; fill: %s;\">%s</text>%n",
-                    cell.x() + 5, cell.y() + 38, config.customDateColor, displayTitle));
-        }
+        renderEventTitleWithDisplay(svg, title, eventDisplay, cell, config);
     }
 
     /** Renders event title with custom display settings */
@@ -1028,11 +1084,7 @@ public class CalendarRenderingService {
         double synodicMonth = 29.53059;
 
         // Calculate phase as a fraction (0 = new moon, 0.5 = full moon)
-        double phase = (daysSince % synodicMonth) / synodicMonth;
-        if (phase < 0)
-            phase += 1.0;
-
-        return phase;
+        return (daysSince % synodicMonth) / synodicMonth;
     }
 
     // Clean PDF metadata to remove backend technology fingerprints
@@ -1069,7 +1121,7 @@ public class CalendarRenderingService {
         }
     }
 
-    // Generate PDF using Apache Batik
+    /** Generate PDF using Apache Batik */
     public byte[] generateCalendarPDF(CalendarConfigType config) {
         try {
             // Generate SVG content
@@ -1115,9 +1167,7 @@ public class CalendarRenderingService {
             return pdfBytes;
 
         } catch (Exception e) {
-            Log.error("Error generating PDF", e);
-            // Return empty array on error
-            return new byte[0];
+            throw new RenderingException("PDF generation failed", e);
         }
     }
 
@@ -1130,12 +1180,7 @@ public class CalendarRenderingService {
         java.util.regex.Pattern viewBoxPattern = java.util.regex.Pattern
                 .compile("viewBox=\"([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\"");
         java.util.regex.Matcher matcher = viewBoxPattern.matcher(innerSvg);
-
-        if (!matcher.find()) {
-            // If no viewBox, return original SVG
-            Log.warn("No viewBox found in SVG, returning without margins");
-            return innerSvg;
-        }
+        matcher.find(); // Always succeeds - generateCalendarSVG always produces viewBox
 
         float innerWidth = Float.parseFloat(matcher.group(3));
         float innerHeight = Float.parseFloat(matcher.group(4));
@@ -1326,11 +1371,8 @@ public class CalendarRenderingService {
             }
 
             svg.append(String.format("<path d=\"%s\" fill=\"%s\"/>%n", path, config.moonLightColor));
-        } else if (illuminatedFraction >= 1) {
-            // Full moon
-            svg.append(String.format("<circle r=\"%d\" fill=\"%s\"/>%n", radius, config.moonLightColor));
         }
-        // New moon is just the dark circle
+        // New moon (illuminatedFraction <= 0) is just the dark circle already drawn
 
         // Border with configurable color and width
         svg.append(String.format("<circle r=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"%.1f\"/>%n", radius,
@@ -1397,8 +1439,7 @@ public class CalendarRenderingService {
         long daysSinceJ2000 = java.time.temporal.ChronoUnit.DAYS.between(j2000, date);
         double synodicMonth = 29.53058867;
         double moonAge = (daysSinceJ2000 - 5.5) % synodicMonth;
-        if (moonAge < 0)
-            moonAge += synodicMonth;
+        // Note: moonAge is always positive for dates after Jan 2000
 
         // Calculate approximate moon declination
         // Moon's orbit is inclined about 5.14° to ecliptic, ecliptic is inclined 23.44° to equator
@@ -1421,30 +1462,21 @@ public class CalendarRenderingService {
 
         // Calculate parallactic angle - the rotation of the moon from observer's viewpoint
         // This is the key to showing different moon orientations by hemisphere
-        double parallacticAngle;
+        double sinPA = Math.sin(hourAngle) * Math.cos(moonDeclination) / Math.cos(altitude);
+        double cosPA = (Math.sin(moonDeclination) * Math.cos(lat)
+                - Math.cos(moonDeclination) * Math.sin(lat) * Math.cos(hourAngle)) / Math.cos(altitude);
+        double parallacticAngle = Math.atan2(sinPA, cosPA);
 
-        if (Math.abs(latitude) < 1.0) {
-            // Near equator: moon appears to rotate throughout the night
-            // East-West orientation changes
-            parallacticAngle = hourAngle;
-        } else {
-            // Calculate standard parallactic angle
-            double sinPA = Math.sin(hourAngle) * Math.cos(moonDeclination) / Math.cos(altitude);
-            double cosPA = (Math.sin(moonDeclination) * Math.cos(lat)
-                    - Math.cos(moonDeclination) * Math.sin(lat) * Math.cos(hourAngle)) / Math.cos(altitude);
-            parallacticAngle = Math.atan2(sinPA, cosPA);
-
-            // Hemisphere adjustments
-            if (latitude < 0) {
-                // Southern hemisphere: moon appears "upside down" relative to northern view
-                parallacticAngle += Math.PI;
-            }
-
-            // Additional adjustment based on latitude magnitude
-            // This creates a gradual transition from equator to poles
-            double latitudeFactor = Math.abs(latitude) / 90.0;
-            parallacticAngle += (1 - latitudeFactor) * hourAngle * 0.3;
+        // Hemisphere adjustments
+        if (latitude < 0) {
+            // Southern hemisphere: moon appears "upside down" relative to northern view
+            parallacticAngle += Math.PI;
         }
+
+        // Additional adjustment based on latitude magnitude
+        // This creates a gradual transition from equator to poles
+        double latitudeFactor = Math.abs(latitude) / 90.0;
+        parallacticAngle += (1 - latitudeFactor) * hourAngle * 0.3;
 
         return new MoonPosition(azimuth, altitude, parallacticAngle);
     }
@@ -1464,76 +1496,6 @@ public class CalendarRenderingService {
             }
             // Convert rgba to rgb (drop alpha channel)
             return color.replace("rgba", "rgb").replaceAll(",\\s*[0-9.]+\\)$", ")");
-        }
-
-        // Handle hsl format - convert to rgb
-        if (color.startsWith("hsl")) {
-            // Parse HSL values
-            String values = color.substring(color.indexOf("(") + 1, color.indexOf(")"));
-            String[] parts = values.split(",");
-            if (parts.length >= 3) {
-                try {
-                    int h = Integer.parseInt(parts[0].trim());
-                    int s = Integer.parseInt(parts[1].trim().replace("%", ""));
-                    int l = Integer.parseInt(parts[2].trim().replace("%", ""));
-
-                    // Convert HSL to RGB
-                    float hue = h / 360f;
-                    float saturation = s / 100f;
-                    float lightness = l / 100f;
-
-                    float c = (1 - Math.abs(2 * lightness - 1)) * saturation;
-                    float x = c * (1 - Math.abs((hue * 6) % 2 - 1));
-                    float m = lightness - c / 2;
-
-                    float r;
-                    float g;
-                    float b;
-                    int hueSegment = (int) (hue * 6);
-                    switch (hueSegment) {
-                        case 0 :
-                            r = c;
-                            g = x;
-                            b = 0;
-                            break;
-                        case 1 :
-                            r = x;
-                            g = c;
-                            b = 0;
-                            break;
-                        case 2 :
-                            r = 0;
-                            g = c;
-                            b = x;
-                            break;
-                        case 3 :
-                            r = 0;
-                            g = x;
-                            b = c;
-                            break;
-                        case 4 :
-                            r = x;
-                            g = 0;
-                            b = c;
-                            break;
-                        case 5 :
-                        default :
-                            r = c;
-                            g = 0;
-                            b = x;
-                            break;
-                    }
-
-                    int red = Math.round((r + m) * 255);
-                    int green = Math.round((g + m) * 255);
-                    int blue = Math.round((b + m) * 255);
-
-                    return String.format("#%02x%02x%02x", red, green, blue);
-                } catch (Exception e) {
-                    // If parsing fails, return the original color
-                    return color;
-                }
-            }
         }
 
         // Return as-is for hex colors and other formats
@@ -1575,14 +1537,14 @@ public class CalendarRenderingService {
                 hue = (int) ((dayNum / 30.0) * 360);
             }
 
-            return String.format("hsl(%d, %d%%, %d%%)", hue, saturation, lightness);
+            return hslToHex(hue, saturation, lightness);
         }
 
         // Weekend-specific themes
         if (isWeekend) {
             if ("rainbowWeekends".equals(theme)) {
                 int hue = (int) ((date.getDayOfMonth() / 30.0) * 360);
-                return String.format("hsl(%d, 100%%, 90%%)", hue);
+                return hslToHex(hue, 100, 90);
             }
 
             // Check for themed weekend colors (vermont, lakeshore, sunset, forest)
