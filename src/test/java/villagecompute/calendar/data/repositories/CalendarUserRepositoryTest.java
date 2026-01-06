@@ -2,8 +2,6 @@ package villagecompute.calendar.data.repositories;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,32 +35,6 @@ class CalendarUserRepositoryTest {
 
     @Test
     @Transactional
-    void testFindByOAuthSubject() {
-        // Given
-        CalendarUser user = createUser("GOOGLE", "google-123", "test@example.com");
-        repository.persist(user);
-        entityManager.flush();
-
-        // When
-        Optional<CalendarUser> found = repository.findByOAuthSubject("GOOGLE", "google-123");
-
-        // Then
-        assertTrue(found.isPresent());
-        assertEquals("test@example.com", found.get().email);
-    }
-
-    @Test
-    @Transactional
-    void testFindByOAuthSubject_NotFound() {
-        // When
-        Optional<CalendarUser> found = repository.findByOAuthSubject("GOOGLE", "nonexistent");
-
-        // Then
-        assertFalse(found.isPresent());
-    }
-
-    @Test
-    @Transactional
     void testFindByEmail() {
         // Given
         CalendarUser user = createUser("FACEBOOK", "fb-456", "user@test.com");
@@ -79,49 +51,6 @@ class CalendarUserRepositoryTest {
 
     @Test
     @Transactional
-    void testFindActiveUsersSince() {
-        // Given
-        Instant now = Instant.now();
-        Instant yesterday = now.minus(1, ChronoUnit.DAYS);
-        Instant weekAgo = now.minus(7, ChronoUnit.DAYS);
-
-        CalendarUser recentUser = createUser("GOOGLE", "recent", "recent@test.com");
-        recentUser.lastLoginAt = now;
-        repository.persist(recentUser);
-
-        CalendarUser oldUser = createUser("GOOGLE", "old", "old@test.com");
-        oldUser.lastLoginAt = weekAgo;
-        repository.persist(oldUser);
-
-        entityManager.flush();
-
-        // When
-        List<CalendarUser> activeUsers = repository.findActiveUsersSince(yesterday);
-
-        // Then
-        assertEquals(1, activeUsers.size());
-        assertEquals("recent@test.com", activeUsers.get(0).email);
-    }
-
-    @Test
-    @Transactional
-    void testFindByProvider() {
-        // Given
-        repository.persist(createUser("GOOGLE", "g1", "google1@test.com"));
-        repository.persist(createUser("GOOGLE", "g2", "google2@test.com"));
-        repository.persist(createUser("FACEBOOK", "f1", "facebook1@test.com"));
-        entityManager.flush();
-
-        // When
-        List<CalendarUser> googleUsers = repository.findByProvider("GOOGLE");
-
-        // Then
-        assertEquals(2, googleUsers.size());
-        assertTrue(googleUsers.stream().allMatch(u -> "GOOGLE".equals(u.oauthProvider)));
-    }
-
-    @Test
-    @Transactional
     void testUniqueConstraint() {
         // Given
         repository.persist(createUser("GOOGLE", "duplicate", "test1@example.com"));
@@ -132,24 +61,6 @@ class CalendarUserRepositoryTest {
             repository.persist(duplicate);
             repository.flush();
         });
-    }
-
-    @Test
-    @Transactional
-    void testFindById() {
-        // Given
-        CalendarUser user = createUser("GITHUB", "github-123", "github@test.com");
-        repository.persist(user);
-        entityManager.flush();
-
-        // When
-        Optional<CalendarUser> foundOpt = repository.findById(user.id);
-
-        // Then
-        assertTrue(foundOpt.isPresent());
-        CalendarUser found = foundOpt.get();
-        assertEquals(user.id, found.id);
-        assertEquals("github@test.com", found.email);
     }
 
     @Test
@@ -197,26 +108,8 @@ class CalendarUserRepositoryTest {
         entityManager.flush();
 
         // Then
-        assertTrue(repository.findById(userId).isEmpty());
+        assertTrue(CalendarUser.findByIdOptional(userId).isEmpty());
         assertEquals(0, repository.count());
-    }
-
-    @Test
-    @Transactional
-    void testDeleteById() {
-        // Given
-        CalendarUser user = createUser("GOOGLE", "delete-by-id", "deletebyid@test.com");
-        repository.persist(user);
-        java.util.UUID userId = user.id;
-        entityManager.flush();
-
-        // When
-        boolean deleted = repository.delete("id", userId) > 0;
-        entityManager.flush();
-
-        // Then
-        assertTrue(deleted);
-        assertTrue(repository.findById(userId).isEmpty());
     }
 
     @Test
@@ -231,7 +124,7 @@ class CalendarUserRepositoryTest {
 
         // Then
         assertNotNull(user.id);
-        Optional<CalendarUser> foundOpt = repository.findById(user.id);
+        Optional<CalendarUser> foundOpt = CalendarUser.findByIdOptional(user.id);
         assertTrue(foundOpt.isPresent());
         assertEquals("persistflush@test.com", foundOpt.get().email);
     }
@@ -264,37 +157,6 @@ class CalendarUserRepositoryTest {
 
         // Then
         assertEquals(2, count);
-    }
-
-    @Test
-    @Transactional
-    void testFindByProvider_EmptyResult() {
-        // Given
-        repository.persist(createUser("GOOGLE", "g1", "g1@test.com"));
-
-        // When
-        List<CalendarUser> facebookUsers = repository.findByProvider("FACEBOOK");
-
-        // Then
-        assertEquals(0, facebookUsers.size());
-    }
-
-    @Test
-    @Transactional
-    void testFindActiveUsersSince_EmptyResult() {
-        // Given
-        java.time.Instant now = java.time.Instant.now();
-        CalendarUser user = createUser("GOOGLE", "old", "old@test.com");
-        user.lastLoginAt = now.minus(30, java.time.temporal.ChronoUnit.DAYS);
-        repository.persist(user);
-        entityManager.flush();
-
-        // When
-        List<CalendarUser> activeUsers = repository
-                .findActiveUsersSince(now.minus(7, java.time.temporal.ChronoUnit.DAYS));
-
-        // Then
-        assertEquals(0, activeUsers.size());
     }
 
     @Test

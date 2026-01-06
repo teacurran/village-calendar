@@ -18,7 +18,6 @@ import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.Event;
 import villagecompute.calendar.data.models.UserCalendar;
-import villagecompute.calendar.data.repositories.EventRepository;
 
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -34,9 +33,6 @@ class EventServiceTest {
 
     @Inject
     CalendarService calendarService;
-
-    @Inject
-    EventRepository eventRepository;
 
     @Inject
     ObjectMapper objectMapper;

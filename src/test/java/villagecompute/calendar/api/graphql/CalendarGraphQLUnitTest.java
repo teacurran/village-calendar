@@ -231,11 +231,11 @@ class CalendarGraphQLUnitTest {
 
         @Test
         void calendars_NonAdminQueriesOtherUser_ThrowsSecurityException() {
-            UUID otherUserId = UUID.randomUUID();
+            String otherUserId = UUID.randomUUID().toString();
             when(authService.requireCurrentUser(jwt)).thenReturn(testUser);
             when(jwt.getGroups()).thenReturn(Set.of(Roles.USER));
 
-            assertThrows(SecurityException.class, () -> calendarGraphQL.calendars(otherUserId.toString(), null));
+            assertThrows(SecurityException.class, () -> calendarGraphQL.calendars(otherUserId, null));
         }
 
         @Test

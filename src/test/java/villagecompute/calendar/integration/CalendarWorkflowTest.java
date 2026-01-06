@@ -232,7 +232,7 @@ public class CalendarWorkflowTest {
         event5.persist();
 
         // Query calendar with events from database
-        List<Event> events = Event.findByCalendar(calendar.id).list();
+        List<Event> events = Event.findByCalendarId(calendar.id);
 
         // Verify all 5 events returned
         assertEquals(5, events.size(), "Should have 5 events");
