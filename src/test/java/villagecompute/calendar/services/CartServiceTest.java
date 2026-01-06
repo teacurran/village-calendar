@@ -526,4 +526,137 @@ class CartServiceTest {
         assertEquals(1, cart2AfterUpdate.itemCount);
         assertEquals(1, cart2AfterUpdate.items.get(0).quantity); // Still 1
     }
+
+    @Test
+    @Transactional
+    void testRemoveItem_ItemFromDifferentCart_NoChange() {
+        // Given - Create two sessions with items
+        String sessionId1 = "session-1-" + UUID.randomUUID();
+        String sessionId2 = "session-2-" + UUID.randomUUID();
+
+        AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar";
+        input.quantity = 1;
+        input.productCode = "print";
+
+        CartType cart1 = cartService.addToCart(sessionId1, input);
+        cartService.addToCart(sessionId2, input);
+        UUID itemFromCart1 = UUID.fromString(cart1.items.get(0).id);
+
+        // When - Try to remove item from cart1 while using session2
+        CartType cart2AfterRemove = cartService.removeItem(sessionId2, itemFromCart1);
+
+        // Then - Cart2 should be unchanged (item belongs to different cart)
+        assertEquals(1, cart2AfterRemove.itemCount);
+    }
+
+    @Test
+    @Transactional
+    void testAddToCart_WithPdfProductCode_UsesCorrectPrice() {
+        // Given
+        AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "PDF Calendar";
+        input.quantity = 1;
+        input.productCode = "pdf"; // PDF product code
+
+        // When
+        CartType cart = cartService.addToCart(testSessionId, input);
+
+        // Then
+        assertNotNull(cart);
+        assertEquals(1, cart.itemCount);
+        // PDF is $5.00, so subtotal should be 5.0
+        assertEquals(5.0, cart.subtotal);
+    }
+
+    @Test
+    @Transactional
+    void testAddToCart_WithEmptyAssets_NoAssetsCreated() {
+        // Given
+        AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Calendar Without Assets";
+        input.quantity = 1;
+        input.productCode = "print";
+        input.assets = java.util.List.of(); // Empty list
+
+        // When
+        CartType cart = cartService.addToCart(testSessionId, input);
+
+        // Then
+        assertNotNull(cart);
+        assertEquals(1, cart.itemCount);
+    }
+
+    @Test
+    @Transactional
+    void testUpdateQuantity_ToNegativeValue_RemovesItem() {
+        // Given
+        AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar";
+        input.quantity = 1;
+        input.productCode = "print";
+
+        CartType initialCart = cartService.addToCart(testSessionId, input);
+        UUID itemId = UUID.fromString(initialCart.items.get(0).id);
+
+        // When - negative quantity should remove item
+        CartType updatedCart = cartService.updateQuantity(testSessionId, itemId, -1);
+
+        // Then
+        assertEquals(0, updatedCart.itemCount);
+        assertTrue(updatedCart.items.isEmpty());
+    }
+
+    @Test
+    @Transactional
+    void testAddToCart_MultipleItemsDifferentProducts() {
+        // Given - Add both print and pdf products
+        AddToCartInput printInput = new AddToCartInput();
+        printInput.generatorType = "calendar";
+        printInput.description = "Print Calendar";
+        printInput.quantity = 2;
+        printInput.productCode = "print";
+
+        AddToCartInput pdfInput = new AddToCartInput();
+        pdfInput.generatorType = "calendar";
+        pdfInput.description = "PDF Calendar";
+        pdfInput.quantity = 1;
+        pdfInput.productCode = "pdf";
+
+        // When
+        cartService.addToCart(testSessionId, printInput);
+        CartType cart = cartService.addToCart(testSessionId, pdfInput);
+
+        // Then - Total should be (2 * $25.00) + (1 * $5.00) = $55.00
+        assertEquals(3, cart.itemCount);
+        assertEquals(2, cart.items.size());
+        assertEquals(55.0, cart.subtotal);
+    }
+
+    @Test
+    @Transactional
+    void testGetCart_AfterAddingItems_ReturnsCorrectState() {
+        // Given - Add an item
+        AddToCartInput input = new AddToCartInput();
+        input.generatorType = "calendar";
+        input.description = "Test Calendar";
+        input.quantity = 3;
+        input.productCode = "print";
+
+        cartService.addToCart(testSessionId, input);
+
+        // When - Get cart
+        CartType cart = cartService.getCart(testSessionId);
+
+        // Then
+        assertEquals(3, cart.itemCount);
+        assertEquals(1, cart.items.size());
+        assertEquals(75.0, cart.subtotal); // 3 * $25.00
+        assertEquals(0.0, cart.taxAmount); // Tax is TODO
+        assertEquals(75.0, cart.totalAmount); // subtotal + tax
+    }
 }
