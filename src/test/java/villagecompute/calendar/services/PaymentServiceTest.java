@@ -47,7 +47,7 @@ class PaymentServiceTest {
 
     private CalendarUser testUser;
     private UserCalendar testCalendar;
-    private CalendarOrder testOrder;
+    private UUID testOrderId; // Store ID to re-fetch in each test transaction
 
     @BeforeEach
     @Transactional
@@ -94,8 +94,15 @@ class PaymentServiceTest {
         shippingAddress.put("postalCode", "12345");
         shippingAddress.put("country", "US");
 
-        // Create test order
-        testOrder = orderService.createOrder(testUser, testCalendar, 1, new BigDecimal("29.99"), shippingAddress);
+        // Create test order and store the ID
+        CalendarOrder testOrder = orderService.createOrder(testUser, testCalendar, 1, new BigDecimal("29.99"),
+                shippingAddress);
+        testOrderId = testOrder.id;
+    }
+
+    /** Helper to get the test order within current transaction. */
+    private CalendarOrder getTestOrder() {
+        return CalendarOrder.findById(testOrderId);
     }
 
     // ========== GETTER TESTS ==========
@@ -138,17 +145,18 @@ class PaymentServiceTest {
     void testProcessPaymentSuccess_ValidOrder_MarksAsPaid() {
         // Given
         String paymentIntentId = "pi_test_" + UUID.randomUUID();
-        testOrder.stripePaymentIntentId = paymentIntentId;
-        testOrder.persist();
+        CalendarOrder order = getTestOrder();
+        order.stripePaymentIntentId = paymentIntentId;
+        order.persist();
 
         // When
         boolean result = paymentService.processPaymentSuccess(paymentIntentId, null);
 
         // Then
         assertTrue(result);
-        testOrder = CalendarOrder.findById(testOrder.id);
-        assertEquals(CalendarOrder.STATUS_PAID, testOrder.status);
-        assertNotNull(testOrder.paidAt);
+        order = getTestOrder();
+        assertEquals(CalendarOrder.STATUS_PAID, order.status);
+        assertNotNull(order.paidAt);
     }
 
     @Test
@@ -157,16 +165,17 @@ class PaymentServiceTest {
         // Given
         String paymentIntentId = "pi_test_charge_" + UUID.randomUUID();
         String chargeId = "ch_test_" + UUID.randomUUID();
-        testOrder.stripePaymentIntentId = paymentIntentId;
-        testOrder.persist();
+        CalendarOrder order = getTestOrder();
+        order.stripePaymentIntentId = paymentIntentId;
+        order.persist();
 
         // When
         boolean result = paymentService.processPaymentSuccess(paymentIntentId, chargeId);
 
         // Then
         assertTrue(result);
-        testOrder = CalendarOrder.findById(testOrder.id);
-        assertEquals(chargeId, testOrder.stripeChargeId);
+        order = getTestOrder();
+        assertEquals(chargeId, order.stripeChargeId);
     }
 
     @Test
@@ -174,10 +183,11 @@ class PaymentServiceTest {
     void testProcessPaymentSuccess_AlreadyPaid_ReturnsFalse() {
         // Given - order already marked as paid
         String paymentIntentId = "pi_test_already_paid_" + UUID.randomUUID();
-        testOrder.stripePaymentIntentId = paymentIntentId;
-        testOrder.status = CalendarOrder.STATUS_PAID;
-        testOrder.paidAt = Instant.now();
-        testOrder.persist();
+        CalendarOrder order = getTestOrder();
+        order.stripePaymentIntentId = paymentIntentId;
+        order.status = CalendarOrder.STATUS_PAID;
+        order.paidAt = Instant.now();
+        order.persist();
 
         // When
         boolean result = paymentService.processPaymentSuccess(paymentIntentId, null);
@@ -191,18 +201,19 @@ class PaymentServiceTest {
     void testProcessPaymentSuccess_AddsNote() {
         // Given
         String paymentIntentId = "pi_test_note_" + UUID.randomUUID();
-        testOrder.stripePaymentIntentId = paymentIntentId;
-        testOrder.notes = null;
-        testOrder.persist();
+        CalendarOrder order = getTestOrder();
+        order.stripePaymentIntentId = paymentIntentId;
+        order.notes = null;
+        order.persist();
 
         // When
         paymentService.processPaymentSuccess(paymentIntentId, null);
 
         // Then
-        testOrder = CalendarOrder.findById(testOrder.id);
-        assertNotNull(testOrder.notes);
-        assertTrue(testOrder.notes.contains("Payment succeeded"));
-        assertTrue(testOrder.notes.contains(paymentIntentId));
+        order = getTestOrder();
+        assertNotNull(order.notes);
+        assertTrue(order.notes.contains("Payment succeeded"));
+        assertTrue(order.notes.contains(paymentIntentId));
     }
 
     @Test
@@ -210,17 +221,18 @@ class PaymentServiceTest {
     void testProcessPaymentSuccess_AppendsToExistingNotes() {
         // Given
         String paymentIntentId = "pi_test_append_" + UUID.randomUUID();
-        testOrder.stripePaymentIntentId = paymentIntentId;
-        testOrder.notes = "Existing notes\n";
-        testOrder.persist();
+        CalendarOrder order = getTestOrder();
+        order.stripePaymentIntentId = paymentIntentId;
+        order.notes = "Existing notes\n";
+        order.persist();
 
         // When
         paymentService.processPaymentSuccess(paymentIntentId, null);
 
         // Then
-        testOrder = CalendarOrder.findById(testOrder.id);
-        assertTrue(testOrder.notes.contains("Existing notes"));
-        assertTrue(testOrder.notes.contains("Payment succeeded"));
+        order = getTestOrder();
+        assertTrue(order.notes.contains("Existing notes"));
+        assertTrue(order.notes.contains("Payment succeeded"));
     }
 
     // ========== PROCESS REFUND WEBHOOK TESTS ==========
@@ -242,19 +254,20 @@ class PaymentServiceTest {
         // Given
         String chargeId = "ch_test_refund_" + UUID.randomUUID();
         String refundId = "re_test_" + UUID.randomUUID();
-        testOrder.stripeChargeId = chargeId;
-        testOrder.notes = null;
-        testOrder.persist();
+        CalendarOrder order = getTestOrder();
+        order.stripeChargeId = chargeId;
+        order.notes = null;
+        order.persist();
 
         // When
         paymentService.processRefundWebhook(chargeId, refundId, 2999L);
 
         // Then
-        testOrder = CalendarOrder.findById(testOrder.id);
-        assertNotNull(testOrder.notes);
-        assertTrue(testOrder.notes.contains("Refund received"));
-        assertTrue(testOrder.notes.contains(refundId));
-        assertTrue(testOrder.notes.contains("$29.99"));
+        order = getTestOrder();
+        assertNotNull(order.notes);
+        assertTrue(order.notes.contains("Refund received"));
+        assertTrue(order.notes.contains(refundId));
+        assertTrue(order.notes.contains("$29.99"));
     }
 
     @Test
@@ -263,17 +276,18 @@ class PaymentServiceTest {
         // Given - refund already recorded
         String chargeId = "ch_test_idempotent_" + UUID.randomUUID();
         String refundId = "re_test_idempotent_" + UUID.randomUUID();
-        testOrder.stripeChargeId = chargeId;
-        testOrder.notes = "Previous note\n[timestamp] Refund received via webhook: $29.99 (Refund ID: " + refundId
+        CalendarOrder order = getTestOrder();
+        order.stripeChargeId = chargeId;
+        order.notes = "Previous note\n[timestamp] Refund received via webhook: $29.99 (Refund ID: " + refundId
                 + ", Charge: " + chargeId + ")\n";
-        testOrder.persist();
+        order.persist();
 
         // When
         paymentService.processRefundWebhook(chargeId, refundId, 2999L);
 
         // Then - notes should not be duplicated
-        testOrder = CalendarOrder.findById(testOrder.id);
-        int refundCount = countOccurrences(testOrder.notes, refundId);
+        order = getTestOrder();
+        int refundCount = countOccurrences(order.notes, refundId);
         assertEquals(1, refundCount);
     }
 
@@ -283,17 +297,18 @@ class PaymentServiceTest {
         // Given
         String chargeId = "ch_test_append_" + UUID.randomUUID();
         String refundId = "re_test_append_" + UUID.randomUUID();
-        testOrder.stripeChargeId = chargeId;
-        testOrder.notes = "Existing payment notes\n";
-        testOrder.persist();
+        CalendarOrder order = getTestOrder();
+        order.stripeChargeId = chargeId;
+        order.notes = "Existing payment notes\n";
+        order.persist();
 
         // When
         paymentService.processRefundWebhook(chargeId, refundId, 500L);
 
         // Then
-        testOrder = CalendarOrder.findById(testOrder.id);
-        assertTrue(testOrder.notes.contains("Existing payment notes"));
-        assertTrue(testOrder.notes.contains("Refund received"));
+        order = getTestOrder();
+        assertTrue(order.notes.contains("Existing payment notes"));
+        assertTrue(order.notes.contains("Refund received"));
     }
 
     // ========== PROCESS CHECKOUT SESSION COMPLETED TESTS ==========
@@ -363,14 +378,15 @@ class PaymentServiceTest {
     @Transactional
     void testProcessCheckoutSessionCompleted_AlreadyPaid_ReturnsFalse() {
         // Given
-        testOrder.status = CalendarOrder.STATUS_PAID;
-        testOrder.paidAt = Instant.now();
-        testOrder.persist();
+        CalendarOrder order = getTestOrder();
+        order.status = CalendarOrder.STATUS_PAID;
+        order.paidAt = Instant.now();
+        order.persist();
 
         Session mockSession = mock(Session.class);
         when(mockSession.getId()).thenReturn("cs_test_already_paid");
         Map<String, String> metadata = new HashMap<>();
-        metadata.put("orderId", testOrder.id.toString());
+        metadata.put("orderId", testOrderId.toString());
         when(mockSession.getMetadata()).thenReturn(metadata);
 
         // When
@@ -388,7 +404,7 @@ class PaymentServiceTest {
         when(mockSession.getId()).thenReturn("cs_test_valid");
         when(mockSession.getPaymentIntent()).thenReturn("pi_test_checkout_" + UUID.randomUUID());
         Map<String, String> metadata = new HashMap<>();
-        metadata.put("orderId", testOrder.id.toString());
+        metadata.put("orderId", testOrderId.toString());
         when(mockSession.getMetadata()).thenReturn(metadata);
         when(mockSession.getAmountTotal()).thenReturn(3598L); // $35.98
         when(mockSession.getAmountSubtotal()).thenReturn(2999L); // $29.99
@@ -402,10 +418,10 @@ class PaymentServiceTest {
 
         // Then
         assertTrue(result);
-        testOrder = CalendarOrder.findById(testOrder.id);
-        assertEquals(CalendarOrder.STATUS_PAID, testOrder.status);
-        assertNotNull(testOrder.paidAt);
-        assertEquals("customer@example.com", testOrder.customerEmail);
+        CalendarOrder order = getTestOrder();
+        assertEquals(CalendarOrder.STATUS_PAID, order.status);
+        assertNotNull(order.paidAt);
+        assertEquals("customer@example.com", order.customerEmail);
     }
 
     @Test
@@ -416,7 +432,7 @@ class PaymentServiceTest {
         when(mockSession.getId()).thenReturn("cs_test_totals");
         when(mockSession.getPaymentIntent()).thenReturn("pi_test_totals_" + UUID.randomUUID());
         Map<String, String> metadata = new HashMap<>();
-        metadata.put("orderId", testOrder.id.toString());
+        metadata.put("orderId", testOrderId.toString());
         when(mockSession.getMetadata()).thenReturn(metadata);
         when(mockSession.getAmountTotal()).thenReturn(3897L); // $38.97
         when(mockSession.getAmountSubtotal()).thenReturn(2999L); // $29.99
@@ -435,11 +451,11 @@ class PaymentServiceTest {
 
         // Then
         assertTrue(result);
-        testOrder = CalendarOrder.findById(testOrder.id);
-        assertEquals(new BigDecimal("38.97"), testOrder.totalPrice);
-        assertEquals(new BigDecimal("29.99"), testOrder.subtotal);
-        assertEquals(new BigDecimal("5.99"), testOrder.shippingCost);
-        assertEquals(new BigDecimal("2.99"), testOrder.taxAmount);
+        CalendarOrder order = getTestOrder();
+        assertEquals(new BigDecimal("38.97"), order.totalPrice);
+        assertEquals(new BigDecimal("29.99"), order.subtotal);
+        assertEquals(new BigDecimal("5.99"), order.shippingCost);
+        assertEquals(new BigDecimal("2.99"), order.taxAmount);
     }
 
     @Test
@@ -450,7 +466,7 @@ class PaymentServiceTest {
         when(mockSession.getId()).thenReturn("cs_test_customer_details");
         when(mockSession.getPaymentIntent()).thenReturn("pi_test_details_" + UUID.randomUUID());
         Map<String, String> metadata = new HashMap<>();
-        metadata.put("orderId", testOrder.id.toString());
+        metadata.put("orderId", testOrderId.toString());
         when(mockSession.getMetadata()).thenReturn(metadata);
         when(mockSession.getAmountTotal()).thenReturn(2999L);
         when(mockSession.getAmountSubtotal()).thenReturn(2999L);
@@ -467,8 +483,8 @@ class PaymentServiceTest {
 
         // Then
         assertTrue(result);
-        testOrder = CalendarOrder.findById(testOrder.id);
-        assertEquals("details@example.com", testOrder.customerEmail);
+        CalendarOrder order = getTestOrder();
+        assertEquals("details@example.com", order.customerEmail);
     }
 
     @Test
@@ -479,7 +495,7 @@ class PaymentServiceTest {
         when(mockSession.getId()).thenReturn("cs_test_empty_email");
         when(mockSession.getPaymentIntent()).thenReturn("pi_test_empty_" + UUID.randomUUID());
         Map<String, String> metadata = new HashMap<>();
-        metadata.put("orderId", testOrder.id.toString());
+        metadata.put("orderId", testOrderId.toString());
         when(mockSession.getMetadata()).thenReturn(metadata);
         when(mockSession.getAmountTotal()).thenReturn(2999L);
         when(mockSession.getAmountSubtotal()).thenReturn(null);
@@ -496,8 +512,8 @@ class PaymentServiceTest {
 
         // Then
         assertTrue(result);
-        testOrder = CalendarOrder.findById(testOrder.id);
-        assertEquals("fallback@example.com", testOrder.customerEmail);
+        CalendarOrder order = getTestOrder();
+        assertEquals("fallback@example.com", order.customerEmail);
     }
 
     // ========== CHECKOUT LINE ITEM TESTS ==========
