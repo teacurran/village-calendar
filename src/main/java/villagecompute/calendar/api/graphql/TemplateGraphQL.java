@@ -160,28 +160,6 @@ public class TemplateGraphQL {
      *            Template update data
      * @return Updated template
      */
-    /**
-     * Debug query to check current user's security identity and roles. Temporary - remove after debugging.
-     */
-    @Query("debugSecurityIdentity")
-    @Description("Debug: Show current security identity and roles")
-    public String debugSecurityIdentity() {
-        if (securityIdentity == null) {
-            return "SecurityIdentity is null";
-        }
-        StringBuilder sb = new StringBuilder();
-        sb.append("Anonymous: ").append(securityIdentity.isAnonymous()).append(System.lineSeparator());
-        sb.append("Principal: ")
-                .append(securityIdentity.getPrincipal() != null ? securityIdentity.getPrincipal().getName() : "null")
-                .append(System.lineSeparator());
-        sb.append("Roles: ").append(securityIdentity.getRoles()).append(System.lineSeparator());
-        sb.append("Has ADMIN: ").append(securityIdentity.hasRole("ADMIN")).append(System.lineSeparator());
-        sb.append("Has USER: ").append(securityIdentity.hasRole("USER")).append(System.lineSeparator());
-        sb.append("Attributes: ").append(securityIdentity.getAttributes()).append(System.lineSeparator());
-        LOG.info("Debug security identity: " + sb.toString());
-        return sb.toString();
-    }
-
     @Mutation("updateTemplate")
     @Description("Update an existing calendar template (admin only). Requires ADMIN role in JWT claims.")
     @RolesAllowed(Roles.ADMIN)
