@@ -881,6 +881,462 @@ class OrderServiceTest {
         assertNull(orderService.findByOrderNumber("   "));
     }
 
+    // ==================== Status Transition Edge Case Tests ====================
+
+    @Test
+    @Transactional
+    void testUpdateOrderStatusFromPrinted() {
+        // Given - order in PRINTED state
+        CalendarOrder order = createTestOrder();
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PAID, "Paid");
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PROCESSING, "Processing");
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PRINTED, "Printed");
+
+        // When - transition from PRINTED to SHIPPED
+        CalendarOrder shippedOrder = orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_SHIPPED, "Shipped");
+
+        // Then
+        assertEquals(CalendarOrder.STATUS_SHIPPED, shippedOrder.status);
+    }
+
+    @Test
+    @Transactional
+    void testCancelOrderFromPrinted() {
+        // Given - order in PRINTED state
+        CalendarOrder order = createTestOrder();
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PAID, "Paid");
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PROCESSING, "Processing");
+        orderService.updateOrderStatus(order.id, CalendarOrder.STATUS_PRINTED, "Printed");
+
+        // When - cancel from PRINTED
+        CalendarOrder cancelledOrder = orderService.cancelOrder(order.id, testUser.id, false, "Cancel from printed");
+
+        // Then
+        assertEquals(CalendarOrder.STATUS_CANCELLED, cancelledOrder.status);
+    }
+
+    @Test
+    @Transactional
+    void testInvalidStatusTransitionFromDefault() {
+        // Given
+        CalendarOrder order = createTestOrder();
+
+        // When & Then - invalid status should throw
+        assertThrows(IllegalStateException.class,
+                () -> orderService.updateOrderStatus(order.id, "INVALID_STATUS", "Invalid"));
+    }
+
+    // ==================== findOrCreateGuestUser Branch Tests ====================
+
+    @Test
+    @Transactional
+    void testFindOrCreateGuestUser_WithFirstNameOnly() {
+        // Given
+        String email = "firstname-only-" + System.currentTimeMillis() + "@example.com";
+        java.util.Map<String, Object> addressInfo = new java.util.HashMap<>();
+        addressInfo.put("firstName", "John");
+        addressInfo.put("lastName", null);
+
+        // When
+        CalendarUser guestUser = orderService.findOrCreateGuestUser(email, addressInfo);
+
+        // Then
+        assertNotNull(guestUser);
+        assertEquals("John", guestUser.displayName.trim());
+    }
+
+    @Test
+    @Transactional
+    void testFindOrCreateGuestUser_WithLastNameOnly() {
+        // Given
+        String email = "lastname-only-" + System.currentTimeMillis() + "@example.com";
+        java.util.Map<String, Object> addressInfo = new java.util.HashMap<>();
+        addressInfo.put("firstName", null);
+        addressInfo.put("lastName", "Doe");
+
+        // When
+        CalendarUser guestUser = orderService.findOrCreateGuestUser(email, addressInfo);
+
+        // Then
+        assertNotNull(guestUser);
+        assertEquals("Doe", guestUser.displayName.trim());
+    }
+
+    @Test
+    @Transactional
+    void testFindOrCreateGuestUser_WithNullAddressInfo() {
+        // Given
+        String email = "no-address-" + System.currentTimeMillis() + "@example.com";
+
+        // When
+        CalendarUser guestUser = orderService.findOrCreateGuestUser(email, null);
+
+        // Then
+        assertNotNull(guestUser);
+        assertNull(guestUser.displayName);
+    }
+
+    @Test
+    @Transactional
+    void testFindOrCreateGuestUser_WithEmptyAddressInfo() {
+        // Given
+        String email = "empty-address-" + System.currentTimeMillis() + "@example.com";
+        java.util.Map<String, Object> addressInfo = new java.util.HashMap<>();
+
+        // When
+        CalendarUser guestUser = orderService.findOrCreateGuestUser(email, addressInfo);
+
+        // Then
+        assertNotNull(guestUser);
+        assertNull(guestUser.displayName);
+    }
+
+    // ==================== processCheckout Branch Tests ====================
+
+    @Test
+    @Transactional
+    void testProcessCheckout_WithLegacyTemplateName() {
+        // Given - using templateName instead of description
+        String paymentIntentId = "pi_test_legacy_" + System.currentTimeMillis();
+        String email = "legacy-" + System.currentTimeMillis() + "@villagecompute.com";
+        java.util.Map<String, Object> shippingAddress = new java.util.HashMap<>();
+        shippingAddress.put("firstName", "Legacy");
+        shippingAddress.put("lastName", "User");
+
+        java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+        java.util.Map<String, Object> item = new java.util.HashMap<>();
+        item.put("templateName", "Legacy Calendar Name"); // Using templateName instead of description
+        item.put("quantity", 1);
+        item.put("unitPrice", 29.99);
+        item.put("lineTotal", 29.99);
+        items.add(item);
+
+        // When
+        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 29.99, 5.99,
+                0.0, 35.98);
+
+        // Then
+        assertNotNull(orderNumber);
+        CalendarOrder order = orderService.findByOrderNumber(orderNumber);
+        assertEquals("Legacy Calendar Name", order.items.get(0).description);
+    }
+
+    @Test
+    @Transactional
+    void testProcessCheckout_WithPdfProductType() {
+        // Given - productType = pdf in configuration
+        String paymentIntentId = "pi_test_pdf_" + System.currentTimeMillis();
+        String email = "pdf-" + System.currentTimeMillis() + "@villagecompute.com";
+        java.util.Map<String, Object> shippingAddress = new java.util.HashMap<>();
+        shippingAddress.put("firstName", "PDF");
+        shippingAddress.put("lastName", "User");
+
+        java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+        java.util.Map<String, Object> item = new java.util.HashMap<>();
+        item.put("description", "PDF Calendar");
+        item.put("quantity", 1);
+        item.put("unitPrice", 9.99);
+        item.put("lineTotal", 9.99);
+        item.put("configuration", "{\"productType\":\"pdf\",\"year\":2026}");
+        items.add(item);
+
+        // When
+        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 9.99, 0.0,
+                0.0, 9.99);
+
+        // Then
+        assertNotNull(orderNumber);
+        CalendarOrder order = orderService.findByOrderNumber(orderNumber);
+        assertEquals(CalendarOrderItem.TYPE_PDF, order.items.get(0).productType);
+    }
+
+    @Test
+    @Transactional
+    void testProcessCheckout_WithDigitalProductType() {
+        // Given - productType = digital in configuration
+        String paymentIntentId = "pi_test_digital_" + System.currentTimeMillis();
+        String email = "digital-" + System.currentTimeMillis() + "@villagecompute.com";
+        java.util.Map<String, Object> shippingAddress = new java.util.HashMap<>();
+        shippingAddress.put("firstName", "Digital");
+        shippingAddress.put("lastName", "User");
+
+        java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+        java.util.Map<String, Object> item = new java.util.HashMap<>();
+        item.put("description", "Digital Calendar");
+        item.put("quantity", 1);
+        item.put("unitPrice", 9.99);
+        item.put("lineTotal", 9.99);
+        item.put("configuration", "{\"productType\":\"digital\",\"year\":2026}");
+        items.add(item);
+
+        // When
+        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 9.99, 0.0,
+                0.0, 9.99);
+
+        // Then
+        assertNotNull(orderNumber);
+        CalendarOrder order = orderService.findByOrderNumber(orderNumber);
+        assertEquals(CalendarOrderItem.TYPE_PDF, order.items.get(0).productType);
+    }
+
+    @Test
+    @Transactional
+    void testProcessCheckout_WithPdfInDescription() {
+        // Given - description contains "pdf"
+        String paymentIntentId = "pi_test_pdf_desc_" + System.currentTimeMillis();
+        String email = "pdf-desc-" + System.currentTimeMillis() + "@villagecompute.com";
+        java.util.Map<String, Object> shippingAddress = new java.util.HashMap<>();
+        shippingAddress.put("firstName", "PDF");
+        shippingAddress.put("lastName", "Desc");
+
+        java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+        java.util.Map<String, Object> item = new java.util.HashMap<>();
+        item.put("description", "My PDF Download");
+        item.put("quantity", 1);
+        item.put("unitPrice", 9.99);
+        item.put("lineTotal", 9.99);
+        items.add(item);
+
+        // When
+        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 9.99, 0.0,
+                0.0, 9.99);
+
+        // Then
+        assertNotNull(orderNumber);
+        CalendarOrder order = orderService.findByOrderNumber(orderNumber);
+        assertEquals(CalendarOrderItem.TYPE_PDF, order.items.get(0).productType);
+    }
+
+    @Test
+    @Transactional
+    void testProcessCheckout_WithNullAmounts() {
+        // Given - null amounts should default to zero
+        String paymentIntentId = "pi_test_null_amounts_" + System.currentTimeMillis();
+        String email = "null-amounts-" + System.currentTimeMillis() + "@villagecompute.com";
+        java.util.Map<String, Object> shippingAddress = new java.util.HashMap<>();
+        shippingAddress.put("firstName", "Null");
+        shippingAddress.put("lastName", "Amounts");
+
+        java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+
+        // When
+        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, null, null,
+                null, null);
+
+        // Then
+        assertNotNull(orderNumber);
+        CalendarOrder order = orderService.findByOrderNumber(orderNumber);
+        assertEquals(java.math.BigDecimal.ZERO, order.subtotal);
+        assertEquals(java.math.BigDecimal.ZERO, order.shippingCost);
+        assertEquals(java.math.BigDecimal.ZERO, order.taxAmount);
+        assertEquals(java.math.BigDecimal.ZERO, order.totalPrice);
+    }
+
+    @Test
+    @Transactional
+    void testProcessCheckout_WithNullItems() {
+        // Given - null items list
+        String paymentIntentId = "pi_test_null_items_" + System.currentTimeMillis();
+        String email = "null-items-" + System.currentTimeMillis() + "@villagecompute.com";
+        java.util.Map<String, Object> shippingAddress = new java.util.HashMap<>();
+        shippingAddress.put("firstName", "Null");
+        shippingAddress.put("lastName", "Items");
+
+        // When
+        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, null, 0.0, 0.0, 0.0,
+                0.0);
+
+        // Then
+        assertNotNull(orderNumber);
+        CalendarOrder order = orderService.findByOrderNumber(orderNumber);
+        assertTrue(order.items.isEmpty());
+    }
+
+    @Test
+    @Transactional
+    void testProcessCheckout_WithEmptyItems() {
+        // Given - empty items list
+        String paymentIntentId = "pi_test_empty_items_" + System.currentTimeMillis();
+        String email = "empty-items-" + System.currentTimeMillis() + "@villagecompute.com";
+        java.util.Map<String, Object> shippingAddress = new java.util.HashMap<>();
+        shippingAddress.put("firstName", "Empty");
+        shippingAddress.put("lastName", "Items");
+
+        java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+
+        // When
+        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 0.0, 0.0, 0.0,
+                0.0);
+
+        // Then
+        assertNotNull(orderNumber);
+        CalendarOrder order = orderService.findByOrderNumber(orderNumber);
+        assertTrue(order.items.isEmpty());
+    }
+
+    @Test
+    @Transactional
+    void testProcessCheckout_WithInvalidConfiguration() {
+        // Given - invalid JSON configuration
+        String paymentIntentId = "pi_test_invalid_config_" + System.currentTimeMillis();
+        String email = "invalid-config-" + System.currentTimeMillis() + "@villagecompute.com";
+        java.util.Map<String, Object> shippingAddress = new java.util.HashMap<>();
+        shippingAddress.put("firstName", "Invalid");
+        shippingAddress.put("lastName", "Config");
+
+        java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+        java.util.Map<String, Object> item = new java.util.HashMap<>();
+        item.put("description", "Invalid Config Calendar");
+        item.put("quantity", 1);
+        item.put("unitPrice", 29.99);
+        item.put("lineTotal", 29.99);
+        item.put("configuration", "not valid json at all");
+        items.add(item);
+
+        // When - should not throw, just log warning
+        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 29.99, 5.99,
+                0.0, 35.98);
+
+        // Then
+        assertNotNull(orderNumber);
+        CalendarOrder order = orderService.findByOrderNumber(orderNumber);
+        assertNotNull(order);
+    }
+
+    @Test
+    @Transactional
+    void testProcessCheckout_WithYearInConfiguration() {
+        // Given - configuration contains year
+        String paymentIntentId = "pi_test_year_" + System.currentTimeMillis();
+        String email = "year-config-" + System.currentTimeMillis() + "@villagecompute.com";
+        java.util.Map<String, Object> shippingAddress = new java.util.HashMap<>();
+        shippingAddress.put("firstName", "Year");
+        shippingAddress.put("lastName", "Config");
+
+        java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+        java.util.Map<String, Object> item = new java.util.HashMap<>();
+        item.put("description", "Calendar 2027");
+        item.put("quantity", 1);
+        item.put("unitPrice", 29.99);
+        item.put("lineTotal", 29.99);
+        item.put("configuration", "{\"year\":2027,\"theme\":\"modern\"}");
+        items.add(item);
+
+        // When
+        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 29.99, 5.99,
+                0.0, 35.98);
+
+        // Then
+        assertNotNull(orderNumber);
+        CalendarOrder order = orderService.findByOrderNumber(orderNumber);
+        assertEquals(Integer.valueOf(2027), order.items.get(0).getYear());
+    }
+
+    @Test
+    @Transactional
+    void testProcessCheckout_WithNullQuantityAndPrice() {
+        // Given - null quantity and price should use defaults
+        String paymentIntentId = "pi_test_defaults_" + System.currentTimeMillis();
+        String email = "defaults-" + System.currentTimeMillis() + "@villagecompute.com";
+        java.util.Map<String, Object> shippingAddress = new java.util.HashMap<>();
+        shippingAddress.put("firstName", "Default");
+        shippingAddress.put("lastName", "Values");
+
+        java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+        java.util.Map<String, Object> item = new java.util.HashMap<>();
+        item.put("description", "Default Calendar");
+        // No quantity, unitPrice, or lineTotal
+        items.add(item);
+
+        // When
+        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 29.99, 5.99,
+                0.0, 35.98);
+
+        // Then
+        assertNotNull(orderNumber);
+        CalendarOrder order = orderService.findByOrderNumber(orderNumber);
+        assertEquals(Integer.valueOf(1), order.items.get(0).quantity); // Default quantity
+    }
+
+    @Test
+    @Transactional
+    void testProcessCheckout_WithGeneratedSvgInConfiguration() {
+        // Given - configuration with generatedSvg
+        String paymentIntentId = "pi_test_svg_" + System.currentTimeMillis();
+        String email = "svg-" + System.currentTimeMillis() + "@villagecompute.com";
+        java.util.Map<String, Object> shippingAddress = new java.util.HashMap<>();
+        shippingAddress.put("firstName", "SVG");
+        shippingAddress.put("lastName", "User");
+
+        java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
+        java.util.Map<String, Object> item = new java.util.HashMap<>();
+        item.put("description", "SVG Calendar");
+        item.put("quantity", 1);
+        item.put("unitPrice", 29.99);
+        item.put("lineTotal", 29.99);
+        item.put("configuration",
+                "{\"year\":2026,\"generatedSvg\":\"<svg><rect/></svg>\"}");
+        items.add(item);
+
+        // When
+        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 29.99, 5.99,
+                0.0, 35.98);
+
+        // Then
+        assertNotNull(orderNumber);
+        CalendarOrder order = orderService.findByOrderNumber(orderNumber);
+        assertNotNull(order);
+    }
+
+    // ==================== Shipping Status Edge Case Tests ====================
+
+    @Test
+    @Transactional
+    void testAutoShipDigitalItems_NoPendingDigitalItems() {
+        // Given - order with no pending digital items
+        CalendarOrder order = createTestOrder();
+        order.status = CalendarOrder.STATUS_PAID;
+        order.persist();
+
+        // Get the existing print item and mark it as shipped
+        for (CalendarOrderItem item : order.items) {
+            item.itemStatus = CalendarOrderItem.STATUS_SHIPPED;
+            item.persist();
+        }
+
+        // When
+        int shippedCount = orderService.autoShipDigitalItems(order.id);
+
+        // Then
+        assertEquals(0, shippedCount);
+    }
+
+    @Test
+    @Transactional
+    void testUpdateQuantity_NegativeQuantity() {
+        // Given
+        CalendarOrder order = createTestOrder();
+        order.status = CalendarOrder.STATUS_PAID;
+        order.persist();
+
+        CalendarOrderItem item = new CalendarOrderItem();
+        item.order = order;
+        item.productType = CalendarOrderItem.TYPE_PRINT;
+        item.description = "Test Calendar";
+        item.quantity = 1;
+        item.unitPrice = new java.math.BigDecimal("29.99");
+        item.lineTotal = new java.math.BigDecimal("29.99");
+        item.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        item.persist();
+
+        // When - mark as shipped twice to test idempotent behavior
+        orderService.markItemAsShipped(item.id);
+        CalendarOrderItem shippedItem = orderService.markItemAsShipped(item.id);
+
+        // Then - should still be shipped
+        assertEquals(CalendarOrderItem.STATUS_SHIPPED, shippedItem.itemStatus);
+    }
+
     // Helper method to create a test order
     private CalendarOrder createTestOrder() {
         return orderService.createOrder(testUser, testCalendar, 1, new BigDecimal("29.99"), testShippingAddress);
