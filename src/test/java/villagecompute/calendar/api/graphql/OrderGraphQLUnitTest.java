@@ -205,20 +205,20 @@ class OrderGraphQLUnitTest {
 
         @Test
         void orders_NonAdminAccessingOtherUserOrders_ThrowsSecurityException() {
-            UUID targetUserId = UUID.randomUUID();
+            String targetUserId = UUID.randomUUID().toString();
             when(authService.requireCurrentUser(jwt)).thenReturn(testUser);
             when(jwt.getGroups()).thenReturn(Set.of(Roles.USER));
 
-            assertThrows(SecurityException.class, () -> orderGraphQL.orders(targetUserId.toString(), null));
+            assertThrows(SecurityException.class, () -> orderGraphQL.orders(targetUserId, null));
         }
 
         @Test
         void orders_NonAdminWithNullGroups_ThrowsSecurityException() {
-            UUID targetUserId = UUID.randomUUID();
+            String targetUserId = UUID.randomUUID().toString();
             when(authService.requireCurrentUser(jwt)).thenReturn(testUser);
             when(jwt.getGroups()).thenReturn(null);
 
-            assertThrows(SecurityException.class, () -> orderGraphQL.orders(targetUserId.toString(), null));
+            assertThrows(SecurityException.class, () -> orderGraphQL.orders(targetUserId, null));
         }
 
         @Test
@@ -281,12 +281,13 @@ class OrderGraphQLUnitTest {
             CalendarUser otherUser = new CalendarUser();
             otherUser.id = UUID.randomUUID();
             testOrder.user = otherUser;
+            String orderId = testOrder.id.toString();
 
             when(authService.requireCurrentUser(jwt)).thenReturn(testUser);
             when(orderService.getOrderById(testOrder.id)).thenReturn(Optional.of(testOrder));
             when(jwt.getGroups()).thenReturn(Set.of(Roles.USER));
 
-            assertThrows(SecurityException.class, () -> orderGraphQL.order(testOrder.id.toString()));
+            assertThrows(SecurityException.class, () -> orderGraphQL.order(orderId));
         }
 
         @Test
@@ -309,11 +310,12 @@ class OrderGraphQLUnitTest {
         @Test
         void order_OrderWithNullUser_ChecksAdmin() {
             testOrder.user = null;
+            String orderId = testOrder.id.toString();
             when(authService.requireCurrentUser(jwt)).thenReturn(testUser);
             when(orderService.getOrderById(testOrder.id)).thenReturn(Optional.of(testOrder));
             when(jwt.getGroups()).thenReturn(Set.of(Roles.USER));
 
-            assertThrows(SecurityException.class, () -> orderGraphQL.order(testOrder.id.toString()));
+            assertThrows(SecurityException.class, () -> orderGraphQL.order(orderId));
         }
 
         @Test
@@ -321,12 +323,13 @@ class OrderGraphQLUnitTest {
             CalendarUser otherUser = new CalendarUser();
             otherUser.id = UUID.randomUUID();
             testOrder.user = otherUser;
+            String orderId = testOrder.id.toString();
 
             when(authService.requireCurrentUser(jwt)).thenReturn(testUser);
             when(orderService.getOrderById(testOrder.id)).thenReturn(Optional.of(testOrder));
             when(jwt.getGroups()).thenReturn(null);
 
-            assertThrows(SecurityException.class, () -> orderGraphQL.order(testOrder.id.toString()));
+            assertThrows(SecurityException.class, () -> orderGraphQL.order(orderId));
         }
     }
 
