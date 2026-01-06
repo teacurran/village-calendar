@@ -102,4 +102,272 @@ class TypesTest {
         assertNull(intent.calendarId);
         assertEquals(3, intent.quantity);
     }
+
+    // ============================================================================
+    // DisplaySettingsType Tests
+    // ============================================================================
+
+    @Test
+    void displaySettingsType_Equals_SameValues_ReturnsTrue() {
+        DisplaySettingsType settings1 = new DisplaySettingsType();
+        settings1.emojiSize = 24;
+        settings1.emojiX = 10.5;
+        settings1.emojiY = 20.5;
+        settings1.textSize = 12;
+        settings1.textX = 5.0;
+        settings1.textY = 15.0;
+        settings1.textRotation = 45.0;
+        settings1.textColor = "#FF0000";
+        settings1.textAlign = "center";
+        settings1.textBold = true;
+        settings1.textWrap = false;
+
+        DisplaySettingsType settings2 = new DisplaySettingsType();
+        settings2.emojiSize = 24;
+        settings2.emojiX = 10.5;
+        settings2.emojiY = 20.5;
+        settings2.textSize = 12;
+        settings2.textX = 5.0;
+        settings2.textY = 15.0;
+        settings2.textRotation = 45.0;
+        settings2.textColor = "#FF0000";
+        settings2.textAlign = "center";
+        settings2.textBold = true;
+        settings2.textWrap = false;
+
+        assertEquals(settings1, settings2);
+        assertEquals(settings1.hashCode(), settings2.hashCode());
+    }
+
+    @Test
+    void displaySettingsType_Equals_DifferentEmojiSize_ReturnsFalse() {
+        DisplaySettingsType settings1 = new DisplaySettingsType();
+        settings1.emojiSize = 24;
+
+        DisplaySettingsType settings2 = new DisplaySettingsType();
+        settings2.emojiSize = 32;
+
+        assertNotEquals(settings1, settings2);
+    }
+
+    @Test
+    void displaySettingsType_Equals_DifferentTextColor_ReturnsFalse() {
+        DisplaySettingsType settings1 = new DisplaySettingsType();
+        settings1.textColor = "#FF0000";
+
+        DisplaySettingsType settings2 = new DisplaySettingsType();
+        settings2.textColor = "#00FF00";
+
+        assertNotEquals(settings1, settings2);
+    }
+
+    @Test
+    void displaySettingsType_Equals_NullFields_ReturnsTrue() {
+        DisplaySettingsType settings1 = new DisplaySettingsType();
+        DisplaySettingsType settings2 = new DisplaySettingsType();
+
+        assertEquals(settings1, settings2);
+        assertEquals(settings1.hashCode(), settings2.hashCode());
+    }
+
+    @Test
+    void displaySettingsType_Equals_SameInstance_ReturnsTrue() {
+        DisplaySettingsType settings = new DisplaySettingsType();
+        settings.emojiSize = 24;
+
+        assertEquals(settings, settings);
+    }
+
+    @Test
+    void displaySettingsType_Equals_Null_ReturnsFalse() {
+        DisplaySettingsType settings = new DisplaySettingsType();
+
+        assertNotEquals(settings, null);
+    }
+
+    @Test
+    void displaySettingsType_Equals_DifferentClass_ReturnsFalse() {
+        DisplaySettingsType settings = new DisplaySettingsType();
+
+        assertNotEquals(settings, "not a DisplaySettingsType");
+    }
+
+    @Test
+    void displaySettingsType_HashCode_ConsistentWithEquals() {
+        DisplaySettingsType settings1 = new DisplaySettingsType();
+        settings1.textBold = true;
+        settings1.textWrap = true;
+
+        DisplaySettingsType settings2 = new DisplaySettingsType();
+        settings2.textBold = true;
+        settings2.textWrap = true;
+
+        // Equal objects must have equal hash codes
+        assertEquals(settings1, settings2);
+        assertEquals(settings1.hashCode(), settings2.hashCode());
+    }
+
+    // ============================================================================
+    // HolidayType Tests
+    // ============================================================================
+
+    @Test
+    void holidayType_Equals_SameValues_ReturnsTrue() {
+        HolidayType holiday1 = new HolidayType("Christmas", "🎄");
+        HolidayType holiday2 = new HolidayType("Christmas", "🎄");
+
+        assertEquals(holiday1, holiday2);
+        assertEquals(holiday1.hashCode(), holiday2.hashCode());
+    }
+
+    @Test
+    void holidayType_Equals_DifferentName_ReturnsFalse() {
+        HolidayType holiday1 = new HolidayType("Christmas", "🎄");
+        HolidayType holiday2 = new HolidayType("New Year", "🎄");
+
+        assertNotEquals(holiday1, holiday2);
+    }
+
+    @Test
+    void holidayType_Equals_DifferentEmoji_ReturnsFalse() {
+        HolidayType holiday1 = new HolidayType("Christmas", "🎄");
+        HolidayType holiday2 = new HolidayType("Christmas", "🎅");
+
+        assertNotEquals(holiday1, holiday2);
+    }
+
+    @Test
+    void holidayType_Equals_NullEmoji_ReturnsTrue() {
+        HolidayType holiday1 = new HolidayType("Independence Day");
+        HolidayType holiday2 = new HolidayType("Independence Day");
+
+        assertEquals(holiday1, holiday2);
+        assertEquals(holiday1.hashCode(), holiday2.hashCode());
+    }
+
+    @Test
+    void holidayType_Equals_SameInstance_ReturnsTrue() {
+        HolidayType holiday = new HolidayType("Christmas", "🎄");
+
+        assertEquals(holiday, holiday);
+    }
+
+    @Test
+    void holidayType_Equals_Null_ReturnsFalse() {
+        HolidayType holiday = new HolidayType("Christmas", "🎄");
+
+        assertNotEquals(holiday, null);
+    }
+
+    @Test
+    void holidayType_Equals_DifferentClass_ReturnsFalse() {
+        HolidayType holiday = new HolidayType("Christmas", "🎄");
+
+        assertNotEquals(holiday, "not a HolidayType");
+    }
+
+    @Test
+    void holidayType_DefaultConstructor_AllFieldsNull() {
+        HolidayType holiday = new HolidayType();
+
+        assertNull(holiday.name);
+        assertNull(holiday.emoji);
+    }
+
+    // ============================================================================
+    // CustomDateEntryType Tests
+    // ============================================================================
+
+    @Test
+    void customDateEntryType_Equals_SameValues_ReturnsTrue() {
+        DisplaySettingsType settings = new DisplaySettingsType();
+        settings.emojiSize = 24;
+
+        CustomDateEntryType entry1 = new CustomDateEntryType("🎂", "Birthday", settings);
+        CustomDateEntryType entry2 = new CustomDateEntryType("🎂", "Birthday", settings);
+
+        assertEquals(entry1, entry2);
+        assertEquals(entry1.hashCode(), entry2.hashCode());
+    }
+
+    @Test
+    void customDateEntryType_Equals_DifferentEmoji_ReturnsFalse() {
+        CustomDateEntryType entry1 = new CustomDateEntryType("🎂", "Birthday");
+        CustomDateEntryType entry2 = new CustomDateEntryType("🎉", "Birthday");
+
+        assertNotEquals(entry1, entry2);
+    }
+
+    @Test
+    void customDateEntryType_Equals_DifferentTitle_ReturnsFalse() {
+        CustomDateEntryType entry1 = new CustomDateEntryType("🎂", "Birthday");
+        CustomDateEntryType entry2 = new CustomDateEntryType("🎂", "Anniversary");
+
+        assertNotEquals(entry1, entry2);
+    }
+
+    @Test
+    void customDateEntryType_Equals_DifferentDisplaySettings_ReturnsFalse() {
+        DisplaySettingsType settings1 = new DisplaySettingsType();
+        settings1.emojiSize = 24;
+
+        DisplaySettingsType settings2 = new DisplaySettingsType();
+        settings2.emojiSize = 32;
+
+        CustomDateEntryType entry1 = new CustomDateEntryType("🎂", "Birthday", settings1);
+        CustomDateEntryType entry2 = new CustomDateEntryType("🎂", "Birthday", settings2);
+
+        assertNotEquals(entry1, entry2);
+    }
+
+    @Test
+    void customDateEntryType_Equals_NullDisplaySettings_ReturnsTrue() {
+        CustomDateEntryType entry1 = new CustomDateEntryType("🎂", "Birthday");
+        CustomDateEntryType entry2 = new CustomDateEntryType("🎂", "Birthday");
+
+        assertEquals(entry1, entry2);
+        assertEquals(entry1.hashCode(), entry2.hashCode());
+    }
+
+    @Test
+    void customDateEntryType_Equals_SameInstance_ReturnsTrue() {
+        CustomDateEntryType entry = new CustomDateEntryType("🎂", "Birthday");
+
+        assertEquals(entry, entry);
+    }
+
+    @Test
+    void customDateEntryType_Equals_Null_ReturnsFalse() {
+        CustomDateEntryType entry = new CustomDateEntryType("🎂", "Birthday");
+
+        assertNotEquals(entry, null);
+    }
+
+    @Test
+    void customDateEntryType_Equals_DifferentClass_ReturnsFalse() {
+        CustomDateEntryType entry = new CustomDateEntryType("🎂", "Birthday");
+
+        assertNotEquals(entry, "not a CustomDateEntryType");
+    }
+
+    @Test
+    void customDateEntryType_EmojiOnlyConstructor() {
+        CustomDateEntryType entry = new CustomDateEntryType("🎂");
+
+        assertEquals("🎂", entry.emoji);
+        assertNull(entry.title);
+        assertNull(entry.displaySettings);
+    }
+
+    @Test
+    void customDateEntryType_EmojiAndSettingsConstructor() {
+        DisplaySettingsType settings = new DisplaySettingsType();
+        settings.emojiSize = 24;
+
+        CustomDateEntryType entry = new CustomDateEntryType("🎂", settings);
+
+        assertEquals("🎂", entry.emoji);
+        assertNull(entry.title);
+        assertEquals(settings, entry.displaySettings);
+    }
 }
