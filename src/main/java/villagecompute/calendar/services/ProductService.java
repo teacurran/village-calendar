@@ -63,6 +63,9 @@ public class ProductService {
 
     /** Get a product by its code */
     public Optional<Product> getProduct(String code) {
+        if (code == null) {
+            return Optional.empty();
+        }
         return Optional.ofNullable(PRODUCTS.get(code));
     }
 
@@ -73,6 +76,9 @@ public class ProductService {
      *             if product code is invalid
      */
     public BigDecimal getPrice(String productCode) {
+        if (productCode == null) {
+            throw new IllegalArgumentException("Invalid product code: null");
+        }
         Product product = PRODUCTS.get(productCode);
         if (product == null) {
             throw new IllegalArgumentException("Invalid product code: " + productCode);
@@ -82,6 +88,9 @@ public class ProductService {
 
     /** Validate that a product code exists */
     public boolean isValidProductCode(String code) {
+        if (code == null) {
+            return false;
+        }
         return PRODUCTS.containsKey(code);
     }
 
