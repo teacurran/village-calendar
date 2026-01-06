@@ -8,8 +8,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import io.quarkus.hibernate.orm.panache.PanacheQuery;
-
 /**
  * Event entity representing custom dates/events on a calendar. Events must be within the calendar's year and have valid
  * text, emoji, and color values.
@@ -67,10 +65,10 @@ public class Event extends DefaultPanacheEntityWithTimestamps {
      *
      * @param calendarId
      *            Calendar ID
-     * @return Query of events ordered by date
+     * @return List of events ordered by date ascending
      */
-    public static PanacheQuery<Event> findByCalendar(UUID calendarId) {
-        return find("calendar.id = ?1 ORDER BY eventDate ASC", calendarId);
+    public static List<Event> findByCalendarId(UUID calendarId) {
+        return find("calendar.id = ?1 ORDER BY eventDate ASC", calendarId).list();
     }
 
     /**
@@ -82,10 +80,10 @@ public class Event extends DefaultPanacheEntityWithTimestamps {
      *            Start date (inclusive)
      * @param endDate
      *            End date (inclusive)
-     * @return List of events in the date range
+     * @return List of events in the date range ordered by date
      */
     public static List<Event> findByDateRange(UUID calendarId, LocalDate startDate, LocalDate endDate) {
-        return find("calendar.id = ?1 AND eventDate >= ?2 AND eventDate <= ?3 ORDER BY" + " eventDate ASC", calendarId,
+        return find("calendar.id = ?1 AND eventDate >= ?2 AND eventDate <= ?3 ORDER BY eventDate ASC", calendarId,
                 startDate, endDate).list();
     }
 
@@ -103,7 +101,7 @@ public class Event extends DefaultPanacheEntityWithTimestamps {
     }
 
     /**
-     * Count events for a calendar.
+     * Count events for a specific calendar.
      *
      * @param calendarId
      *            Calendar ID
@@ -111,16 +109,5 @@ public class Event extends DefaultPanacheEntityWithTimestamps {
      */
     public static long countByCalendar(UUID calendarId) {
         return count("calendar.id = ?1", calendarId);
-    }
-
-    /**
-     * Delete all events for a calendar.
-     *
-     * @param calendarId
-     *            Calendar ID
-     * @return Number of deleted events
-     */
-    public static long deleteByCalendar(UUID calendarId) {
-        return delete("calendar.id = ?1", calendarId);
     }
 }

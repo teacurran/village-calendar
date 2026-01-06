@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.Event;
 import villagecompute.calendar.data.models.UserCalendar;
-import villagecompute.calendar.data.repositories.EventRepository;
 
 /**
  * Service layer for event business logic operations. Handles event CRUD operations, validation, authorization, and bulk
@@ -39,9 +38,6 @@ public class EventService {
 
     // Hex color pattern (e.g., #FF5733 or #ABC)
     private static final Pattern HEX_COLOR_PATTERN = Pattern.compile("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$");
-
-    @Inject
-    EventRepository eventRepository;
 
     @Inject
     CalendarService calendarService;
@@ -242,9 +238,9 @@ public class EventService {
             if (startDate.isAfter(endDate)) {
                 throw new IllegalArgumentException("Start date must be before or equal to end date");
             }
-            events = eventRepository.findByDateRange(calendarId, startDate, endDate);
+            events = Event.findByDateRange(calendarId, startDate, endDate);
         } else {
-            events = eventRepository.findByCalendarId(calendarId);
+            events = Event.findByCalendarId(calendarId);
         }
 
         LOG.debugf("Found %d events for calendar %s", events.size(), calendarId);
