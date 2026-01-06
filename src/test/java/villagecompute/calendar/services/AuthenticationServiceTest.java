@@ -153,6 +153,90 @@ class AuthenticationServiceTest {
 
     @Test
     @Transactional
+    void testHandleOAuthCallback_WithUserInfo() {
+        // Given: OAuth identity with UserInfo available
+        SecurityIdentity identity = createMockIdentityWithUserInfo(TEST_OAUTH_SUBJECT, TEST_EMAIL, TEST_NAME,
+                TEST_PICTURE);
+
+        // When: Handle OAuth callback
+        CalendarUser user = authenticationService.handleOAuthCallback("google", identity, null);
+
+        // Then: User is created with information from UserInfo
+        assertNotNull(user, "User should be created");
+        assertEquals(TEST_EMAIL, user.email, "Email should come from UserInfo");
+        assertEquals(TEST_NAME, user.displayName, "Name should come from UserInfo");
+        assertEquals(TEST_PICTURE, user.profileImageUrl, "Picture should come from UserInfo");
+    }
+
+    @Test
+    @Transactional
+    void testHandleOAuthCallback_WithSessionId_ConvertsCalendars() {
+        // Given: A guest calendar with a session ID
+        String sessionId = "test-session-" + UUID.randomUUID();
+
+        villagecompute.calendar.data.models.CalendarTemplate template = new villagecompute.calendar.data.models.CalendarTemplate();
+        template.name = "Test Template";
+        template.configuration = new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode();
+        template.isActive = true;
+        template.isFeatured = false;
+        template.displayOrder = 1;
+        template.persist();
+
+        villagecompute.calendar.data.models.UserCalendar guestCalendar = new villagecompute.calendar.data.models.UserCalendar();
+        guestCalendar.sessionId = sessionId;
+        guestCalendar.user = null; // Guest calendar has no user
+        guestCalendar.template = template;
+        guestCalendar.name = "Guest Calendar";
+        guestCalendar.year = 2025;
+        guestCalendar.configuration = new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode();
+        guestCalendar.persist();
+
+        UUID calendarId = guestCalendar.id;
+
+        // When: Handle OAuth callback with sessionId
+        SecurityIdentity identity = createMockIdentity(TEST_OAUTH_SUBJECT, TEST_EMAIL, TEST_NAME, TEST_PICTURE);
+        CalendarUser user = authenticationService.handleOAuthCallback("google", identity, sessionId);
+
+        // Then: Calendar should be converted to user
+        assertNotNull(user, "User should be created");
+
+        villagecompute.calendar.data.models.UserCalendar convertedCalendar = villagecompute.calendar.data.models.UserCalendar
+                .findById(calendarId);
+        assertNotNull(convertedCalendar, "Calendar should still exist");
+        assertEquals(user.id, convertedCalendar.user.id, "Calendar should now belong to user");
+        assertNull(convertedCalendar.sessionId, "Session ID should be cleared after conversion");
+    }
+
+    @Test
+    @Transactional
+    void testHandleOAuthCallback_WithEmptySessionId_DoesNotConvert() {
+        // Given: Empty session ID
+        SecurityIdentity identity = createMockIdentity(TEST_OAUTH_SUBJECT, TEST_EMAIL, TEST_NAME, TEST_PICTURE);
+
+        // When: Handle OAuth callback with empty sessionId
+        CalendarUser user = authenticationService.handleOAuthCallback("google", identity, "   ");
+
+        // Then: User is created but no conversion attempted (no errors)
+        assertNotNull(user, "User should be created");
+        assertEquals(TEST_EMAIL, user.email, "Email should match");
+    }
+
+    // ========================================================================
+    // isAuthenticated tests
+    // ========================================================================
+
+    @Test
+    void testIsAuthenticated_Unauthenticated_ReturnsFalse() {
+        // In test context without authentication, should return false
+        // Note: The injected SecurityIdentity in tests is typically anonymous
+        boolean result = authenticationService.isAuthenticated();
+
+        // The default test context has no authenticated user
+        assertFalse(result, "Should return false when not authenticated");
+    }
+
+    @Test
+    @Transactional
     void testIssueJWT() {
         // Given: A calendar user
         CalendarUser user = new CalendarUser();
@@ -174,7 +258,301 @@ class AuthenticationServiceTest {
         // which is tested in integration tests
     }
 
-    /** Helper method to create a mock SecurityIdentity for testing. */
+    // ========================================================================
+    // getCurrentUser tests
+    // ========================================================================
+
+    @Test
+    void testGetCurrentUser_NullJwt_ReturnsEmpty() {
+        Optional<CalendarUser> result = authenticationService.getCurrentUser(null);
+
+        assertTrue(result.isEmpty(), "Should return empty when JWT is null");
+    }
+
+    @Test
+    void testGetCurrentUser_NullSubject_ReturnsEmpty() {
+        org.eclipse.microprofile.jwt.JsonWebToken jwt = createMockJwt(null);
+
+        Optional<CalendarUser> result = authenticationService.getCurrentUser(jwt);
+
+        assertTrue(result.isEmpty(), "Should return empty when subject is null");
+    }
+
+    @Test
+    void testGetCurrentUser_InvalidUuidSubject_ReturnsEmpty() {
+        org.eclipse.microprofile.jwt.JsonWebToken jwt = createMockJwt("not-a-valid-uuid");
+
+        Optional<CalendarUser> result = authenticationService.getCurrentUser(jwt);
+
+        assertTrue(result.isEmpty(), "Should return empty for invalid UUID subject");
+    }
+
+    @Test
+    @Transactional
+    void testGetCurrentUser_ValidUuidUserNotFound_ReturnsEmpty() {
+        UUID nonExistentId = UUID.randomUUID();
+        org.eclipse.microprofile.jwt.JsonWebToken jwt = createMockJwt(nonExistentId.toString());
+
+        Optional<CalendarUser> result = authenticationService.getCurrentUser(jwt);
+
+        assertTrue(result.isEmpty(), "Should return empty when user not found");
+    }
+
+    @Test
+    @Transactional
+    void testGetCurrentUser_ValidUuidUserExists_ReturnsUser() {
+        // Given: An existing user
+        CalendarUser user = new CalendarUser();
+        user.oauthProvider = TEST_PROVIDER;
+        user.oauthSubject = TEST_OAUTH_SUBJECT;
+        user.email = TEST_EMAIL;
+        user.displayName = TEST_NAME;
+        user.persist();
+
+        org.eclipse.microprofile.jwt.JsonWebToken jwt = createMockJwt(user.id.toString());
+
+        // When
+        Optional<CalendarUser> result = authenticationService.getCurrentUser(jwt);
+
+        // Then
+        assertTrue(result.isPresent(), "Should return user when found");
+        assertEquals(user.id, result.get().id, "Should return correct user");
+        assertEquals(TEST_EMAIL, result.get().email, "User email should match");
+    }
+
+    // ========================================================================
+    // requireCurrentUser tests
+    // ========================================================================
+
+    @Test
+    void testRequireCurrentUser_NullJwt_ThrowsSecurityException() {
+        SecurityException exception = assertThrows(SecurityException.class,
+                () -> authenticationService.requireCurrentUser(null));
+
+        assertEquals("Unauthorized: User not found", exception.getMessage());
+    }
+
+    @Test
+    void testRequireCurrentUser_InvalidUuid_ThrowsSecurityException() {
+        org.eclipse.microprofile.jwt.JsonWebToken jwt = createMockJwt("invalid-uuid");
+
+        SecurityException exception = assertThrows(SecurityException.class,
+                () -> authenticationService.requireCurrentUser(jwt));
+
+        assertEquals("Unauthorized: User not found", exception.getMessage());
+    }
+
+    @Test
+    @Transactional
+    void testRequireCurrentUser_UserNotFound_ThrowsSecurityException() {
+        UUID nonExistentId = UUID.randomUUID();
+        org.eclipse.microprofile.jwt.JsonWebToken jwt = createMockJwt(nonExistentId.toString());
+
+        SecurityException exception = assertThrows(SecurityException.class,
+                () -> authenticationService.requireCurrentUser(jwt));
+
+        assertEquals("Unauthorized: User not found", exception.getMessage());
+    }
+
+    @Test
+    @Transactional
+    void testRequireCurrentUser_UserExists_ReturnsUser() {
+        // Given: An existing user
+        CalendarUser user = new CalendarUser();
+        user.oauthProvider = TEST_PROVIDER;
+        user.oauthSubject = TEST_OAUTH_SUBJECT + "-require";
+        user.email = "require-" + TEST_EMAIL;
+        user.displayName = TEST_NAME;
+        user.persist();
+
+        org.eclipse.microprofile.jwt.JsonWebToken jwt = createMockJwt(user.id.toString());
+
+        // When
+        CalendarUser result = authenticationService.requireCurrentUser(jwt);
+
+        // Then
+        assertNotNull(result, "Should return user");
+        assertEquals(user.id, result.id, "Should return correct user");
+    }
+
+    /** Helper method to create a mock JsonWebToken for testing. */
+    private org.eclipse.microprofile.jwt.JsonWebToken createMockJwt(String subject) {
+        return new org.eclipse.microprofile.jwt.JsonWebToken() {
+            @Override
+            public String getName() {
+                return subject;
+            }
+
+            @Override
+            public String getSubject() {
+                return subject;
+            }
+
+            @Override
+            public Set<String> getClaimNames() {
+                return Set.of("sub");
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T> T getClaim(String claimName) {
+                if ("sub".equals(claimName)) {
+                    return (T) subject;
+                }
+                return null;
+            }
+
+            @Override
+            public String getRawToken() {
+                return "mock.jwt.token";
+            }
+
+            @Override
+            public String getIssuer() {
+                return "village-calendar";
+            }
+
+            @Override
+            public Set<String> getAudience() {
+                return Set.of();
+            }
+
+            @Override
+            public long getExpirationTime() {
+                return System.currentTimeMillis() / 1000 + 3600;
+            }
+
+            @Override
+            public long getIssuedAtTime() {
+                return System.currentTimeMillis() / 1000;
+            }
+
+            @Override
+            public Set<String> getGroups() {
+                return Set.of("USER");
+            }
+
+            @Override
+            public String getTokenID() {
+                return "mock-token-id";
+            }
+        };
+    }
+
+    /** Helper method to create a mock SecurityIdentity with UserInfo for testing. */
+    private SecurityIdentity createMockIdentityWithUserInfo(String subject, String email, String name, String picture) {
+        io.quarkus.oidc.UserInfo userInfo = new io.quarkus.oidc.UserInfo() {
+            private final Map<String, Object> claims = Map.of("email", email != null ? email : "", "name",
+                    name != null ? name : "", "picture", picture != null ? picture : "");
+
+            @Override
+            public String getString(String key) {
+                Object value = claims.get(key);
+                return value != null ? value.toString() : null;
+            }
+
+            @Override
+            public String getPreferredUserName() {
+                return email;
+            }
+
+            @Override
+            public Object get(String key) {
+                return claims.get(key);
+            }
+
+            @Override
+            public boolean contains(String key) {
+                return claims.containsKey(key);
+            }
+
+            @Override
+            public Set<String> getPropertyNames() {
+                return claims.keySet();
+            }
+
+            @Override
+            public jakarta.json.JsonObject getJsonObject() {
+                return null;
+            }
+
+            @Override
+            public Long getLong(String key) {
+                return null;
+            }
+
+            @Override
+            public Boolean getBoolean(String key) {
+                return null;
+            }
+
+            @Override
+            public jakarta.json.JsonObject getObject(String key) {
+                return null;
+            }
+
+            @Override
+            public jakarta.json.JsonArray getArray(String key) {
+                return null;
+            }
+        };
+
+        return new SecurityIdentity() {
+            @Override
+            public Principal getPrincipal() {
+                return () -> subject;
+            }
+
+            @Override
+            public boolean isAnonymous() {
+                return false;
+            }
+
+            @Override
+            public Set<String> getRoles() {
+                return Set.of("USER");
+            }
+
+            @Override
+            public boolean hasRole(String role) {
+                return "USER".equals(role);
+            }
+
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T> T getAttribute(String attributeName) {
+                if ("userinfo".equals(attributeName)) {
+                    return (T) userInfo;
+                }
+                return null;
+            }
+
+            @Override
+            public Map<String, Object> getAttributes() {
+                return Map.of("userinfo", userInfo);
+            }
+
+            @Override
+            public <T extends io.quarkus.security.credential.Credential> T getCredential(Class<T> aClass) {
+                return null;
+            }
+
+            @Override
+            public Set<io.quarkus.security.credential.Credential> getCredentials() {
+                return Set.of();
+            }
+
+            public <T extends io.quarkus.security.credential.Credential> Set<T> getCredentials(Class<T> aClass) {
+                return Set.of();
+            }
+
+            public io.smallrye.mutiny.Uni<Boolean> checkPermission(java.security.Permission permission) {
+                return io.smallrye.mutiny.Uni.createFrom().item(true);
+            }
+        };
+    }
+
+    /** Helper method to create a mock SecurityIdentity for testing (without UserInfo). */
     private SecurityIdentity createMockIdentity(String subject, String email, String name, String picture) {
 
         return new SecurityIdentity() {
