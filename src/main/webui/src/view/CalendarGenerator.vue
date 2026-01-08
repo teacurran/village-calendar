@@ -103,6 +103,7 @@
       @display-options-change="handleWizardDisplayOptionsChange"
       @colors-change="handleWizardColorsChange"
       @holidays-change="handleWizardHolidaysChange"
+      @personal-events-change="handleWizardPersonalEventsChange"
     />
 
     <!-- Add to Cart Modal -->
@@ -787,6 +788,7 @@ import type {
   ColorSettings,
   HolidaySettings,
   EmojiFontType,
+  PersonalEventSettings,
 } from "../components/calendar/CreateWizardDrawer.vue";
 import { sessionFetch } from "../services/sessionService";
 import {
@@ -3110,6 +3112,33 @@ const handleWizardHolidaysChange = (holidays: HolidaySettings) => {
   config.value.holidaySets = holidays.selectedSets;
   config.value.eventDisplayMode = holidays.displayMode;
   // Config watcher handles generateCalendar() with debounce
+};
+
+// Handle personal events change from wizard
+const handleWizardPersonalEventsChange = (settings: PersonalEventSettings) => {
+  // Convert PersonalEvent array to customEvents format
+  customEvents.value = settings.events.map((event) => ({
+    id: event.id,
+    date: event.date,
+    emoji: event.emoji || "📅",
+    title: event.title || "",
+    showTitle: settings.showEventText,
+    displaySettings: {},
+  }));
+
+  // Update event display mode based on emoji size and show text settings
+  let displayMode = "large";
+  if (settings.emojiSize === "prominent") {
+    displayMode = settings.showEventText ? "large-text" : "large";
+  } else if (settings.emojiSize === "compact") {
+    displayMode = settings.showEventText ? "small-text" : "small";
+  } else {
+    displayMode = settings.showEventText ? "text" : "none";
+  }
+  config.value.eventDisplayMode = displayMode;
+
+  // Regenerate calendar to reflect changes
+  generateCalendar();
 };
 
 // Load saved calendars for the current user

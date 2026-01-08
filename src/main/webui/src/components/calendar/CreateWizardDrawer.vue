@@ -11,8 +11,11 @@ import RadioButton from "primevue/radiobutton";
 import ProgressSpinner from "primevue/progressspinner";
 import Select from "primevue/select";
 import Popover from "primevue/popover";
+import InputText from "primevue/inputtext";
+import DatePicker from "primevue/datepicker";
 import { VSwatches } from "vue3-swatches";
 import "vue3-swatches/dist/style.css";
+import EmojiPicker from "./EmojiPicker.vue";
 
 // Props
 interface CalendarConfig {
@@ -56,6 +59,7 @@ const emit = defineEmits<{
   (e: "displayOptionsChange", options: DisplayOptions): void;
   (e: "colorsChange", colors: ColorSettings): void;
   (e: "holidaysChange", holidays: HolidaySettings): void;
+  (e: "personalEventsChange", events: PersonalEventSettings): void;
 }>();
 
 // Types
@@ -133,12 +137,26 @@ export interface HolidaySettings {
   displayMode: EventDisplayMode;
 }
 
+export interface PersonalEvent {
+  id: number;
+  date: Date | null;
+  emoji: string;
+  title: string;
+}
+
+export interface PersonalEventSettings {
+  events: PersonalEvent[];
+  emojiSize: EmojiSizeType;
+  showEventText: boolean;
+}
+
 export interface WizardConfig {
   layout: LayoutType;
   moon: MoonSettings;
   displayOptions: DisplayOptions;
   colors: ColorSettings;
   holidays: HolidaySettings;
+  personalEvents: PersonalEventSettings;
 }
 
 // State
@@ -283,6 +301,85 @@ const emitHolidaySettings = () => {
   emit("holidaysChange", {
     selectedSets: allSets,
     displayMode: eventDisplayMode.value,
+  });
+};
+
+// Personal Events state
+const personalEvents = ref<PersonalEvent[]>([]);
+const showEmojiPicker = ref(false);
+const editingEventId = ref<number | null>(null);
+const newEventDate = ref<Date | null>(null);
+const newEventEmoji = ref("🎉");
+const newEventTitle = ref("");
+const personalEventEmojiSize = ref<EmojiSizeType>("prominent");
+const showPersonalEventText = ref(true);
+
+// Personal events computed display mode
+const personalEventDisplayMode = computed<EventDisplayMode>(() => {
+  if (personalEventEmojiSize.value === "prominent") {
+    return showPersonalEventText.value ? "large-text" : "large";
+  } else if (personalEventEmojiSize.value === "compact") {
+    return showPersonalEventText.value ? "small-text" : "small";
+  } else {
+    return showPersonalEventText.value ? "text" : "none";
+  }
+});
+
+// Add a new personal event
+const addPersonalEvent = () => {
+  if (!newEventDate.value) {
+    return;
+  }
+
+  const event: PersonalEvent = {
+    id: Date.now(),
+    date: newEventDate.value,
+    emoji: newEventEmoji.value || "📅",
+    title: newEventTitle.value || "",
+  };
+
+  personalEvents.value.push(event);
+  clearEventForm();
+  emitPersonalEventsSettings();
+};
+
+// Clear the event form
+const clearEventForm = () => {
+  newEventDate.value = null;
+  newEventEmoji.value = "🎉";
+  newEventTitle.value = "";
+  editingEventId.value = null;
+};
+
+// Remove a personal event
+const removePersonalEvent = (id: number) => {
+  personalEvents.value = personalEvents.value.filter((e) => e.id !== id);
+  emitPersonalEventsSettings();
+};
+
+// Handle emoji selection from picker
+const handleEmojiSelect = (emoji: string) => {
+  newEventEmoji.value = emoji;
+  showEmojiPicker.value = false;
+};
+
+// Format date for display
+const formatEventDate = (date: Date | null): string => {
+  if (!date) {
+    return "";
+  }
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+};
+
+// Emit personal events settings
+const emitPersonalEventsSettings = () => {
+  emit("personalEventsChange", {
+    events: personalEvents.value,
+    emojiSize: personalEventEmojiSize.value,
+    showEventText: showPersonalEventText.value,
   });
 };
 
@@ -1681,8 +1778,217 @@ onMounted(() => {
           </StepPanel>
         </StepItem>
 
-        <!-- Step 7: Finish -->
+        <!-- Step 7: Personal Events -->
         <StepItem value="7">
+          <Step>Personal Events</Step>
+          <StepPanel v-slot="{ activateCallback }">
+            <div class="step-content">
+              <p class="step-description">
+                Add personal events like birthdays, anniversaries, or special
+                dates to your calendar.
+              </p>
+
+              <!-- Add Event Form -->
+              <div class="personal-event-form">
+                <div class="event-form-row">
+                  <div class="event-date-field">
+                    <label class="field-label">Date</label>
+                    <DatePicker
+                      v-model="newEventDate"
+                      date-format="M d"
+                      placeholder="Select date"
+                      class="event-date-picker"
+                      show-icon
+                      fluid
+                    />
+                  </div>
+                  <div class="event-emoji-field">
+                    <label class="field-label">Emoji</label>
+                    <Button
+                      :label="newEventEmoji"
+                      class="emoji-button"
+                      outlined
+                      @click="showEmojiPicker = true"
+                    />
+                  </div>
+                </div>
+                <div class="event-form-row">
+                  <div class="event-title-field">
+                    <label class="field-label">Event Name (optional)</label>
+                    <InputText
+                      v-model="newEventTitle"
+                      placeholder="e.g., Mom's Birthday"
+                      class="event-title-input"
+                      fluid
+                    />
+                  </div>
+                  <Button
+                    icon="pi pi-plus"
+                    class="add-event-button"
+                    :disabled="!newEventDate"
+                    @click="addPersonalEvent"
+                  />
+                </div>
+              </div>
+
+              <!-- Events List -->
+              <div
+                v-if="personalEvents.length > 0"
+                class="personal-events-list"
+              >
+                <p class="events-label">Your Events:</p>
+                <div
+                  v-for="event in personalEvents"
+                  :key="event.id"
+                  class="personal-event-chip"
+                >
+                  <span class="event-emoji">{{ event.emoji }}</span>
+                  <span class="event-info">
+                    <span class="event-date">{{
+                      formatEventDate(event.date)
+                    }}</span>
+                    <span v-if="event.title" class="event-title">{{
+                      event.title
+                    }}</span>
+                  </span>
+                  <Button
+                    v-tooltip="'Remove'"
+                    icon="pi pi-times"
+                    text
+                    rounded
+                    severity="secondary"
+                    size="small"
+                    @click="removePersonalEvent(event.id)"
+                  />
+                </div>
+              </div>
+
+              <!-- Display Settings -->
+              <div
+                v-if="personalEvents.length > 0"
+                class="display-mode-section"
+              >
+                <h4 class="subsection-title">Event Display</h4>
+
+                <!-- Live Preview -->
+                <div class="event-live-preview">
+                  <div class="event-preview-cell large-preview">
+                    <span class="cell-day">15</span>
+                    <span
+                      v-if="personalEventEmojiSize === 'prominent'"
+                      class="cell-emoji large"
+                      >🎂</span
+                    >
+                    <span
+                      v-if="personalEventEmojiSize === 'compact'"
+                      class="cell-emoji small"
+                      >🎂</span
+                    >
+                    <span v-if="showPersonalEventText" class="cell-text"
+                      >Birthday</span
+                    >
+                  </div>
+                </div>
+
+                <!-- Emoji Size -->
+                <div class="emoji-size-section">
+                  <label class="subsection-label">Emoji Size</label>
+                  <div class="emoji-size-options">
+                    <div
+                      class="emoji-size-option"
+                      :class="{
+                        selected: personalEventEmojiSize === 'prominent',
+                      }"
+                      @click="
+                        personalEventEmojiSize = 'prominent';
+                        emitPersonalEventsSettings();
+                      "
+                    >
+                      <RadioButton
+                        v-model="personalEventEmojiSize"
+                        input-id="personal-emoji-prominent"
+                        value="prominent"
+                        name="personalEmojiSize"
+                      />
+                      <label for="personal-emoji-prominent">Prominent</label>
+                    </div>
+                    <div
+                      class="emoji-size-option"
+                      :class="{
+                        selected: personalEventEmojiSize === 'compact',
+                      }"
+                      @click="
+                        personalEventEmojiSize = 'compact';
+                        emitPersonalEventsSettings();
+                      "
+                    >
+                      <RadioButton
+                        v-model="personalEventEmojiSize"
+                        input-id="personal-emoji-compact"
+                        value="compact"
+                        name="personalEmojiSize"
+                      />
+                      <label for="personal-emoji-compact">Compact</label>
+                    </div>
+                    <div
+                      class="emoji-size-option"
+                      :class="{ selected: personalEventEmojiSize === 'none' }"
+                      @click="
+                        personalEventEmojiSize = 'none';
+                        emitPersonalEventsSettings();
+                      "
+                    >
+                      <RadioButton
+                        v-model="personalEventEmojiSize"
+                        input-id="personal-emoji-none"
+                        value="none"
+                        name="personalEmojiSize"
+                      />
+                      <label for="personal-emoji-none">None</label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Show Event Text -->
+                <div class="holiday-text-option">
+                  <Checkbox
+                    v-model="showPersonalEventText"
+                    input-id="showPersonalEventText"
+                    :binary="true"
+                    @change="emitPersonalEventsSettings()"
+                  />
+                  <label for="showPersonalEventText" class="checkbox-label">
+                    <span class="checkbox-title">Show event name</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="step-navigation">
+                <Button
+                  label="Previous"
+                  icon="pi pi-arrow-left"
+                  outlined
+                  @click="activateCallback('6')"
+                />
+                <Button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  icon-pos="right"
+                  @click="activateCallback('8')"
+                />
+              </div>
+            </div>
+          </StepPanel>
+        </StepItem>
+
+        <!-- Emoji Picker Dialog -->
+        <EmojiPicker
+          v-model:visible="showEmojiPicker"
+          @select="handleEmojiSelect"
+        />
+
+        <!-- Step 8: Finish -->
+        <StepItem value="8">
           <Step>Your Calendar is Ready!</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
@@ -1735,7 +2041,7 @@ onMounted(() => {
                   label="Previous"
                   icon="pi pi-arrow-left"
                   outlined
-                  @click="activateCallback('6')"
+                  @click="activateCallback('7')"
                 />
                 <Button label="Done" icon="pi pi-check" @click="handleClose" />
               </div>
@@ -2545,6 +2851,121 @@ onMounted(() => {
   width: 26px;
   height: 26px;
   object-fit: contain;
+}
+
+/* Personal Events Form */
+.personal-event-form {
+  background: var(--surface-50);
+  border: 1px solid var(--surface-200);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.event-form-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.event-form-row:last-child {
+  margin-bottom: 0;
+}
+
+.event-date-field {
+  flex: 1;
+}
+
+.event-emoji-field {
+  flex-shrink: 0;
+}
+
+.event-title-field {
+  flex: 1;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-color-secondary);
+  margin-bottom: 0.375rem;
+}
+
+.emoji-button {
+  font-size: 1.5rem;
+  padding: 0.5rem 0.75rem;
+  min-width: 3rem;
+}
+
+.add-event-button {
+  flex-shrink: 0;
+}
+
+/* Personal Events List */
+.personal-events-list {
+  margin-bottom: 1rem;
+}
+
+.events-label {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+  margin: 0 0 0.5rem 0;
+}
+
+.personal-event-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-0);
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.personal-event-chip:last-child {
+  margin-bottom: 0;
+}
+
+.event-emoji {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.event-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.event-date {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.event-title {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Override DatePicker styles */
+:deep(.event-date-picker) {
+  width: 100%;
+}
+
+:deep(.event-date-picker .p-datepicker-input) {
+  font-size: 0.875rem;
+}
+
+:deep(.event-title-input) {
+  font-size: 0.875rem;
 }
 </style>
 
