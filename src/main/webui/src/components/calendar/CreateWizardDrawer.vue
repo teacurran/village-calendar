@@ -15,7 +15,7 @@ import InputText from "primevue/inputtext";
 import DatePicker from "primevue/datepicker";
 import { VSwatches } from "vue3-swatches";
 import "vue3-swatches/dist/style.css";
-import EmojiPicker from "./EmojiPicker.vue";
+import InlineEmojiPicker from "./InlineEmojiPicker.vue";
 
 // Props
 interface CalendarConfig {
@@ -141,6 +141,7 @@ export interface PersonalEvent {
   id: number;
   date: Date | null;
   emoji: string;
+  emojiColor: string;
   title: string;
 }
 
@@ -306,13 +307,31 @@ const emitHolidaySettings = () => {
 
 // Personal Events state
 const personalEvents = ref<PersonalEvent[]>([]);
-const showEmojiPicker = ref(false);
 const editingEventId = ref<number | null>(null);
 const newEventDate = ref<Date | null>(null);
 const newEventEmoji = ref("🎉");
+const newEventEmojiColor = ref("noto-color");
 const newEventTitle = ref("");
 const personalEventEmojiSize = ref<EmojiSizeType>("prominent");
 const showPersonalEventText = ref(true);
+const emojiPickerRef = ref();
+const emojiColorPopoverRef = ref();
+
+// Emoji color options for personal events (reuse emojiStyleOptions from text colors)
+const personalEventEmojiStyles = [
+  { id: "noto-color", label: "Full Color" },
+  { id: "noto-mono", label: "Black & White" },
+  { id: "mono-red", label: "Red", color: "#DC2626" },
+  { id: "mono-blue", label: "Blue", color: "#2563EB" },
+  { id: "mono-green", label: "Green", color: "#16A34A" },
+  { id: "mono-orange", label: "Orange", color: "#EA580C" },
+  { id: "mono-purple", label: "Purple", color: "#9333EA" },
+  { id: "mono-pink", label: "Pink", color: "#EC4899" },
+  { id: "mono-teal", label: "Teal", color: "#0D9488" },
+  { id: "mono-brown", label: "Brown", color: "#92400E" },
+  { id: "mono-navy", label: "Navy", color: "#1E3A5F" },
+  { id: "mono-coral", label: "Coral", color: "#F97316" },
+];
 
 // Personal events computed display mode
 const personalEventDisplayMode = computed<EventDisplayMode>(() => {
@@ -335,6 +354,7 @@ const addPersonalEvent = () => {
     id: Date.now(),
     date: newEventDate.value,
     emoji: newEventEmoji.value || "📅",
+    emojiColor: newEventEmojiColor.value || "noto-color",
     title: newEventTitle.value || "",
   };
 
@@ -347,8 +367,25 @@ const addPersonalEvent = () => {
 const clearEventForm = () => {
   newEventDate.value = null;
   newEventEmoji.value = "🎉";
+  newEventEmojiColor.value = "noto-color";
   newEventTitle.value = "";
   editingEventId.value = null;
+};
+
+// Toggle emoji picker popover
+const toggleEmojiPicker = (event: Event) => {
+  emojiPickerRef.value?.toggle(event);
+};
+
+// Toggle emoji color popover
+const toggleEmojiColorPopover = (event: Event) => {
+  emojiColorPopoverRef.value?.toggle(event);
+};
+
+// Select emoji color
+const selectEventEmojiColor = (colorId: string) => {
+  newEventEmojiColor.value = colorId;
+  emojiColorPopoverRef.value?.hide();
 };
 
 // Remove a personal event
@@ -360,7 +397,6 @@ const removePersonalEvent = (id: number) => {
 // Handle emoji selection from picker
 const handleEmojiSelect = (emoji: string) => {
   newEventEmoji.value = emoji;
-  showEmojiPicker.value = false;
 };
 
 // Format date for display
@@ -1805,11 +1841,50 @@ onMounted(() => {
                   <div class="event-emoji-field">
                     <label class="field-label">Emoji</label>
                     <Button
-                      :label="newEventEmoji"
-                      class="emoji-button"
+                      class="emoji-select-button"
                       outlined
-                      @click="showEmojiPicker = true"
+                      @click="toggleEmojiPicker"
+                    >
+                      <span class="emoji-preview-text">{{ newEventEmoji }}</span>
+                    </Button>
+                    <InlineEmojiPicker
+                      ref="emojiPickerRef"
+                      @select="handleEmojiSelect"
                     />
+                  </div>
+                  <div class="event-color-field">
+                    <label class="field-label">Color</label>
+                    <div
+                      class="emoji-color-trigger-small"
+                      @click="toggleEmojiColorPopover"
+                    >
+                      <img
+                        :src="`/api/calendar/emoji-preview?emoji=${encodeURIComponent(newEventEmoji)}&style=${newEventEmojiColor}`"
+                        alt="Color preview"
+                        class="emoji-color-preview-img"
+                      />
+                    </div>
+                    <Popover
+                      ref="emojiColorPopoverRef"
+                      :pt="{ root: { class: 'emoji-color-popover' } }"
+                    >
+                      <div class="emoji-color-grid">
+                        <div
+                          v-for="style in personalEventEmojiStyles"
+                          :key="style.id"
+                          class="emoji-color-option"
+                          :class="{ selected: newEventEmojiColor === style.id }"
+                          :title="style.label"
+                          @click="selectEventEmojiColor(style.id)"
+                        >
+                          <img
+                            :src="`/api/calendar/emoji-preview?emoji=${encodeURIComponent(newEventEmoji)}&style=${style.id}`"
+                            :alt="style.label"
+                            class="emoji-color-img"
+                          />
+                        </div>
+                      </div>
+                    </Popover>
                   </div>
                 </div>
                 <div class="event-form-row">
@@ -1842,7 +1917,11 @@ onMounted(() => {
                   :key="event.id"
                   class="personal-event-chip"
                 >
-                  <span class="event-emoji">{{ event.emoji }}</span>
+                  <img
+                    :src="`/api/calendar/emoji-preview?emoji=${encodeURIComponent(event.emoji)}&style=${event.emojiColor || 'noto-color'}`"
+                    :alt="event.emoji"
+                    class="event-emoji-img"
+                  />
                   <span class="event-info">
                     <span class="event-date">{{
                       formatEventDate(event.date)
@@ -1980,12 +2059,6 @@ onMounted(() => {
             </div>
           </StepPanel>
         </StepItem>
-
-        <!-- Emoji Picker Dialog -->
-        <EmojiPicker
-          v-model:visible="showEmojiPicker"
-          @select="handleEmojiSelect"
-        />
 
         <!-- Step 8: Finish -->
         <StepItem value="8">
@@ -2893,10 +2966,92 @@ onMounted(() => {
   margin-bottom: 0.375rem;
 }
 
-.emoji-button {
-  font-size: 1.5rem;
-  padding: 0.5rem 0.75rem;
+/* Emoji select button (new inline picker) */
+.emoji-select-button {
   min-width: 3rem;
+  height: 2.5rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.emoji-preview-text {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+/* Emoji color field */
+.event-color-field {
+  flex-shrink: 0;
+}
+
+.emoji-color-trigger-small {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--surface-0);
+  border: 1px solid var(--surface-300);
+}
+
+.emoji-color-trigger-small:hover {
+  background: var(--surface-50);
+  border-color: var(--surface-400);
+}
+
+.emoji-color-preview-img {
+  width: 1.75rem;
+  height: 1.75rem;
+  object-fit: contain;
+}
+
+/* Emoji color popover grid */
+.emoji-color-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 8px;
+  width: 180px;
+}
+
+.emoji-color-option {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--surface-50);
+  border: 2px solid transparent;
+}
+
+.emoji-color-option:hover {
+  transform: scale(1.1);
+  background: var(--surface-100);
+}
+
+.emoji-color-option.selected {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-200);
+  background: var(--primary-50);
+}
+
+.emoji-color-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+/* Event emoji image in list */
+.event-emoji-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .add-event-button {
@@ -2984,5 +3139,10 @@ onMounted(() => {
 
 .emoji-popover-left .p-popover-content {
   padding: 0;
+}
+
+/* Emoji color popover */
+.emoji-color-popover .p-popover-content {
+  padding: 0 !important;
 }
 </style>

@@ -1888,6 +1888,7 @@ class CalendarRenderingServiceTest {
         // Test text wrap enabled but title is short (< 8 chars) - should not wrap
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
+        config.eventDisplayMode = "large-text"; // Enable text rendering
 
         DisplaySettingsType displaySettings = new DisplaySettingsType();
         displaySettings.textWrap = true;
@@ -1907,6 +1908,7 @@ class CalendarRenderingServiceTest {
         // Test text wrap enabled with long title that gets wrapped to multiple lines
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
+        config.eventDisplayMode = "large-text"; // Enable text rendering
 
         DisplaySettingsType displaySettings = new DisplaySettingsType();
         displaySettings.textWrap = true;
@@ -2083,11 +2085,11 @@ class CalendarRenderingServiceTest {
 
     @Test
     void testRenderEmoji_TextFallback_PositionBased_NotCentered() {
-        // Branch: Position-based emoji uses centered=false
-        // Custom date without display settings uses emojiPosition which passes centered=false
+        // Branch: Position-based emoji uses centered=true (now with display mode)
+        // Custom date with display mode "large" renders emoji
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.eventDisplayMode = "none"; // Use none so we don't get large/small emoji
+        config.eventDisplayMode = "large"; // Enable emoji rendering
         config.emojiPosition = CalendarRenderingService.EMOJI_POS_TOP_RIGHT;
         config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("Z")); // Plain letter, not an emoji
 
@@ -2095,7 +2097,7 @@ class CalendarRenderingServiceTest {
 
         assertNotNull(svg);
         assertTrue(svg.contains(SVG_OPEN_TAG));
-        // Position-based emoji with non-SVG character should use text fallback with centered=false
+        // Custom emoji with non-SVG character should use text fallback
         assertTrue(svg.contains(">Z</text>"), "Text fallback should render the character");
     }
 
@@ -2283,6 +2285,7 @@ class CalendarRenderingServiceTest {
         // Branch: style.rotation() != 0 should add transform attribute
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
+        config.eventDisplayMode = "large-text"; // Enable text rendering
 
         DisplaySettingsType displaySettings = new DisplaySettingsType();
         displaySettings.textRotation = 45.0; // Non-zero rotation
@@ -2301,6 +2304,7 @@ class CalendarRenderingServiceTest {
         // Branch: style.rotation() == 0 should NOT add transform attribute for text
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
+        config.eventDisplayMode = "large-text"; // Enable text rendering
 
         DisplaySettingsType displaySettings = new DisplaySettingsType();
         displaySettings.textRotation = 0.0; // Zero rotation
@@ -2319,6 +2323,7 @@ class CalendarRenderingServiceTest {
         // Branch: title.length() > 10 && !allowFullTitle should truncate
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
+        config.eventDisplayMode = "large-text"; // Enable text rendering
 
         DisplaySettingsType displaySettings = new DisplaySettingsType();
         displaySettings.textWrap = false; // allowFullTitle = false since !textWrap
@@ -2339,6 +2344,7 @@ class CalendarRenderingServiceTest {
         // Branch: title.length() <= 10 should not truncate
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
+        config.eventDisplayMode = "large-text"; // Enable text rendering
 
         DisplaySettingsType displaySettings = new DisplaySettingsType();
         displaySettings.textWrap = false;
@@ -2359,6 +2365,7 @@ class CalendarRenderingServiceTest {
         // Branch: style.rotation() != 0 should add transform attribute
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
+        config.eventDisplayMode = "large-text"; // Enable text rendering
 
         DisplaySettingsType displaySettings = new DisplaySettingsType();
         displaySettings.textRotation = -90.0; // Non-zero rotation

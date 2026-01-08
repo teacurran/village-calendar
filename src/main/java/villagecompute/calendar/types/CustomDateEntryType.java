@@ -15,6 +15,9 @@ public class CustomDateEntryType {
     @JsonProperty("emoji")
     public String emoji;
 
+    @JsonProperty("emojiFont")
+    public String emojiFont;
+
     @JsonProperty("title")
     public String title;
 
@@ -89,6 +92,10 @@ public class CustomDateEntryType {
         return displaySettings != null && Boolean.TRUE.equals(displaySettings.textWrap);
     }
 
+    public String getEmojiFont(String defaultFont) {
+        return emojiFont != null ? emojiFont : defaultFont;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o)
@@ -96,12 +103,12 @@ public class CustomDateEntryType {
         if (o == null || getClass() != o.getClass())
             return false;
         CustomDateEntryType that = (CustomDateEntryType) o;
-        return Objects.equals(emoji, that.emoji) && Objects.equals(title, that.title)
-                && Objects.equals(displaySettings, that.displaySettings);
+        return Objects.equals(emoji, that.emoji) && Objects.equals(emojiFont, that.emojiFont)
+                && Objects.equals(title, that.title) && Objects.equals(displaySettings, that.displaySettings);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(emoji, title, displaySettings);
+        return Objects.hash(emoji, emojiFont, title, displaySettings);
     }
 }

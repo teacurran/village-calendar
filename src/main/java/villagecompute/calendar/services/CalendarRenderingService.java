@@ -85,7 +85,12 @@ public class CalendarRenderingService {
      * 2.0 licensed, safe for commercial printing). Noto Emoji (monochrome) is available for a text-only look.
      */
     static String getEmojiFontFamily(CalendarConfigType config) {
-        if (EMOJI_FONT_NOTO_MONO.equals(config.emojiFont)) {
+        return getEmojiFontFamily(config.emojiFont);
+    }
+
+    /** Returns the CSS font-family string for emoji rendering based on the emojiFont setting. */
+    static String getEmojiFontFamily(String emojiFont) {
+        if (EMOJI_FONT_NOTO_MONO.equals(emojiFont)) {
             // Noto Emoji (monochrome version) - black and white outline style
             // Include DejaVu Sans as fallback which has wide Unicode coverage on Linux servers
             return "'Noto Emoji', 'DejaVu Sans', 'Segoe UI Symbol', 'Symbola', sans-serif";
@@ -199,9 +204,14 @@ public class CalendarRenderingService {
      * to colored monochrome variants.
      */
     static String substituteEmojiForMonochrome(String emoji, CalendarConfigType config) {
+        return substituteEmojiForMonochrome(emoji, config.emojiFont);
+    }
+
+    /** Substitutes emojis for monochrome fonts using the specified emojiFont setting. */
+    static String substituteEmojiForMonochrome(String emoji, String emojiFont) {
         // Apply substitutions for noto-mono and all mono-* color variants
-        boolean needsSubstitution = EMOJI_FONT_NOTO_MONO.equals(config.emojiFont)
-                || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
+        boolean needsSubstitution = EMOJI_FONT_NOTO_MONO.equals(emojiFont)
+                || (emojiFont != null && emojiFont.startsWith("mono-"));
         if (!needsSubstitution) {
             return emoji; // No substitution needed for color mode
         }
@@ -228,11 +238,25 @@ public class CalendarRenderingService {
      */
     private String renderEmoji(String emoji, double x, double y, int size, CalendarConfigType config,
             boolean centered) {
+        return renderEmoji(emoji, x, y, size, config, centered, null);
+    }
+
+    /**
+     * Render emoji with optional per-event emojiFont override.
+     *
+     * @param emojiFontOverride
+     *            Optional emojiFont to use instead of config.emojiFont (null to use config default)
+     */
+    private String renderEmoji(String emoji, double x, double y, int size, CalendarConfigType config, boolean centered,
+            String emojiFontOverride) {
+        // Use override if provided, otherwise fall back to config
+        String effectiveEmojiFont = emojiFontOverride != null ? emojiFontOverride : config.emojiFont;
+
         // Check if monochrome mode is enabled (noto-mono or any mono-* color variant)
-        boolean isMonochrome = EMOJI_FONT_NOTO_MONO.equals(config.emojiFont)
-                || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
+        boolean isMonochrome = EMOJI_FONT_NOTO_MONO.equals(effectiveEmojiFont)
+                || (effectiveEmojiFont != null && effectiveEmojiFont.startsWith("mono-"));
         // Get color for colored monochrome variants
-        String colorHex = EMOJI_COLOR_MAP.get(config.emojiFont);
+        String colorHex = EMOJI_COLOR_MAP.get(effectiveEmojiFont);
 
         // Try to use SVG rendering for better PDF compatibility
         if (emojiSvgService != null && emojiSvgService.hasEmojiSvg(emoji)) {
@@ -243,16 +267,17 @@ public class CalendarRenderingService {
         }
 
         // Fall back to text rendering with emoji font
-        String processedEmoji = substituteEmojiForMonochrome(emoji, config);
+        String processedEmoji = substituteEmojiForMonochrome(emoji, effectiveEmojiFont);
+        String fontFamily = getEmojiFontFamily(effectiveEmojiFont);
         if (centered) {
             return String.format(
                     "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; text-anchor: middle;"
                             + " dominant-baseline: middle; font-family: %s;\">%s</text>",
-                    x, y, size, getEmojiFontFamily(config), processedEmoji);
+                    x, y, size, fontFamily, processedEmoji);
         } else {
             return String.format(
                     "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; font-family:" + " %s;\">%s</text>", x, y,
-                    size, getEmojiFontFamily(config), processedEmoji);
+                    size, fontFamily, processedEmoji);
         }
     }
 
@@ -396,7 +421,9 @@ public class CalendarRenderingService {
         if (entry == null || entry.emoji == null) {
             return "";
         }
-        return substituteEmojiForMonochrome(entry.emoji, config);
+        // Use per-entry emojiFont if available, otherwise fall back to config
+        String emojiFont = entry.getEmojiFont(config.emojiFont);
+        return substituteEmojiForMonochrome(entry.emoji, emojiFont);
     }
 
     /** Calculates emoji position based on position string */
@@ -447,26 +474,61 @@ public class CalendarRenderingService {
         return new int[]{emojiX, emojiY};
     }
 
-    /** Renders custom emoji with positioning based on display settings */
+    /** Renders custom emoji with positioning based on display settings and eventDisplayMode */
     private void renderCustomEmoji(StringBuilder svg, String customEmoji, CustomDateEntryType eventDisplay, Cell cell,
             CalendarConfigType config) {
         if (customEmoji.isEmpty() || eventDisplay == null) {
             return;
         }
 
-        double emojiX = cell.x() + (cell.width() * eventDisplay.getEmojiX(50) / 100.0);
-        double emojiY = cell.y() + (cell.height() * eventDisplay.getEmojiY(50) / 100.0);
+        // Get per-event emoji font or fall back to global config
+        String eventEmojiFont = eventDisplay.getEmojiFont(config.emojiFont);
+
+        // Determine emoji size and position based on eventDisplayMode
+        String displayMode = config.eventDisplayMode != null ? config.eventDisplayMode : "large";
+
+        int baseSize;
+        double xPercent = 15; // Default to left side (15%)
+        double yPercent = 75; // Default to bottom area (75%)
+
+        // Size based on display mode (matches holiday rendering pattern)
+        if (displayMode.startsWith("large")) {
+            baseSize = 28; // Large prominent emoji
+            xPercent = 15;
+            yPercent = 70;
+        } else if (displayMode.startsWith("small")) {
+            baseSize = 16; // Smaller compact emoji
+            xPercent = 15;
+            yPercent = 55;
+        } else {
+            // none or text-only - don't render emoji
+            return;
+        }
+
+        // Override with custom display settings if provided
+        double emojiX = cell.x() + (cell.width() * eventDisplay.getEmojiX(xPercent) / 100.0);
+        double emojiY = cell.y() + (cell.height() * eventDisplay.getEmojiY(yPercent) / 100.0);
+
+        // Scale emoji size to cell width
         double scaleFactor = cell.width() / 100.0;
-        int scaledSize = (int) (eventDisplay.getEmojiSize(12) * scaleFactor);
-        int emojiSize = Math.max(8, Math.min(24, scaledSize));
-        svg.append(renderEmoji(customEmoji, emojiX, emojiY, emojiSize, config, true));
+        int customSize = eventDisplay.getEmojiSize(baseSize);
+        int scaledSize = (int) (customSize * scaleFactor);
+        int emojiSize = Math.max(10, Math.min(40, scaledSize));
+
+        svg.append(renderEmoji(customEmoji, emojiX, emojiY, emojiSize, config, true, eventEmojiFont));
         svg.append(System.lineSeparator());
     }
 
-    /** Renders event title with optional wrapping and rotation */
+    /** Renders event title with optional wrapping and rotation based on display mode */
     private void renderEventTitle(StringBuilder svg, String title, CustomDateEntryType eventDisplay, Cell cell,
             CalendarConfigType config) {
         if (title == null || title.isEmpty() || eventDisplay == null) {
+            return;
+        }
+
+        // Only render title if display mode includes text
+        String displayMode = config.eventDisplayMode != null ? config.eventDisplayMode : "large";
+        if (!displayMode.endsWith("-text") && !displayMode.equals("text")) {
             return;
         }
 
@@ -476,14 +538,30 @@ public class CalendarRenderingService {
     /** Renders event title with custom display settings */
     private void renderEventTitleWithDisplay(StringBuilder svg, String title, CustomDateEntryType eventDisplay,
             Cell cell, CalendarConfigType config) {
-        double textX = cell.x() + (cell.width() * eventDisplay.getTextX(50) / 100.0);
-        double textY = cell.y() + (cell.height() * eventDisplay.getTextY(70) / 100.0);
+        // Determine default positioning based on display mode
+        String displayMode = config.eventDisplayMode != null ? config.eventDisplayMode : "large-text";
+
+        // Position text below the emoji area
+        double defaultXPercent = 15; // Left aligned to match emoji
+        double defaultYPercent = 90; // Below emoji
+
+        if (displayMode.startsWith("small")) {
+            defaultYPercent = 75; // Smaller emoji leaves more room
+        } else if (displayMode.equals("text")) {
+            defaultXPercent = 50; // Center when no emoji
+            defaultYPercent = 70;
+        }
+
+        double textX = cell.x() + (cell.width() * eventDisplay.getTextX(defaultXPercent) / 100.0);
+        double textY = cell.y() + (cell.height() * eventDisplay.getTextY(defaultYPercent) / 100.0);
         double scaleFactor = cell.width() / 100.0;
-        int scaledSize = (int) (eventDisplay.getTextSize(7) * scaleFactor);
-        int textSize = Math.max(5, Math.min(12, scaledSize));
+        int baseSize = displayMode.startsWith("large") ? 8 : 7;
+        int scaledSize = (int) (eventDisplay.getTextSize(baseSize) * scaleFactor);
+        int textSize = Math.max(5, Math.min(14, scaledSize));
         String textColor = eventDisplay.getTextColor(config.customDateColor);
         String fontWeight = eventDisplay.isTextBold() ? "bold" : "normal";
-        String textAnchor = getTextAnchor(eventDisplay.getTextAlign("center"));
+        String defaultAlign = displayMode.equals("text") ? "center" : "start";
+        String textAnchor = getTextAnchor(eventDisplay.getTextAlign(defaultAlign));
         double rotation = eventDisplay.getTextRotation();
 
         TextRenderStyle style = new TextRenderStyle(textSize, textColor, fontWeight, textAnchor, rotation);

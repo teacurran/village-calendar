@@ -1953,9 +1953,10 @@ const generateCalendar = async () => {
     customEvents.value.forEach((event) => {
       if (event.date) {
         const dateStr = formatDate(event.date);
-        // Store emoji with display settings
+        // Store emoji with display settings and color
         customDatesMap[dateStr] = {
           emoji: event.emoji || "📅",
+          emojiFont: event.emojiColor || "noto-color",
           displaySettings: event.displaySettings || {},
         };
         if (event.showTitle && event.title) {
@@ -3008,6 +3009,7 @@ const buildFullConfiguration = () => {
       const dateStr = formatDate(event.date);
       fullConfig.customDates[dateStr] = {
         emoji: event.emoji || "📅",
+        emojiFont: event.emojiColor || "noto-color",
         displaySettings: event.displaySettings || {},
       };
       if (event.showTitle && event.title) {
@@ -3121,6 +3123,7 @@ const handleWizardPersonalEventsChange = (settings: PersonalEventSettings) => {
     id: event.id,
     date: event.date,
     emoji: event.emoji || "📅",
+    emojiColor: event.emojiColor || "noto-color",
     title: event.title || "",
     showTitle: settings.showEventText,
     displaySettings: {},
@@ -3235,6 +3238,7 @@ const saveNewCalendar = async () => {
       const dateStr = formatDate(event.date);
       customDatesMap[dateStr] = {
         emoji: event.emoji || "📅",
+        emojiFont: event.emojiColor || "noto-color",
         displaySettings: event.displaySettings || {},
       };
       if (event.showTitle && event.title) {
@@ -3481,6 +3485,7 @@ const confirmSaveTemplate = async () => {
       const dateStr = formatDate(event.date);
       fullConfig.customDates[dateStr] = {
         emoji: event.emoji || "📅",
+        emojiFont: event.emojiColor || "noto-color",
         displaySettings: event.displaySettings || {},
       };
       if (event.showTitle && event.title) {
@@ -3537,6 +3542,7 @@ const updateTemplate = async (template) => {
       const dateStr = formatDate(event.date);
       fullConfig.customDates[dateStr] = {
         emoji: event.emoji || "📅",
+        emojiFont: event.emojiColor || "noto-color",
         displaySettings: event.displaySettings || {},
       };
       if (event.showTitle && event.title) {
