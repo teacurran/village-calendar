@@ -2282,13 +2282,14 @@ class CalendarRenderingServiceTest {
 
     @Test
     void testRenderSingleLineText_WithRotation() {
-        // Branch: style.rotation() != 0 should add transform attribute
+        // Custom event text rendering now matches holiday style (no rotation support)
+        // This test verifies text is still rendered correctly
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
         config.eventDisplayMode = "large-text"; // Enable text rendering
 
         DisplaySettingsType displaySettings = new DisplaySettingsType();
-        displaySettings.textRotation = 45.0; // Non-zero rotation
+        displaySettings.textRotation = 45.0; // Rotation is now ignored
         displaySettings.textWrap = false;
 
         config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎂", "Birthday", displaySettings));
@@ -2296,7 +2297,8 @@ class CalendarRenderingServiceTest {
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
         assertNotNull(svg);
-        assertTrue(svg.contains("transform=\"rotate(45.0"), "Text with rotation should have transform attribute");
+        // Text should be rendered (rotation is ignored in holiday-style rendering)
+        assertTrue(svg.contains(">Birthday</text>"), "Text should be rendered");
     }
 
     @Test
@@ -2362,24 +2364,25 @@ class CalendarRenderingServiceTest {
 
     @Test
     void testRenderWrappedText_WithRotation() {
-        // Branch: style.rotation() != 0 should add transform attribute
+        // Custom event text rendering now matches holiday style (simplified, no wrapping/rotation)
+        // This test verifies text is still rendered correctly
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
         config.eventDisplayMode = "large-text"; // Enable text rendering
 
         DisplaySettingsType displaySettings = new DisplaySettingsType();
-        displaySettings.textRotation = -90.0; // Non-zero rotation
-        displaySettings.textWrap = true; // Enable text wrapping
+        displaySettings.textRotation = -90.0; // Rotation is now ignored
+        displaySettings.textWrap = true; // Text wrapping is now ignored (single line with truncation)
 
-        // Title > 8 chars triggers wrapped text
+        // Long title will be truncated
         config.customDates.put(LocalDate.of(2025, 1, 15),
                 new CustomDateEntryType("🎂", "Happy Birthday Party", displaySettings));
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
         assertNotNull(svg);
-        assertTrue(svg.contains("transform=\"rotate(-90.0"),
-                "Wrapped text with rotation should have transform attribute");
+        // Text should be rendered (truncated to fit)
+        assertTrue(svg.contains("Happy Birth"), "Truncated text should be rendered");
     }
 
     @Test

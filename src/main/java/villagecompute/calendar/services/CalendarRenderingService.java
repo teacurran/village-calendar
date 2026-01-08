@@ -484,38 +484,36 @@ public class CalendarRenderingService {
         // Get per-event emoji font or fall back to global config
         String eventEmojiFont = eventDisplay.getEmojiFont(config.emojiFont);
 
-        // Determine emoji size and position based on eventDisplayMode
+        // Determine emoji size and position based on eventDisplayMode (matching holiday rendering)
         String displayMode = config.eventDisplayMode != null ? config.eventDisplayMode : "large";
+        boolean largeEmoji = "large".equals(displayMode) || "large-text".equals(displayMode);
+        boolean smallEmoji = "small".equals(displayMode) || "small-text".equals(displayMode);
 
-        int baseSize;
-        double xPercent = 15; // Default to left side (15%)
-        double yPercent = 75; // Default to bottom area (75%)
-
-        // Size based on display mode (matches holiday rendering pattern)
-        if (displayMode.startsWith("large")) {
-            baseSize = 28; // Large prominent emoji
-            xPercent = 15;
-            yPercent = 70;
-        } else if (displayMode.startsWith("small")) {
-            baseSize = 16; // Smaller compact emoji
-            xPercent = 15;
-            yPercent = 55;
-        } else {
-            // none or text-only - don't render emoji
+        if (!largeEmoji && !smallEmoji) {
+            // none or text-only mode - don't render emoji
             return;
         }
 
-        // Override with custom display settings if provided
-        double emojiX = cell.x() + (cell.width() * eventDisplay.getEmojiX(xPercent) / 100.0);
-        double emojiY = cell.y() + (cell.height() * eventDisplay.getEmojiY(yPercent) / 100.0);
+        int emojiX;
+        int emojiY;
+        int fontSize;
+        boolean centered;
 
-        // Scale emoji size to cell width
-        double scaleFactor = cell.width() / 100.0;
-        int customSize = eventDisplay.getEmojiSize(baseSize);
-        int scaledSize = (int) (customSize * scaleFactor);
-        int emojiSize = Math.max(10, Math.min(40, scaledSize));
+        if (largeEmoji) {
+            // Large/large-text mode: centered emoji, same as holidays
+            emojiX = cell.x() + cell.width() / 2;
+            fontSize = Math.max(16, cell.height() / 3);
+            emojiY = cell.y() + (int) (cell.height() * 0.50);
+            centered = true;
+        } else {
+            // Small/small-text mode: bottom-left corner, same as holidays
+            emojiX = cell.x() + 5;
+            emojiY = cell.y() + cell.height() - 8;
+            fontSize = Math.max(10, cell.height() / 6);
+            centered = false;
+        }
 
-        svg.append(renderEmoji(customEmoji, emojiX, emojiY, emojiSize, config, true, eventEmojiFont));
+        svg.append(renderEmoji(customEmoji, emojiX, emojiY, fontSize, config, centered, eventEmojiFont));
         svg.append(System.lineSeparator());
     }
 
@@ -535,42 +533,25 @@ public class CalendarRenderingService {
         renderEventTitleWithDisplay(svg, title, eventDisplay, cell, config);
     }
 
-    /** Renders event title with custom display settings */
+    /** Renders event title with custom display settings - matching holiday text rendering */
     private void renderEventTitleWithDisplay(StringBuilder svg, String title, CustomDateEntryType eventDisplay,
             Cell cell, CalendarConfigType config) {
-        // Determine default positioning based on display mode
-        String displayMode = config.eventDisplayMode != null ? config.eventDisplayMode : "large-text";
-
-        // Position text below the emoji area
-        double defaultXPercent = 15; // Left aligned to match emoji
-        double defaultYPercent = 90; // Below emoji
-
-        if (displayMode.startsWith("small")) {
-            defaultYPercent = 75; // Smaller emoji leaves more room
-        } else if (displayMode.equals("text")) {
-            defaultXPercent = 50; // Center when no emoji
-            defaultYPercent = 70;
-        }
-
-        double textX = cell.x() + (cell.width() * eventDisplay.getTextX(defaultXPercent) / 100.0);
-        double textY = cell.y() + (cell.height() * eventDisplay.getTextY(defaultYPercent) / 100.0);
-        double scaleFactor = cell.width() / 100.0;
-        int baseSize = displayMode.startsWith("large") ? 8 : 7;
-        int scaledSize = (int) (eventDisplay.getTextSize(baseSize) * scaleFactor);
-        int textSize = Math.max(5, Math.min(14, scaledSize));
+        // Match holiday text rendering: centered at bottom of cell
+        int textX = cell.x() + cell.width() / 2;
+        int textY = cell.y() + cell.height() - 3;
+        int textSize = Math.max(5, cell.width() / 10);
         String textColor = eventDisplay.getTextColor(config.customDateColor);
-        String fontWeight = eventDisplay.isTextBold() ? "bold" : "normal";
-        String defaultAlign = displayMode.equals("text") ? "center" : "start";
-        String textAnchor = getTextAnchor(eventDisplay.getTextAlign(defaultAlign));
-        double rotation = eventDisplay.getTextRotation();
 
-        TextRenderStyle style = new TextRenderStyle(textSize, textColor, fontWeight, textAnchor, rotation);
+        // Escape XML entities in the title
+        String escapedTitle = escapeXml(title);
 
-        if (eventDisplay.isTextWrap() && title.length() > 8) {
-            renderWrappedText(svg, title, textX, textY, style);
-        } else {
-            renderSingleLineText(svg, title, textX, textY, style, eventDisplay.isTextWrap());
-        }
+        // Truncate if too long
+        String displayTitle = title.length() > 12 ? escapedTitle.substring(0, 11) + "…" : escapedTitle;
+
+        svg.append(String.format(
+                "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
+                        + " fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\">%s</text>%n",
+                textX, textY, textSize, textColor, displayTitle));
     }
 
     /** Renders a single line of text, truncating if necessary */
