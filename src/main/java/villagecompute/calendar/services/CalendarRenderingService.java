@@ -474,7 +474,7 @@ public class CalendarRenderingService {
         return new int[]{emojiX, emojiY};
     }
 
-    /** Renders custom emoji with positioning based on display settings and eventDisplayMode */
+    /** Renders custom emoji with positioning based on display settings and customEventDisplayMode */
     private void renderCustomEmoji(StringBuilder svg, String customEmoji, CustomDateEntryType eventDisplay, Cell cell,
             CalendarConfigType config) {
         if (customEmoji.isEmpty() || eventDisplay == null) {
@@ -484,8 +484,8 @@ public class CalendarRenderingService {
         // Get per-event emoji font or fall back to global config
         String eventEmojiFont = eventDisplay.getEmojiFont(config.emojiFont);
 
-        // Determine emoji size and position based on eventDisplayMode (matching holiday rendering)
-        String displayMode = config.eventDisplayMode != null ? config.eventDisplayMode : "large";
+        // Determine emoji size and position based on customEventDisplayMode (separate from holiday eventDisplayMode)
+        String displayMode = config.customEventDisplayMode != null ? config.customEventDisplayMode : "large-text";
         boolean largeEmoji = "large".equals(displayMode) || "large-text".equals(displayMode);
         boolean smallEmoji = "small".equals(displayMode) || "small-text".equals(displayMode);
 
@@ -517,15 +517,15 @@ public class CalendarRenderingService {
         svg.append(System.lineSeparator());
     }
 
-    /** Renders event title with optional wrapping and rotation based on display mode */
+    /** Renders event title with optional wrapping and rotation based on customEventDisplayMode */
     private void renderEventTitle(StringBuilder svg, String title, CustomDateEntryType eventDisplay, Cell cell,
             CalendarConfigType config) {
         if (title == null || title.isEmpty() || eventDisplay == null) {
             return;
         }
 
-        // Only render title if display mode includes text
-        String displayMode = config.eventDisplayMode != null ? config.eventDisplayMode : "large";
+        // Only render title if customEventDisplayMode includes text
+        String displayMode = config.customEventDisplayMode != null ? config.customEventDisplayMode : "large-text";
         if (!displayMode.endsWith("-text") && !displayMode.equals("text")) {
             return;
         }

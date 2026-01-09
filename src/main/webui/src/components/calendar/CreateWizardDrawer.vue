@@ -1600,6 +1600,7 @@ onMounted(() => {
                   </div>
                   <Popover
                     ref="emojiPopover"
+                    appendTo="self"
                     :pt="{ root: { class: 'emoji-popover-left' } }"
                   >
                     <div class="emoji-popover-content">
@@ -1866,6 +1867,7 @@ onMounted(() => {
                     </div>
                     <Popover
                       ref="emojiColorPopoverRef"
+                      appendTo="self"
                       :pt="{ root: { class: 'emoji-color-popover' } }"
                     >
                       <div class="emoji-color-grid">
@@ -3124,16 +3126,23 @@ onMounted(() => {
 }
 </style>
 
-<!-- Unscoped styles for Popover positioning (appended to body) -->
+<!-- Unscoped styles for Popover positioning -->
 <style>
+/* Emoji style popover (Text Colors section) */
 .emoji-popover-left {
-  /* Align right edge of popover with right edge of 42px trigger */
-  transform: translateX(calc(-100% + 42px));
+  /* Must be higher than PrimeVue Drawer (z-index ~1100) */
+  z-index: 2000 !important;
+  /* Position within drawer bounds - align left edge */
+  left: 0 !important;
+  right: auto !important;
+  transform: none !important;
+  /* Constrain width */
+  max-width: 250px;
 }
 
 .emoji-popover-left::before,
 .emoji-popover-left::after {
-  /* Hide the arrow since it won't align properly */
+  /* Hide the arrow since positioning is customized */
   display: none !important;
 }
 
@@ -3141,7 +3150,24 @@ onMounted(() => {
   padding: 0;
 }
 
-/* Emoji color popover */
+/* Emoji color popover (Personal Events section) */
+.emoji-color-popover {
+  /* Must be higher than PrimeVue Drawer (z-index ~1100) */
+  z-index: 2000 !important;
+  /* Position within drawer bounds - align left edge */
+  left: 0 !important;
+  right: auto !important;
+  transform: none !important;
+  /* Constrain width to fit 4 columns within drawer */
+  max-width: 200px;
+}
+
+.emoji-color-popover::before,
+.emoji-color-popover::after {
+  /* Hide the arrow since positioning is customized */
+  display: none !important;
+}
+
 .emoji-color-popover .p-popover-content {
   padding: 0 !important;
 }

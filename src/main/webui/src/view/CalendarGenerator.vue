@@ -883,8 +883,16 @@ const config = ref({
     | "large"
     | "large-text"
     | "small"
+    | "small-text"
     | "text"
-    | "none", // Display mode for events/holidays
+    | "none", // Display mode for holidays
+  customEventDisplayMode: "large-text" as
+    | "large"
+    | "large-text"
+    | "small"
+    | "small-text"
+    | "text"
+    | "none", // Display mode for personal/custom events
   // Emoji font settings
   emojiFont: "noto-color" as "noto-color" | "noto-mono", // Emoji font style
 });
@@ -2003,6 +2011,7 @@ const generateCalendar = async () => {
       holidaySet: selectedHolidaySet.value,
       holidaySets: config.value.holidaySets,
       eventDisplayMode: config.value.eventDisplayMode,
+      customEventDisplayMode: config.value.customEventDisplayMode,
       emojiFont: config.value.emojiFont,
       showHolidays:
         selectedHolidaySet.value && selectedHolidaySet.value !== "none",
@@ -3129,8 +3138,9 @@ const handleWizardPersonalEventsChange = (settings: PersonalEventSettings) => {
     displaySettings: {},
   }));
 
-  // Update event display mode based on emoji size and show text settings
-  let displayMode = "large";
+  // Update custom event display mode based on emoji size and show text settings
+  // Note: This uses customEventDisplayMode (for personal events), not eventDisplayMode (for holidays)
+  let displayMode = "large-text";
   if (settings.emojiSize === "prominent") {
     displayMode = settings.showEventText ? "large-text" : "large";
   } else if (settings.emojiSize === "compact") {
@@ -3138,7 +3148,7 @@ const handleWizardPersonalEventsChange = (settings: PersonalEventSettings) => {
   } else {
     displayMode = settings.showEventText ? "text" : "none";
   }
-  config.value.eventDisplayMode = displayMode;
+  config.value.customEventDisplayMode = displayMode;
 
   // Regenerate calendar to reflect changes
   generateCalendar();

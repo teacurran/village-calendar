@@ -1,5 +1,9 @@
 <template>
-  <Popover ref="popoverRef" :pt="{ root: { class: 'inline-emoji-popover' } }">
+  <Popover
+    ref="popoverRef"
+    appendTo="self"
+    :pt="{ root: { class: 'inline-emoji-popover' } }"
+  >
     <div class="emoji-picker-content">
       <!-- Category tabs -->
       <div class="emoji-categories">
@@ -614,10 +618,27 @@ defineExpose({ toggle, hide });
 <style>
 /* Unscoped styles for popover positioning */
 .inline-emoji-popover {
-  z-index: 1100 !important;
+  /* Must be higher than PrimeVue Drawer (z-index ~1100) */
+  z-index: 2000 !important;
+  /* Ensure it doesn't overflow right edge */
+  max-width: 290px;
 }
 
 .inline-emoji-popover .p-popover-content {
   padding: 0 !important;
+}
+
+/* Position popover to stay within drawer bounds */
+.inline-emoji-popover.p-popover {
+  /* Override default positioning to align left edge with trigger */
+  left: 0 !important;
+  right: auto !important;
+  transform: none !important;
+}
+
+/* Hide arrow since positioning is customized */
+.inline-emoji-popover::before,
+.inline-emoji-popover::after {
+  display: none !important;
 }
 </style>
