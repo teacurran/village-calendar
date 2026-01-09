@@ -312,6 +312,8 @@ const newEventDate = ref<Date | null>(null);
 const newEventEmoji = ref("🎉");
 const newEventEmojiColor = ref("noto-color");
 const newEventTitle = ref("");
+const emojiImageFailed = ref<Record<string, boolean>>({});
+const eventImageFailed = ref<Record<number, boolean>>({});
 const personalEventEmojiSize = ref<EmojiSizeType>("prominent");
 const showPersonalEventText = ref(true);
 const emojiPickerRef = ref();
@@ -397,6 +399,18 @@ const removePersonalEvent = (id: number) => {
 // Handle emoji selection from picker
 const handleEmojiSelect = (emoji: string) => {
   newEventEmoji.value = emoji;
+  // Reset failed state when emoji changes - new emoji might have SVG support
+  emojiImageFailed.value = {};
+};
+
+// Handle emoji preview image load error (fallback to text emoji)
+const handleEmojiImageError = (styleId: string) => {
+  emojiImageFailed.value[styleId] = true;
+};
+
+// Handle event list image load error
+const handleEventImageError = (eventId: number) => {
+  eventImageFailed.value[eventId] = true;
 };
 
 // Format date for display
@@ -1860,10 +1874,15 @@ onMounted(() => {
                       @click="toggleEmojiColorPopover"
                     >
                       <img
+                        v-if="!emojiImageFailed[newEventEmojiColor]"
                         :src="`/api/calendar/emoji-preview?emoji=${encodeURIComponent(newEventEmoji)}&style=${newEventEmojiColor}`"
                         alt="Color preview"
                         class="emoji-color-preview-img"
+                        @error="handleEmojiImageError(newEventEmojiColor)"
                       />
+                      <span v-else class="emoji-color-fallback-small">{{
+                        newEventEmoji
+                      }}</span>
                     </div>
                     <Popover
                       ref="emojiColorPopoverRef"
@@ -1880,10 +1899,15 @@ onMounted(() => {
                           @click="selectEventEmojiColor(style.id)"
                         >
                           <img
+                            v-if="!emojiImageFailed[style.id]"
                             :src="`/api/calendar/emoji-preview?emoji=${encodeURIComponent(newEventEmoji)}&style=${style.id}`"
                             :alt="style.label"
                             class="emoji-color-img"
+                            @error="handleEmojiImageError(style.id)"
                           />
+                          <span v-else class="emoji-color-fallback">{{
+                            newEventEmoji
+                          }}</span>
                         </div>
                       </div>
                     </Popover>
@@ -1920,10 +1944,15 @@ onMounted(() => {
                   class="personal-event-chip"
                 >
                   <img
+                    v-if="!eventImageFailed[event.id]"
                     :src="`/api/calendar/emoji-preview?emoji=${encodeURIComponent(event.emoji)}&style=${event.emojiColor || 'noto-color'}`"
                     :alt="event.emoji"
                     class="event-emoji-img"
+                    @error="handleEventImageError(event.id)"
                   />
+                  <span v-else class="event-emoji-fallback">{{
+                    event.emoji
+                  }}</span>
                   <span class="event-info">
                     <span class="event-date">{{
                       formatEventDate(event.date)
@@ -3046,6 +3075,28 @@ onMounted(() => {
   width: 28px;
   height: 28px;
   object-fit: contain;
+}
+
+/* Fallback text emoji when SVG not available */
+.emoji-color-fallback {
+  font-size: 24px;
+  line-height: 1;
+  filter: grayscale(100%);
+  opacity: 0.6;
+}
+
+.emoji-color-fallback-small {
+  font-size: 20px;
+  line-height: 1;
+  filter: grayscale(100%);
+  opacity: 0.6;
+}
+
+.event-emoji-fallback {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
 }
 
 /* Event emoji image in list */
