@@ -1274,8 +1274,7 @@ class OrderServiceTest {
         item.put("quantity", 1);
         item.put("unitPrice", 29.99);
         item.put("lineTotal", 29.99);
-        item.put("configuration",
-                "{\"year\":2026,\"generatedSvg\":\"<svg><rect/></svg>\"}");
+        item.put("configuration", "{\"year\":2026,\"generatedSvg\":\"<svg><rect/></svg>\"}");
         items.add(item);
 
         // When

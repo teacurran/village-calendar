@@ -140,7 +140,7 @@ const mazeTypeOptions: MazeTypeOption[] = [
     name: "Sigma (Hexagonal)",
     description:
       "Honeycomb pattern with hexagonal cells allowing up to 6 passages per cell.",
-    available: false,
+    available: true,
   },
   {
     id: "THETA",
@@ -234,7 +234,6 @@ const generateTypeThumbnail = (type: MazeTypeId): string => {
         </g>
         <circle cx="60" cy="20" r="4" fill="#4CAF50"/>
         <circle cx="60" cy="80" r="4" fill="#F44336"/>
-        <text x="60" y="115" text-anchor="middle" font-size="10" fill="#999">Coming Soon</text>
       </svg>`;
 
     case "THETA":
