@@ -538,20 +538,70 @@ public class CalendarRenderingService {
             Cell cell, CalendarConfigType config) {
         // Match holiday text rendering: centered at bottom of cell
         int textX = cell.x() + cell.width() / 2;
-        int textY = cell.y() + cell.height() - 3;
         int textSize = Math.max(5, cell.width() / 10);
+        int lineHeight = (int) (textSize * 1.2);
         String textColor = eventDisplay.getTextColor(config.customDateColor);
 
-        // Escape XML entities in the title
-        String escapedTitle = escapeXml(title);
+        // Split title into words for potential wrapping
+        String[] words = title.split(" ");
 
-        // Truncate if too long
-        String displayTitle = title.length() > 12 ? escapedTitle.substring(0, 11) + "…" : escapedTitle;
+        if (words.length == 1 || title.length() <= 10) {
+            // Single word or short title - render on one line at bottom
+            int textY = cell.y() + cell.height() - 3;
+            String escapedTitle = escapeXml(title);
+            // Truncate only if single word is too long
+            String displayTitle = title.length() > 12 ? escapedTitle.substring(0, 11) + "…" : escapedTitle;
+            svg.append(String.format(
+                    "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
+                            + " fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\">%s</text>%n",
+                    textX, textY, textSize, textColor, displayTitle));
+        } else {
+            // Multi-word title - wrap to two lines with baseline at bottom
+            StringBuilder line1 = new StringBuilder();
+            StringBuilder line2 = new StringBuilder();
+            int charCount = 0;
 
-        svg.append(String.format(
-                "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
-                        + " fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\">%s</text>%n",
-                textX, textY, textSize, textColor, displayTitle));
+            for (String word : words) {
+                if (charCount + word.length() <= 8 && line2.isEmpty()) {
+                    if (!line1.isEmpty()) {
+                        line1.append(" ");
+                    }
+                    line1.append(word);
+                    charCount += word.length() + 1;
+                } else {
+                    if (!line2.isEmpty()) {
+                        line2.append(" ");
+                    }
+                    line2.append(word);
+                }
+            }
+
+            // Truncate line2 if too long
+            String line2Str = line2.toString();
+            if (line2Str.length() > 12) {
+                line2Str = line2Str.substring(0, 11) + "…";
+            }
+
+            // Position: line2 at bottom, line1 above it
+            int line2Y = cell.y() + cell.height() - 3;
+            int line1Y = line2Y - lineHeight;
+
+            // Render line 1 (top line)
+            if (!line1.isEmpty()) {
+                svg.append(String.format(
+                        "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
+                                + " fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\">%s</text>%n",
+                        textX, line1Y, textSize, textColor, escapeXml(line1.toString())));
+            }
+
+            // Render line 2 (bottom line)
+            if (!line2Str.isEmpty()) {
+                svg.append(String.format(
+                        "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
+                                + " fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\">%s</text>%n",
+                        textX, line2Y, textSize, textColor, escapeXml(line2Str)));
+            }
+        }
     }
 
     /** Renders a single line of text, truncating if necessary */

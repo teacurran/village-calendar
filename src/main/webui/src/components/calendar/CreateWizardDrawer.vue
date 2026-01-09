@@ -454,6 +454,14 @@ const formatEventDate = (date: Date | null): string => {
   });
 };
 
+// Preview title for Event Display - shows actual title or placeholder
+const previewEventTitle = computed(() => {
+  if (newEventTitle.value && newEventTitle.value.trim()) {
+    return newEventTitle.value;
+  }
+  return "Event Name";
+});
+
 // Emit personal events settings
 const emitPersonalEventsSettings = () => {
   emit("personalEventsChange", {
@@ -2032,22 +2040,24 @@ onMounted(() => {
               <div class="display-mode-section">
                 <h4 class="subsection-title">Event Display</h4>
 
-                <!-- Live Preview -->
+                <!-- Live Preview - shows actual emoji and title being edited -->
                 <div class="event-live-preview">
                   <div class="event-preview-cell large-preview">
                     <span class="cell-day">15</span>
+                    <img
+                      v-if="personalEventEmojiSize !== 'none'"
+                      :src="`/api/calendar/emoji-preview?emoji=${encodeURIComponent(newEventEmoji)}&style=${newEventEmojiColor}`"
+                      :alt="newEventEmoji"
+                      :class="[
+                        'cell-emoji-img',
+                        personalEventEmojiSize === 'prominent' ? 'large' : 'small',
+                      ]"
+                    />
                     <span
-                      v-if="personalEventEmojiSize === 'prominent'"
-                      class="cell-emoji large"
-                      >🎂</span
-                    >
-                    <span
-                      v-if="personalEventEmojiSize === 'compact'"
-                      class="cell-emoji small"
-                      >🎂</span
-                    >
-                    <span v-if="showPersonalEventText" class="cell-text"
-                      >Birthday</span
+                      v-if="showPersonalEventText"
+                      class="cell-text"
+                      :title="previewEventTitle"
+                      >{{ previewEventTitle }}</span
                     >
                   </div>
                 </div>
@@ -2930,6 +2940,26 @@ onMounted(() => {
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 24px;
+}
+
+.cell-emoji-img {
+  position: absolute;
+  object-fit: contain;
+}
+
+.cell-emoji-img.small {
+  bottom: 6px;
+  left: 6px;
+  width: 14px;
+  height: 14px;
+}
+
+.cell-emoji-img.large {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
 }
 
 .cell-text {
