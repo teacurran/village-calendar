@@ -5,24 +5,15 @@
     :pt="{ root: { class: 'inline-emoji-popover' } }"
   >
     <div class="emoji-picker-content">
-      <!-- Category tabs -->
-      <div class="emoji-categories">
-        <button
-          v-for="category in categories"
-          :key="category.id"
-          class="category-btn"
-          :class="{ active: activeCategory === category.id }"
-          :title="category.name"
-          @click="activeCategory = category.id"
-        >
-          {{ category.icon }}
-        </button>
+      <!-- Loading state -->
+      <div v-if="loading" class="emoji-loading">
+        <span>Loading...</span>
       </div>
 
-      <!-- Emoji grid -->
-      <div class="emoji-grid">
+      <!-- Emoji grid (flat list of available emojis) -->
+      <div v-else class="emoji-grid">
         <button
-          v-for="emoji in currentEmojis"
+          v-for="emoji in availableEmojis"
           :key="emoji"
           class="emoji-btn"
           @click="selectEmoji(emoji)"
@@ -35,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, onMounted } from "vue";
 import Popover from "primevue/popover";
 
 const emit = defineEmits<{
@@ -43,492 +34,23 @@ const emit = defineEmits<{
 }>();
 
 const popoverRef = ref();
-const activeCategory = ref("smileys");
+const loading = ref(true);
+const availableEmojis = ref<string[]>([]);
 
-// Emoji categories with common emojis
-const categories = [
-  { id: "smileys", name: "Smileys & People", icon: "😀" },
-  { id: "celebrations", name: "Celebrations", icon: "🎉" },
-  { id: "hearts", name: "Hearts & Love", icon: "❤️" },
-  { id: "nature", name: "Nature", icon: "🌸" },
-  { id: "food", name: "Food & Drink", icon: "🍕" },
-  { id: "activities", name: "Activities", icon: "⚽" },
-  { id: "travel", name: "Travel", icon: "✈️" },
-  { id: "symbols", name: "Symbols", icon: "⭐" },
-];
-
-const emojiData: Record<string, string[]> = {
-  smileys: [
-    "😀",
-    "😃",
-    "😄",
-    "😁",
-    "😆",
-    "😅",
-    "🤣",
-    "😂",
-    "🙂",
-    "😊",
-    "😇",
-    "🥰",
-    "😍",
-    "🤩",
-    "😘",
-    "😗",
-    "😚",
-    "😋",
-    "😛",
-    "🤪",
-    "😎",
-    "🤓",
-    "🥳",
-    "😏",
-    "😌",
-    "😴",
-    "🤒",
-    "🤕",
-    "🤢",
-    "🤮",
-    "🤧",
-    "🥵",
-    "🥶",
-    "😱",
-    "😨",
-    "👶",
-    "👧",
-    "🧒",
-    "👦",
-    "👩",
-    "🧑",
-    "👨",
-    "👵",
-    "🧓",
-    "👴",
-    "👸",
-    "🤴",
-    "🎅",
-    "🤶",
-    "🧙",
-    "🧚",
-    "🧛",
-    "🧜",
-    "🧝",
-    "🧞",
-    "👼",
-    "🤰",
-    "👪",
-    "👫",
-    "👭",
-    "👬",
-  ],
-  celebrations: [
-    "🎉",
-    "🎊",
-    "🎂",
-    "🎁",
-    "🎈",
-    "🎄",
-    "🎃",
-    "🎆",
-    "🎇",
-    "🧨",
-    "✨",
-    "🎀",
-    "🎗️",
-    "🏆",
-    "🥇",
-    "🥈",
-    "🥉",
-    "🎖️",
-    "🏅",
-    "🎯",
-    "🎪",
-    "🎭",
-    "🎨",
-    "🎬",
-    "🎤",
-    "🎧",
-    "🎼",
-    "🎹",
-    "🎸",
-    "🎺",
-    "🎻",
-    "🥁",
-    "🎷",
-    "🪘",
-    "🎵",
-    "🎶",
-    "🎟️",
-    "🎫",
-    "🎲",
-    "🎮",
-    "🃏",
-    "🀄",
-    "🎴",
-    "🪅",
-    "🪆",
-    "🧸",
-    "🪀",
-    "🪁",
-    "🔮",
-    "🪄",
-  ],
-  hearts: [
-    "❤️",
-    "🧡",
-    "💛",
-    "💚",
-    "💙",
-    "💜",
-    "🖤",
-    "🤍",
-    "🤎",
-    "💔",
-    "❣️",
-    "💕",
-    "💞",
-    "💓",
-    "💗",
-    "💖",
-    "💘",
-    "💝",
-    "💟",
-    "♥️",
-    "😻",
-    "💑",
-    "💏",
-    "💋",
-    "👄",
-    "🌹",
-    "🥀",
-    "💐",
-    "💒",
-    "👰",
-    "🤵",
-    "💍",
-    "🫶",
-    "🤗",
-    "🥹",
-    "😍",
-    "🥰",
-    "😘",
-    "😚",
-    "😗",
-  ],
-  nature: [
-    "🌸",
-    "💮",
-    "🏵️",
-    "🌹",
-    "🥀",
-    "🌺",
-    "🌻",
-    "🌼",
-    "🌷",
-    "🌱",
-    "🪴",
-    "🌲",
-    "🌳",
-    "🌴",
-    "🌵",
-    "🌾",
-    "🌿",
-    "☘️",
-    "🍀",
-    "🍁",
-    "🍂",
-    "🍃",
-    "🪹",
-    "🪺",
-    "🍄",
-    "🐚",
-    "🪸",
-    "🪨",
-    "🌍",
-    "🌎",
-    "🌏",
-    "🌙",
-    "🌚",
-    "🌝",
-    "🌞",
-    "⭐",
-    "🌟",
-    "✨",
-    "💫",
-    "☀️",
-    "🌤️",
-    "⛅",
-    "🌥️",
-    "🌦️",
-    "🌈",
-    "☁️",
-    "🌧️",
-    "⛈️",
-    "🌩️",
-    "❄️",
-    "🐶",
-    "🐱",
-    "🐭",
-    "🐹",
-    "🐰",
-    "🦊",
-    "🐻",
-    "🐼",
-    "🐨",
-    "🦁",
-  ],
-  food: [
-    "🍕",
-    "🍔",
-    "🍟",
-    "🌭",
-    "🍿",
-    "🧂",
-    "🥓",
-    "🥚",
-    "🍳",
-    "🧇",
-    "🥞",
-    "🧈",
-    "🥐",
-    "🍞",
-    "🥖",
-    "🥨",
-    "🧀",
-    "🥗",
-    "🥙",
-    "🥪",
-    "🌮",
-    "🌯",
-    "🫔",
-    "🥫",
-    "🍝",
-    "🍜",
-    "🍲",
-    "🍛",
-    "🍣",
-    "🍱",
-    "🥟",
-    "🦪",
-    "🍤",
-    "🍙",
-    "🍚",
-    "🍘",
-    "🍥",
-    "🥠",
-    "🥮",
-    "🍢",
-    "🍡",
-    "🍧",
-    "🍨",
-    "🍦",
-    "🥧",
-    "🧁",
-    "🍰",
-    "🎂",
-    "🍮",
-    "🍭",
-    "🍬",
-    "🍫",
-    "🍩",
-    "🍪",
-    "🌰",
-    "🥜",
-    "🍯",
-    "🥛",
-    "☕",
-    "🍵",
-  ],
-  activities: [
-    "⚽",
-    "🏀",
-    "🏈",
-    "⚾",
-    "🥎",
-    "🎾",
-    "🏐",
-    "🏉",
-    "🥏",
-    "🎱",
-    "🪀",
-    "🏓",
-    "🏸",
-    "🏒",
-    "🏑",
-    "🥍",
-    "🏏",
-    "🪃",
-    "🥅",
-    "⛳",
-    "🪁",
-    "🏹",
-    "🎣",
-    "🤿",
-    "🥊",
-    "🥋",
-    "🎽",
-    "🛹",
-    "🛼",
-    "🛷",
-    "⛸️",
-    "🥌",
-    "🎿",
-    "⛷️",
-    "🏂",
-    "🪂",
-    "🏋️",
-    "🤼",
-    "🤸",
-    "🤺",
-    "⛹️",
-    "🤾",
-    "🏌️",
-    "🏇",
-    "🧘",
-    "🏄",
-    "🏊",
-    "🤽",
-    "🚣",
-    "🧗",
-    "🚴",
-    "🚵",
-    "🏎️",
-    "🏍️",
-    "🤹",
-    "🎪",
-    "🎭",
-    "🎨",
-    "🎬",
-    "📸",
-  ],
-  travel: [
-    "✈️",
-    "🛫",
-    "🛬",
-    "🛩️",
-    "💺",
-    "🚀",
-    "🛸",
-    "🚁",
-    "🛶",
-    "⛵",
-    "🚤",
-    "🛥️",
-    "🛳️",
-    "⛴️",
-    "🚢",
-    "🚂",
-    "🚃",
-    "🚄",
-    "🚅",
-    "🚆",
-    "🚇",
-    "🚈",
-    "🚉",
-    "🚊",
-    "🚝",
-    "🚞",
-    "🚋",
-    "🚌",
-    "🚍",
-    "🚎",
-    "🚐",
-    "🚑",
-    "🚒",
-    "🚓",
-    "🚔",
-    "🚕",
-    "🚖",
-    "🚗",
-    "🚘",
-    "🚙",
-    "🛻",
-    "🚚",
-    "🚛",
-    "🚜",
-    "🏎️",
-    "🏍️",
-    "🛵",
-    "🛺",
-    "🚲",
-    "🛴",
-    "🗼",
-    "🗽",
-    "🏰",
-    "🏯",
-    "🏟️",
-    "🎡",
-    "🎢",
-    "🎠",
-    "⛲",
-    "⛱️",
-  ],
-  symbols: [
-    "⭐",
-    "🌟",
-    "✨",
-    "💫",
-    "⚡",
-    "🔥",
-    "💥",
-    "☄️",
-    "🌈",
-    "☀️",
-    "🌙",
-    "💧",
-    "🌊",
-    "💨",
-    "🍀",
-    "🔔",
-    "🎵",
-    "🎶",
-    "💡",
-    "🔑",
-    "🗝️",
-    "🔒",
-    "🔓",
-    "📌",
-    "📍",
-    "✅",
-    "❌",
-    "❓",
-    "❗",
-    "💯",
-    "🔢",
-    "🔤",
-    "🅰️",
-    "🅱️",
-    "🆎",
-    "🅾️",
-    "🆘",
-    "⛔",
-    "🚫",
-    "❤️",
-    "🧡",
-    "💛",
-    "💚",
-    "💙",
-    "💜",
-    "🖤",
-    "🤍",
-    "🤎",
-    "♠️",
-    "♣️",
-    "♥️",
-    "♦️",
-    "🔴",
-    "🟠",
-    "🟡",
-    "🟢",
-    "🔵",
-    "🟣",
-    "⚫",
-    "⚪",
-  ],
-};
-
-const currentEmojis = computed(() => {
-  return emojiData[activeCategory.value] || emojiData.smileys;
+// Fetch available emojis from API on mount
+onMounted(async () => {
+  try {
+    const response = await fetch("/api/calendar/available-emojis");
+    if (response.ok) {
+      const emojis = await response.json();
+      // Sort emojis for consistent display order
+      availableEmojis.value = Array.from(emojis as Set<string>).sort();
+    }
+  } catch (error) {
+    console.error("Failed to fetch available emojis:", error);
+  } finally {
+    loading.value = false;
+  }
 });
 
 const selectEmoji = (emoji: string) => {
@@ -556,34 +78,10 @@ defineExpose({ toggle, hide });
   flex-direction: column;
 }
 
-.emoji-categories {
-  display: flex;
-  gap: 2px;
-  padding: 8px 8px 6px;
-  border-bottom: 1px solid var(--surface-200);
-  flex-wrap: wrap;
-}
-
-.category-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-
-.category-btn:hover {
-  background: var(--surface-100);
-}
-
-.category-btn.active {
-  background: var(--primary-100);
+.emoji-loading {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-color-secondary);
 }
 
 .emoji-grid {
@@ -592,7 +90,7 @@ defineExpose({ toggle, hide });
   gap: 2px;
   padding: 8px;
   overflow-y: auto;
-  max-height: 260px;
+  max-height: 300px;
 }
 
 .emoji-btn {
@@ -628,12 +126,12 @@ defineExpose({ toggle, hide });
   padding: 0 !important;
 }
 
-/* Position popover to stay within drawer bounds */
+/* Position popover to stay centered within drawer bounds */
 .inline-emoji-popover.p-popover {
-  /* Override default positioning to align left edge with trigger */
-  left: 0 !important;
+  /* Center within drawer (drawer is 460px, content ~420px after padding) */
+  left: 50% !important;
   right: auto !important;
-  transform: none !important;
+  transform: translateX(-50%) !important;
 }
 
 /* Hide arrow since positioning is customized */

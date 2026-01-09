@@ -3132,10 +3132,10 @@ onMounted(() => {
 .emoji-popover-left {
   /* Must be higher than PrimeVue Drawer (z-index ~1100) */
   z-index: 2000 !important;
-  /* Position within drawer bounds - align left edge */
-  left: 0 !important;
+  /* Center within drawer (drawer is 460px, content ~420px after padding) */
+  left: 50% !important;
   right: auto !important;
-  transform: none !important;
+  transform: translateX(-50%) !important;
   /* Constrain width */
   max-width: 250px;
 }
@@ -3154,10 +3154,10 @@ onMounted(() => {
 .emoji-color-popover {
   /* Must be higher than PrimeVue Drawer (z-index ~1100) */
   z-index: 2000 !important;
-  /* Position within drawer bounds - align left edge */
-  left: 0 !important;
+  /* Center within drawer (drawer is 460px, content ~420px after padding) */
+  left: 50% !important;
   right: auto !important;
-  transform: none !important;
+  transform: translateX(-50%) !important;
   /* Constrain width to fit 4 columns within drawer */
   max-width: 200px;
 }

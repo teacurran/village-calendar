@@ -188,6 +188,19 @@ public class CalendarResource {
     }
 
     /**
+     * Get the list of emojis that have monochrome SVG variants available.
+     *
+     * @return List of emoji characters that can be rendered in monochrome
+     */
+    @GET
+    @Path("/available-emojis")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getAvailableEmojis() {
+        java.util.Set<String> emojis = emojiSvgService.getAvailableEmojis();
+        return Response.ok(emojis).header(HEADER_CACHE_CONTROL, "public, max-age=3600").build();
+    }
+
+    /**
      * Get an emoji SVG for preview purposes.
      *
      * @param emoji
