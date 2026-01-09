@@ -352,17 +352,45 @@ const addPersonalEvent = () => {
     return;
   }
 
-  const event: PersonalEvent = {
-    id: Date.now(),
-    date: newEventDate.value,
-    emoji: newEventEmoji.value || "📅",
-    emojiColor: newEventEmojiColor.value || "noto-color",
-    title: newEventTitle.value || "",
-  };
+  if (editingEventId.value !== null) {
+    // Update existing event
+    const index = personalEvents.value.findIndex(
+      (e) => e.id === editingEventId.value
+    );
+    if (index !== -1) {
+      personalEvents.value[index] = {
+        id: editingEventId.value,
+        date: newEventDate.value,
+        emoji: newEventEmoji.value || "📅",
+        emojiColor: newEventEmojiColor.value || "noto-color",
+        title: newEventTitle.value || "",
+      };
+    }
+  } else {
+    // Add new event
+    const event: PersonalEvent = {
+      id: Date.now(),
+      date: newEventDate.value,
+      emoji: newEventEmoji.value || "📅",
+      emojiColor: newEventEmojiColor.value || "noto-color",
+      title: newEventTitle.value || "",
+    };
+    personalEvents.value.push(event);
+  }
 
-  personalEvents.value.push(event);
   clearEventForm();
   emitPersonalEventsSettings();
+};
+
+// Edit an existing personal event
+const editPersonalEvent = (event: PersonalEvent) => {
+  editingEventId.value = event.id;
+  newEventDate.value = event.date;
+  newEventEmoji.value = event.emoji;
+  newEventEmojiColor.value = event.emojiColor || "noto-color";
+  newEventTitle.value = event.title || "";
+  // Reset image failed state for new emoji
+  emojiImageFailed.value = {};
 };
 
 // Clear the event form
@@ -401,6 +429,8 @@ const handleEmojiSelect = (emoji: string) => {
   newEventEmoji.value = emoji;
   // Reset failed state when emoji changes - new emoji might have SVG support
   emojiImageFailed.value = {};
+  // Also reset picker preview specifically
+  delete emojiImageFailed.value["picker-preview"];
 };
 
 // Handle emoji preview image load error (fallback to text emoji)
@@ -1860,7 +1890,14 @@ onMounted(() => {
                       outlined
                       @click="toggleEmojiPicker"
                     >
-                      <span class="emoji-preview-text">{{ newEventEmoji }}</span>
+                      <img
+                        v-if="!emojiImageFailed['picker-preview']"
+                        :src="`/api/calendar/emoji-preview?emoji=${encodeURIComponent(newEventEmoji)}&style=noto-color`"
+                        alt="Selected emoji"
+                        class="emoji-picker-preview-img"
+                        @error="handleEmojiImageError('picker-preview')"
+                      />
+                      <span v-else class="emoji-preview-text">{{ newEventEmoji }}</span>
                     </Button>
                     <InlineEmojiPicker
                       ref="emojiPickerRef"
@@ -1924,10 +1961,19 @@ onMounted(() => {
                     />
                   </div>
                   <Button
-                    icon="pi pi-plus"
+                    :icon="editingEventId ? 'pi pi-check' : 'pi pi-plus'"
                     class="add-event-button"
                     :disabled="!newEventDate"
+                    :severity="editingEventId ? 'success' : 'primary'"
                     @click="addPersonalEvent"
+                  />
+                  <Button
+                    v-if="editingEventId"
+                    icon="pi pi-times"
+                    class="cancel-edit-button"
+                    severity="secondary"
+                    outlined
+                    @click="clearEventForm"
                   />
                 </div>
               </div>
@@ -1962,6 +2008,15 @@ onMounted(() => {
                     }}</span>
                   </span>
                   <Button
+                    v-tooltip="'Edit'"
+                    icon="pi pi-pencil"
+                    text
+                    rounded
+                    severity="secondary"
+                    size="small"
+                    @click="editPersonalEvent(event)"
+                  />
+                  <Button
                     v-tooltip="'Remove'"
                     icon="pi pi-times"
                     text
@@ -1973,11 +2028,8 @@ onMounted(() => {
                 </div>
               </div>
 
-              <!-- Display Settings -->
-              <div
-                v-if="personalEvents.length > 0"
-                class="display-mode-section"
-              >
+              <!-- Display Settings - always shown so user can configure before adding events -->
+              <div class="display-mode-section">
                 <h4 class="subsection-title">Event Display</h4>
 
                 <!-- Live Preview -->
@@ -3007,6 +3059,17 @@ onMounted(() => {
 .emoji-preview-text {
   font-size: 1.5rem;
   line-height: 1;
+}
+
+.emoji-picker-preview-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.cancel-edit-button {
+  flex-shrink: 0;
+  margin-left: 0.25rem;
 }
 
 /* Emoji color field */

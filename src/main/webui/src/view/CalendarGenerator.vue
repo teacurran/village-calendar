@@ -1961,15 +1961,13 @@ const generateCalendar = async () => {
     customEvents.value.forEach((event) => {
       if (event.date) {
         const dateStr = formatDate(event.date);
-        // Store emoji with display settings and color
+        // Store emoji with display settings, color, and title
         customDatesMap[dateStr] = {
           emoji: event.emoji || "📅",
           emojiFont: event.emojiColor || "noto-color",
           displaySettings: event.displaySettings || {},
+          title: event.showTitle && event.title ? event.title : null,
         };
-        if (event.showTitle && event.title) {
-          eventTitles[dateStr] = event.title;
-        }
       }
     });
 
@@ -3012,7 +3010,7 @@ const buildFullConfiguration = () => {
     eventTitles: {},
   };
 
-  // Add custom events to configuration with display settings
+  // Add custom events to configuration with display settings and title
   customEvents.value.forEach((event) => {
     if (event.date) {
       const dateStr = formatDate(event.date);
@@ -3020,10 +3018,8 @@ const buildFullConfiguration = () => {
         emoji: event.emoji || "📅",
         emojiFont: event.emojiColor || "noto-color",
         displaySettings: event.displaySettings || {},
+        title: event.showTitle && event.title ? event.title : null,
       };
-      if (event.showTitle && event.title) {
-        fullConfig.eventTitles[dateStr] = event.title;
-      }
     }
   });
 
@@ -3241,7 +3237,6 @@ const saveNewCalendar = async () => {
 
   // Build custom dates map from current events
   const customDatesMap = {};
-  const eventTitles = {};
 
   customEvents.value.forEach((event) => {
     if (event.date) {
@@ -3250,10 +3245,8 @@ const saveNewCalendar = async () => {
         emoji: event.emoji || "📅",
         emojiFont: event.emojiColor || "noto-color",
         displaySettings: event.displaySettings || {},
+        title: event.showTitle && event.title ? event.title : null,
       };
-      if (event.showTitle && event.title) {
-        eventTitles[dateStr] = event.title;
-      }
     }
   });
 
@@ -3263,7 +3256,6 @@ const saveNewCalendar = async () => {
     const configToSave = {
       ...config.value,
       customDates: customDatesMap,
-      eventTitles: eventTitles,
     };
 
     const response = await fetch("/api/calendar-templates/user/save", {
@@ -3486,10 +3478,9 @@ const confirmSaveTemplate = async () => {
   const fullConfig = {
     ...config.value,
     customDates: {},
-    eventTitles: {},
   };
 
-  // Add custom events to configuration with display settings
+  // Add custom events to configuration with display settings and title
   customEvents.value.forEach((event) => {
     if (event.date) {
       const dateStr = formatDate(event.date);
@@ -3497,10 +3488,8 @@ const confirmSaveTemplate = async () => {
         emoji: event.emoji || "📅",
         emojiFont: event.emojiColor || "noto-color",
         displaySettings: event.displaySettings || {},
+        title: event.showTitle && event.title ? event.title : null,
       };
-      if (event.showTitle && event.title) {
-        fullConfig.eventTitles[dateStr] = event.title;
-      }
     }
   });
 
@@ -3543,10 +3532,9 @@ const updateTemplate = async (template) => {
   const fullConfig = {
     ...config.value,
     customDates: {},
-    eventTitles: {},
   };
 
-  // Add custom events to configuration with display settings
+  // Add custom events to configuration with display settings and title
   customEvents.value.forEach((event) => {
     if (event.date) {
       const dateStr = formatDate(event.date);
@@ -3554,10 +3542,8 @@ const updateTemplate = async (template) => {
         emoji: event.emoji || "📅",
         emojiFont: event.emojiColor || "noto-color",
         displaySettings: event.displaySettings || {},
+        title: event.showTitle && event.title ? event.title : null,
       };
-      if (event.showTitle && event.title) {
-        fullConfig.eventTitles[dateStr] = event.title;
-      }
     }
   });
 
