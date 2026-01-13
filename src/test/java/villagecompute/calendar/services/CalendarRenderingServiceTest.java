@@ -2368,21 +2368,22 @@ class CalendarRenderingServiceTest {
         // This test verifies text is still rendered correctly
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.eventDisplayMode = "large-text"; // Enable text rendering
+        config.customEventDisplayMode = "large-text"; // Enable text rendering for custom events
 
         DisplaySettingsType displaySettings = new DisplaySettingsType();
         displaySettings.textRotation = -90.0; // Rotation is now ignored
-        displaySettings.textWrap = true; // Text wrapping is now ignored (single line with truncation)
+        displaySettings.textWrap = true;
 
-        // Long title will be truncated
+        // Multi-word title will wrap: "Happy" on line 1, "Birthday Party" (truncated) on line 2
         config.customDates.put(LocalDate.of(2025, 1, 15),
                 new CustomDateEntryType("🎂", "Happy Birthday Party", displaySettings));
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
         assertNotNull(svg);
-        // Text should be rendered (truncated to fit)
-        assertTrue(svg.contains("Happy Birth"), "Truncated text should be rendered");
+        // Text should be rendered with wrapping - "Happy" on first line, "Birthday" on second
+        assertTrue(svg.contains(">Happy</text>"), "First line should contain 'Happy'");
+        assertTrue(svg.contains("Birthday"), "Second line should contain 'Birthday'");
     }
 
     @Test
