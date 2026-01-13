@@ -386,7 +386,12 @@ public class OrderResolver {
     @Name("quantity")
     @Description("Total quantity of items in the order")
     public int quantity(@Source final CalendarOrder order) {
-        return order.getTotalItemCount();
+        try {
+            return order.getTotalItemCount();
+        } catch (org.hibernate.LazyInitializationException e) {
+            LOG.debugf("Items not loaded for order %s, returning 0 for quantity", order.id);
+            return 0;
+        }
     }
 
     /**
@@ -400,14 +405,22 @@ public class OrderResolver {
     @Name("unitPrice")
     @Description("Unit price per item in dollars")
     public BigDecimal unitPrice(@Source final CalendarOrder order) {
-        // Return first item's unit price if available
-        if (order.items != null && !order.items.isEmpty()) {
-            return order.items.get(0).unitPrice;
-        }
-        // Fall back to computing from subtotal/quantity
-        int quantity = order.getTotalItemCount();
-        if (quantity > 0 && order.subtotal != null) {
-            return order.subtotal.divide(BigDecimal.valueOf(quantity), 2, java.math.RoundingMode.HALF_UP);
+        try {
+            // Return first item's unit price if available
+            if (order.items != null && !order.items.isEmpty()) {
+                return order.items.get(0).unitPrice;
+            }
+            // Fall back to computing from subtotal/quantity
+            int quantity = order.getTotalItemCount();
+            if (quantity > 0 && order.subtotal != null) {
+                return order.subtotal.divide(BigDecimal.valueOf(quantity), 2, java.math.RoundingMode.HALF_UP);
+            }
+        } catch (org.hibernate.LazyInitializationException e) {
+            LOG.debugf("Items not loaded for order %s, computing unitPrice from subtotal", order.id);
+            // Fall back to subtotal if available
+            if (order.subtotal != null) {
+                return order.subtotal;
+            }
         }
         return BigDecimal.ZERO;
     }
@@ -423,9 +436,14 @@ public class OrderResolver {
     @Name("deliveredAt")
     @Description("Timestamp when order was delivered")
     public Instant deliveredAt(@Source final CalendarOrder order) {
-        // Check shipments for delivery timestamp
-        if (order.shipments != null && !order.shipments.isEmpty()) {
-            return order.shipments.stream().map(s -> s.deliveredAt).filter(Objects::nonNull).findFirst().orElse(null);
+        // Check shipments for delivery timestamp - handle lazy loading gracefully
+        try {
+            if (order.shipments != null && !order.shipments.isEmpty()) {
+                return order.shipments.stream().map(s -> s.deliveredAt).filter(Objects::nonNull).findFirst()
+                        .orElse(null);
+            }
+        } catch (org.hibernate.LazyInitializationException e) {
+            LOG.debugf("Shipments not loaded for order %s, returning null for deliveredAt", order.id);
         }
         return null;
     }
@@ -441,16 +459,21 @@ public class OrderResolver {
     @Name("calendar")
     @Description("Calendar associated with the order (from first item)")
     public CalendarInfo calendar(@Source final CalendarOrder order) {
-        if (order.items == null || order.items.isEmpty()) {
+        try {
+            if (order.items == null || order.items.isEmpty()) {
+                return null;
+            }
+            // Get calendar info from first item
+            CalendarOrderItem firstItem = order.items.get(0);
+            CalendarInfo info = new CalendarInfo();
+            info.id = order.id.toString(); // Use order ID as fallback
+            info.name = firstItem.description != null ? firstItem.description : "Calendar";
+            info.year = firstItem.getYear();
+            return info;
+        } catch (org.hibernate.LazyInitializationException e) {
+            LOG.debugf("Items not loaded for order %s, returning null for calendar", order.id);
             return null;
         }
-        // Get calendar info from first item
-        CalendarOrderItem firstItem = order.items.get(0);
-        CalendarInfo info = new CalendarInfo();
-        info.id = order.id.toString(); // Use order ID as fallback
-        info.name = firstItem.description != null ? firstItem.description : "Calendar";
-        info.year = firstItem.getYear();
-        return info;
     }
 
     /**
