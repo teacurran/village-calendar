@@ -194,7 +194,7 @@ public class OrderService {
     }
 
     /**
-     * Get orders by status.
+     * Get orders by status with items eagerly loaded.
      *
      * @param status
      *            Order status
@@ -202,11 +202,12 @@ public class OrderService {
      */
     public List<CalendarOrder> getOrdersByStatus(String status) {
         LOG.debugf("Fetching orders with status: %s", status);
-        return CalendarOrder.findByStatusOrderByCreatedDesc(status);
+        return CalendarOrder.find("SELECT DISTINCT o FROM CalendarOrder o LEFT JOIN FETCH o.items "
+                + "WHERE o.status = ?1 ORDER BY o.created DESC", status).list();
     }
 
     /**
-     * Get all orders for a specific user.
+     * Get all orders for a specific user with items eagerly loaded.
      *
      * @param userId
      *            User ID
@@ -214,7 +215,19 @@ public class OrderService {
      */
     public List<CalendarOrder> getUserOrders(UUID userId) {
         LOG.debugf("Fetching orders for user: %s", userId);
-        return CalendarOrder.findByUser(userId).list();
+        return CalendarOrder.find("SELECT DISTINCT o FROM CalendarOrder o LEFT JOIN FETCH o.items "
+                + "WHERE o.user.id = ?1 ORDER BY o.created DESC", userId).list();
+    }
+
+    /**
+     * Get all orders with items eagerly loaded.
+     *
+     * @return List of all orders
+     */
+    public List<CalendarOrder> getAllOrdersWithItems() {
+        LOG.debug("Fetching all orders with items");
+        return CalendarOrder
+                .find("SELECT DISTINCT o FROM CalendarOrder o LEFT JOIN FETCH o.items ORDER BY o.created DESC").list();
     }
 
     /**

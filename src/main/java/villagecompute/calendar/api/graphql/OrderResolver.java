@@ -218,11 +218,11 @@ public class OrderResolver {
 
         List<CalendarOrder> orders;
 
-        // Fetch orders by status or all orders
+        // Fetch orders by status or all orders (with items eagerly loaded)
         if (status != null && !status.isBlank()) {
             orders = orderService.getOrdersByStatus(status);
         } else {
-            orders = CalendarOrder.listAll();
+            orders = orderService.getAllOrdersWithItems();
         }
 
         // Apply limit
@@ -388,8 +388,8 @@ public class OrderResolver {
     public int quantity(@Source final CalendarOrder order) {
         try {
             return order.getTotalItemCount();
-        } catch (org.hibernate.LazyInitializationException e) {
-            LOG.debugf("Items not loaded for order %s, returning 0 for quantity", order.id);
+        } catch (Exception e) {
+            LOG.debugf("Could not get item count for order %s: %s", order.id, e.getMessage());
             return 0;
         }
     }
@@ -415,8 +415,8 @@ public class OrderResolver {
             if (quantity > 0 && order.subtotal != null) {
                 return order.subtotal.divide(BigDecimal.valueOf(quantity), 2, java.math.RoundingMode.HALF_UP);
             }
-        } catch (org.hibernate.LazyInitializationException e) {
-            LOG.debugf("Items not loaded for order %s, computing unitPrice from subtotal", order.id);
+        } catch (Exception e) {
+            LOG.debugf("Could not get unitPrice for order %s: %s", order.id, e.getMessage());
             // Fall back to subtotal if available
             if (order.subtotal != null) {
                 return order.subtotal;
@@ -442,8 +442,8 @@ public class OrderResolver {
                 return order.shipments.stream().map(s -> s.deliveredAt).filter(Objects::nonNull).findFirst()
                         .orElse(null);
             }
-        } catch (org.hibernate.LazyInitializationException e) {
-            LOG.debugf("Shipments not loaded for order %s, returning null for deliveredAt", order.id);
+        } catch (Exception e) {
+            LOG.debugf("Could not get deliveredAt for order %s: %s", order.id, e.getMessage());
         }
         return null;
     }
@@ -470,8 +470,8 @@ public class OrderResolver {
             info.name = firstItem.description != null ? firstItem.description : "Calendar";
             info.year = firstItem.getYear();
             return info;
-        } catch (org.hibernate.LazyInitializationException e) {
-            LOG.debugf("Items not loaded for order %s, returning null for calendar", order.id);
+        } catch (Exception e) {
+            LOG.debugf("Could not get calendar for order %s: %s", order.id, e.getMessage());
             return null;
         }
     }
