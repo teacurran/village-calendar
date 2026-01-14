@@ -2,6 +2,7 @@ package villagecompute.calendar.api.graphql;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -301,12 +302,8 @@ public class OrderResolver {
             throw new IllegalArgumentException("Invalid shipping address format");
         }
 
-        // Determine unit price based on product type
-        BigDecimal unitPrice = STANDARD_CALENDAR_PRICE;
-        // TODO: Add different pricing for DESK_CALENDAR, POSTER, etc. when implemented
-
         // Create order in PENDING status
-        CalendarOrder order = orderService.createOrder(currentUser, calendar, input.quantity, unitPrice,
+        CalendarOrder order = orderService.createOrder(currentUser, calendar, input.quantity, STANDARD_CALENDAR_PRICE,
                 shippingAddressJson);
 
         LOG.infof("Created order %s with total price $%.2f", order.id, order.totalPrice);
@@ -408,7 +405,7 @@ public class OrderResolver {
         try {
             // Return first item's unit price if available
             if (order.items != null && !order.items.isEmpty()) {
-                return order.items.get(0).unitPrice;
+                return order.items.getFirst().unitPrice;
             }
             // Fall back to computing from subtotal/quantity
             int quantity = order.getTotalItemCount();
@@ -464,7 +461,7 @@ public class OrderResolver {
                 return null;
             }
             // Get calendar info from first item
-            CalendarOrderItem firstItem = order.items.get(0);
+            CalendarOrderItem firstItem = order.items.getFirst();
             CalendarInfo info = new CalendarInfo();
             info.id = order.id.toString(); // Use order ID as fallback
             info.name = firstItem.description != null ? firstItem.description : "Calendar";
@@ -545,7 +542,7 @@ public class OrderResolver {
 
         if (userIds.isEmpty()) {
             LOG.debug("No user IDs to load");
-            return orders.stream().map(o -> (CalendarUser) null).toList();
+            return new ArrayList<>();
         }
 
         // Batch load users in a single query
