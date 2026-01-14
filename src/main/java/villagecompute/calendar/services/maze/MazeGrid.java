@@ -61,7 +61,7 @@ public class MazeGrid {
 
     /** Generate orthogonal maze using recursive backtracker algorithm. */
     private void generateOrthogonal() {
-        Stack<MazeCell> stack = new Stack<>();
+        Deque<MazeCell> stack = new ArrayDeque<>();
         MazeCell current = cells[startX][startY];
         current.visited = true;
         stack.push(current);
@@ -95,7 +95,7 @@ public class MazeGrid {
 
     /** Generate sigma (hexagonal) maze using recursive backtracker algorithm with hex neighbors. */
     private void generateSigma() {
-        Stack<MazeCell> stack = new Stack<>();
+        Deque<MazeCell> stack = new ArrayDeque<>();
         MazeCell current = cells[startX][startY];
         current.visited = true;
         stack.push(current);
@@ -156,56 +156,45 @@ public class MazeGrid {
         int y = cell.y;
         boolean evenRow = (y % 2) == 0;
 
-        // East neighbor (same for all rows)
-        if (x < width - 1 && !cells[x + 1][y].visited) {
-            neighbors.add(cells[x + 1][y]);
-        }
-        // West neighbor (same for all rows)
-        if (x > 0 && !cells[x - 1][y].visited) {
-            neighbors.add(cells[x - 1][y]);
-        }
+        // East and West neighbors (same for all rows)
+        tryAddUnvisitedNeighbor(neighbors, x + 1, y);
+        tryAddUnvisitedNeighbor(neighbors, x - 1, y);
 
+        // Diagonal neighbors depend on even/odd row
         if (evenRow) {
-            // Even row: NW is at (x-1, y-1), NE is at (x, y-1)
-            if (y > 0) {
-                if (x > 0 && !cells[x - 1][y - 1].visited) {
-                    neighbors.add(cells[x - 1][y - 1]); // NW
-                }
-                if (!cells[x][y - 1].visited) {
-                    neighbors.add(cells[x][y - 1]); // NE
-                }
-            }
-            // Even row: SW is at (x-1, y+1), SE is at (x, y+1)
-            if (y < height - 1) {
-                if (x > 0 && !cells[x - 1][y + 1].visited) {
-                    neighbors.add(cells[x - 1][y + 1]); // SW
-                }
-                if (!cells[x][y + 1].visited) {
-                    neighbors.add(cells[x][y + 1]); // SE
-                }
-            }
+            addEvenRowDiagonalNeighbors(neighbors, x, y);
         } else {
-            // Odd row: NW is at (x, y-1), NE is at (x+1, y-1)
-            if (y > 0) {
-                if (!cells[x][y - 1].visited) {
-                    neighbors.add(cells[x][y - 1]); // NW
-                }
-                if (x < width - 1 && !cells[x + 1][y - 1].visited) {
-                    neighbors.add(cells[x + 1][y - 1]); // NE
-                }
-            }
-            // Odd row: SW is at (x, y+1), SE is at (x+1, y+1)
-            if (y < height - 1) {
-                if (!cells[x][y + 1].visited) {
-                    neighbors.add(cells[x][y + 1]); // SW
-                }
-                if (x < width - 1 && !cells[x + 1][y + 1].visited) {
-                    neighbors.add(cells[x + 1][y + 1]); // SE
-                }
-            }
+            addOddRowDiagonalNeighbors(neighbors, x, y);
         }
 
         return neighbors;
+    }
+
+    /** Try to add an unvisited neighbor at the given coordinates. */
+    private void tryAddUnvisitedNeighbor(List<MazeCell> neighbors, int x, int y) {
+        if (x >= 0 && x < width && y >= 0 && y < height && !cells[x][y].visited) {
+            neighbors.add(cells[x][y]);
+        }
+    }
+
+    /** Add diagonal neighbors for even rows in hex grid. */
+    private void addEvenRowDiagonalNeighbors(List<MazeCell> neighbors, int x, int y) {
+        // Even row: NW is at (x-1, y-1), NE is at (x, y-1)
+        tryAddUnvisitedNeighbor(neighbors, x - 1, y - 1); // NW
+        tryAddUnvisitedNeighbor(neighbors, x, y - 1); // NE
+        // Even row: SW is at (x-1, y+1), SE is at (x, y+1)
+        tryAddUnvisitedNeighbor(neighbors, x - 1, y + 1); // SW
+        tryAddUnvisitedNeighbor(neighbors, x, y + 1); // SE
+    }
+
+    /** Add diagonal neighbors for odd rows in hex grid. */
+    private void addOddRowDiagonalNeighbors(List<MazeCell> neighbors, int x, int y) {
+        // Odd row: NW is at (x, y-1), NE is at (x+1, y-1)
+        tryAddUnvisitedNeighbor(neighbors, x, y - 1); // NW
+        tryAddUnvisitedNeighbor(neighbors, x + 1, y - 1); // NE
+        // Odd row: SW is at (x, y+1), SE is at (x+1, y+1)
+        tryAddUnvisitedNeighbor(neighbors, x, y + 1); // SW
+        tryAddUnvisitedNeighbor(neighbors, x + 1, y + 1); // SE
     }
 
     /**

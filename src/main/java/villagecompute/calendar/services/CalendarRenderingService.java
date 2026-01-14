@@ -57,6 +57,18 @@ public class CalendarRenderingService {
     private static final float POINTS_PER_INCH = 72f;
     // ===========================================
 
+    // Event display mode constants
+    private static final String DISPLAY_MODE_LARGE_TEXT = "large-text";
+    private static final String DISPLAY_MODE_SMALL_TEXT = "small-text";
+    private static final String DISPLAY_MODE_TEXT = "text";
+    private static final String DISPLAY_MODE_LARGE = "large";
+    private static final String DISPLAY_MODE_SMALL = "small";
+    private static final String DISPLAY_MODE_NONE = "none";
+
+    // SVG text format string for simple centered text
+    private static final String SVG_TEXT_SIMPLE_FORMAT = "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
+            + " fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\">%s</text>%n";
+
     // SVG text element format string for styled text with optional transform
     private static final String SVG_TEXT_STYLED_FORMAT = "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
             + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n";
@@ -334,13 +346,15 @@ public class CalendarRenderingService {
      */
     private String renderHolidayContent(String holidayEmoji, String holidayName, Cell cell, CalendarConfigType config) {
 
-        if ("none".equals(config.eventDisplayMode)) {
+        if (DISPLAY_MODE_NONE.equals(config.eventDisplayMode)) {
             return "";
         }
 
         StringBuilder result = new StringBuilder();
-        boolean largeEmoji = "large".equals(config.eventDisplayMode) || "large-text".equals(config.eventDisplayMode);
-        boolean smallEmoji = "small".equals(config.eventDisplayMode) || "small-text".equals(config.eventDisplayMode);
+        boolean largeEmoji = DISPLAY_MODE_LARGE.equals(config.eventDisplayMode)
+                || DISPLAY_MODE_LARGE_TEXT.equals(config.eventDisplayMode);
+        boolean smallEmoji = DISPLAY_MODE_SMALL.equals(config.eventDisplayMode)
+                || DISPLAY_MODE_SMALL_TEXT.equals(config.eventDisplayMode);
 
         // Render emoji based on display mode
         if (largeEmoji && !holidayEmoji.isEmpty()) {
@@ -361,17 +375,15 @@ public class CalendarRenderingService {
         }
 
         // Holiday name text for large-text, small-text, and text modes only
-        boolean showHolidayText = ("large-text".equals(config.eventDisplayMode)
-                || "small-text".equals(config.eventDisplayMode) || "text".equals(config.eventDisplayMode))
-                && !holidayName.isEmpty();
+        boolean showHolidayText = (DISPLAY_MODE_LARGE_TEXT.equals(config.eventDisplayMode)
+                || DISPLAY_MODE_SMALL_TEXT.equals(config.eventDisplayMode)
+                || DISPLAY_MODE_TEXT.equals(config.eventDisplayMode)) && !holidayName.isEmpty();
         if (showHolidayText) {
             int textX = cell.x() + cell.width() / 2;
             int textY = cell.y() + cell.height() - 3;
             int textSize = Math.max(5, cell.width() / 10);
-            result.append(String.format(
-                    "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
-                            + " fill=\"%s\" font-family=\"Helvetica, Arial," + " sans-serif\">%s</text>%n",
-                    textX, textY, textSize, config.holidayColor, escapeXml(holidayName)));
+            result.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, textY, textSize, config.holidayColor,
+                    escapeXml(holidayName)));
         }
 
         return result.toString();
@@ -551,10 +563,7 @@ public class CalendarRenderingService {
             String escapedTitle = escapeXml(title);
             // Truncate only if single word is too long
             String displayTitle = title.length() > 12 ? escapedTitle.substring(0, 11) + "…" : escapedTitle;
-            svg.append(String.format(
-                    "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
-                            + " fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\">%s</text>%n",
-                    textX, textY, textSize, textColor, displayTitle));
+            svg.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, textY, textSize, textColor, displayTitle));
         } else {
             // Multi-word title - wrap to two lines with baseline at bottom
             StringBuilder line1 = new StringBuilder();
@@ -588,76 +597,15 @@ public class CalendarRenderingService {
 
             // Render line 1 (top line)
             if (!line1.isEmpty()) {
-                svg.append(String.format(
-                        "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
-                                + " fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\">%s</text>%n",
-                        textX, line1Y, textSize, textColor, escapeXml(line1.toString())));
+                svg.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, line1Y, textSize, textColor,
+                        escapeXml(line1.toString())));
             }
 
             // Render line 2 (bottom line)
             if (!line2Str.isEmpty()) {
-                svg.append(String.format(
-                        "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
-                                + " fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\">%s</text>%n",
-                        textX, line2Y, textSize, textColor, escapeXml(line2Str)));
+                svg.append(
+                        String.format(SVG_TEXT_SIMPLE_FORMAT, textX, line2Y, textSize, textColor, escapeXml(line2Str)));
             }
-        }
-    }
-
-    /** Renders a single line of text, truncating if necessary */
-    private void renderSingleLineText(StringBuilder svg, String title, double textX, double textY,
-            TextRenderStyle style, boolean allowFullTitle) {
-        String displayTitle = (!allowFullTitle && title.length() > 10) ? title.substring(0, 9) + "…" : title;
-        String transform = style.rotation() != 0
-                ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", style.rotation(), textX, textY)
-                : "";
-        svg.append(String.format(SVG_TEXT_STYLED_FORMAT, textX, textY, style.size(), style.color(), style.fontWeight(),
-                style.textAnchor(), transform, displayTitle));
-    }
-
-    /** Converts text alignment to SVG text-anchor */
-    private String getTextAnchor(String textAlign) {
-        if ("left".equals(textAlign)) {
-            return "start";
-        } else if ("right".equals(textAlign)) {
-            return "end";
-        }
-        return "middle";
-    }
-
-    /** Renders wrapped text on two lines */
-    private void renderWrappedText(StringBuilder svg, String title, double textX, double textY, TextRenderStyle style) {
-        String[] words = title.split(" ");
-        StringBuilder line1 = new StringBuilder();
-        StringBuilder line2 = new StringBuilder();
-        int charCount = 0;
-
-        for (String word : words) {
-            if (charCount + word.length() <= 8) {
-                if (!line1.isEmpty()) {
-                    line1.append(" ");
-                }
-                line1.append(word);
-                charCount += word.length() + 1;
-            } else if (line2.isEmpty()) {
-                line2.append(word);
-            } else {
-                line2.append("…");
-                break;
-            }
-        }
-
-        String transform = style.rotation() != 0
-                ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", style.rotation(), textX, textY)
-                : "";
-        double lineHeight = style.size() * 1.2;
-
-        svg.append(String.format(SVG_TEXT_STYLED_FORMAT, textX, textY - lineHeight / 2, style.size(), style.color(),
-                style.fontWeight(), style.textAnchor(), transform, line1));
-
-        if (!line2.isEmpty()) {
-            svg.append(String.format(SVG_TEXT_STYLED_FORMAT, textX, textY + lineHeight / 2, style.size(), style.color(),
-                    style.fontWeight(), style.textAnchor(), transform, line2));
         }
     }
 
