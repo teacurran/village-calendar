@@ -103,6 +103,7 @@
       @display-options-change="handleWizardDisplayOptionsChange"
       @colors-change="handleWizardColorsChange"
       @holidays-change="handleWizardHolidaysChange"
+      @personal-events-change="handleWizardPersonalEventsChange"
     />
 
     <!-- Add to Cart Modal -->
@@ -787,6 +788,7 @@ import type {
   ColorSettings,
   HolidaySettings,
   EmojiFontType,
+  PersonalEventSettings,
 } from "../components/calendar/CreateWizardDrawer.vue";
 import { sessionFetch } from "../services/sessionService";
 import {
@@ -881,8 +883,16 @@ const config = ref({
     | "large"
     | "large-text"
     | "small"
+    | "small-text"
     | "text"
-    | "none", // Display mode for events/holidays
+    | "none", // Display mode for holidays
+  customEventDisplayMode: "large-text" as
+    | "large"
+    | "large-text"
+    | "small"
+    | "small-text"
+    | "text"
+    | "none", // Display mode for personal/custom events
   // Emoji font settings
   emojiFont: "noto-color" as "noto-color" | "noto-mono", // Emoji font style
 });
@@ -1951,14 +1961,13 @@ const generateCalendar = async () => {
     customEvents.value.forEach((event) => {
       if (event.date) {
         const dateStr = formatDate(event.date);
-        // Store emoji with display settings
+        // Store emoji with display settings, color, and title
         customDatesMap[dateStr] = {
           emoji: event.emoji || "📅",
+          emojiFont: event.emojiColor || "noto-color",
           displaySettings: event.displaySettings || {},
+          title: event.showTitle && event.title ? event.title : null,
         };
-        if (event.showTitle && event.title) {
-          eventTitles[dateStr] = event.title;
-        }
       }
     });
 
@@ -2000,6 +2009,7 @@ const generateCalendar = async () => {
       holidaySet: selectedHolidaySet.value,
       holidaySets: config.value.holidaySets,
       eventDisplayMode: config.value.eventDisplayMode,
+      customEventDisplayMode: config.value.customEventDisplayMode,
       emojiFont: config.value.emojiFont,
       showHolidays:
         selectedHolidaySet.value && selectedHolidaySet.value !== "none",
@@ -3000,17 +3010,16 @@ const buildFullConfiguration = () => {
     eventTitles: {},
   };
 
-  // Add custom events to configuration with display settings
+  // Add custom events to configuration with display settings and title
   customEvents.value.forEach((event) => {
     if (event.date) {
       const dateStr = formatDate(event.date);
       fullConfig.customDates[dateStr] = {
         emoji: event.emoji || "📅",
+        emojiFont: event.emojiColor || "noto-color",
         displaySettings: event.displaySettings || {},
+        title: event.showTitle && event.title ? event.title : null,
       };
-      if (event.showTitle && event.title) {
-        fullConfig.eventTitles[dateStr] = event.title;
-      }
     }
   });
 
@@ -3112,6 +3121,35 @@ const handleWizardHolidaysChange = (holidays: HolidaySettings) => {
   // Config watcher handles generateCalendar() with debounce
 };
 
+// Handle personal events change from wizard
+const handleWizardPersonalEventsChange = (settings: PersonalEventSettings) => {
+  // Convert PersonalEvent array to customEvents format
+  customEvents.value = settings.events.map((event) => ({
+    id: event.id,
+    date: event.date,
+    emoji: event.emoji || "📅",
+    emojiColor: event.emojiColor || "noto-color",
+    title: event.title || "",
+    showTitle: settings.showEventText,
+    displaySettings: {},
+  }));
+
+  // Update custom event display mode based on emoji size and show text settings
+  // Note: This uses customEventDisplayMode (for personal events), not eventDisplayMode (for holidays)
+  let displayMode = "large-text";
+  if (settings.emojiSize === "prominent") {
+    displayMode = settings.showEventText ? "large-text" : "large";
+  } else if (settings.emojiSize === "compact") {
+    displayMode = settings.showEventText ? "small-text" : "small";
+  } else {
+    displayMode = settings.showEventText ? "text" : "none";
+  }
+  config.value.customEventDisplayMode = displayMode;
+
+  // Regenerate calendar to reflect changes
+  generateCalendar();
+};
+
 // Load saved calendars for the current user
 const loadSavedCalendars = async () => {
   loadingSavedCalendars.value = true;
@@ -3199,18 +3237,16 @@ const saveNewCalendar = async () => {
 
   // Build custom dates map from current events
   const customDatesMap = {};
-  const eventTitles = {};
 
   customEvents.value.forEach((event) => {
     if (event.date) {
       const dateStr = formatDate(event.date);
       customDatesMap[dateStr] = {
         emoji: event.emoji || "📅",
+        emojiFont: event.emojiColor || "noto-color",
         displaySettings: event.displaySettings || {},
+        title: event.showTitle && event.title ? event.title : null,
       };
-      if (event.showTitle && event.title) {
-        eventTitles[dateStr] = event.title;
-      }
     }
   });
 
@@ -3220,7 +3256,6 @@ const saveNewCalendar = async () => {
     const configToSave = {
       ...config.value,
       customDates: customDatesMap,
-      eventTitles: eventTitles,
     };
 
     const response = await fetch("/api/calendar-templates/user/save", {
@@ -3443,20 +3478,18 @@ const confirmSaveTemplate = async () => {
   const fullConfig = {
     ...config.value,
     customDates: {},
-    eventTitles: {},
   };
 
-  // Add custom events to configuration with display settings
+  // Add custom events to configuration with display settings and title
   customEvents.value.forEach((event) => {
     if (event.date) {
       const dateStr = formatDate(event.date);
       fullConfig.customDates[dateStr] = {
         emoji: event.emoji || "📅",
+        emojiFont: event.emojiColor || "noto-color",
         displaySettings: event.displaySettings || {},
+        title: event.showTitle && event.title ? event.title : null,
       };
-      if (event.showTitle && event.title) {
-        fullConfig.eventTitles[dateStr] = event.title;
-      }
     }
   });
 
@@ -3499,20 +3532,18 @@ const updateTemplate = async (template) => {
   const fullConfig = {
     ...config.value,
     customDates: {},
-    eventTitles: {},
   };
 
-  // Add custom events to configuration with display settings
+  // Add custom events to configuration with display settings and title
   customEvents.value.forEach((event) => {
     if (event.date) {
       const dateStr = formatDate(event.date);
       fullConfig.customDates[dateStr] = {
         emoji: event.emoji || "📅",
+        emojiFont: event.emojiColor || "noto-color",
         displaySettings: event.displaySettings || {},
+        title: event.showTitle && event.title ? event.title : null,
       };
-      if (event.showTitle && event.title) {
-        fullConfig.eventTitles[dateStr] = event.title;
-      }
     }
   });
 

@@ -61,7 +61,7 @@ public class MazeGrid {
 
     /** Generate orthogonal maze using recursive backtracker algorithm. */
     private void generateOrthogonal() {
-        Stack<MazeCell> stack = new Stack<>();
+        Deque<MazeCell> stack = new ArrayDeque<>();
         MazeCell current = cells[startX][startY];
         current.visited = true;
         stack.push(current);
@@ -93,10 +93,29 @@ public class MazeGrid {
         generateOrthogonal();
     }
 
-    /** Generate sigma (hexagonal) maze. */
+    /** Generate sigma (hexagonal) maze using recursive backtracker algorithm with hex neighbors. */
     private void generateSigma() {
-        // Sigma mazes use hexagonal cells - simplified version for now
-        generateOrthogonal();
+        Deque<MazeCell> stack = new ArrayDeque<>();
+        MazeCell current = cells[startX][startY];
+        current.visited = true;
+        stack.push(current);
+
+        while (!stack.isEmpty()) {
+            current = stack.peek();
+            List<MazeCell> unvisitedNeighbors = getUnvisitedHexNeighbors(current);
+
+            if (unvisitedNeighbors.isEmpty()) {
+                stack.pop();
+            } else {
+                MazeCell next = unvisitedNeighbors.get(random.nextInt(unvisitedNeighbors.size()));
+                current.removeHexWallTo(next, type);
+                next.visited = true;
+                stack.push(next);
+            }
+        }
+
+        // Apply difficulty modifications
+        applyHexDifficultyModifications();
     }
 
     /** Generate theta (circular) maze. */
@@ -125,6 +144,57 @@ public class MazeGrid {
             neighbors.add(cells[x][y + 1]);
 
         return neighbors;
+    }
+
+    /**
+     * Get unvisited neighbors for hexagonal (sigma) maze. Uses offset coordinates where odd rows are shifted right.
+     * Pointy-top hexagons have 6 neighbors: NW, NE, E, SE, SW, W.
+     */
+    private List<MazeCell> getUnvisitedHexNeighbors(MazeCell cell) {
+        List<MazeCell> neighbors = new ArrayList<>();
+        int x = cell.x;
+        int y = cell.y;
+        boolean evenRow = (y % 2) == 0;
+
+        // East and West neighbors (same for all rows)
+        tryAddUnvisitedNeighbor(neighbors, x + 1, y);
+        tryAddUnvisitedNeighbor(neighbors, x - 1, y);
+
+        // Diagonal neighbors depend on even/odd row
+        if (evenRow) {
+            addEvenRowDiagonalNeighbors(neighbors, x, y);
+        } else {
+            addOddRowDiagonalNeighbors(neighbors, x, y);
+        }
+
+        return neighbors;
+    }
+
+    /** Try to add an unvisited neighbor at the given coordinates. */
+    private void tryAddUnvisitedNeighbor(List<MazeCell> neighbors, int x, int y) {
+        if (x >= 0 && x < width && y >= 0 && y < height && !cells[x][y].visited) {
+            neighbors.add(cells[x][y]);
+        }
+    }
+
+    /** Add diagonal neighbors for even rows in hex grid. */
+    private void addEvenRowDiagonalNeighbors(List<MazeCell> neighbors, int x, int y) {
+        // Even row: NW is at (x-1, y-1), NE is at (x, y-1)
+        tryAddUnvisitedNeighbor(neighbors, x - 1, y - 1); // NW
+        tryAddUnvisitedNeighbor(neighbors, x, y - 1); // NE
+        // Even row: SW is at (x-1, y+1), SE is at (x, y+1)
+        tryAddUnvisitedNeighbor(neighbors, x - 1, y + 1); // SW
+        tryAddUnvisitedNeighbor(neighbors, x, y + 1); // SE
+    }
+
+    /** Add diagonal neighbors for odd rows in hex grid. */
+    private void addOddRowDiagonalNeighbors(List<MazeCell> neighbors, int x, int y) {
+        // Odd row: NW is at (x, y-1), NE is at (x+1, y-1)
+        tryAddUnvisitedNeighbor(neighbors, x, y - 1); // NW
+        tryAddUnvisitedNeighbor(neighbors, x + 1, y - 1); // NE
+        // Odd row: SW is at (x, y+1), SE is at (x+1, y+1)
+        tryAddUnvisitedNeighbor(neighbors, x, y + 1); // SW
+        tryAddUnvisitedNeighbor(neighbors, x + 1, y + 1); // SE
     }
 
     /**
@@ -215,6 +285,154 @@ public class MazeGrid {
         return neighbors;
     }
 
+    /** Get accessible neighbors for hexagonal maze (cells connected by open passages). */
+    private List<MazeCell> getAccessibleHexNeighbors(MazeCell cell) {
+        List<MazeCell> neighbors = new ArrayList<>();
+        int x = cell.x;
+        int y = cell.y;
+        boolean evenRow = (y % 2) == 0;
+
+        // East neighbor
+        if (x < width - 1 && !cell.eastWall) {
+            neighbors.add(cells[x + 1][y]);
+        }
+        // West neighbor
+        if (x > 0 && !cell.westWall) {
+            neighbors.add(cells[x - 1][y]);
+        }
+
+        if (evenRow) {
+            // NW neighbor at (x-1, y-1)
+            if (y > 0 && x > 0 && !cell.northWestWall) {
+                neighbors.add(cells[x - 1][y - 1]);
+            }
+            // NE neighbor at (x, y-1)
+            if (y > 0 && !cell.northEastWall) {
+                neighbors.add(cells[x][y - 1]);
+            }
+            // SW neighbor at (x-1, y+1)
+            if (y < height - 1 && x > 0 && !cell.southWestWall) {
+                neighbors.add(cells[x - 1][y + 1]);
+            }
+            // SE neighbor at (x, y+1)
+            if (y < height - 1 && !cell.southEastWall) {
+                neighbors.add(cells[x][y + 1]);
+            }
+        } else {
+            // NW neighbor at (x, y-1)
+            if (y > 0 && !cell.northWestWall) {
+                neighbors.add(cells[x][y - 1]);
+            }
+            // NE neighbor at (x+1, y-1)
+            if (y > 0 && x < width - 1 && !cell.northEastWall) {
+                neighbors.add(cells[x + 1][y - 1]);
+            }
+            // SW neighbor at (x, y+1)
+            if (y < height - 1 && !cell.southWestWall) {
+                neighbors.add(cells[x][y + 1]);
+            }
+            // SE neighbor at (x+1, y+1)
+            if (y < height - 1 && x < width - 1 && !cell.southEastWall) {
+                neighbors.add(cells[x + 1][y + 1]);
+            }
+        }
+
+        return neighbors;
+    }
+
+    /** Get blocked neighbors for hexagonal maze (cells separated by walls). */
+    private List<MazeCell> getBlockedHexNeighbors(MazeCell cell) {
+        List<MazeCell> neighbors = new ArrayList<>();
+        int x = cell.x;
+        int y = cell.y;
+        boolean evenRow = (y % 2) == 0;
+
+        // East neighbor
+        if (x < width - 1 && cell.eastWall) {
+            neighbors.add(cells[x + 1][y]);
+        }
+        // West neighbor
+        if (x > 0 && cell.westWall) {
+            neighbors.add(cells[x - 1][y]);
+        }
+
+        if (evenRow) {
+            if (y > 0 && x > 0 && cell.northWestWall) {
+                neighbors.add(cells[x - 1][y - 1]);
+            }
+            if (y > 0 && cell.northEastWall) {
+                neighbors.add(cells[x][y - 1]);
+            }
+            if (y < height - 1 && x > 0 && cell.southWestWall) {
+                neighbors.add(cells[x - 1][y + 1]);
+            }
+            if (y < height - 1 && cell.southEastWall) {
+                neighbors.add(cells[x][y + 1]);
+            }
+        } else {
+            if (y > 0 && cell.northWestWall) {
+                neighbors.add(cells[x][y - 1]);
+            }
+            if (y > 0 && x < width - 1 && cell.northEastWall) {
+                neighbors.add(cells[x + 1][y - 1]);
+            }
+            if (y < height - 1 && cell.southWestWall) {
+                neighbors.add(cells[x][y + 1]);
+            }
+            if (y < height - 1 && x < width - 1 && cell.southEastWall) {
+                neighbors.add(cells[x + 1][y + 1]);
+            }
+        }
+
+        return neighbors;
+    }
+
+    /** Apply difficulty modifications for hexagonal mazes. */
+    private void applyHexDifficultyModifications() {
+        int totalCells = width * height;
+
+        switch (difficulty) {
+            case 1 :
+                removeHexWallsForShortcuts(totalCells / 4);
+                break;
+            case 2 :
+                removeHexWallsForShortcuts(totalCells / 8);
+                break;
+            case 3 :
+                removeHexWallsForShortcuts(totalCells / 20);
+                break;
+            case 4 :
+                removeHexWallsForShortcuts(totalCells / 50);
+                break;
+            case 5 :
+            default :
+                break;
+        }
+    }
+
+    /** Remove walls to create shortcuts in hexagonal maze. */
+    private void removeHexWallsForShortcuts(int count) {
+        for (int i = 0; i < count; i++) {
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
+            MazeCell cell = cells[x][y];
+
+            List<MazeCell> blocked = getBlockedHexNeighbors(cell);
+            if (!blocked.isEmpty()) {
+                MazeCell neighbor = blocked.get(random.nextInt(blocked.size()));
+                cell.removeHexWallTo(neighbor, type);
+            }
+        }
+    }
+
+    /** Get accessible neighbors based on maze type. */
+    private List<MazeCell> getAccessibleNeighborsForType(MazeCell cell) {
+        if (type == MazeType.SIGMA) {
+            return getAccessibleHexNeighbors(cell);
+        }
+        return getAccessibleNeighbors(cell);
+    }
+
     /** Find the solution path using BFS. */
     private void findSolution() {
         // Reset visited flags
@@ -245,7 +463,7 @@ public class MazeGrid {
                 return;
             }
 
-            for (MazeCell neighbor : getAccessibleNeighbors(current)) {
+            for (MazeCell neighbor : getAccessibleNeighborsForType(current)) {
                 if (!neighbor.visited) {
                     neighbor.visited = true;
                     neighbor.parent = current;
@@ -294,7 +512,7 @@ public class MazeGrid {
         while (!queue.isEmpty()) {
             MazeCell current = queue.poll();
 
-            for (MazeCell neighbor : getAccessibleNeighbors(current)) {
+            for (MazeCell neighbor : getAccessibleNeighborsForType(current)) {
                 if (!neighbor.visited) {
                     neighbor.visited = true;
                     neighbor.deadEndDepth = current.deadEndDepth + 1;

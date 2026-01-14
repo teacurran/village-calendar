@@ -69,7 +69,10 @@ public class CalendarConfigType {
     @JsonProperty("holidaySets")
     public List<String> holidaySets = new ArrayList<>(); // List of holiday set IDs to include
 
-    public String eventDisplayMode = "large"; // "large", "large-text", "small", "text", or "none"
+    public String eventDisplayMode = "large"; // "large", "large-text", "small", "small-text", "text", or "none" - for
+                                              // holidays
+    public String customEventDisplayMode = "large-text"; // Display mode for personal/custom events (same options as
+                                                         // eventDisplayMode)
     public String emojiFont = "noto-color"; // "noto-color", "noto-mono", or "mono-{color}" for colored monochrome
     public String locale = "en-US";
     public DayOfWeek firstDayOfWeek = DayOfWeek.SUNDAY;
@@ -116,6 +119,7 @@ public class CalendarConfigType {
         this.holidays = new HashMap<>(other.holidays);
         this.holidaySets = new ArrayList<>(other.holidaySets);
         this.eventDisplayMode = other.eventDisplayMode;
+        this.customEventDisplayMode = other.customEventDisplayMode;
         this.emojiFont = other.emojiFont;
         this.locale = other.locale;
         this.firstDayOfWeek = other.firstDayOfWeek;

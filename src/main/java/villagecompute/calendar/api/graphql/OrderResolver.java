@@ -1,6 +1,7 @@
 package villagecompute.calendar.api.graphql;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,6 +33,7 @@ import com.stripe.model.checkout.Session;
 
 import villagecompute.calendar.api.graphql.inputs.PlaceOrderInput;
 import villagecompute.calendar.data.models.CalendarOrder;
+import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.exceptions.PaymentException;
@@ -216,11 +218,11 @@ public class OrderResolver {
 
         List<CalendarOrder> orders;
 
-        // Fetch orders by status or all orders
+        // Fetch orders by status or all orders (with items eagerly loaded)
         if (status != null && !status.isBlank()) {
             orders = orderService.getOrdersByStatus(status);
         } else {
-            orders = CalendarOrder.listAll();
+            orders = orderService.getAllOrdersWithItems();
         }
 
         // Apply limit
@@ -372,6 +374,156 @@ public class OrderResolver {
     // ==================================================================
     // BATCHED FIELD RESOLVERS (DataLoader Pattern)
     // ==================================================================
+
+    /**
+     * Field resolver for CalendarOrder.quantity. Returns the total quantity of items in the order. This provides
+     * backwards compatibility after the order model was refactored to use CalendarOrderItem line items.
+     *
+     * @param order
+     *            Order to get quantity for
+     * @return Total quantity of items in the order
+     */
+    @Name("quantity")
+    @Description("Total quantity of items in the order")
+    public int quantity(@Source final CalendarOrder order) {
+        try {
+            return order.getTotalItemCount();
+        } catch (Exception e) {
+            LOG.debugf("Could not get item count for order %s: %s", order.id, e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Field resolver for CalendarOrder.unitPrice. Returns the unit price from the first item, or computes it from
+     * subtotal/quantity. This provides backwards compatibility after the order model was refactored.
+     *
+     * @param order
+     *            Order to get unit price for
+     * @return Unit price in dollars
+     */
+    @Name("unitPrice")
+    @Description("Unit price per item in dollars")
+    public BigDecimal unitPrice(@Source final CalendarOrder order) {
+        try {
+            // Return first item's unit price if available
+            if (order.items != null && !order.items.isEmpty()) {
+                return order.items.get(0).unitPrice;
+            }
+            // Fall back to computing from subtotal/quantity
+            int quantity = order.getTotalItemCount();
+            if (quantity > 0 && order.subtotal != null) {
+                return order.subtotal.divide(BigDecimal.valueOf(quantity), 2, java.math.RoundingMode.HALF_UP);
+            }
+        } catch (Exception e) {
+            LOG.debugf("Could not get unitPrice for order %s: %s", order.id, e.getMessage());
+            // Fall back to subtotal if available
+            if (order.subtotal != null) {
+                return order.subtotal;
+            }
+        }
+        return BigDecimal.ZERO;
+    }
+
+    /**
+     * Field resolver for CalendarOrder.deliveredAt. Returns the delivery timestamp from the first delivered shipment,
+     * or null if not yet delivered. This provides backwards compatibility after the order model was refactored.
+     *
+     * @param order
+     *            Order to get delivery timestamp for
+     * @return Delivery timestamp or null
+     */
+    @Name("deliveredAt")
+    @Description("Timestamp when order was delivered")
+    public Instant deliveredAt(@Source final CalendarOrder order) {
+        // Check shipments for delivery timestamp - handle lazy loading gracefully
+        try {
+            if (order.shipments != null && !order.shipments.isEmpty()) {
+                return order.shipments.stream().map(s -> s.deliveredAt).filter(Objects::nonNull).findFirst()
+                        .orElse(null);
+            }
+        } catch (Exception e) {
+            LOG.debugf("Could not get deliveredAt for order %s: %s", order.id, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Field resolver for CalendarOrder.calendar. Returns calendar info from the first item's configuration. This
+     * provides backwards compatibility after the order model was refactored to use CalendarOrderItem.
+     *
+     * @param order
+     *            Order to get calendar for
+     * @return Calendar info or null
+     */
+    @Name("calendar")
+    @Description("Calendar associated with the order (from first item)")
+    public CalendarInfo calendar(@Source final CalendarOrder order) {
+        try {
+            if (order.items == null || order.items.isEmpty()) {
+                return null;
+            }
+            // Get calendar info from first item
+            CalendarOrderItem firstItem = order.items.get(0);
+            CalendarInfo info = new CalendarInfo();
+            info.id = order.id.toString(); // Use order ID as fallback
+            info.name = firstItem.description != null ? firstItem.description : "Calendar";
+            info.year = firstItem.getYear();
+            return info;
+        } catch (Exception e) {
+            LOG.debugf("Could not get calendar for order %s: %s", order.id, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Simple type for calendar info in order responses. Provides backwards compatibility for the calendar field after
+     * the order model was refactored to use CalendarOrderItem.
+     */
+    public static class CalendarInfo {
+        public String id;
+        public String name;
+        public int year;
+        public String generatedPdfUrl;
+        public String generatedSvg;
+        public TemplateInfo template;
+    }
+
+    /** Simple type for template info nested in CalendarInfo */
+    public static class TemplateInfo {
+        public String id;
+        public String name;
+    }
+
+    // ==================================================================
+    // CALENDAR ORDER ITEM FIELD RESOLVERS
+    // ==================================================================
+
+    /**
+     * Field resolver for CalendarOrderItem.productName. Returns the description field for backwards compatibility.
+     *
+     * @param item
+     *            Order item to get product name for
+     * @return Product name (description)
+     */
+    @Name("productName")
+    @Description("Product name/description")
+    public String productName(@Source final CalendarOrderItem item) {
+        return item.description;
+    }
+
+    /**
+     * Field resolver for CalendarOrderItem.calendarYear. Returns the year from configuration.
+     *
+     * @param item
+     *            Order item to get calendar year for
+     * @return Calendar year
+     */
+    @Name("calendarYear")
+    @Description("Calendar year from configuration")
+    public int calendarYear(@Source final CalendarOrderItem item) {
+        return item.getYear();
+    }
 
     /**
      * Batched field resolver for CalendarOrder.user relationship. Prevents N+1 queries by batch-loading users for

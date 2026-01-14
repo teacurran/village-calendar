@@ -2,8 +2,6 @@ package villagecompute.calendar.services;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.List;
-
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.BeforeEach;

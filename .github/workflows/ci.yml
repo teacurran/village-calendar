@@ -11,8 +11,9 @@ on:
       - beta
 
 # Cancel in-progress runs for the same branch/PR
+# Include event_name to ensure push and pull_request runs never cancel each other
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:

@@ -11,8 +11,11 @@ import RadioButton from "primevue/radiobutton";
 import ProgressSpinner from "primevue/progressspinner";
 import Select from "primevue/select";
 import Popover from "primevue/popover";
+import InputText from "primevue/inputtext";
+import DatePicker from "primevue/datepicker";
 import { VSwatches } from "vue3-swatches";
 import "vue3-swatches/dist/style.css";
+import InlineEmojiPicker from "./InlineEmojiPicker.vue";
 
 // Props
 interface CalendarConfig {
@@ -56,6 +59,7 @@ const emit = defineEmits<{
   (e: "displayOptionsChange", options: DisplayOptions): void;
   (e: "colorsChange", colors: ColorSettings): void;
   (e: "holidaysChange", holidays: HolidaySettings): void;
+  (e: "personalEventsChange", events: PersonalEventSettings): void;
 }>();
 
 // Types
@@ -133,12 +137,27 @@ export interface HolidaySettings {
   displayMode: EventDisplayMode;
 }
 
+export interface PersonalEvent {
+  id: number;
+  date: Date | null;
+  emoji: string;
+  emojiColor: string;
+  title: string;
+}
+
+export interface PersonalEventSettings {
+  events: PersonalEvent[];
+  emojiSize: EmojiSizeType;
+  showEventText: boolean;
+}
+
 export interface WizardConfig {
   layout: LayoutType;
   moon: MoonSettings;
   displayOptions: DisplayOptions;
   colors: ColorSettings;
   holidays: HolidaySettings;
+  personalEvents: PersonalEventSettings;
 }
 
 // State
@@ -283,6 +302,172 @@ const emitHolidaySettings = () => {
   emit("holidaysChange", {
     selectedSets: allSets,
     displayMode: eventDisplayMode.value,
+  });
+};
+
+// Personal Events state
+const personalEvents = ref<PersonalEvent[]>([]);
+const editingEventId = ref<number | null>(null);
+const newEventDate = ref<Date | null>(null);
+const newEventEmoji = ref("🎉");
+const newEventEmojiColor = ref("noto-color");
+const newEventTitle = ref("");
+const emojiImageFailed = ref<Record<string, boolean>>({});
+const eventImageFailed = ref<Record<number, boolean>>({});
+const personalEventEmojiSize = ref<EmojiSizeType>("prominent");
+const showPersonalEventText = ref(true);
+const emojiPickerRef = ref();
+const emojiColorPopoverRef = ref();
+
+// Emoji color options for personal events (reuse emojiStyleOptions from text colors)
+const personalEventEmojiStyles = [
+  { id: "noto-color", label: "Full Color" },
+  { id: "noto-mono", label: "Black & White" },
+  { id: "mono-red", label: "Red", color: "#DC2626" },
+  { id: "mono-blue", label: "Blue", color: "#2563EB" },
+  { id: "mono-green", label: "Green", color: "#16A34A" },
+  { id: "mono-orange", label: "Orange", color: "#EA580C" },
+  { id: "mono-purple", label: "Purple", color: "#9333EA" },
+  { id: "mono-pink", label: "Pink", color: "#EC4899" },
+  { id: "mono-teal", label: "Teal", color: "#0D9488" },
+  { id: "mono-brown", label: "Brown", color: "#92400E" },
+  { id: "mono-navy", label: "Navy", color: "#1E3A5F" },
+  { id: "mono-coral", label: "Coral", color: "#F97316" },
+];
+
+// Personal events computed display mode
+const personalEventDisplayMode = computed<EventDisplayMode>(() => {
+  if (personalEventEmojiSize.value === "prominent") {
+    return showPersonalEventText.value ? "large-text" : "large";
+  } else if (personalEventEmojiSize.value === "compact") {
+    return showPersonalEventText.value ? "small-text" : "small";
+  } else {
+    return showPersonalEventText.value ? "text" : "none";
+  }
+});
+
+// Add a new personal event
+const addPersonalEvent = () => {
+  if (!newEventDate.value) {
+    return;
+  }
+
+  if (editingEventId.value !== null) {
+    // Update existing event
+    const index = personalEvents.value.findIndex(
+      (e) => e.id === editingEventId.value
+    );
+    if (index !== -1) {
+      personalEvents.value[index] = {
+        id: editingEventId.value,
+        date: newEventDate.value,
+        emoji: newEventEmoji.value || "📅",
+        emojiColor: newEventEmojiColor.value || "noto-color",
+        title: newEventTitle.value || "",
+      };
+    }
+  } else {
+    // Add new event
+    const event: PersonalEvent = {
+      id: Date.now(),
+      date: newEventDate.value,
+      emoji: newEventEmoji.value || "📅",
+      emojiColor: newEventEmojiColor.value || "noto-color",
+      title: newEventTitle.value || "",
+    };
+    personalEvents.value.push(event);
+  }
+
+  clearEventForm();
+  emitPersonalEventsSettings();
+};
+
+// Edit an existing personal event
+const editPersonalEvent = (event: PersonalEvent) => {
+  editingEventId.value = event.id;
+  newEventDate.value = event.date;
+  newEventEmoji.value = event.emoji;
+  newEventEmojiColor.value = event.emojiColor || "noto-color";
+  newEventTitle.value = event.title || "";
+  // Reset image failed state for new emoji
+  emojiImageFailed.value = {};
+};
+
+// Clear the event form
+const clearEventForm = () => {
+  newEventDate.value = null;
+  newEventEmoji.value = "🎉";
+  newEventEmojiColor.value = "noto-color";
+  newEventTitle.value = "";
+  editingEventId.value = null;
+};
+
+// Toggle emoji picker popover
+const toggleEmojiPicker = (event: Event) => {
+  emojiPickerRef.value?.toggle(event);
+};
+
+// Toggle emoji color popover
+const toggleEmojiColorPopover = (event: Event) => {
+  emojiColorPopoverRef.value?.toggle(event);
+};
+
+// Select emoji color
+const selectEventEmojiColor = (colorId: string) => {
+  newEventEmojiColor.value = colorId;
+  emojiColorPopoverRef.value?.hide();
+};
+
+// Remove a personal event
+const removePersonalEvent = (id: number) => {
+  personalEvents.value = personalEvents.value.filter((e) => e.id !== id);
+  emitPersonalEventsSettings();
+};
+
+// Handle emoji selection from picker
+const handleEmojiSelect = (emoji: string) => {
+  newEventEmoji.value = emoji;
+  // Reset failed state when emoji changes - new emoji might have SVG support
+  emojiImageFailed.value = {};
+  // Also reset picker preview specifically
+  delete emojiImageFailed.value["picker-preview"];
+};
+
+// Handle emoji preview image load error (fallback to text emoji)
+const handleEmojiImageError = (styleId: string) => {
+  emojiImageFailed.value[styleId] = true;
+};
+
+// Handle event list image load error
+const handleEventImageError = (eventId: number) => {
+  eventImageFailed.value[eventId] = true;
+};
+
+// Format date for display
+const formatEventDate = (date: Date | null): string => {
+  if (!date) {
+    return "";
+  }
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+};
+
+// Preview title for Event Display - shows actual title or placeholder
+const previewEventTitle = computed(() => {
+  if (newEventTitle.value && newEventTitle.value.trim()) {
+    return newEventTitle.value;
+  }
+  return "Event Name";
+});
+
+// Emit personal events settings
+const emitPersonalEventsSettings = () => {
+  emit("personalEventsChange", {
+    events: personalEvents.value,
+    emojiSize: personalEventEmojiSize.value,
+    showEventText: showPersonalEventText.value,
   });
 };
 
@@ -1467,6 +1652,7 @@ onMounted(() => {
                   </div>
                   <Popover
                     ref="emojiPopover"
+                    appendTo="self"
                     :pt="{ root: { class: 'emoji-popover-left' } }"
                   >
                     <div class="emoji-popover-content">
@@ -1681,8 +1867,294 @@ onMounted(() => {
           </StepPanel>
         </StepItem>
 
-        <!-- Step 7: Finish -->
+        <!-- Step 7: Personal Events -->
         <StepItem value="7">
+          <Step>Personal Events</Step>
+          <StepPanel v-slot="{ activateCallback }">
+            <div class="step-content">
+              <p class="step-description">
+                Add personal events like birthdays, anniversaries, or special
+                dates to your calendar.
+              </p>
+
+              <!-- Add Event Form -->
+              <div class="personal-event-form">
+                <div class="event-form-row">
+                  <div class="event-date-field">
+                    <label class="field-label">Date</label>
+                    <DatePicker
+                      v-model="newEventDate"
+                      date-format="M d"
+                      placeholder="Select date"
+                      class="event-date-picker"
+                      show-icon
+                      fluid
+                    />
+                  </div>
+                  <div class="event-emoji-field">
+                    <label class="field-label">Emoji</label>
+                    <Button
+                      class="emoji-select-button"
+                      outlined
+                      @click="toggleEmojiPicker"
+                    >
+                      <img
+                        v-if="!emojiImageFailed['picker-preview']"
+                        :src="`/api/calendar/emoji-preview?emoji=${encodeURIComponent(newEventEmoji)}&style=noto-color`"
+                        alt="Selected emoji"
+                        class="emoji-picker-preview-img"
+                        @error="handleEmojiImageError('picker-preview')"
+                      />
+                      <span v-else class="emoji-preview-text">{{ newEventEmoji }}</span>
+                    </Button>
+                    <InlineEmojiPicker
+                      ref="emojiPickerRef"
+                      @select="handleEmojiSelect"
+                    />
+                  </div>
+                  <div class="event-color-field">
+                    <label class="field-label">Color</label>
+                    <div
+                      class="emoji-color-trigger-small"
+                      @click="toggleEmojiColorPopover"
+                    >
+                      <img
+                        v-if="!emojiImageFailed[newEventEmojiColor]"
+                        :src="`/api/calendar/emoji-preview?emoji=${encodeURIComponent(newEventEmoji)}&style=${newEventEmojiColor}`"
+                        alt="Color preview"
+                        class="emoji-color-preview-img"
+                        @error="handleEmojiImageError(newEventEmojiColor)"
+                      />
+                      <span v-else class="emoji-color-fallback-small">{{
+                        newEventEmoji
+                      }}</span>
+                    </div>
+                    <Popover
+                      ref="emojiColorPopoverRef"
+                      appendTo="self"
+                      :pt="{ root: { class: 'emoji-color-popover' } }"
+                    >
+                      <div class="emoji-color-grid">
+                        <div
+                          v-for="style in personalEventEmojiStyles"
+                          :key="style.id"
+                          class="emoji-color-option"
+                          :class="{ selected: newEventEmojiColor === style.id }"
+                          :title="style.label"
+                          @click="selectEventEmojiColor(style.id)"
+                        >
+                          <img
+                            v-if="!emojiImageFailed[style.id]"
+                            :src="`/api/calendar/emoji-preview?emoji=${encodeURIComponent(newEventEmoji)}&style=${style.id}`"
+                            :alt="style.label"
+                            class="emoji-color-img"
+                            @error="handleEmojiImageError(style.id)"
+                          />
+                          <span v-else class="emoji-color-fallback">{{
+                            newEventEmoji
+                          }}</span>
+                        </div>
+                      </div>
+                    </Popover>
+                  </div>
+                </div>
+                <div class="event-form-row">
+                  <div class="event-title-field">
+                    <label class="field-label">Event Name (optional)</label>
+                    <InputText
+                      v-model="newEventTitle"
+                      placeholder="e.g., Mom's Birthday"
+                      class="event-title-input"
+                      fluid
+                    />
+                  </div>
+                  <Button
+                    :icon="editingEventId ? 'pi pi-check' : 'pi pi-plus'"
+                    class="add-event-button"
+                    :disabled="!newEventDate"
+                    :severity="editingEventId ? 'success' : 'primary'"
+                    @click="addPersonalEvent"
+                  />
+                  <Button
+                    v-if="editingEventId"
+                    icon="pi pi-times"
+                    class="cancel-edit-button"
+                    severity="secondary"
+                    outlined
+                    @click="clearEventForm"
+                  />
+                </div>
+              </div>
+
+              <!-- Events List -->
+              <div
+                v-if="personalEvents.length > 0"
+                class="personal-events-list"
+              >
+                <p class="events-label">Your Events:</p>
+                <div
+                  v-for="event in personalEvents"
+                  :key="event.id"
+                  class="personal-event-chip"
+                >
+                  <img
+                    v-if="!eventImageFailed[event.id]"
+                    :src="`/api/calendar/emoji-preview?emoji=${encodeURIComponent(event.emoji)}&style=${event.emojiColor || 'noto-color'}`"
+                    :alt="event.emoji"
+                    class="event-emoji-img"
+                    @error="handleEventImageError(event.id)"
+                  />
+                  <span v-else class="event-emoji-fallback">{{
+                    event.emoji
+                  }}</span>
+                  <span class="event-info">
+                    <span class="event-date">{{
+                      formatEventDate(event.date)
+                    }}</span>
+                    <span v-if="event.title" class="event-title">{{
+                      event.title
+                    }}</span>
+                  </span>
+                  <Button
+                    v-tooltip="'Edit'"
+                    icon="pi pi-pencil"
+                    text
+                    rounded
+                    severity="secondary"
+                    size="small"
+                    @click="editPersonalEvent(event)"
+                  />
+                  <Button
+                    v-tooltip="'Remove'"
+                    icon="pi pi-times"
+                    text
+                    rounded
+                    severity="secondary"
+                    size="small"
+                    @click="removePersonalEvent(event.id)"
+                  />
+                </div>
+              </div>
+
+              <!-- Display Settings - always shown so user can configure before adding events -->
+              <div class="display-mode-section">
+                <h4 class="subsection-title">Event Display</h4>
+
+                <!-- Live Preview - shows actual emoji and title being edited -->
+                <div class="event-live-preview">
+                  <div class="event-preview-cell large-preview">
+                    <span class="cell-day">15</span>
+                    <img
+                      v-if="personalEventEmojiSize !== 'none'"
+                      :src="`/api/calendar/emoji-preview?emoji=${encodeURIComponent(newEventEmoji)}&style=${newEventEmojiColor}`"
+                      :alt="newEventEmoji"
+                      :class="[
+                        'cell-emoji-img',
+                        personalEventEmojiSize === 'prominent' ? 'large' : 'small',
+                      ]"
+                    />
+                    <span
+                      v-if="showPersonalEventText"
+                      class="cell-text"
+                      :title="previewEventTitle"
+                      >{{ previewEventTitle }}</span
+                    >
+                  </div>
+                </div>
+
+                <!-- Emoji Size -->
+                <div class="emoji-size-section">
+                  <label class="subsection-label">Emoji Size</label>
+                  <div class="emoji-size-options">
+                    <div
+                      class="emoji-size-option"
+                      :class="{
+                        selected: personalEventEmojiSize === 'prominent',
+                      }"
+                      @click="
+                        personalEventEmojiSize = 'prominent';
+                        emitPersonalEventsSettings();
+                      "
+                    >
+                      <RadioButton
+                        v-model="personalEventEmojiSize"
+                        input-id="personal-emoji-prominent"
+                        value="prominent"
+                        name="personalEmojiSize"
+                      />
+                      <label for="personal-emoji-prominent">Prominent</label>
+                    </div>
+                    <div
+                      class="emoji-size-option"
+                      :class="{
+                        selected: personalEventEmojiSize === 'compact',
+                      }"
+                      @click="
+                        personalEventEmojiSize = 'compact';
+                        emitPersonalEventsSettings();
+                      "
+                    >
+                      <RadioButton
+                        v-model="personalEventEmojiSize"
+                        input-id="personal-emoji-compact"
+                        value="compact"
+                        name="personalEmojiSize"
+                      />
+                      <label for="personal-emoji-compact">Compact</label>
+                    </div>
+                    <div
+                      class="emoji-size-option"
+                      :class="{ selected: personalEventEmojiSize === 'none' }"
+                      @click="
+                        personalEventEmojiSize = 'none';
+                        emitPersonalEventsSettings();
+                      "
+                    >
+                      <RadioButton
+                        v-model="personalEventEmojiSize"
+                        input-id="personal-emoji-none"
+                        value="none"
+                        name="personalEmojiSize"
+                      />
+                      <label for="personal-emoji-none">None</label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Show Event Text -->
+                <div class="holiday-text-option">
+                  <Checkbox
+                    v-model="showPersonalEventText"
+                    input-id="showPersonalEventText"
+                    :binary="true"
+                    @change="emitPersonalEventsSettings()"
+                  />
+                  <label for="showPersonalEventText" class="checkbox-label">
+                    <span class="checkbox-title">Show event name</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="step-navigation">
+                <Button
+                  label="Previous"
+                  icon="pi pi-arrow-left"
+                  outlined
+                  @click="activateCallback('6')"
+                />
+                <Button
+                  label="Next"
+                  icon="pi pi-arrow-right"
+                  icon-pos="right"
+                  @click="activateCallback('8')"
+                />
+              </div>
+            </div>
+          </StepPanel>
+        </StepItem>
+
+        <!-- Step 8: Finish -->
+        <StepItem value="8">
           <Step>Your Calendar is Ready!</Step>
           <StepPanel v-slot="{ activateCallback }">
             <div class="step-content">
@@ -1735,7 +2207,7 @@ onMounted(() => {
                   label="Previous"
                   icon="pi pi-arrow-left"
                   outlined
-                  @click="activateCallback('6')"
+                  @click="activateCallback('7')"
                 />
                 <Button label="Done" icon="pi pi-check" @click="handleClose" />
               </div>
@@ -2470,6 +2942,26 @@ onMounted(() => {
   font-size: 24px;
 }
 
+.cell-emoji-img {
+  position: absolute;
+  object-fit: contain;
+}
+
+.cell-emoji-img.small {
+  bottom: 6px;
+  left: 6px;
+  width: 14px;
+  height: 14px;
+}
+
+.cell-emoji-img.large {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+}
+
 .cell-text {
   position: absolute;
   bottom: 4px;
@@ -2546,22 +3038,281 @@ onMounted(() => {
   height: 26px;
   object-fit: contain;
 }
+
+/* Personal Events Form */
+.personal-event-form {
+  background: var(--surface-50);
+  border: 1px solid var(--surface-200);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.event-form-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+.event-form-row:last-child {
+  margin-bottom: 0;
+}
+
+.event-date-field {
+  flex: 1;
+}
+
+.event-emoji-field {
+  flex-shrink: 0;
+}
+
+.event-title-field {
+  flex: 1;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-color-secondary);
+  margin-bottom: 0.375rem;
+}
+
+/* Emoji select button (new inline picker) */
+.emoji-select-button {
+  min-width: 3rem;
+  height: 2.5rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.emoji-preview-text {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.emoji-picker-preview-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.cancel-edit-button {
+  flex-shrink: 0;
+  margin-left: 0.25rem;
+}
+
+/* Emoji color field */
+.event-color-field {
+  flex-shrink: 0;
+}
+
+.emoji-color-trigger-small {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--surface-0);
+  border: 1px solid var(--surface-300);
+}
+
+.emoji-color-trigger-small:hover {
+  background: var(--surface-50);
+  border-color: var(--surface-400);
+}
+
+.emoji-color-preview-img {
+  width: 1.75rem;
+  height: 1.75rem;
+  object-fit: contain;
+}
+
+/* Emoji color popover grid */
+.emoji-color-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 8px;
+  width: 180px;
+}
+
+.emoji-color-option {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--surface-50);
+  border: 2px solid transparent;
+}
+
+.emoji-color-option:hover {
+  transform: scale(1.1);
+  background: var(--surface-100);
+}
+
+.emoji-color-option.selected {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-200);
+  background: var(--primary-50);
+}
+
+.emoji-color-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+/* Fallback text emoji when SVG not available */
+.emoji-color-fallback {
+  font-size: 24px;
+  line-height: 1;
+  filter: grayscale(100%);
+  opacity: 0.6;
+}
+
+.emoji-color-fallback-small {
+  font-size: 20px;
+  line-height: 1;
+  filter: grayscale(100%);
+  opacity: 0.6;
+}
+
+.event-emoji-fallback {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+/* Event emoji image in list */
+.event-emoji-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.add-event-button {
+  flex-shrink: 0;
+}
+
+/* Personal Events List */
+.personal-events-list {
+  margin-bottom: 1rem;
+}
+
+.events-label {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+  margin: 0 0 0.5rem 0;
+}
+
+.personal-event-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-0);
+  border: 1px solid var(--surface-200);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.personal-event-chip:last-child {
+  margin-bottom: 0;
+}
+
+.event-emoji {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.event-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.event-date {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.event-title {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Override DatePicker styles */
+:deep(.event-date-picker) {
+  width: 100%;
+}
+
+:deep(.event-date-picker .p-datepicker-input) {
+  font-size: 0.875rem;
+}
+
+:deep(.event-title-input) {
+  font-size: 0.875rem;
+}
 </style>
 
-<!-- Unscoped styles for Popover positioning (appended to body) -->
+<!-- Unscoped styles for Popover positioning -->
 <style>
+/* Emoji style popover (Text Colors section) */
 .emoji-popover-left {
-  /* Align right edge of popover with right edge of 42px trigger */
-  transform: translateX(calc(-100% + 42px));
+  /* Must be higher than PrimeVue Drawer (z-index ~1100) */
+  z-index: 2000 !important;
+  /* Center within drawer (drawer is 460px, content ~420px after padding) */
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  /* Constrain width */
+  max-width: 250px;
 }
 
 .emoji-popover-left::before,
 .emoji-popover-left::after {
-  /* Hide the arrow since it won't align properly */
+  /* Hide the arrow since positioning is customized */
   display: none !important;
 }
 
 .emoji-popover-left .p-popover-content {
   padding: 0;
+}
+
+/* Emoji color popover (Personal Events section) */
+.emoji-color-popover {
+  /* Must be higher than PrimeVue Drawer (z-index ~1100) */
+  z-index: 2000 !important;
+  /* Center within drawer (drawer is 460px, content ~420px after padding) */
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  /* Constrain width to fit 4 columns within drawer */
+  max-width: 200px;
+}
+
+.emoji-color-popover::before,
+.emoji-color-popover::after {
+  /* Hide the arrow since positioning is customized */
+  display: none !important;
+}
+
+.emoji-color-popover .p-popover-content {
+  padding: 0 !important;
 }
 </style>

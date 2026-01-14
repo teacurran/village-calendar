@@ -57,6 +57,18 @@ public class CalendarRenderingService {
     private static final float POINTS_PER_INCH = 72f;
     // ===========================================
 
+    // Event display mode constants
+    private static final String DISPLAY_MODE_LARGE_TEXT = "large-text";
+    private static final String DISPLAY_MODE_SMALL_TEXT = "small-text";
+    private static final String DISPLAY_MODE_TEXT = "text";
+    private static final String DISPLAY_MODE_LARGE = "large";
+    private static final String DISPLAY_MODE_SMALL = "small";
+    private static final String DISPLAY_MODE_NONE = "none";
+
+    // SVG text format string for simple centered text
+    private static final String SVG_TEXT_SIMPLE_FORMAT = "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
+            + " fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\">%s</text>%n";
+
     // SVG text element format string for styled text with optional transform
     private static final String SVG_TEXT_STYLED_FORMAT = "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
             + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n";
@@ -85,7 +97,12 @@ public class CalendarRenderingService {
      * 2.0 licensed, safe for commercial printing). Noto Emoji (monochrome) is available for a text-only look.
      */
     static String getEmojiFontFamily(CalendarConfigType config) {
-        if (EMOJI_FONT_NOTO_MONO.equals(config.emojiFont)) {
+        return getEmojiFontFamily(config.emojiFont);
+    }
+
+    /** Returns the CSS font-family string for emoji rendering based on the emojiFont setting. */
+    static String getEmojiFontFamily(String emojiFont) {
+        if (EMOJI_FONT_NOTO_MONO.equals(emojiFont)) {
             // Noto Emoji (monochrome version) - black and white outline style
             // Include DejaVu Sans as fallback which has wide Unicode coverage on Linux servers
             return "'Noto Emoji', 'DejaVu Sans', 'Segoe UI Symbol', 'Symbola', sans-serif";
@@ -199,9 +216,14 @@ public class CalendarRenderingService {
      * to colored monochrome variants.
      */
     static String substituteEmojiForMonochrome(String emoji, CalendarConfigType config) {
+        return substituteEmojiForMonochrome(emoji, config.emojiFont);
+    }
+
+    /** Substitutes emojis for monochrome fonts using the specified emojiFont setting. */
+    static String substituteEmojiForMonochrome(String emoji, String emojiFont) {
         // Apply substitutions for noto-mono and all mono-* color variants
-        boolean needsSubstitution = EMOJI_FONT_NOTO_MONO.equals(config.emojiFont)
-                || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
+        boolean needsSubstitution = EMOJI_FONT_NOTO_MONO.equals(emojiFont)
+                || (emojiFont != null && emojiFont.startsWith("mono-"));
         if (!needsSubstitution) {
             return emoji; // No substitution needed for color mode
         }
@@ -228,11 +250,25 @@ public class CalendarRenderingService {
      */
     private String renderEmoji(String emoji, double x, double y, int size, CalendarConfigType config,
             boolean centered) {
+        return renderEmoji(emoji, x, y, size, config, centered, null);
+    }
+
+    /**
+     * Render emoji with optional per-event emojiFont override.
+     *
+     * @param emojiFontOverride
+     *            Optional emojiFont to use instead of config.emojiFont (null to use config default)
+     */
+    private String renderEmoji(String emoji, double x, double y, int size, CalendarConfigType config, boolean centered,
+            String emojiFontOverride) {
+        // Use override if provided, otherwise fall back to config
+        String effectiveEmojiFont = emojiFontOverride != null ? emojiFontOverride : config.emojiFont;
+
         // Check if monochrome mode is enabled (noto-mono or any mono-* color variant)
-        boolean isMonochrome = EMOJI_FONT_NOTO_MONO.equals(config.emojiFont)
-                || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
+        boolean isMonochrome = EMOJI_FONT_NOTO_MONO.equals(effectiveEmojiFont)
+                || (effectiveEmojiFont != null && effectiveEmojiFont.startsWith("mono-"));
         // Get color for colored monochrome variants
-        String colorHex = EMOJI_COLOR_MAP.get(config.emojiFont);
+        String colorHex = EMOJI_COLOR_MAP.get(effectiveEmojiFont);
 
         // Try to use SVG rendering for better PDF compatibility
         if (emojiSvgService != null && emojiSvgService.hasEmojiSvg(emoji)) {
@@ -243,16 +279,17 @@ public class CalendarRenderingService {
         }
 
         // Fall back to text rendering with emoji font
-        String processedEmoji = substituteEmojiForMonochrome(emoji, config);
+        String processedEmoji = substituteEmojiForMonochrome(emoji, effectiveEmojiFont);
+        String fontFamily = getEmojiFontFamily(effectiveEmojiFont);
         if (centered) {
             return String.format(
                     "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; text-anchor: middle;"
                             + " dominant-baseline: middle; font-family: %s;\">%s</text>",
-                    x, y, size, getEmojiFontFamily(config), processedEmoji);
+                    x, y, size, fontFamily, processedEmoji);
         } else {
             return String.format(
                     "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; font-family:" + " %s;\">%s</text>", x, y,
-                    size, getEmojiFontFamily(config), processedEmoji);
+                    size, fontFamily, processedEmoji);
         }
     }
 
@@ -309,13 +346,15 @@ public class CalendarRenderingService {
      */
     private String renderHolidayContent(String holidayEmoji, String holidayName, Cell cell, CalendarConfigType config) {
 
-        if ("none".equals(config.eventDisplayMode)) {
+        if (DISPLAY_MODE_NONE.equals(config.eventDisplayMode)) {
             return "";
         }
 
         StringBuilder result = new StringBuilder();
-        boolean largeEmoji = "large".equals(config.eventDisplayMode) || "large-text".equals(config.eventDisplayMode);
-        boolean smallEmoji = "small".equals(config.eventDisplayMode) || "small-text".equals(config.eventDisplayMode);
+        boolean largeEmoji = DISPLAY_MODE_LARGE.equals(config.eventDisplayMode)
+                || DISPLAY_MODE_LARGE_TEXT.equals(config.eventDisplayMode);
+        boolean smallEmoji = DISPLAY_MODE_SMALL.equals(config.eventDisplayMode)
+                || DISPLAY_MODE_SMALL_TEXT.equals(config.eventDisplayMode);
 
         // Render emoji based on display mode
         if (largeEmoji && !holidayEmoji.isEmpty()) {
@@ -336,17 +375,15 @@ public class CalendarRenderingService {
         }
 
         // Holiday name text for large-text, small-text, and text modes only
-        boolean showHolidayText = ("large-text".equals(config.eventDisplayMode)
-                || "small-text".equals(config.eventDisplayMode) || "text".equals(config.eventDisplayMode))
-                && !holidayName.isEmpty();
+        boolean showHolidayText = (DISPLAY_MODE_LARGE_TEXT.equals(config.eventDisplayMode)
+                || DISPLAY_MODE_SMALL_TEXT.equals(config.eventDisplayMode)
+                || DISPLAY_MODE_TEXT.equals(config.eventDisplayMode)) && !holidayName.isEmpty();
         if (showHolidayText) {
             int textX = cell.x() + cell.width() / 2;
             int textY = cell.y() + cell.height() - 3;
             int textSize = Math.max(5, cell.width() / 10);
-            result.append(String.format(
-                    "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
-                            + " fill=\"%s\" font-family=\"Helvetica, Arial," + " sans-serif\">%s</text>%n",
-                    textX, textY, textSize, config.holidayColor, escapeXml(holidayName)));
+            result.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, textY, textSize, config.holidayColor,
+                    escapeXml(holidayName)));
         }
 
         return result.toString();
@@ -396,7 +433,9 @@ public class CalendarRenderingService {
         if (entry == null || entry.emoji == null) {
             return "";
         }
-        return substituteEmojiForMonochrome(entry.emoji, config);
+        // Use per-entry emojiFont if available, otherwise fall back to config
+        String emojiFont = entry.getEmojiFont(config.emojiFont);
+        return substituteEmojiForMonochrome(entry.emoji, emojiFont);
     }
 
     /** Calculates emoji position based on position string */
@@ -447,108 +486,126 @@ public class CalendarRenderingService {
         return new int[]{emojiX, emojiY};
     }
 
-    /** Renders custom emoji with positioning based on display settings */
+    /** Renders custom emoji with positioning based on display settings and customEventDisplayMode */
     private void renderCustomEmoji(StringBuilder svg, String customEmoji, CustomDateEntryType eventDisplay, Cell cell,
             CalendarConfigType config) {
         if (customEmoji.isEmpty() || eventDisplay == null) {
             return;
         }
 
-        double emojiX = cell.x() + (cell.width() * eventDisplay.getEmojiX(50) / 100.0);
-        double emojiY = cell.y() + (cell.height() * eventDisplay.getEmojiY(50) / 100.0);
-        double scaleFactor = cell.width() / 100.0;
-        int scaledSize = (int) (eventDisplay.getEmojiSize(12) * scaleFactor);
-        int emojiSize = Math.max(8, Math.min(24, scaledSize));
-        svg.append(renderEmoji(customEmoji, emojiX, emojiY, emojiSize, config, true));
+        // Get per-event emoji font or fall back to global config
+        String eventEmojiFont = eventDisplay.getEmojiFont(config.emojiFont);
+
+        // Determine emoji size and position based on customEventDisplayMode (separate from holiday eventDisplayMode)
+        String displayMode = config.customEventDisplayMode != null ? config.customEventDisplayMode : "large-text";
+        boolean largeEmoji = "large".equals(displayMode) || "large-text".equals(displayMode);
+        boolean smallEmoji = "small".equals(displayMode) || "small-text".equals(displayMode);
+
+        if (!largeEmoji && !smallEmoji) {
+            // none or text-only mode - don't render emoji
+            return;
+        }
+
+        int emojiX;
+        int emojiY;
+        int fontSize;
+        boolean centered;
+
+        if (largeEmoji) {
+            // Large/large-text mode: centered emoji, same as holidays
+            emojiX = cell.x() + cell.width() / 2;
+            fontSize = Math.max(16, cell.height() / 3);
+            emojiY = cell.y() + (int) (cell.height() * 0.50);
+            centered = true;
+        } else {
+            // Small/small-text mode: bottom-left corner, same as holidays
+            emojiX = cell.x() + 5;
+            emojiY = cell.y() + cell.height() - 8;
+            fontSize = Math.max(10, cell.height() / 6);
+            centered = false;
+        }
+
+        svg.append(renderEmoji(customEmoji, emojiX, emojiY, fontSize, config, centered, eventEmojiFont));
         svg.append(System.lineSeparator());
     }
 
-    /** Renders event title with optional wrapping and rotation */
+    /** Renders event title with optional wrapping and rotation based on customEventDisplayMode */
     private void renderEventTitle(StringBuilder svg, String title, CustomDateEntryType eventDisplay, Cell cell,
             CalendarConfigType config) {
         if (title == null || title.isEmpty() || eventDisplay == null) {
             return;
         }
 
+        // Only render title if customEventDisplayMode includes text
+        String displayMode = config.customEventDisplayMode != null ? config.customEventDisplayMode : "large-text";
+        if (!displayMode.endsWith("-text") && !displayMode.equals("text")) {
+            return;
+        }
+
         renderEventTitleWithDisplay(svg, title, eventDisplay, cell, config);
     }
 
-    /** Renders event title with custom display settings */
+    /** Renders event title with custom display settings - matching holiday text rendering */
     private void renderEventTitleWithDisplay(StringBuilder svg, String title, CustomDateEntryType eventDisplay,
             Cell cell, CalendarConfigType config) {
-        double textX = cell.x() + (cell.width() * eventDisplay.getTextX(50) / 100.0);
-        double textY = cell.y() + (cell.height() * eventDisplay.getTextY(70) / 100.0);
-        double scaleFactor = cell.width() / 100.0;
-        int scaledSize = (int) (eventDisplay.getTextSize(7) * scaleFactor);
-        int textSize = Math.max(5, Math.min(12, scaledSize));
+        // Match holiday text rendering: centered at bottom of cell
+        int textX = cell.x() + cell.width() / 2;
+        int textSize = Math.max(5, cell.width() / 10);
+        int lineHeight = (int) (textSize * 1.2);
         String textColor = eventDisplay.getTextColor(config.customDateColor);
-        String fontWeight = eventDisplay.isTextBold() ? "bold" : "normal";
-        String textAnchor = getTextAnchor(eventDisplay.getTextAlign("center"));
-        double rotation = eventDisplay.getTextRotation();
 
-        TextRenderStyle style = new TextRenderStyle(textSize, textColor, fontWeight, textAnchor, rotation);
-
-        if (eventDisplay.isTextWrap() && title.length() > 8) {
-            renderWrappedText(svg, title, textX, textY, style);
-        } else {
-            renderSingleLineText(svg, title, textX, textY, style, eventDisplay.isTextWrap());
-        }
-    }
-
-    /** Renders a single line of text, truncating if necessary */
-    private void renderSingleLineText(StringBuilder svg, String title, double textX, double textY,
-            TextRenderStyle style, boolean allowFullTitle) {
-        String displayTitle = (!allowFullTitle && title.length() > 10) ? title.substring(0, 9) + "…" : title;
-        String transform = style.rotation() != 0
-                ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", style.rotation(), textX, textY)
-                : "";
-        svg.append(String.format(SVG_TEXT_STYLED_FORMAT, textX, textY, style.size(), style.color(), style.fontWeight(),
-                style.textAnchor(), transform, displayTitle));
-    }
-
-    /** Converts text alignment to SVG text-anchor */
-    private String getTextAnchor(String textAlign) {
-        if ("left".equals(textAlign)) {
-            return "start";
-        } else if ("right".equals(textAlign)) {
-            return "end";
-        }
-        return "middle";
-    }
-
-    /** Renders wrapped text on two lines */
-    private void renderWrappedText(StringBuilder svg, String title, double textX, double textY, TextRenderStyle style) {
+        // Split title into words for potential wrapping
         String[] words = title.split(" ");
-        StringBuilder line1 = new StringBuilder();
-        StringBuilder line2 = new StringBuilder();
-        int charCount = 0;
 
-        for (String word : words) {
-            if (charCount + word.length() <= 8) {
-                if (!line1.isEmpty()) {
-                    line1.append(" ");
+        if (words.length == 1 || title.length() <= 10) {
+            // Single word or short title - render on one line at bottom
+            int textY = cell.y() + cell.height() - 3;
+            String escapedTitle = escapeXml(title);
+            // Truncate only if single word is too long
+            String displayTitle = title.length() > 12 ? escapedTitle.substring(0, 11) + "…" : escapedTitle;
+            svg.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, textY, textSize, textColor, displayTitle));
+        } else {
+            // Multi-word title - wrap to two lines with baseline at bottom
+            StringBuilder line1 = new StringBuilder();
+            StringBuilder line2 = new StringBuilder();
+            int charCount = 0;
+
+            for (String word : words) {
+                if (charCount + word.length() <= 8 && line2.isEmpty()) {
+                    if (!line1.isEmpty()) {
+                        line1.append(" ");
+                    }
+                    line1.append(word);
+                    charCount += word.length() + 1;
+                } else {
+                    if (!line2.isEmpty()) {
+                        line2.append(" ");
+                    }
+                    line2.append(word);
                 }
-                line1.append(word);
-                charCount += word.length() + 1;
-            } else if (line2.isEmpty()) {
-                line2.append(word);
-            } else {
-                line2.append("…");
-                break;
             }
-        }
 
-        String transform = style.rotation() != 0
-                ? String.format(" transform=\"rotate(%.1f %.1f %.1f)\"", style.rotation(), textX, textY)
-                : "";
-        double lineHeight = style.size() * 1.2;
+            // Truncate line2 if too long
+            String line2Str = line2.toString();
+            if (line2Str.length() > 12) {
+                line2Str = line2Str.substring(0, 11) + "…";
+            }
 
-        svg.append(String.format(SVG_TEXT_STYLED_FORMAT, textX, textY - lineHeight / 2, style.size(), style.color(),
-                style.fontWeight(), style.textAnchor(), transform, line1));
+            // Position: line2 at bottom, line1 above it
+            int line2Y = cell.y() + cell.height() - 3;
+            int line1Y = line2Y - lineHeight;
 
-        if (!line2.isEmpty()) {
-            svg.append(String.format(SVG_TEXT_STYLED_FORMAT, textX, textY + lineHeight / 2, style.size(), style.color(),
-                    style.fontWeight(), style.textAnchor(), transform, line2));
+            // Render line 1 (top line)
+            if (!line1.isEmpty()) {
+                svg.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, line1Y, textSize, textColor,
+                        escapeXml(line1.toString())));
+            }
+
+            // Render line 2 (bottom line)
+            if (!line2Str.isEmpty()) {
+                svg.append(
+                        String.format(SVG_TEXT_SIMPLE_FORMAT, textX, line2Y, textSize, textColor, escapeXml(line2Str)));
+            }
         }
     }
 
