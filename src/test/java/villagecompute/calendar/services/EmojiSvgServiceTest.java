@@ -58,6 +58,36 @@ class EmojiSvgServiceTest {
         assertTrue(emojiSvgService.hasEmojiSvg("☀️")); // Sun with VS16
     }
 
+    @Test
+    void testHasEmojiSvg_OnlyInColorCache_ReturnsTrue() throws Exception {
+        EmojiSvgService testService = createServiceWithTestCaches();
+
+        // Add only to color cache
+        getColorSvgCache(testService).put("coloronly", TEST_SVG_CONTENT);
+
+        // Single-arg hasEmojiSvg should return true (color || mono)
+        assertTrue(testService.hasEmojiSvg("coloronly"));
+    }
+
+    @Test
+    void testHasEmojiSvg_OnlyInMonoCache_ReturnsTrue() throws Exception {
+        EmojiSvgService testService = createServiceWithTestCaches();
+
+        // Add only to mono cache
+        getMonoSvgCache(testService).put("monoonly", TEST_MONO_SVG_CONTENT);
+
+        // Single-arg hasEmojiSvg should return true (color || mono)
+        assertTrue(testService.hasEmojiSvg("monoonly"));
+    }
+
+    @Test
+    void testHasEmojiSvg_InNeitherCache_ReturnsFalse() throws Exception {
+        EmojiSvgService testService = createServiceWithTestCaches();
+
+        // Don't add to any cache
+        assertFalse(testService.hasEmojiSvg("nonexistent"));
+    }
+
     // ========== hasEmojiSvg(String emoji, boolean monochrome) Tests ==========
 
     @Test
@@ -477,7 +507,152 @@ class EmojiSvgServiceTest {
         assertTrue(result2.contains("id=\"e30_40_grayscale\""));
     }
 
+    // ========== extractSvgInnerContent Branch Coverage Tests ==========
+
+    @Test
+    void testExtractSvgInnerContent_NoSvgTag_ReturnsOriginal() throws Exception {
+        EmojiSvgService testService = createServiceWithTestCaches();
+        String input = "<div>no svg here</div>";
+
+        String result = invokeExtractSvgInnerContent(testService, input);
+
+        assertEquals(input, result);
+    }
+
+    @Test
+    void testExtractSvgInnerContent_NoClosingBracket_ReturnsOriginal() throws Exception {
+        EmojiSvgService testService = createServiceWithTestCaches();
+        String input = "<svg viewBox=\"0 0 100 100\" this tag never closes";
+
+        String result = invokeExtractSvgInnerContent(testService, input);
+
+        assertEquals(input, result);
+    }
+
+    @Test
+    void testExtractSvgInnerContent_NoClosingSvgTag_ReturnsOriginal() throws Exception {
+        EmojiSvgService testService = createServiceWithTestCaches();
+        String input = "<svg viewBox=\"0 0 100 100\"><circle/>";
+
+        String result = invokeExtractSvgInnerContent(testService, input);
+
+        assertEquals(input, result);
+    }
+
+    @Test
+    void testExtractSvgInnerContent_ValidSvg_ReturnsInnerContent() throws Exception {
+        EmojiSvgService testService = createServiceWithTestCaches();
+        String input = "<svg viewBox=\"0 0 100 100\"><circle cx=\"50\" cy=\"50\" r=\"40\"/></svg>";
+
+        String result = invokeExtractSvgInnerContent(testService, input);
+
+        assertEquals("<circle cx=\"50\" cy=\"50\" r=\"40\"/>", result);
+    }
+
+    @Test
+    void testExtractSvgInnerContent_ValidSvgWithWhitespace_ReturnsTrimmedContent() throws Exception {
+        EmojiSvgService testService = createServiceWithTestCaches();
+        String input = "<svg viewBox=\"0 0 100 100\">   <circle/>   </svg>";
+
+        String result = invokeExtractSvgInnerContent(testService, input);
+
+        assertEquals("<circle/>", result);
+    }
+
+    private String invokeExtractSvgInnerContent(EmojiSvgService service, String input) throws Exception {
+        java.lang.reflect.Method method = EmojiSvgService.class.getDeclaredMethod("extractSvgInnerContent",
+                String.class);
+        method.setAccessible(true);
+        return (String) method.invoke(service, input);
+    }
+
+    // ========== Init Method Branch Coverage Tests ==========
+
+    @Test
+    void testInit_ColorSvgNotFound_HandlesGracefully() throws Exception {
+        // Add a fake entry to EMOJI_TO_FILENAME that points to a non-existent file
+        String testEmoji = "🧪"; // Test tube emoji - not in the real mapping
+        String fakeFilename = "emoji_nonexistent_test_file";
+
+        Map<String, String> emojiToFilename = getEmojiToFilenameMap();
+        // Store original state
+        String originalValue = emojiToFilename.get(testEmoji);
+
+        try {
+            // Add test entry pointing to non-existent file
+            emojiToFilename.put(testEmoji, fakeFilename);
+
+            // Create new service and init
+            EmojiSvgService testService = new EmojiSvgService();
+            testService.init();
+
+            // The emoji should NOT be in the cache because the file doesn't exist
+            assertFalse(testService.hasEmojiSvg(testEmoji, false),
+                    "Emoji with non-existent color SVG should not be in color cache");
+        } finally {
+            // Clean up - restore original state
+            if (originalValue == null) {
+                emojiToFilename.remove(testEmoji);
+            } else {
+                emojiToFilename.put(testEmoji, originalValue);
+            }
+        }
+    }
+
+    @Test
+    void testInit_MonoSvgNotFound_HandlesGracefully() throws Exception {
+        // Test that mono SVG missing is handled gracefully
+        // We can verify this by checking an emoji that exists in color but not mono
+        EmojiSvgService testService = new EmojiSvgService();
+        testService.init();
+
+        // Get the caches to check their sizes
+        Map<String, String> colorCache = getColorSvgCache(testService);
+        Map<String, String> monoCache = getMonoSvgCache(testService);
+
+        // There should be some emojis where color exists but mono doesn't
+        // (or vice versa) - the service should handle this gracefully
+        assertFalse(colorCache.isEmpty(), "Color cache should have entries");
+        // Mono cache may have fewer entries than color cache
+        // The important thing is that init() completed without throwing
+    }
+
+    @Test
+    void testInit_BothSvgsNotFound_HandlesGracefully() throws Exception {
+        String testEmoji = "🔬"; // Microscope - not in the real mapping
+        String fakeFilename = "emoji_completely_fake_file";
+
+        Map<String, String> emojiToFilename = getEmojiToFilenameMap();
+        String originalValue = emojiToFilename.get(testEmoji);
+
+        try {
+            emojiToFilename.put(testEmoji, fakeFilename);
+
+            EmojiSvgService testService = new EmojiSvgService();
+            testService.init();
+
+            // Neither cache should have the emoji
+            assertFalse(testService.hasEmojiSvg(testEmoji, false),
+                    "Emoji with non-existent color SVG should not be in color cache");
+            assertFalse(testService.hasEmojiSvg(testEmoji, true),
+                    "Emoji with non-existent mono SVG should not be in mono cache");
+        } finally {
+            if (originalValue == null) {
+                emojiToFilename.remove(testEmoji);
+            } else {
+                emojiToFilename.put(testEmoji, originalValue);
+            }
+        }
+    }
+
     // ========== Helper Methods ==========
+
+    @SuppressWarnings("unchecked")
+    private Map<String, String> getEmojiToFilenameMap() throws Exception {
+        Field field = EmojiSvgService.class.getDeclaredField("EMOJI_TO_FILENAME");
+        field.setAccessible(true);
+        return (Map<String, String>) field.get(null);
+    }
 
     private EmojiSvgService createServiceWithTestCaches() throws Exception {
         EmojiSvgService service = new EmojiSvgService();

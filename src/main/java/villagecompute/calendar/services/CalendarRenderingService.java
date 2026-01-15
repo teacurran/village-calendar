@@ -69,10 +69,6 @@ public class CalendarRenderingService {
     private static final String SVG_TEXT_SIMPLE_FORMAT = "<text x=\"%d\" y=\"%d\" text-anchor=\"middle\" font-size=\"%d\""
             + " fill=\"%s\" font-family=\"Helvetica, Arial, sans-serif\">%s</text>%n";
 
-    // SVG text element format string for styled text with optional transform
-    private static final String SVG_TEXT_STYLED_FORMAT = "<text x=\"%.1f\" y=\"%.1f\" style=\"font-size: %dpx; fill: %s;"
-            + " font-weight: %s; text-anchor: %s; font-family: Arial, sans-serif;\"%s>%s</text>%n";
-
     // SVG closing tag
     private static final String SVG_CLOSE_TAG = "</svg>";
 
@@ -397,10 +393,6 @@ public class CalendarRenderingService {
     record Cell(int x, int y, int width, int height) {
     }
 
-    /** Encapsulates text styling properties for SVG text rendering */
-    private record TextRenderStyle(int size, String color, String fontWeight, String textAnchor, double rotation) {
-    }
-
     /** Renders the cell background color if needed */
     private void renderCellBackground(StringBuilder svg, Cell cell, String cellBackground) {
         String pdfSafeColor = convertColorForPDF(cellBackground);
@@ -497,9 +489,10 @@ public class CalendarRenderingService {
         String eventEmojiFont = eventDisplay.getEmojiFont(config.emojiFont);
 
         // Determine emoji size and position based on customEventDisplayMode (separate from holiday eventDisplayMode)
-        String displayMode = config.customEventDisplayMode != null ? config.customEventDisplayMode : "large-text";
-        boolean largeEmoji = "large".equals(displayMode) || "large-text".equals(displayMode);
-        boolean smallEmoji = "small".equals(displayMode) || "small-text".equals(displayMode);
+        String displayMode = config.customEventDisplayMode != null ? config.customEventDisplayMode
+                : DISPLAY_MODE_LARGE_TEXT;
+        boolean largeEmoji = DISPLAY_MODE_LARGE.equals(displayMode) || DISPLAY_MODE_LARGE_TEXT.equals(displayMode);
+        boolean smallEmoji = DISPLAY_MODE_SMALL.equals(displayMode) || DISPLAY_MODE_SMALL_TEXT.equals(displayMode);
 
         if (!largeEmoji && !smallEmoji) {
             // none or text-only mode - don't render emoji
@@ -537,8 +530,9 @@ public class CalendarRenderingService {
         }
 
         // Only render title if customEventDisplayMode includes text
-        String displayMode = config.customEventDisplayMode != null ? config.customEventDisplayMode : "large-text";
-        if (!displayMode.endsWith("-text") && !displayMode.equals("text")) {
+        String displayMode = config.customEventDisplayMode != null ? config.customEventDisplayMode
+                : DISPLAY_MODE_LARGE_TEXT;
+        if (!displayMode.endsWith("-text") && !displayMode.equals(DISPLAY_MODE_TEXT)) {
             return;
         }
 
@@ -1653,8 +1647,9 @@ public class CalendarRenderingService {
 
     /** Escapes special XML characters in a string. */
     private String escapeXml(String text) {
-        if (text == null)
+        if (text == null) {
             return "";
+        }
         return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'",
                 "&apos;");
     }
