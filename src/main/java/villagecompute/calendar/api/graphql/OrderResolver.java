@@ -2,7 +2,6 @@ package villagecompute.calendar.api.graphql;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -540,19 +539,21 @@ public class OrderResolver {
         List<UUID> userIds = orders.stream().map(o -> o.user != null ? o.user.id : null).filter(Objects::nonNull)
                 .distinct().toList();
 
+        Map<UUID, CalendarUser> userMap;
         if (userIds.isEmpty()) {
             LOG.debug("No user IDs to load");
-            return new ArrayList<>();
+            userMap = Map.of();
+        } else {
+            // Batch load users in a single query
+            List<CalendarUser> users = CalendarUser.list("id in ?1", userIds);
+            LOG.debugf("Loaded %d users in batch", users.size());
+
+            // Create lookup map for O(1) access
+            userMap = users.stream().collect(Collectors.toMap(u -> u.id, u -> u));
         }
 
-        // Batch load users in a single query
-        List<CalendarUser> users = CalendarUser.list("id in ?1", userIds);
-        LOG.debugf("Loaded %d users in batch", users.size());
-
-        // Create lookup map for O(1) access
-        Map<UUID, CalendarUser> userMap = users.stream().collect(Collectors.toMap(u -> u.id, u -> u));
-
         // Return users in same order as input orders (DataLoader contract)
+        // Must return list of same size as input, with nulls for orders without users
         List<CalendarUser> result = orders.stream().map(o -> o.user != null ? userMap.get(o.user.id) : null).toList();
 
         LOG.debugf("Returning %d users for %d orders", result.size(), orders.size());
