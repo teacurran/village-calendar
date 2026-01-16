@@ -10,6 +10,7 @@ import java.time.format.TextStyle;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -1051,8 +1052,12 @@ public class CalendarRenderingService {
                 config.dayNameColor != null ? config.dayNameColor : theme.weekdayHeader));
         svg.append(String.format(".grid-line { stroke: %s; stroke-width: 1; fill: none; }%n", config.gridLineColor));
 
-        String weekendBg = config.weekendBgColor != null && !config.weekendBgColor.isEmpty() ? config.weekendBgColor
-                : (theme.weekendBackground != null ? theme.weekendBackground : "none");
+        String weekendBg;
+        if (config.weekendBgColor != null && !config.weekendBgColor.isEmpty()) {
+            weekendBg = config.weekendBgColor;
+        } else {
+            weekendBg = Objects.requireNonNullElse(theme.weekendBackground, "none");
+        }
         svg.append(String.format(".weekend-bg { fill: %s; }%n", weekendBg));
         svg.append(String.format(".holiday { fill: %s; font-weight: bold; }%n", config.holidayColor));
         svg.append(String.format(".custom-date { fill: %s; }%n", config.customDateColor));

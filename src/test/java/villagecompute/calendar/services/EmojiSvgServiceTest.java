@@ -26,12 +26,6 @@ class EmojiSvgServiceTest {
     private static final String TEST_MONO_SVG_CONTENT = "<path d=\"M10,10 L100,100\"/>";
     private static final String TEST_MONO_VIEWBOX = "0 0 100 100";
 
-    // Test emoji
-    private static final String TEST_EMOJI = "🎄"; // Christmas tree
-    private static final String TEST_EMOJI_NORMALIZED = "🎄"; // Same (no VS16)
-    private static final String TEST_EMOJI_WITH_VS16 = "☀️"; // Has VS16
-    private static final String TEST_EMOJI_WITHOUT_VS16 = "☀"; // Without VS16
-
     @BeforeEach
     void setUp() {
         emojiSvgService = new EmojiSvgService();
@@ -65,7 +59,6 @@ class EmojiSvgServiceTest {
         // Add only to color cache
         getColorSvgCache(testService).put("coloronly", TEST_SVG_CONTENT);
 
-        // Single-arg hasEmojiSvg should return true (color || mono)
         assertTrue(testService.hasEmojiSvg("coloronly"));
     }
 
@@ -76,7 +69,6 @@ class EmojiSvgServiceTest {
         // Add only to mono cache
         getMonoSvgCache(testService).put("monoonly", TEST_MONO_SVG_CONTENT);
 
-        // Single-arg hasEmojiSvg should return true (color || mono)
         assertTrue(testService.hasEmojiSvg("monoonly"));
     }
 
@@ -608,7 +600,6 @@ class EmojiSvgServiceTest {
 
         // Get the caches to check their sizes
         Map<String, String> colorCache = getColorSvgCache(testService);
-        Map<String, String> monoCache = getMonoSvgCache(testService);
 
         // There should be some emojis where color exists but mono doesn't
         // (or vice versa) - the service should handle this gracefully
