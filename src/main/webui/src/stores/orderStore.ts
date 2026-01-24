@@ -10,6 +10,24 @@ import {
 } from "../services/orderService";
 import type { OrderUpdateInput } from "../types/order";
 
+/**
+ * Parse a JSON field that may be returned as a string from GraphQL.
+ * GraphQL JsonNodeAdapter returns JsonNode as JSON strings.
+ */
+function parseJsonField(value: any): any {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+
 export interface CalendarOrderItem {
   id: string;
   productType: string;
@@ -78,7 +96,11 @@ export const useOrderStore = defineStore("order", {
 
       try {
         const orders = await fetchAllOrdersAdmin(authToken, status, limit);
-        this.orders = orders;
+        // Parse shippingAddress JSON strings returned by GraphQL
+        this.orders = orders.map((order: any) => ({
+          ...order,
+          shippingAddress: parseJsonField(order.shippingAddress),
+        }));
         return true;
       } catch (err: any) {
         this.error = err.message || "Failed to load orders";
@@ -107,16 +129,24 @@ export const useOrderStore = defineStore("order", {
         );
 
         if (updatedOrder) {
+          // Parse shippingAddress JSON string
+          const parsedOrder = {
+            ...updatedOrder,
+            shippingAddress: parseJsonField(updatedOrder.shippingAddress),
+          };
+
           // Update in orders array
           const index = this.orders.findIndex((o) => o.id === orderId);
           if (index !== -1) {
-            this.orders[index] = updatedOrder;
+            this.orders[index] = parsedOrder;
           }
 
           // Update current order if it matches
           if (this.currentOrder?.id === orderId) {
-            this.currentOrder = updatedOrder;
+            this.currentOrder = parsedOrder;
           }
+
+          return parsedOrder;
         }
 
         return updatedOrder;

@@ -194,9 +194,20 @@ function showCalendarPreview(order: CalendarOrder) {
  * Get customer name (first initial + last name) for filename
  */
 function getCustomerNameForFilename(order: CalendarOrder): string {
-  // Try shipping address first
+  // Try shipping address first (check both formats)
   const addr = order.shippingAddress;
+  if (addr?.name) {
+    // Stripe format: single "name" field
+    const parts = addr.name.split(" ");
+    if (parts.length > 1) {
+      const firstInitial = parts[0].charAt(0).toUpperCase();
+      const lastName = parts[parts.length - 1];
+      return `${firstInitial}${lastName}`;
+    }
+    return parts[0];
+  }
   if (addr?.firstName && addr?.lastName) {
+    // Custom format: separate firstName/lastName
     const firstInitial = addr.firstName.charAt(0).toUpperCase();
     return `${firstInitial}${addr.lastName}`;
   }
@@ -378,10 +389,31 @@ function formatDateTime(date: string | undefined): string {
 
 /**
  * Format shipping address
+ * Handles both custom format (street, city, etc.) and Stripe format (line1, line2, etc.)
  */
 function formatAddress(address: any): string {
   if (!address) return "-";
+
+  // Handle Stripe format (line1, line2, city, state, postal_code, country)
+  if (address.line1) {
+    const parts = [
+      address.name,
+      address.line1,
+      address.line2,
+      address.city,
+      address.state,
+      address.postal_code || address.postalCode,
+      address.country,
+    ].filter(Boolean);
+    return parts.join(", ");
+  }
+
+  // Handle custom format (street, street2, city, state, postalCode, country)
   const parts = [
+    address.name ||
+      (address.firstName && address.lastName
+        ? `${address.firstName} ${address.lastName}`
+        : null),
     address.street,
     address.street2,
     address.city,
@@ -398,14 +430,17 @@ function formatAddress(address: any): string {
 const filteredOrders = computed(() => {
   let result = orders.value;
 
-  // Apply search filter (order ID or customer email)
+  // Apply search filter (order ID, customer email, or name)
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
     result = result.filter(
       (order) =>
         order.id.toLowerCase().includes(query) ||
-        order.user.email.toLowerCase().includes(query) ||
-        order.user.displayName?.toLowerCase().includes(query) ||
+        order.orderNumber?.toLowerCase().includes(query) ||
+        order.customerEmail?.toLowerCase().includes(query) ||
+        order.user?.email?.toLowerCase().includes(query) ||
+        order.user?.displayName?.toLowerCase().includes(query) ||
+        order.shippingAddress?.name?.toLowerCase().includes(query) ||
         (order.trackingNumber &&
           order.trackingNumber.toLowerCase().includes(query)),
     );

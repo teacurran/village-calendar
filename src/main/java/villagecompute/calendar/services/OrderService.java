@@ -827,11 +827,18 @@ public class OrderService {
 
         // Try to extract name from address info
         if (addressInfo != null) {
-            String firstName = (String) addressInfo.get("firstName");
-            String lastName = (String) addressInfo.get("lastName");
-            if (firstName != null || lastName != null) {
-                guestUser.displayName = ((firstName != null ? firstName : "") + " "
-                        + (lastName != null ? lastName : "")).trim();
+            // Check for Stripe format (single "name" field) first
+            String name = (String) addressInfo.get("name");
+            if (name != null && !name.isBlank()) {
+                guestUser.displayName = name.trim();
+            } else {
+                // Fall back to firstName/lastName format
+                String firstName = (String) addressInfo.get("firstName");
+                String lastName = (String) addressInfo.get("lastName");
+                if (firstName != null || lastName != null) {
+                    guestUser.displayName = ((firstName != null ? firstName : "") + " "
+                            + (lastName != null ? lastName : "")).trim();
+                }
             }
         }
 
