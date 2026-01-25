@@ -107,8 +107,11 @@ class OrderEmailJobHandlerIntegrationTest {
         // Then - Verify template renders without errors
         assertNotNull(html, "Template should render");
         assertTrue(html.contains("Thank You for Your Order"), "Should contain thank you message");
-        assertTrue(html.contains("customer@example.com") || html.contains("Valued Customer"),
-                "Should show customer identifier");
+        // Template shows displayName if available, email as fallback, or "Valued Customer" if no user
+        // With address.name populated, guest user displayName is set to "John Doe"
+        assertTrue(
+                html.contains("John Doe") || html.contains("customer@example.com") || html.contains("Valued Customer"),
+                "Should show customer identifier (name, email, or fallback)");
         assertTrue(html.contains(order.orderNumber) || html.contains(order.id.toString()),
                 "Should contain order identifier");
         assertFalse(html.contains("Property") && html.contains("not found"), "Should not contain template errors");
