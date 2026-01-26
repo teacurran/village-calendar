@@ -42,6 +42,11 @@ const loading = computed(() => orderStore.loading);
 const error = computed(() => orderStore.error);
 const orders = computed(() => orderStore.orders);
 
+// Pagination state from store
+const currentPage = computed(() => orderStore.currentPage);
+const pageSize = computed(() => orderStore.pageSize);
+const totalRecords = computed(() => orderStore.totalCount);
+
 // Filters
 const statusFilter = ref<string | null>(null);
 const dateRangeFilter = ref<Date[] | null>(null);
@@ -90,9 +95,9 @@ const previewSvgContent = ref("");
 const validationErrors = ref<string[]>([]);
 
 /**
- * Load orders with status filter
+ * Load orders with status filter and pagination
  */
-async function loadOrders() {
+async function loadOrders(page: number = 0, rows: number = 25) {
   if (!authStore.token) {
     toast.add({
       severity: "error",
@@ -103,7 +108,19 @@ async function loadOrders() {
     return;
   }
 
-  await orderStore.loadOrders(authStore.token, statusFilter.value || undefined);
+  await orderStore.loadOrders(
+    authStore.token,
+    statusFilter.value || undefined,
+    page,
+    rows,
+  );
+}
+
+/**
+ * Handle DataTable page change event
+ */
+async function onPage(event: { page: number; rows: number }) {
+  await loadOrders(event.page, event.rows);
 }
 
 /**
@@ -391,7 +408,11 @@ function formatDateTime(date: string | undefined): string {
  * Get customer name from order, with fallbacks
  */
 function getCustomerName(order: CalendarOrder): string {
-  // Try user displayName first
+  // Try customerName from REST response first
+  if (order.customerName) {
+    return order.customerName;
+  }
+  // Try user displayName
   if (order.user?.displayName) {
     return order.user.displayName;
   }
@@ -475,7 +496,8 @@ function formatShippingAddress(address: any): string {
 }
 
 /**
- * Filtered orders based on all active filters
+ * Filtered orders based on client-side filters (search and date range)
+ * Status filtering happens server-side via the REST API
  */
 const filteredOrders = computed(() => {
   let result = orders.value;
@@ -487,6 +509,7 @@ const filteredOrders = computed(() => {
       (order) =>
         order.id.toLowerCase().includes(query) ||
         order.orderNumber?.toLowerCase().includes(query) ||
+        order.customerName?.toLowerCase().includes(query) ||
         order.customerEmail?.toLowerCase().includes(query) ||
         order.user?.email?.toLowerCase().includes(query) ||
         order.user?.displayName?.toLowerCase().includes(query) ||
@@ -512,16 +535,20 @@ const filteredOrders = computed(() => {
 
 /**
  * Get order count for current filter
+ * Shows client-filtered count if search/date filters active, otherwise server total
  */
 const orderCount = computed(() => {
-  return filteredOrders.value.length;
+  if (searchQuery.value || dateRangeFilter.value) {
+    return filteredOrders.value.length;
+  }
+  return totalRecords.value;
 });
 
 /**
- * Watch status filter changes
+ * Watch status filter changes - reset to first page when status changes
  */
 async function onStatusFilterChange() {
-  await loadOrders();
+  await loadOrders(0, pageSize.value);
 }
 
 /**
@@ -531,11 +558,11 @@ function clearFilters() {
   statusFilter.value = null;
   dateRangeFilter.value = null;
   searchQuery.value = "";
-  loadOrders();
+  loadOrders(0, pageSize.value);
 }
 
 onMounted(async () => {
-  await loadOrders();
+  await loadOrders(0, 25);
 });
 </script>
 
@@ -617,15 +644,19 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Orders DataTable -->
+    <!-- Orders DataTable with server-side pagination -->
     <DataTable
       :value="filteredOrders"
       :loading="loading"
       striped-rows
+      lazy
       paginator
-      :rows="25"
+      :first="currentPage * pageSize"
+      :rows="pageSize"
+      :total-records="totalRecords"
       :rows-per-page-options="[10, 25, 50, 100]"
       table-style="min-width: 50rem"
+      @page="onPage"
     >
       <template #empty>
         <div class="text-center py-4">No orders found</div>

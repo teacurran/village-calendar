@@ -2,14 +2,18 @@ package villagecompute.calendar.api;
 
 import static villagecompute.calendar.util.MimeTypes.HEADER_CONTENT_DISPOSITION;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -27,6 +31,9 @@ import villagecompute.calendar.data.models.ItemAsset;
 import villagecompute.calendar.services.AuthenticationService;
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PDFRenderingService;
+import villagecompute.calendar.types.OrderSummaryType;
+import villagecompute.calendar.types.PaginatedOrdersType;
+import villagecompute.calendar.util.Roles;
 
 /** REST endpoint for secure order-related operations */
 @Path("/orders")
@@ -48,6 +55,64 @@ public class OrderResource {
 
     @Inject
     AuthenticationService authService;
+
+    /**
+     * Get paginated list of orders for admin dashboard. Replaces the slow GraphQL allOrders query with proper
+     * database-level pagination.
+     *
+     * @param status
+     *            Optional status filter (PENDING, PAID, PROCESSING, SHIPPED, etc.)
+     * @param page
+     *            Page number (0-based, default 0)
+     * @param pageSize
+     *            Number of orders per page (default 20, max 100)
+     * @return Paginated order list with total count
+     */
+    @GET
+    @Path("/admin")
+    @Produces(MediaType.APPLICATION_JSON)
+    @RolesAllowed(Roles.ADMIN)
+    public Response getAdminOrders(@QueryParam("status") String status, @QueryParam("page") @DefaultValue("0") int page,
+            @QueryParam("pageSize") @DefaultValue("20") int pageSize) {
+
+        LOG.infof("Admin orders request: status=%s, page=%d, pageSize=%d", status, page, pageSize);
+
+        // Validate and clamp page size
+        if (pageSize < 1) {
+            pageSize = 20;
+        }
+        if (pageSize > 100) {
+            pageSize = 100;
+        }
+        if (page < 0) {
+            page = 0;
+        }
+
+        try {
+            // Get total count for pagination
+            long totalCount = orderService.countOrders(status);
+
+            // Get paginated orders with user and items eagerly loaded
+            List<CalendarOrder> orders = orderService.getOrdersPaginated(status, page, pageSize);
+
+            // Convert to summary DTOs
+            List<OrderSummaryType> summaries = orders.stream()
+                    .map(order -> OrderSummaryType.fromEntity(order, objectMapper)).toList();
+
+            // Build paginated response
+            PaginatedOrdersType response = new PaginatedOrdersType(summaries, page, pageSize, totalCount);
+
+            LOG.infof("Returning %d orders (page %d of %d, total %d)", summaries.size(), page, response.totalPages,
+                    totalCount);
+
+            return Response.ok(response).build();
+
+        } catch (Exception e) {
+            LOG.errorf(e, "Error fetching admin orders");
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("Failed to fetch orders: " + e.getMessage()).build();
+        }
+    }
 
     /**
      * Download PDF for a specific order item. This endpoint retrieves the saved SVG content from the order and

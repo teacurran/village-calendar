@@ -231,6 +231,46 @@ public class OrderService {
     }
 
     /**
+     * Get paginated orders for admin dashboard with user and items eagerly loaded.
+     *
+     * @param status
+     *            Optional status filter
+     * @param page
+     *            Page number (0-based)
+     * @param pageSize
+     *            Number of orders per page
+     * @return List of orders for the requested page
+     */
+    public List<CalendarOrder> getOrdersPaginated(String status, int page, int pageSize) {
+        LOG.debugf("Fetching orders page %d (size %d) with status filter: %s", page, pageSize, status);
+
+        String baseQuery = "SELECT DISTINCT o FROM CalendarOrder o "
+                + "LEFT JOIN FETCH o.user LEFT JOIN FETCH o.items ";
+        String whereClause = (status != null && !status.isBlank()) ? "WHERE o.status = ?1 " : "";
+        String orderClause = "ORDER BY o.created DESC";
+
+        if (status != null && !status.isBlank()) {
+            return CalendarOrder.find(baseQuery + whereClause + orderClause, status).page(page, pageSize).list();
+        } else {
+            return CalendarOrder.find(baseQuery + orderClause).page(page, pageSize).list();
+        }
+    }
+
+    /**
+     * Count total orders, optionally filtered by status.
+     *
+     * @param status
+     *            Optional status filter
+     * @return Total count of matching orders
+     */
+    public long countOrders(String status) {
+        if (status != null && !status.isBlank()) {
+            return CalendarOrder.count("status", status);
+        }
+        return CalendarOrder.count();
+    }
+
+    /**
      * Get a single order by ID.
      *
      * @param orderId
