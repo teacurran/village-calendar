@@ -814,8 +814,19 @@ public class OrderService {
         // First try to find by email
         Optional<CalendarUser> existingUser = CalendarUser.findByEmail(email);
         if (existingUser.isPresent()) {
+            CalendarUser user = existingUser.get();
             LOG.infof("Found existing user for email %s", email);
-            return existingUser.get();
+
+            // Update displayName if missing and we have address info with a name
+            if ((user.displayName == null || user.displayName.isBlank()) && addressInfo != null) {
+                String name = extractNameFromAddress(addressInfo);
+                if (name != null) {
+                    user.displayName = name;
+                    user.persist();
+                    LOG.infof("Updated displayName for user %s to '%s'", email, name);
+                }
+            }
+            return user;
         }
 
         // Create a guest user
@@ -827,18 +838,9 @@ public class OrderService {
 
         // Try to extract name from address info
         if (addressInfo != null) {
-            // Check for Stripe format (single "name" field) first
-            String name = (String) addressInfo.get("name");
-            if (name != null && !name.isBlank()) {
-                guestUser.displayName = name.trim();
-            } else {
-                // Fall back to firstName/lastName format
-                String firstName = (String) addressInfo.get("firstName");
-                String lastName = (String) addressInfo.get("lastName");
-                if (firstName != null || lastName != null) {
-                    guestUser.displayName = ((firstName != null ? firstName : "") + " "
-                            + (lastName != null ? lastName : "")).trim();
-                }
+            String name = extractNameFromAddress(addressInfo);
+            if (name != null) {
+                guestUser.displayName = name;
             }
         }
 
@@ -846,6 +848,34 @@ public class OrderService {
         guestUser.persist();
 
         return guestUser;
+    }
+
+    /**
+     * Extract customer name from address info map. Handles both Stripe format (single "name" field) and custom format
+     * (firstName/lastName).
+     */
+    private String extractNameFromAddress(Map<String, Object> addressInfo) {
+        if (addressInfo == null) {
+            return null;
+        }
+
+        // Check for Stripe format (single "name" field) first
+        String name = (String) addressInfo.get("name");
+        if (name != null && !name.isBlank()) {
+            return name.trim();
+        }
+
+        // Fall back to firstName/lastName format
+        String firstName = (String) addressInfo.get("firstName");
+        String lastName = (String) addressInfo.get("lastName");
+        if (firstName != null || lastName != null) {
+            String combined = ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
+            if (!combined.isEmpty()) {
+                return combined;
+            }
+        }
+
+        return null;
     }
 
     /** Create a UserCalendar from cart item configuration. */

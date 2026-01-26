@@ -388,7 +388,26 @@ function formatDateTime(date: string | undefined): string {
 }
 
 /**
- * Format shipping address
+ * Get customer name from order, with fallbacks
+ */
+function getCustomerName(order: CalendarOrder): string {
+  // Try user displayName first
+  if (order.user?.displayName) {
+    return order.user.displayName;
+  }
+  // Fall back to name from shipping address
+  const addr = order.shippingAddress;
+  if (addr?.name) {
+    return addr.name;
+  }
+  if (addr?.firstName || addr?.lastName) {
+    return `${addr.firstName || ""} ${addr.lastName || ""}`.trim();
+  }
+  return "-";
+}
+
+/**
+ * Format shipping address (includes name)
  * Handles both custom format (street, city, etc.) and Stripe format (line1, line2, etc.)
  */
 function formatAddress(address: any): string {
@@ -414,6 +433,37 @@ function formatAddress(address: any): string {
       (address.firstName && address.lastName
         ? `${address.firstName} ${address.lastName}`
         : null),
+    address.street,
+    address.street2,
+    address.city,
+    address.state,
+    address.postalCode,
+    address.country,
+  ].filter(Boolean);
+  return parts.join(", ");
+}
+
+/**
+ * Format shipping address without name (for display when name is shown separately)
+ */
+function formatShippingAddress(address: any): string {
+  if (!address) return "-";
+
+  // Handle Stripe format
+  if (address.line1) {
+    const parts = [
+      address.line1,
+      address.line2,
+      address.city,
+      address.state,
+      address.postal_code || address.postalCode,
+      address.country,
+    ].filter(Boolean);
+    return parts.join(", ");
+  }
+
+  // Handle custom format
+  const parts = [
     address.street,
     address.street2,
     address.city,
@@ -595,9 +645,11 @@ onMounted(async () => {
         <template #body="{ data }">
           <div>
             <div class="font-semibold">
-              {{ data.user.displayName || "Unknown" }}
+              {{ getCustomerName(data) }}
             </div>
-            <div class="text-sm text-surface-600">{{ data.user.email }}</div>
+            <div class="text-sm text-surface-600">
+              {{ data.customerEmail || data.user?.email || "-" }}
+            </div>
           </div>
         </template>
       </Column>
@@ -956,19 +1008,19 @@ onMounted(async () => {
             <div>
               <span class="text-surface-600">Name:</span>
               <span class="font-semibold ml-2">{{
-                viewingOrder.user?.displayName || "-"
+                getCustomerName(viewingOrder)
               }}</span>
             </div>
             <div>
               <span class="text-surface-600">Email:</span>
               <span class="ml-2">{{
-                viewingOrder.customerEmail || viewingOrder.user?.email
+                viewingOrder.customerEmail || viewingOrder.user?.email || "-"
               }}</span>
             </div>
             <div class="col-span-2">
               <span class="text-surface-600">Shipping Address:</span>
               <div class="font-semibold ml-2 mt-1">
-                {{ formatAddress(viewingOrder.shippingAddress) }}
+                {{ formatShippingAddress(viewingOrder.shippingAddress) }}
               </div>
             </div>
           </div>
