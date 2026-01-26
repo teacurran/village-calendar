@@ -966,13 +966,13 @@ onMounted(async () => {
                 <div>
                   <span class="text-surface-600">Name:</span>
                   <span class="font-semibold ml-2">{{
-                    viewingOrder.calendar?.name || "Calendar"
+                    viewingOrder.items?.[0]?.description || "Calendar"
                   }}</span>
                 </div>
                 <div>
                   <span class="text-surface-600">Year:</span>
                   <span class="font-semibold ml-2">{{
-                    viewingOrder.calendar?.year || "-"
+                    viewingOrder.items?.[0]?.year || "-"
                   }}</span>
                 </div>
               </div>
