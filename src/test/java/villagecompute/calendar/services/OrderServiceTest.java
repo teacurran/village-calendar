@@ -1336,6 +1336,191 @@ class OrderServiceTest {
         assertEquals(CalendarOrderItem.STATUS_SHIPPED, shippedItem.itemStatus);
     }
 
+    // ==================== Pagination Tests ====================
+
+    @Test
+    @Transactional
+    void testCountOrders_AllOrders() {
+        // Given
+        createTestOrder();
+        createTestOrder();
+        createTestOrder();
+
+        // When
+        long count = orderService.countOrders(null);
+
+        // Then
+        assertEquals(3, count);
+    }
+
+    @Test
+    @Transactional
+    void testCountOrders_WithStatusFilter() {
+        // Given
+        createTestOrder(); // PENDING
+        CalendarOrder paidOrder = createTestOrder();
+        orderService.updateOrderStatus(paidOrder.id, CalendarOrder.STATUS_PAID, "Paid");
+        createTestOrder(); // PENDING
+
+        // When
+        long pendingCount = orderService.countOrders(CalendarOrder.STATUS_PENDING);
+        long paidCount = orderService.countOrders(CalendarOrder.STATUS_PAID);
+
+        // Then
+        assertEquals(2, pendingCount);
+        assertEquals(1, paidCount);
+    }
+
+    @Test
+    @Transactional
+    void testCountOrders_WithEmptyStatus() {
+        // Given
+        createTestOrder();
+        createTestOrder();
+
+        // When - empty string should be treated as no filter
+        long count = orderService.countOrders("");
+
+        // Then
+        assertEquals(2, count);
+    }
+
+    @Test
+    @Transactional
+    void testCountOrders_WithBlankStatus() {
+        // Given
+        createTestOrder();
+
+        // When - blank string should be treated as no filter
+        long count = orderService.countOrders("   ");
+
+        // Then
+        assertEquals(1, count);
+    }
+
+    @Test
+    @Transactional
+    void testGetOrdersPaginated_FirstPage() {
+        // Given - create 5 orders
+        for (int i = 0; i < 5; i++) {
+            createTestOrder();
+        }
+
+        // When - get first page of 2
+        List<CalendarOrder> orders = orderService.getOrdersPaginated(null, 0, 2);
+
+        // Then
+        assertEquals(2, orders.size());
+    }
+
+    @Test
+    @Transactional
+    void testGetOrdersPaginated_SecondPage() {
+        // Given - create 5 orders
+        for (int i = 0; i < 5; i++) {
+            createTestOrder();
+        }
+
+        // When - get second page of 2
+        List<CalendarOrder> orders = orderService.getOrdersPaginated(null, 1, 2);
+
+        // Then
+        assertEquals(2, orders.size());
+    }
+
+    @Test
+    @Transactional
+    void testGetOrdersPaginated_LastPartialPage() {
+        // Given - create 5 orders
+        for (int i = 0; i < 5; i++) {
+            createTestOrder();
+        }
+
+        // When - get third page of 2 (only 1 order remaining)
+        List<CalendarOrder> orders = orderService.getOrdersPaginated(null, 2, 2);
+
+        // Then
+        assertEquals(1, orders.size());
+    }
+
+    @Test
+    @Transactional
+    void testGetOrdersPaginated_WithStatusFilter() {
+        // Given
+        createTestOrder(); // PENDING
+        CalendarOrder paidOrder1 = createTestOrder();
+        orderService.updateOrderStatus(paidOrder1.id, CalendarOrder.STATUS_PAID, "Paid");
+        CalendarOrder paidOrder2 = createTestOrder();
+        orderService.updateOrderStatus(paidOrder2.id, CalendarOrder.STATUS_PAID, "Paid");
+        createTestOrder(); // PENDING
+
+        // When - get PAID orders
+        List<CalendarOrder> paidOrders = orderService.getOrdersPaginated(CalendarOrder.STATUS_PAID, 0, 10);
+
+        // Then
+        assertEquals(2, paidOrders.size());
+        assertTrue(paidOrders.stream().allMatch(o -> CalendarOrder.STATUS_PAID.equals(o.status)));
+    }
+
+    @Test
+    @Transactional
+    void testGetOrdersPaginated_EagerLoadsUserAndItems() {
+        // Given
+        CalendarOrder order = createTestOrder();
+
+        // When
+        List<CalendarOrder> orders = orderService.getOrdersPaginated(null, 0, 10);
+
+        // Then
+        assertFalse(orders.isEmpty());
+        CalendarOrder loadedOrder = orders.get(0);
+        // These should not throw LazyInitializationException
+        assertNotNull(loadedOrder.user);
+        assertNotNull(loadedOrder.user.email);
+        assertFalse(loadedOrder.items.isEmpty());
+        assertNotNull(loadedOrder.items.get(0).productType);
+    }
+
+    @Test
+    @Transactional
+    void testGetOrdersPaginated_EmptyResult() {
+        // Given - no orders
+
+        // When
+        List<CalendarOrder> orders = orderService.getOrdersPaginated(null, 0, 10);
+
+        // Then
+        assertTrue(orders.isEmpty());
+    }
+
+    @Test
+    @Transactional
+    void testGetOrdersPaginated_BeyondLastPage() {
+        // Given - create 2 orders
+        createTestOrder();
+        createTestOrder();
+
+        // When - request page 10 with page size 10 (way beyond data)
+        List<CalendarOrder> orders = orderService.getOrdersPaginated(null, 10, 10);
+
+        // Then
+        assertTrue(orders.isEmpty());
+    }
+
+    @Test
+    @Transactional
+    void testGetOrdersPaginated_WithEmptyStatus() {
+        // Given
+        createTestOrder();
+        createTestOrder();
+
+        // When - empty status should return all
+        List<CalendarOrder> orders = orderService.getOrdersPaginated("", 0, 10);
+
+        // Then
+        assertEquals(2, orders.size());
+    }
+
     // Helper method to create a test order
     private CalendarOrder createTestOrder() {
         return orderService.createOrder(testUser, testCalendar, 1, new BigDecimal("29.99"), testShippingAddress);
