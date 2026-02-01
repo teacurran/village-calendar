@@ -244,8 +244,9 @@ public class OrderService {
     public List<CalendarOrder> getOrdersPaginated(String status, int page, int pageSize) {
         LOG.debugf("Fetching orders page %d (size %d) with status filter: %s", page, pageSize, status);
 
+        // Fetch orders with user, items, and item assets for admin dashboard thumbnails
         String baseQuery = "SELECT DISTINCT o FROM CalendarOrder o "
-                + "LEFT JOIN FETCH o.user LEFT JOIN FETCH o.items ";
+                + "LEFT JOIN FETCH o.user LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.assets ";
         String whereClause = (status != null && !status.isBlank()) ? "WHERE o.status = ?1 " : "";
         String orderClause = "ORDER BY o.created DESC";
 

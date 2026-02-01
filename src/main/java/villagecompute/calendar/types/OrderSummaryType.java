@@ -6,8 +6,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarOrderItem;
+import villagecompute.calendar.data.models.ItemAsset;
 
 /**
  * Flattened order summary for admin dashboard. Includes all data needed for the order list view without requiring
@@ -95,7 +98,7 @@ public class OrderSummaryType {
 
         // Items
         if (order.items != null) {
-            summary.items = order.items.stream().map(OrderItemSummary::fromEntity).toList();
+            summary.items = order.items.stream().map(item -> OrderItemSummary.fromEntity(item, objectMapper)).toList();
             summary.totalItemCount = order.items.stream().mapToInt(i -> i.quantity).sum();
         } else {
             summary.items = List.of();
@@ -119,7 +122,13 @@ public class OrderSummaryType {
         public String itemStatus;
         public int year;
 
-        public static OrderItemSummary fromEntity(CalendarOrderItem item) {
+        /** Configuration as a map (includes generatedSvg for legacy orders) */
+        public Map<String, Object> configuration;
+
+        /** Assets including SVG content for thumbnails */
+        public List<AssetSummary> assets;
+
+        public static OrderItemSummary fromEntity(CalendarOrderItem item, ObjectMapper objectMapper) {
             OrderItemSummary summary = new OrderItemSummary();
             summary.id = item.id;
             summary.productType = item.productType;
@@ -129,6 +138,41 @@ public class OrderSummaryType {
             summary.lineTotal = item.lineTotal;
             summary.itemStatus = item.itemStatus;
             summary.year = item.getYear();
+
+            // Convert configuration JsonNode to Map
+            if (item.configuration != null) {
+                try {
+                    summary.configuration = objectMapper.convertValue(item.configuration, Map.class);
+                } catch (Exception e) {
+                    // Ignore conversion errors
+                }
+            }
+
+            // Convert assets
+            if (item.assets != null && !item.assets.isEmpty()) {
+                summary.assets = item.assets.stream().map(AssetSummary::fromEntity).toList();
+            }
+
+            return summary;
+        }
+    }
+
+    /**
+     * Asset summary for order item thumbnails.
+     */
+    public static class AssetSummary {
+
+        public UUID id;
+        public String assetKey;
+        public String contentType;
+        public String svgContent;
+
+        public static AssetSummary fromEntity(ItemAsset asset) {
+            AssetSummary summary = new AssetSummary();
+            summary.id = asset.id;
+            summary.assetKey = asset.assetKey;
+            summary.contentType = asset.contentType;
+            summary.svgContent = asset.svgContent;
             return summary;
         }
     }
