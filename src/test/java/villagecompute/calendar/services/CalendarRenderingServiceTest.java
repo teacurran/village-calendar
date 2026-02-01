@@ -657,7 +657,15 @@ class CalendarRenderingServiceTest {
 
         String result = CalendarRenderingService.convertColorForPDF(transparent);
 
-        assertNotNull(result);
+        // "transparent" keyword should be converted to "none" for PDF compatibility
+        assertEquals("none", result);
+    }
+
+    @Test
+    void testConvertColorForPDF_TransparentColorCaseInsensitive() {
+        // Test case insensitivity
+        assertEquals("none", CalendarRenderingService.convertColorForPDF("TRANSPARENT"));
+        assertEquals("none", CalendarRenderingService.convertColorForPDF("Transparent"));
     }
 
     @Test

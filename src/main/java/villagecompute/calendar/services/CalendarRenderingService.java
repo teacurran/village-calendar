@@ -1544,6 +1544,11 @@ public class CalendarRenderingService {
             return "none";
         }
 
+        // Handle the literal "transparent" keyword - not supported by PDF renderers
+        if ("transparent".equalsIgnoreCase(color)) {
+            return "none";
+        }
+
         // Handle rgba with transparency - convert to "none" if fully transparent
         if (color.startsWith("rgba")) {
             // Check if it's transparent (alpha = 0)
