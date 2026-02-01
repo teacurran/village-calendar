@@ -21,6 +21,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarUser;
+import villagecompute.calendar.data.models.CartItem;
+import villagecompute.calendar.data.models.ItemAsset;
 import villagecompute.calendar.data.models.Shipment;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.jobs.DelayedJobHandler;
@@ -843,10 +845,53 @@ public class OrderService {
 
         item.persist();
 
-        LOG.infof("Created order item: %s (%s) x%d @ $%.2f = $%.2f", description, productType, quantity, unitPrice,
-                lineTotal);
+        // Copy assets from the original cart item to the order item
+        copyAssetsFromCartItem(item, cartItem);
+
+        LOG.infof("Created order item: %s (%s) x%d @ $%.2f = $%.2f (assets: %d)", description, productType, quantity,
+                unitPrice, lineTotal, item.assets.size());
 
         return item;
+    }
+
+    /**
+     * Copy assets from a cart item to an order item. Looks up the original cart item by ID and copies its ItemAsset
+     * records to the order item.
+     */
+    private void copyAssetsFromCartItem(CalendarOrderItem orderItem, Map<String, Object> cartItemData) {
+        // Get cart item ID from the checkout data
+        String cartItemId = (String) cartItemData.get("id");
+        if (cartItemId == null || cartItemId.isEmpty()) {
+            LOG.warn("No cart item ID provided, cannot copy assets");
+            return;
+        }
+
+        try {
+            UUID cartItemUuid = UUID.fromString(cartItemId);
+            Optional<CartItem> cartItemOpt = CartItem.findByIdOptional(cartItemUuid);
+
+            if (cartItemOpt.isEmpty()) {
+                LOG.warnf("Cart item not found: %s", cartItemId);
+                return;
+            }
+
+            CartItem cartItem = cartItemOpt.get();
+
+            // Copy each asset from the cart item to the order item
+            if (cartItem.assets != null && !cartItem.assets.isEmpty()) {
+                for (ItemAsset cartAsset : cartItem.assets) {
+                    // The same ItemAsset record is shared between cart and order items
+                    // (ManyToMany relationship allows this)
+                    orderItem.assets.add(cartAsset);
+                }
+                LOG.debugf("Copied %d assets from cart item %s to order item %s", cartItem.assets.size(), cartItemId,
+                        orderItem.id);
+            } else {
+                LOG.debugf("Cart item %s has no assets to copy", cartItemId);
+            }
+        } catch (IllegalArgumentException e) {
+            LOG.warnf("Invalid cart item ID format: %s", cartItemId);
+        }
     }
 
     /** Find existing user by email or create a guest user. */
