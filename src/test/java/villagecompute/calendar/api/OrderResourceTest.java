@@ -27,6 +27,7 @@ import villagecompute.calendar.services.OrderService;
 
 import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import io.restassured.RestAssured;
 
 /** Tests for OrderResource - secure PDF download functionality */
@@ -423,5 +424,167 @@ public class OrderResourceTest {
         // Expect 500 error due to PDF rendering failure
         given().when().get("/api/orders/" + order.orderNumber + "/items/" + itemId + "/pdf").then().statusCode(500)
                 .body(containsString("PDF generation failed"));
+    }
+
+    // ==================== Admin Orders Endpoint Tests ====================
+
+    @Test
+    @DisplayName("Admin orders endpoint requires authentication")
+    void testGetAdminOrders_Unauthenticated_Returns401() {
+        given().when().get("/api/orders/admin").then().statusCode(401);
+    }
+
+    @Test
+    @TestSecurity(
+            user = "regularuser",
+            roles = "USER")
+    @DisplayName("Admin orders endpoint requires ADMIN role")
+    void testGetAdminOrders_NonAdmin_Returns403() {
+        given().when().get("/api/orders/admin").then().statusCode(403);
+    }
+
+    @Test
+    @TestSecurity(
+            user = "adminuser",
+            roles = "ADMIN")
+    @DisplayName("Admin orders endpoint returns paginated results")
+    void testGetAdminOrders_Admin_ReturnsPaginatedOrders() {
+        // Create some test orders
+        createGuestOrder("VC-ADMIN1-" + System.currentTimeMillis());
+        createGuestOrder("VC-ADMIN2-" + System.currentTimeMillis());
+        createGuestOrder("VC-ADMIN3-" + System.currentTimeMillis());
+
+        given().queryParam("page", 0).queryParam("pageSize", 10).when().get("/api/orders/admin").then().statusCode(200)
+                .contentType("application/json").body("page", equalTo(0)).body("pageSize", equalTo(10))
+                .body("totalCount", greaterThanOrEqualTo(3)).body("totalPages", greaterThanOrEqualTo(1))
+                .body("orders", notNullValue()).body("orders.size()", greaterThanOrEqualTo(3));
+    }
+
+    @Test
+    @TestSecurity(
+            user = "adminuser",
+            roles = "ADMIN")
+    @DisplayName("Admin orders endpoint respects pagination parameters")
+    void testGetAdminOrders_PaginationWorks() {
+        // Create 5 test orders
+        for (int i = 0; i < 5; i++) {
+            createGuestOrder("VC-PAGE" + i + "-" + System.currentTimeMillis());
+        }
+
+        // Request page size of 2
+        given().queryParam("page", 0).queryParam("pageSize", 2).when().get("/api/orders/admin").then().statusCode(200)
+                .body("pageSize", equalTo(2)).body("orders.size()", lessThanOrEqualTo(2));
+    }
+
+    @Test
+    @TestSecurity(
+            user = "adminuser",
+            roles = "ADMIN")
+    @DisplayName("Admin orders endpoint filters by status")
+    void testGetAdminOrders_StatusFilterWorks() {
+        // Create orders with different statuses
+        CalendarOrder paidOrder = createGuestOrder("VC-PAID-" + System.currentTimeMillis());
+        QuarkusTransaction.requiringNew().run(() -> {
+            CalendarOrder order = CalendarOrder.findById(paidOrder.id);
+            order.status = CalendarOrder.STATUS_PAID;
+            order.persist();
+        });
+
+        createGuestOrder("VC-PENDING-" + System.currentTimeMillis()); // This stays PAID (from createGuestOrder)
+
+        // Filter by PAID status
+        given().queryParam("status", "PAID").queryParam("page", 0).queryParam("pageSize", 100).when()
+                .get("/api/orders/admin").then().statusCode(200)
+                .body("orders.findAll { it.status == 'PAID' }.size()", greaterThanOrEqualTo(1));
+    }
+
+    @Test
+    @TestSecurity(
+            user = "adminuser",
+            roles = "ADMIN")
+    @DisplayName("Admin orders endpoint uses default pagination values")
+    void testGetAdminOrders_DefaultPagination() {
+        given().when().get("/api/orders/admin").then().statusCode(200).body("page", equalTo(0)).body("pageSize",
+                equalTo(20)); // Default page size
+    }
+
+    @Test
+    @TestSecurity(
+            user = "adminuser",
+            roles = "ADMIN")
+    @DisplayName("Admin orders endpoint clamps page size to maximum 100")
+    void testGetAdminOrders_MaxPageSize() {
+        given().queryParam("pageSize", 500) // Request more than max
+                .when().get("/api/orders/admin").then().statusCode(200).body("pageSize", equalTo(100)); // Clamped to
+                                                                                                        // max
+    }
+
+    @Test
+    @TestSecurity(
+            user = "adminuser",
+            roles = "ADMIN")
+    @DisplayName("Admin orders endpoint clamps negative page to 0")
+    void testGetAdminOrders_NegativePage() {
+        given().queryParam("page", -5).when().get("/api/orders/admin").then().statusCode(200).body("page", equalTo(0));
+    }
+
+    @Test
+    @TestSecurity(
+            user = "adminuser",
+            roles = "ADMIN")
+    @DisplayName("Admin orders endpoint clamps invalid page size to default")
+    void testGetAdminOrders_InvalidPageSize() {
+        given().queryParam("pageSize", 0) // Invalid page size
+                .when().get("/api/orders/admin").then().statusCode(200).body("pageSize", equalTo(20)); // Defaults to 20
+    }
+
+    @Test
+    @TestSecurity(
+            user = "adminuser",
+            roles = "ADMIN")
+    @DisplayName("Admin orders response includes customer info")
+    void testGetAdminOrders_IncludesCustomerInfo() {
+        // Create order with customer info
+        String orderNumber = "VC-CUSTINFO-" + System.currentTimeMillis();
+        QuarkusTransaction.requiringNew().call(() -> {
+            CalendarOrder order = new CalendarOrder();
+            order.user = null;
+            order.subtotal = new BigDecimal("25.00");
+            order.totalPrice = new BigDecimal("25.00");
+            order.status = CalendarOrder.STATUS_PAID;
+            order.orderNumber = orderNumber;
+            order.customerEmail = "customer@example.com";
+            order.shippingAddress = objectMapper.createObjectNode().put("name", "John Doe").put("line1", "123 Main St")
+                    .put("city", "Portland").put("state", "OR").put("postal_code", "97201").put("country", "US");
+            order.persist();
+
+            createOrderItemWithAsset(order, createTestSvg(), 2025);
+            return order;
+        });
+
+        // Verify order response includes customer email and shipping address
+        given().queryParam("page", 0).queryParam("pageSize", 100).when().get("/api/orders/admin").then().statusCode(200)
+                .body("orders.size()", greaterThanOrEqualTo(1))
+                // Check that at least one order has customer email
+                .body("orders.customerEmail", hasItem("customer@example.com"))
+                // Check that orders have shipping address info
+                .body("orders.shippingAddress", notNullValue());
+    }
+
+    @Test
+    @TestSecurity(
+            user = "adminuser",
+            roles = "ADMIN")
+    @DisplayName("Admin orders response includes order items")
+    void testGetAdminOrders_IncludesOrderItems() {
+        createGuestOrder("VC-ITEMS-" + System.currentTimeMillis());
+
+        // Verify orders include items array
+        given().queryParam("page", 0).queryParam("pageSize", 100).when().get("/api/orders/admin").then().statusCode(200)
+                .body("orders.size()", greaterThanOrEqualTo(1))
+                // Check that orders have items
+                .body("orders.items.flatten().size()", greaterThanOrEqualTo(1))
+                // Check that orders have totalItemCount
+                .body("orders.totalItemCount", hasItem(greaterThanOrEqualTo(1)));
     }
 }

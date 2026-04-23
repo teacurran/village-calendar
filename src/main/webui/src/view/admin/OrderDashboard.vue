@@ -42,6 +42,11 @@ const loading = computed(() => orderStore.loading);
 const error = computed(() => orderStore.error);
 const orders = computed(() => orderStore.orders);
 
+// Pagination state from store
+const currentPage = computed(() => orderStore.currentPage);
+const pageSize = computed(() => orderStore.pageSize);
+const totalRecords = computed(() => orderStore.totalCount);
+
 // Filters
 const statusFilter = ref<string | null>(null);
 const dateRangeFilter = ref<Date[] | null>(null);
@@ -90,9 +95,9 @@ const previewSvgContent = ref("");
 const validationErrors = ref<string[]>([]);
 
 /**
- * Load orders with status filter
+ * Load orders with status filter and pagination
  */
-async function loadOrders() {
+async function loadOrders(page: number = 0, rows: number = 25) {
   if (!authStore.token) {
     toast.add({
       severity: "error",
@@ -103,7 +108,19 @@ async function loadOrders() {
     return;
   }
 
-  await orderStore.loadOrders(authStore.token, statusFilter.value || undefined);
+  await orderStore.loadOrders(
+    authStore.token,
+    statusFilter.value || undefined,
+    page,
+    rows,
+  );
+}
+
+/**
+ * Handle DataTable page change event
+ */
+async function onPage(event: { page: number; rows: number }) {
+  await loadOrders(event.page, event.rows);
 }
 
 /**
@@ -194,9 +211,20 @@ function showCalendarPreview(order: CalendarOrder) {
  * Get customer name (first initial + last name) for filename
  */
 function getCustomerNameForFilename(order: CalendarOrder): string {
-  // Try shipping address first
+  // Try shipping address first (check both formats)
   const addr = order.shippingAddress;
+  if (addr?.name) {
+    // Stripe format: single "name" field
+    const parts = addr.name.split(" ");
+    if (parts.length > 1) {
+      const firstInitial = parts[0].charAt(0).toUpperCase();
+      const lastName = parts[parts.length - 1];
+      return `${firstInitial}${lastName}`;
+    }
+    return parts[0];
+  }
   if (addr?.firstName && addr?.lastName) {
+    // Custom format: separate firstName/lastName
     const firstInitial = addr.firstName.charAt(0).toUpperCase();
     return `${firstInitial}${addr.lastName}`;
   }
@@ -377,10 +405,85 @@ function formatDateTime(date: string | undefined): string {
 }
 
 /**
- * Format shipping address
+ * Get customer name from order, with fallbacks
+ */
+function getCustomerName(order: CalendarOrder): string {
+  // Try customerName from REST response first
+  if (order.customerName) {
+    return order.customerName;
+  }
+  // Try user displayName
+  if (order.user?.displayName) {
+    return order.user.displayName;
+  }
+  // Fall back to name from shipping address
+  const addr = order.shippingAddress;
+  if (addr?.name) {
+    return addr.name;
+  }
+  if (addr?.firstName || addr?.lastName) {
+    return `${addr.firstName || ""} ${addr.lastName || ""}`.trim();
+  }
+  return "-";
+}
+
+/**
+ * Format shipping address (includes name)
+ * Handles both custom format (street, city, etc.) and Stripe format (line1, line2, etc.)
  */
 function formatAddress(address: any): string {
   if (!address) return "-";
+
+  // Handle Stripe format (line1, line2, city, state, postal_code, country)
+  if (address.line1) {
+    const parts = [
+      address.name,
+      address.line1,
+      address.line2,
+      address.city,
+      address.state,
+      address.postal_code || address.postalCode,
+      address.country,
+    ].filter(Boolean);
+    return parts.join(", ");
+  }
+
+  // Handle custom format (street, street2, city, state, postalCode, country)
+  const parts = [
+    address.name ||
+      (address.firstName && address.lastName
+        ? `${address.firstName} ${address.lastName}`
+        : null),
+    address.street,
+    address.street2,
+    address.city,
+    address.state,
+    address.postalCode,
+    address.country,
+  ].filter(Boolean);
+  return parts.join(", ");
+}
+
+/**
+ * Format shipping address without name (for display when name is shown separately)
+ */
+function formatShippingAddress(address: any): string {
+  if (!address) return "-";
+
+  // Handle Stripe format
+  if (address.line1) {
+    const parts = [
+      address.line1,
+      address.line2,
+      address.city,
+      address.state,
+      address.postal_code || address.postalCode,
+      address.country,
+    ].filter(Boolean);
+    return parts.join(", ");
+  }
+
+  // Handle custom format
   const parts = [
     address.street,
     address.street2,
@@ -393,19 +496,24 @@ function formatAddress(address: any): string {
 }
 
 /**
- * Filtered orders based on all active filters
+ * Filtered orders based on client-side filters (search and date range)
+ * Status filtering happens server-side via the REST API
  */
 const filteredOrders = computed(() => {
   let result = orders.value;
 
-  // Apply search filter (order ID or customer email)
+  // Apply search filter (order ID, customer email, or name)
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
     result = result.filter(
       (order) =>
         order.id.toLowerCase().includes(query) ||
-        order.user.email.toLowerCase().includes(query) ||
-        order.user.displayName?.toLowerCase().includes(query) ||
+        order.orderNumber?.toLowerCase().includes(query) ||
+        order.customerName?.toLowerCase().includes(query) ||
+        order.customerEmail?.toLowerCase().includes(query) ||
+        order.user?.email?.toLowerCase().includes(query) ||
+        order.user?.displayName?.toLowerCase().includes(query) ||
+        order.shippingAddress?.name?.toLowerCase().includes(query) ||
         (order.trackingNumber &&
           order.trackingNumber.toLowerCase().includes(query)),
     );
@@ -427,16 +535,20 @@ const filteredOrders = computed(() => {
 
 /**
  * Get order count for current filter
+ * Shows client-filtered count if search/date filters active, otherwise server total
  */
 const orderCount = computed(() => {
-  return filteredOrders.value.length;
+  if (searchQuery.value || dateRangeFilter.value) {
+    return filteredOrders.value.length;
+  }
+  return totalRecords.value;
 });
 
 /**
- * Watch status filter changes
+ * Watch status filter changes - reset to first page when status changes
  */
 async function onStatusFilterChange() {
-  await loadOrders();
+  await loadOrders(0, pageSize.value);
 }
 
 /**
@@ -446,11 +558,11 @@ function clearFilters() {
   statusFilter.value = null;
   dateRangeFilter.value = null;
   searchQuery.value = "";
-  loadOrders();
+  loadOrders(0, pageSize.value);
 }
 
 onMounted(async () => {
-  await loadOrders();
+  await loadOrders(0, 25);
 });
 </script>
 
@@ -532,15 +644,19 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Orders DataTable -->
+    <!-- Orders DataTable with server-side pagination -->
     <DataTable
       :value="filteredOrders"
       :loading="loading"
       striped-rows
+      lazy
       paginator
-      :rows="25"
+      :first="currentPage * pageSize"
+      :rows="pageSize"
+      :total-records="totalRecords"
       :rows-per-page-options="[10, 25, 50, 100]"
       table-style="min-width: 50rem"
+      @page="onPage"
     >
       <template #empty>
         <div class="text-center py-4">No orders found</div>
@@ -560,9 +676,11 @@ onMounted(async () => {
         <template #body="{ data }">
           <div>
             <div class="font-semibold">
-              {{ data.user.displayName || "Unknown" }}
+              {{ getCustomerName(data) }}
             </div>
-            <div class="text-sm text-surface-600">{{ data.user.email }}</div>
+            <div class="text-sm text-surface-600">
+              {{ data.customerEmail || data.user?.email || "-" }}
+            </div>
           </div>
         </template>
       </Column>
@@ -848,13 +966,13 @@ onMounted(async () => {
                 <div>
                   <span class="text-surface-600">Name:</span>
                   <span class="font-semibold ml-2">{{
-                    viewingOrder.calendar?.name || "Calendar"
+                    viewingOrder.items?.[0]?.description || "Calendar"
                   }}</span>
                 </div>
                 <div>
                   <span class="text-surface-600">Year:</span>
                   <span class="font-semibold ml-2">{{
-                    viewingOrder.calendar?.year || "-"
+                    viewingOrder.items?.[0]?.year || "-"
                   }}</span>
                 </div>
               </div>
@@ -921,19 +1039,19 @@ onMounted(async () => {
             <div>
               <span class="text-surface-600">Name:</span>
               <span class="font-semibold ml-2">{{
-                viewingOrder.user?.displayName || "-"
+                getCustomerName(viewingOrder)
               }}</span>
             </div>
             <div>
               <span class="text-surface-600">Email:</span>
               <span class="ml-2">{{
-                viewingOrder.customerEmail || viewingOrder.user?.email
+                viewingOrder.customerEmail || viewingOrder.user?.email || "-"
               }}</span>
             </div>
             <div class="col-span-2">
               <span class="text-surface-600">Shipping Address:</span>
               <div class="font-semibold ml-2 mt-1">
-                {{ formatAddress(viewingOrder.shippingAddress) }}
+                {{ formatShippingAddress(viewingOrder.shippingAddress) }}
               </div>
             </div>
           </div>

@@ -355,7 +355,7 @@ const addPersonalEvent = () => {
   if (editingEventId.value !== null) {
     // Update existing event
     const index = personalEvents.value.findIndex(
-      (e) => e.id === editingEventId.value
+      (e) => e.id === editingEventId.value,
     );
     if (index !== -1) {
       personalEvents.value[index] = {
@@ -1652,7 +1652,7 @@ onMounted(() => {
                   </div>
                   <Popover
                     ref="emojiPopover"
-                    appendTo="self"
+                    append-to="self"
                     :pt="{ root: { class: 'emoji-popover-left' } }"
                   >
                     <div class="emoji-popover-content">
@@ -1905,7 +1905,9 @@ onMounted(() => {
                         class="emoji-picker-preview-img"
                         @error="handleEmojiImageError('picker-preview')"
                       />
-                      <span v-else class="emoji-preview-text">{{ newEventEmoji }}</span>
+                      <span v-else class="emoji-preview-text">{{
+                        newEventEmoji
+                      }}</span>
                     </Button>
                     <InlineEmojiPicker
                       ref="emojiPickerRef"
@@ -1931,7 +1933,7 @@ onMounted(() => {
                     </div>
                     <Popover
                       ref="emojiColorPopoverRef"
-                      appendTo="self"
+                      append-to="self"
                       :pt="{ root: { class: 'emoji-color-popover' } }"
                     >
                       <div class="emoji-color-grid">
@@ -2050,7 +2052,9 @@ onMounted(() => {
                       :alt="newEventEmoji"
                       :class="[
                         'cell-emoji-img',
-                        personalEventEmojiSize === 'prominent' ? 'large' : 'small',
+                        personalEventEmojiSize === 'prominent'
+                          ? 'large'
+                          : 'small',
                       ]"
                     />
                     <span

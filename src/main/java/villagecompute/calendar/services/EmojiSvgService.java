@@ -1,6 +1,7 @@
 package villagecompute.calendar.services;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -580,7 +581,7 @@ public class EmojiSvgService {
             String innerContent = extractSvgInnerContent(fullSvg);
 
             return new String[]{innerContent, viewBox};
-        } catch (Exception e) {
+        } catch (IOException e) {
             LOG.warnf("Error loading emoji SVG %s: %s", resourcePath, e.getMessage());
             return new String[0];
         }
@@ -602,17 +603,20 @@ public class EmojiSvgService {
     private String extractSvgInnerContent(String fullSvg) {
         // Find the opening <svg> tag end
         int svgStart = fullSvg.indexOf("<svg");
-        if (svgStart == -1)
+        if (svgStart == -1) {
             return fullSvg;
+        }
 
         int svgTagEnd = fullSvg.indexOf(">", svgStart);
-        if (svgTagEnd == -1)
+        if (svgTagEnd == -1) {
             return fullSvg;
+        }
 
         // Find the closing </svg> tag
         int svgEnd = fullSvg.lastIndexOf("</svg>");
-        if (svgEnd == -1)
+        if (svgEnd == -1) {
             return fullSvg;
+        }
 
         // Return everything between
         return fullSvg.substring(svgTagEnd + 1, svgEnd).trim();

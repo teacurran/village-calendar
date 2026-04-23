@@ -429,88 +429,66 @@ export async function fetchOrderByPaymentIntent(
 // ============================================================================
 
 /**
+ * Paginated orders response from REST API
+ */
+export interface PaginatedOrdersResponse {
+  orders: any[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+/**
+ * Fetch paginated orders via REST API (admin only)
+ * Uses efficient database-level pagination instead of GraphQL
+ */
+export async function fetchAdminOrdersPaginated(
+  authToken: string,
+  page: number = 0,
+  pageSize: number = 25,
+  status?: string,
+): Promise<PaginatedOrdersResponse> {
+  try {
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("pageSize", pageSize.toString());
+    if (status) {
+      params.append("status", status);
+    }
+
+    const response = await fetch(`/api/orders/admin?${params.toString()}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Failed to fetch orders");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching admin orders:", error);
+    throw error;
+  }
+}
+
+/**
  * Fetch all orders with optional status filter (admin only)
+ * @deprecated Use fetchAdminOrdersPaginated instead for better performance
  */
 export async function fetchAllOrdersAdmin(
   authToken: string,
   status?: string,
   limit: number = 100,
 ): Promise<any[]> {
-  try {
-    const response = await fetch("/graphql", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${authToken}`,
-      },
-      body: JSON.stringify({
-        query: `
-          query AllOrders($status: String, $limit: Int) {
-            allOrders(status: $status, limit: $limit) {
-              id
-              orderNumber
-              customerEmail
-              status
-              quantity
-              unitPrice
-              totalPrice
-              subtotal
-              shippingCost
-              taxAmount
-              shippingAddress
-              notes
-              trackingNumber
-              stripePaymentIntentId
-              stripeChargeId
-              created
-              updated
-              paidAt
-              shippedAt
-              totalItemCount
-              items {
-                id
-                productType
-                productName
-                calendarYear
-                quantity
-                unitPrice
-                lineTotal
-                itemStatus
-                configuration
-              }
-              calendar {
-                id
-                name
-                year
-                generatedSvg
-              }
-              user {
-                id
-                email
-                displayName
-              }
-            }
-          }
-        `,
-        variables: { status, limit },
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch orders");
-    }
-
-    const result = await response.json();
-
-    if (result.errors) {
-      throw new Error(result.errors[0]?.message || "Failed to fetch orders");
-    }
-
-    return result.data?.allOrders || [];
-  } catch (error) {
-    console.error("Error fetching all orders:", error);
-    throw error;
-  }
+  // Redirect to paginated endpoint
+  const result = await fetchAdminOrdersPaginated(authToken, 0, limit, status);
+  return result.orders;
 }
 
 /**

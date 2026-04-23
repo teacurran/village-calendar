@@ -21,6 +21,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import villagecompute.calendar.data.models.CalendarOrder;
 import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarUser;
+import villagecompute.calendar.data.models.CartItem;
+import villagecompute.calendar.data.models.ItemAsset;
 import villagecompute.calendar.data.models.Shipment;
 import villagecompute.calendar.data.models.UserCalendar;
 import villagecompute.calendar.services.jobs.DelayedJobHandler;
@@ -228,6 +230,47 @@ public class OrderService {
         LOG.debug("Fetching all orders with items");
         return CalendarOrder
                 .find("SELECT DISTINCT o FROM CalendarOrder o LEFT JOIN FETCH o.items ORDER BY o.created DESC").list();
+    }
+
+    /**
+     * Get paginated orders for admin dashboard with user and items eagerly loaded.
+     *
+     * @param status
+     *            Optional status filter
+     * @param page
+     *            Page number (0-based)
+     * @param pageSize
+     *            Number of orders per page
+     * @return List of orders for the requested page
+     */
+    public List<CalendarOrder> getOrdersPaginated(String status, int page, int pageSize) {
+        LOG.debugf("Fetching orders page %d (size %d) with status filter: %s", page, pageSize, status);
+
+        // Fetch orders with user, items, and item assets for admin dashboard thumbnails
+        String baseQuery = "SELECT DISTINCT o FROM CalendarOrder o "
+                + "LEFT JOIN FETCH o.user LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.assets ";
+        String whereClause = (status != null && !status.isBlank()) ? "WHERE o.status = ?1 " : "";
+        String orderClause = "ORDER BY o.created DESC";
+
+        if (status != null && !status.isBlank()) {
+            return CalendarOrder.find(baseQuery + whereClause + orderClause, status).page(page, pageSize).list();
+        } else {
+            return CalendarOrder.find(baseQuery + orderClause).page(page, pageSize).list();
+        }
+    }
+
+    /**
+     * Count total orders, optionally filtered by status.
+     *
+     * @param status
+     *            Optional status filter
+     * @return Total count of matching orders
+     */
+    public long countOrders(String status) {
+        if (status != null && !status.isBlank()) {
+            return CalendarOrder.count("status", status);
+        }
+        return CalendarOrder.count();
     }
 
     /**
@@ -802,10 +845,53 @@ public class OrderService {
 
         item.persist();
 
-        LOG.infof("Created order item: %s (%s) x%d @ $%.2f = $%.2f", description, productType, quantity, unitPrice,
-                lineTotal);
+        // Copy assets from the original cart item to the order item
+        copyAssetsFromCartItem(item, cartItem);
+
+        LOG.infof("Created order item: %s (%s) x%d @ $%.2f = $%.2f (assets: %d)", description, productType, quantity,
+                unitPrice, lineTotal, item.assets.size());
 
         return item;
+    }
+
+    /**
+     * Copy assets from a cart item to an order item. Looks up the original cart item by ID and copies its ItemAsset
+     * records to the order item.
+     */
+    private void copyAssetsFromCartItem(CalendarOrderItem orderItem, Map<String, Object> cartItemData) {
+        // Get cart item ID from the checkout data
+        String cartItemId = (String) cartItemData.get("id");
+        if (cartItemId == null || cartItemId.isEmpty()) {
+            LOG.warn("No cart item ID provided, cannot copy assets");
+            return;
+        }
+
+        try {
+            UUID cartItemUuid = UUID.fromString(cartItemId);
+            Optional<CartItem> cartItemOpt = CartItem.findByIdOptional(cartItemUuid);
+
+            if (cartItemOpt.isEmpty()) {
+                LOG.warnf("Cart item not found: %s", cartItemId);
+                return;
+            }
+
+            CartItem cartItem = cartItemOpt.get();
+
+            // Copy each asset from the cart item to the order item
+            if (cartItem.assets != null && !cartItem.assets.isEmpty()) {
+                for (ItemAsset cartAsset : cartItem.assets) {
+                    // The same ItemAsset record is shared between cart and order items
+                    // (ManyToMany relationship allows this)
+                    orderItem.assets.add(cartAsset);
+                }
+                LOG.debugf("Copied %d assets from cart item %s to order item %s", cartItem.assets.size(), cartItemId,
+                        orderItem.id);
+            } else {
+                LOG.debugf("Cart item %s has no assets to copy", cartItemId);
+            }
+        } catch (IllegalArgumentException e) {
+            LOG.warnf("Invalid cart item ID format: %s", cartItemId);
+        }
     }
 
     /** Find existing user by email or create a guest user. */
@@ -814,8 +900,19 @@ public class OrderService {
         // First try to find by email
         Optional<CalendarUser> existingUser = CalendarUser.findByEmail(email);
         if (existingUser.isPresent()) {
+            CalendarUser user = existingUser.get();
             LOG.infof("Found existing user for email %s", email);
-            return existingUser.get();
+
+            // Update displayName if missing and we have address info with a name
+            if ((user.displayName == null || user.displayName.isBlank()) && addressInfo != null) {
+                String name = extractNameFromAddress(addressInfo);
+                if (name != null) {
+                    user.displayName = name;
+                    user.persist();
+                    LOG.infof("Updated displayName for user %s to '%s'", email, name);
+                }
+            }
+            return user;
         }
 
         // Create a guest user
@@ -827,11 +924,9 @@ public class OrderService {
 
         // Try to extract name from address info
         if (addressInfo != null) {
-            String firstName = (String) addressInfo.get("firstName");
-            String lastName = (String) addressInfo.get("lastName");
-            if (firstName != null || lastName != null) {
-                guestUser.displayName = ((firstName != null ? firstName : "") + " "
-                        + (lastName != null ? lastName : "")).trim();
+            String name = extractNameFromAddress(addressInfo);
+            if (name != null) {
+                guestUser.displayName = name;
             }
         }
 
@@ -839,6 +934,34 @@ public class OrderService {
         guestUser.persist();
 
         return guestUser;
+    }
+
+    /**
+     * Extract customer name from address info map. Handles both Stripe format (single "name" field) and custom format
+     * (firstName/lastName).
+     */
+    private String extractNameFromAddress(Map<String, Object> addressInfo) {
+        if (addressInfo == null) {
+            return null;
+        }
+
+        // Check for Stripe format (single "name" field) first
+        String name = (String) addressInfo.get("name");
+        if (name != null && !name.isBlank()) {
+            return name.trim();
+        }
+
+        // Fall back to firstName/lastName format
+        String firstName = (String) addressInfo.get("firstName");
+        String lastName = (String) addressInfo.get("lastName");
+        if (firstName != null || lastName != null) {
+            String combined = ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
+            if (!combined.isEmpty()) {
+                return combined;
+            }
+        }
+
+        return null;
     }
 
     /** Create a UserCalendar from cart item configuration. */

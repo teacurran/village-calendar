@@ -11,6 +11,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -656,7 +657,15 @@ class CalendarRenderingServiceTest {
 
         String result = CalendarRenderingService.convertColorForPDF(transparent);
 
-        assertNotNull(result);
+        // "transparent" keyword should be converted to "none" for PDF compatibility
+        assertEquals("none", result);
+    }
+
+    @Test
+    void testConvertColorForPDF_TransparentColorCaseInsensitive() {
+        // Test case insensitivity
+        assertEquals("none", CalendarRenderingService.convertColorForPDF("TRANSPARENT"));
+        assertEquals("none", CalendarRenderingService.convertColorForPDF("Transparent"));
     }
 
     @Test
@@ -881,58 +890,16 @@ class CalendarRenderingServiceTest {
     // Tests for: boolean isMonochrome = EMOJI_FONT_NOTO_MONO.equals(config.emojiFont)
     // || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
 
-    @Test
-    void testRenderEmoji_IsMonochrome_NotoMono() {
-        // Branch: EMOJI_FONT_NOTO_MONO.equals(emojiFont) = TRUE (short-circuits)
+    @ParameterizedTest(
+            name = "emojiFont={0}")
+    @NullAndEmptySource
+    @ValueSource(
+            strings = {"noto-mono", "mono-red", "noto-color"})
+    void testRenderEmoji_EmojiFontVariants(String emojiFont) {
+        // Tests all emojiFont branches: null, empty, noto-mono, mono-* variants, and non-mono fonts
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.emojiFont = CalendarRenderingService.EMOJI_FONT_NOTO_MONO;
-        config.eventDisplayMode = "large"; // Ensure emoji is rendered
-        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🕎")); // Menorah - will be
-                                                                                                    // substituted
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testRenderEmoji_IsMonochrome_MonoColorVariant() {
-        // Branch: EMOJI_FONT_NOTO_MONO.equals = FALSE, emojiFont != null = TRUE, startsWith("mono-") = TRUE
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.emojiFont = "mono-red";
-        config.eventDisplayMode = "large";
-        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉"));
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testRenderEmoji_IsMonochrome_NullEmojiFont() {
-        // Branch: EMOJI_FONT_NOTO_MONO.equals = FALSE, emojiFont != null = FALSE (short-circuits)
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.emojiFont = null; // Explicitly null
-        config.eventDisplayMode = "large";
-        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉"));
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testRenderEmoji_IsMonochrome_NonMonoFont() {
-        // Branch: EMOJI_FONT_NOTO_MONO.equals = FALSE, emojiFont != null = TRUE, startsWith("mono-") = FALSE
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.emojiFont = "noto-color"; // Not null, doesn't start with "mono-"
+        config.emojiFont = emojiFont;
         config.eventDisplayMode = "large";
         config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉"));
 
@@ -1019,54 +986,15 @@ class CalendarRenderingServiceTest {
         assertTrue(svg.contains(SVG_OPEN_TAG));
     }
 
-    @Test
-    void testLargeEmoji_LargeMode() {
-        // Branch: "large".equals(eventDisplayMode) = TRUE (short-circuits to largeEmoji=true)
+    @ParameterizedTest(
+            name = "eventDisplayMode={0}")
+    @ValueSource(
+            strings = {"large", "large-text", "small", "small-text"})
+    void testEmojiDisplayModes_WithHolidays(String eventDisplayMode) {
+        // Tests large/small emoji rendering branches with holiday data
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.eventDisplayMode = "large";
-        config.holidaySets.add("us-federal"); // Add holidays with emojis
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testLargeEmoji_LargeTextMode() {
-        // Branch: "large".equals = FALSE, "large-text".equals = TRUE (largeEmoji=true)
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.eventDisplayMode = "large-text";
-        config.holidaySets.add("us-federal");
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testSmallEmoji_SmallMode() {
-        // Branch: "small".equals(eventDisplayMode) = TRUE (short-circuits to smallEmoji=true)
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.eventDisplayMode = "small";
-        config.holidaySets.add("us-federal");
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testSmallEmoji_SmallTextMode() {
-        // Branch: "small".equals = FALSE, "small-text".equals = TRUE (smallEmoji=true)
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.eventDisplayMode = "small-text";
+        config.eventDisplayMode = eventDisplayMode;
         config.holidaySets.add("us-federal");
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
@@ -1145,55 +1073,6 @@ class CalendarRenderingServiceTest {
 
         assertNotNull(svg);
         assertTrue(svg.contains(SVG_OPEN_TAG));
-    }
-
-    @Test
-    void testShouldShowMoon_IlluminationMode() {
-        // Branch: "illumination".equals = TRUE (short-circuits to true)
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.moonDisplayMode = "illumination";
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-    }
-
-    @Test
-    void testShouldShowMoon_PhasesMode_OnPhaseDay() {
-        // Branch: "illumination" = FALSE, "phases" = TRUE, isMoonPhaseDay = TRUE
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.moonDisplayMode = "phases";
-        // Jan 13, 2025 is approximately a full moon day
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-    }
-
-    @Test
-    void testShouldShowMoon_FullOnlyMode_OnFullMoonDay() {
-        // Branch: "illumination" = FALSE, "phases" = FALSE, "full-only" = TRUE, isFullMoonDay = TRUE
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.moonDisplayMode = "full-only";
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-    }
-
-    @Test
-    void testShouldShowMoon_NoneMode() {
-        // Branch: all conditions FALSE
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.moonDisplayMode = "none";
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
     }
 
     @Test
@@ -2071,16 +1950,28 @@ class CalendarRenderingServiceTest {
         // Use "small" mode which calls renderEmoji with centered=false
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.eventDisplayMode = "small"; // small mode uses centered=false
+        config.customEventDisplayMode = "small"; // custom events use customEventDisplayMode, not eventDisplayMode
         config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("Y")); // Plain letter, not an emoji
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains(SVG_OPEN_TAG));
-        // Text fallback with centered=false should NOT have text-anchor: middle or dominant-baseline: middle
-        // It should contain the character Y rendered as text without centering attributes
         assertTrue(svg.contains(">Y</text>"), "Text fallback should render the character");
+        // Find the text element containing Y and verify non-centered styling
+        int yTextEnd = svg.indexOf(">Y</text>");
+        if (yTextEnd >= 0) {
+            // Search backwards to find the start of this text element
+            int textStart = svg.lastIndexOf("<text", yTextEnd);
+            if (textStart >= 0) {
+                String textElement = svg.substring(textStart, yTextEnd);
+                // Non-centered text should NOT have text-anchor: middle or dominant-baseline: middle
+                assertFalse(textElement.contains("text-anchor: middle"),
+                        "Non-centered text should NOT have text-anchor: middle");
+                assertFalse(textElement.contains("dominant-baseline: middle"),
+                        "Non-centered text should NOT have dominant-baseline: middle");
+            }
+        }
     }
 
     @Test
@@ -2102,158 +1993,37 @@ class CalendarRenderingServiceTest {
     }
 
     // ========== CALCULATE EMOJI POSITION TESTS ==========
-    // Tests for calculateEmojiPosition with all 9 position constants
 
-    @Test
-    void testCalculateEmojiPosition_TopLeft() {
+    @ParameterizedTest(
+            name = "position={0} -> x={1}, y={2}")
+    @CsvSource({"top-left, 105, 213", "top-center, 120, 213", "top-right, 135, 213", "middle-left, 105, 225",
+            "middle-center, 120, 225", "middle-right, 135, 225", "bottom-left, 105, 235", "bottom-center, 120, 235",
+            "bottom-right, 135, 235", "unknown-position, 105, 235", "'', 105, 235"})
+    void testCalculateEmojiPosition_AllPositions(String position, int expectedX, int expectedY) {
         CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
 
-        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_TOP_LEFT, cell);
+        int[] pos = CalendarRenderingService.calculateEmojiPosition(position, cell);
 
-        assertEquals(105, pos[0], "X should be cell.x + 5");
-        assertEquals(213, pos[1], "Y should be cell.y + 13");
+        assertEquals(expectedX, pos[0], "X position mismatch for " + position);
+        assertEquals(expectedY, pos[1], "Y position mismatch for " + position);
     }
 
-    @Test
-    void testCalculateEmojiPosition_TopCenter() {
-        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
-
-        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_TOP_CENTER,
-                cell);
-
-        assertEquals(120, pos[0], "X should be cell.x + width/2 - 5");
-        assertEquals(213, pos[1], "Y should be cell.y + 13");
-    }
-
-    @Test
-    void testCalculateEmojiPosition_TopRight() {
-        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
-
-        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_TOP_RIGHT, cell);
-
-        assertEquals(135, pos[0], "X should be cell.x + width - 15");
-        assertEquals(213, pos[1], "Y should be cell.y + 13");
-    }
-
-    @Test
-    void testCalculateEmojiPosition_MiddleLeft() {
-        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
-
-        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_MIDDLE_LEFT,
-                cell);
-
-        assertEquals(105, pos[0], "X should be cell.x + 5");
-        assertEquals(225, pos[1], "Y should be cell.y + height/2 + 5");
-    }
-
-    @Test
-    void testCalculateEmojiPosition_MiddleCenter() {
-        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
-
-        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_MIDDLE_CENTER,
-                cell);
-
-        assertEquals(120, pos[0], "X should be cell.x + width/2 - 5");
-        assertEquals(225, pos[1], "Y should be cell.y + height/2 + 5");
-    }
-
-    @Test
-    void testCalculateEmojiPosition_MiddleRight() {
-        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
-
-        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_MIDDLE_RIGHT,
-                cell);
-
-        assertEquals(135, pos[0], "X should be cell.x + width - 15");
-        assertEquals(225, pos[1], "Y should be cell.y + height/2 + 5");
-    }
-
-    @Test
-    void testCalculateEmojiPosition_BottomLeft() {
-        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
-
-        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_BOTTOM_LEFT,
-                cell);
-
-        assertEquals(105, pos[0], "X should be cell.x + 5");
-        assertEquals(235, pos[1], "Y should be cell.y + height - 5");
-    }
-
-    @Test
-    void testCalculateEmojiPosition_BottomCenter() {
-        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
-
-        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_BOTTOM_CENTER,
-                cell);
-
-        assertEquals(120, pos[0], "X should be cell.x + width/2 - 5");
-        assertEquals(235, pos[1], "Y should be cell.y + height - 5");
-    }
-
-    @Test
-    void testCalculateEmojiPosition_BottomRight() {
-        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
-
-        int[] pos = CalendarRenderingService.calculateEmojiPosition(CalendarRenderingService.EMOJI_POS_BOTTOM_RIGHT,
-                cell);
-
-        assertEquals(135, pos[0], "X should be cell.x + width - 15");
-        assertEquals(235, pos[1], "Y should be cell.y + height - 5");
-    }
-
-    @Test
-    void testCalculateEmojiPosition_UnknownDefaultsToBottomLeft() {
-        // Unknown position values should default to bottom-left behavior
-        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
-
-        int[] pos = CalendarRenderingService.calculateEmojiPosition("unknown-position", cell);
-
-        assertEquals(105, pos[0], "X should be cell.x + 5 (bottom-left default)");
-        assertEquals(235, pos[1], "Y should be cell.y + height - 5 (bottom-left default)");
-    }
-
-    @Test
-    void testCalculateEmojiPosition_EmptyStringDefaultsToBottomLeft() {
-        // Empty string position should default to bottom-left behavior
-        CalendarRenderingService.Cell cell = new CalendarRenderingService.Cell(100, 200, 50, 40);
-
-        int[] pos = CalendarRenderingService.calculateEmojiPosition("", cell);
-
-        assertEquals(105, pos[0], "X should be cell.x + 5 (bottom-left default)");
-        assertEquals(235, pos[1], "Y should be cell.y + height - 5 (bottom-left default)");
-    }
-
-    @Test
-    void testRenderEmoji_SvgPath_Centered() {
-        // Branch: emojiSvgService != null && hasEmojiSvg = TRUE, centered = TRUE
-        // Uses a real emoji that exists in SVG cache with large mode (centered=true)
+    @ParameterizedTest(
+            name = "eventDisplayMode={0}")
+    @ValueSource(
+            strings = {"large", "small"})
+    void testRenderEmoji_SvgPath_CenteredAndNotCentered(String eventDisplayMode) {
+        // Tests SVG emoji rendering with real emoji in SVG cache
+        // large mode = centered=true, small mode = centered=false
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
-        config.eventDisplayMode = "large"; // large mode uses centered=true
-        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉")); // Real emoji in SVG cache
+        config.eventDisplayMode = eventDisplayMode;
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉"));
 
         String svg = calendarRenderingService.generateCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains(SVG_OPEN_TAG));
-        // SVG path produces nested SVG elements for emojis
-        assertTrue(svg.contains("<g"), "SVG emoji should produce group elements");
-    }
-
-    @Test
-    void testRenderEmoji_SvgPath_NotCentered() {
-        // Branch: emojiSvgService != null && hasEmojiSvg = TRUE, centered = FALSE
-        // Uses a real emoji that exists in SVG cache with small mode (centered=false)
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.eventDisplayMode = "small"; // small mode uses centered=false
-        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉")); // Real emoji in SVG cache
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
-        // SVG path produces nested SVG elements for emojis
         assertTrue(svg.contains("<g"), "SVG emoji should produce group elements");
     }
 
@@ -2426,5 +2196,148 @@ class CalendarRenderingServiceTest {
         // Multiple text elements for wrapped lines
         int textCount = svg.split(TEXT_TAG).length - 1;
         assertTrue(textCount >= 2, "Wrapped text should produce multiple text elements");
+    }
+
+    // ========== ESCAPE XML TESTS ==========
+
+    @Test
+    void testEscapeXml_NullInput_ReturnsEmpty() throws Exception {
+        // Test escapeXml with null input returns empty string
+        java.lang.reflect.Method method = CalendarRenderingService.class.getDeclaredMethod("escapeXml", String.class);
+        method.setAccessible(true);
+
+        String result = (String) method.invoke(calendarRenderingService, (String) null);
+
+        assertEquals("", result, "Null input should return empty string");
+    }
+
+    @Test
+    void testEscapeXml_SpecialCharacters_AreEscaped() throws Exception {
+        // Test escapeXml properly escapes XML special characters
+        java.lang.reflect.Method method = CalendarRenderingService.class.getDeclaredMethod("escapeXml", String.class);
+        method.setAccessible(true);
+
+        String result = (String) method.invoke(calendarRenderingService, "Test & <tag> \"quote\" 'apos'");
+
+        assertEquals("Test &amp; &lt;tag&gt; &quot;quote&quot; &apos;apos&apos;", result,
+                "Special characters should be escaped");
+    }
+
+    @Test
+    void testEscapeXml_NormalText_UnchangedExceptReplacements() throws Exception {
+        // Test escapeXml with normal text
+        java.lang.reflect.Method method = CalendarRenderingService.class.getDeclaredMethod("escapeXml", String.class);
+        method.setAccessible(true);
+
+        String result = (String) method.invoke(calendarRenderingService, "Normal text 123");
+
+        assertEquals("Normal text 123", result, "Normal text should remain unchanged");
+    }
+
+    // ========== RENDER CUSTOM EMOJI TESTS ==========
+
+    @Test
+    void testRenderCustomEmoji_LargeMode_CenteredEmoji() {
+        // Test custom emoji rendering with large mode (centered=true)
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.customEventDisplayMode = "large";
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎄"));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testRenderCustomEmoji_SmallMode_NotCenteredEmoji() {
+        // Test custom emoji rendering with small mode (centered=false)
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.customEventDisplayMode = "small";
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎄"));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testRenderCustomEmoji_NoneMode_NoEmojiRendered() {
+        // Test custom emoji rendering with none mode (emoji not rendered)
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.customEventDisplayMode = "none";
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎄"));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+        // In "none" mode, no emoji should be rendered for custom dates
+    }
+
+    @Test
+    void testRenderCustomEmoji_TextOnlyMode_NoEmojiRendered() {
+        // Test custom emoji rendering with text-only mode (emoji not rendered)
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.customEventDisplayMode = "text";
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎄", "Event Title", null));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testRenderCustomEmoji_WithEmojiFontOverride() {
+        // Test custom emoji with per-event emoji font override
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.customEventDisplayMode = "large";
+        config.emojiFont = "noto-color"; // Default font
+
+        CustomDateEntryType customDate = new CustomDateEntryType("🎄");
+        customDate.emojiFont = "noto-mono"; // Override font for this event
+        config.customDates.put(LocalDate.of(2025, 1, 15), customDate);
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+    }
+
+    @Test
+    void testRenderCustomEmoji_LargeTextMode_RendersBothEmojiAndText() {
+        // Test large-text mode renders both emoji and title
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.customEventDisplayMode = "large-text";
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎄", "Holiday", null));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+        assertTrue(svg.contains(">Holiday</text>"), "Text should be rendered");
+    }
+
+    @Test
+    void testRenderCustomEmoji_SmallTextMode_RendersBothEmojiAndText() {
+        // Test small-text mode renders both emoji and title
+        CalendarConfigType config = new CalendarConfigType();
+        config.year = TEST_YEAR;
+        config.customEventDisplayMode = "small-text";
+        config.customDates.put(LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎄", "Holiday", null));
+
+        String svg = calendarRenderingService.generateCalendarSVG(config);
+
+        assertNotNull(svg);
+        assertTrue(svg.contains(SVG_OPEN_TAG));
+        assertTrue(svg.contains(">Holiday</text>"), "Text should be rendered");
     }
 }

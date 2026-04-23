@@ -301,12 +301,8 @@ public class OrderResolver {
             throw new IllegalArgumentException("Invalid shipping address format");
         }
 
-        // Determine unit price based on product type
-        BigDecimal unitPrice = STANDARD_CALENDAR_PRICE;
-        // TODO: Add different pricing for DESK_CALENDAR, POSTER, etc. when implemented
-
         // Create order in PENDING status
-        CalendarOrder order = orderService.createOrder(currentUser, calendar, input.quantity, unitPrice,
+        CalendarOrder order = orderService.createOrder(currentUser, calendar, input.quantity, STANDARD_CALENDAR_PRICE,
                 shippingAddressJson);
 
         LOG.infof("Created order %s with total price $%.2f", order.id, order.totalPrice);
@@ -408,7 +404,7 @@ public class OrderResolver {
         try {
             // Return first item's unit price if available
             if (order.items != null && !order.items.isEmpty()) {
-                return order.items.get(0).unitPrice;
+                return order.items.getFirst().unitPrice;
             }
             // Fall back to computing from subtotal/quantity
             int quantity = order.getTotalItemCount();
@@ -464,7 +460,7 @@ public class OrderResolver {
                 return null;
             }
             // Get calendar info from first item
-            CalendarOrderItem firstItem = order.items.get(0);
+            CalendarOrderItem firstItem = order.items.getFirst();
             CalendarInfo info = new CalendarInfo();
             info.id = order.id.toString(); // Use order ID as fallback
             info.name = firstItem.description != null ? firstItem.description : "Calendar";
@@ -543,19 +539,21 @@ public class OrderResolver {
         List<UUID> userIds = orders.stream().map(o -> o.user != null ? o.user.id : null).filter(Objects::nonNull)
                 .distinct().toList();
 
+        Map<UUID, CalendarUser> userMap;
         if (userIds.isEmpty()) {
             LOG.debug("No user IDs to load");
-            return orders.stream().map(o -> (CalendarUser) null).toList();
+            userMap = Map.of();
+        } else {
+            // Batch load users in a single query
+            List<CalendarUser> users = CalendarUser.list("id in ?1", userIds);
+            LOG.debugf("Loaded %d users in batch", users.size());
+
+            // Create lookup map for O(1) access
+            userMap = users.stream().collect(Collectors.toMap(u -> u.id, u -> u));
         }
 
-        // Batch load users in a single query
-        List<CalendarUser> users = CalendarUser.list("id in ?1", userIds);
-        LOG.debugf("Loaded %d users in batch", users.size());
-
-        // Create lookup map for O(1) access
-        Map<UUID, CalendarUser> userMap = users.stream().collect(Collectors.toMap(u -> u.id, u -> u));
-
         // Return users in same order as input orders (DataLoader contract)
+        // Must return list of same size as input, with nulls for orders without users
         List<CalendarUser> result = orders.stream().map(o -> o.user != null ? userMap.get(o.user.id) : null).toList();
 
         LOG.debugf("Returning %d users for %d orders", result.size(), orders.size());

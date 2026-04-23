@@ -1,10 +1,10 @@
 # Village Calendar
 
 [![CI](https://github.com/teacurran/village-calendar/actions/workflows/ci.yml/badge.svg)](https://github.com/teacurran/village-calendar/actions/workflows/ci.yml)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=teacurran_village-calendar&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=teacurran_village-calendar)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=teacurran_village-calendar&metric=coverage)](https://sonarcloud.io/summary/new_code?id=teacurran_village-calendar)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=teacurran_village-calendar&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=teacurran_village-calendar)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=teacurran_village-calendar&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=teacurran_village-calendar)
+[![Quality Gate Status](https://sonar.villagecompute.com/api/project_badges/measure?project=village-calendar&metric=alert_status)](https://sonar.villagecompute.com/dashboard?id=village-calendar)
+[![Coverage](https://sonar.villagecompute.com/api/project_badges/measure?project=village-calendar&metric=coverage)](https://sonar.villagecompute.com/dashboard?id=village-calendar)
+[![Maintainability Rating](https://sonar.villagecompute.com/api/project_badges/measure?project=village-calendar&metric=sqale_rating)](https://sonar.villagecompute.com/dashboard?id=village-calendar)
+[![Security Rating](https://sonar.villagecompute.com/api/project_badges/measure?project=village-calendar&metric=security_rating)](https://sonar.villagecompute.com/dashboard?id=village-calendar)
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/)
 [![Quarkus](https://img.shields.io/badge/Quarkus-3.x-blue.svg)](https://quarkus.io/)
 [![Vue](https://img.shields.io/badge/Vue-3-green.svg)](https://vuejs.org/)

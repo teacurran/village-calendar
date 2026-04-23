@@ -39,32 +39,48 @@ import villagecompute.calendar.util.UuidUtil;
 @ApplicationScoped
 public class CalendarGraphQL {
 
-    /** Logger for this class. */
+    /**
+     * Logger for this class.
+     */
     private static final Logger LOG = Logger.getLogger(CalendarGraphQL.class);
 
-    /** Default page size for pagination. */
+    /**
+     * Default page size for pagination.
+     */
     private static final int DEFAULT_PAGE_SIZE = 1000;
 
-    /** Maximum limit for user queries. */
+    /**
+     * Maximum limit for user queries.
+     */
     private static final int MAX_USER_LIMIT = 50;
 
-    /** JWT token for authenticated user. */
+    /**
+     * JWT token for authenticated user.
+     */
     @Inject
     private JsonWebToken jwt;
 
-    /** Security identity for getting principal. */
+    /**
+     * Security identity for getting principal.
+     */
     @Inject
     private io.quarkus.security.identity.SecurityIdentity securityIdentity;
 
-    /** Authentication service for user management. */
+    /**
+     * Authentication service for user management.
+     */
     @Inject
     private AuthenticationService authService;
 
-    /** Calendar service for business logic. */
+    /**
+     * Calendar service for business logic.
+     */
     @Inject
     private CalendarService calendarService;
 
-    /** Event service for event operations. */
+    /**
+     * Event service for event operations.
+     */
     @Inject
     private EventService eventService;
 
@@ -86,11 +102,10 @@ public class CalendarGraphQL {
 
         // Try to get JWT from SecurityIdentity principal first (more reliable)
         JsonWebToken effectiveJwt = jwt;
-        if ((effectiveJwt == null || effectiveJwt.getSubject() == null) && securityIdentity != null) {
-            if (securityIdentity.getPrincipal() instanceof JsonWebToken) {
-                effectiveJwt = (JsonWebToken) securityIdentity.getPrincipal();
-                LOG.debug("Got JWT from SecurityIdentity principal");
-            }
+        if ((effectiveJwt == null || effectiveJwt.getSubject() == null) && securityIdentity != null
+                && securityIdentity.getPrincipal() instanceof JsonWebToken eJwt) {
+            effectiveJwt = eJwt;
+            LOG.debug("Got JWT from SecurityIdentity principal");
         }
 
         // Check if JWT is present
@@ -211,36 +226,37 @@ public class CalendarGraphQL {
     public UserCalendar calendar(@Name("id") @Description("Calendar ID") @NonNull final String id) {
         LOG.infof("Query: calendar(id=%s)", id);
 
+        final UUID calendarId;
         try {
-            UUID calendarId = UuidUtil.parse(id, UuidUtil.FIELD_CALENDAR_ID);
-
-            // Get current user (may be null for anonymous access)
-            CalendarUser currentUser = null;
-            if (jwt != null && jwt.getSubject() != null) {
-                Optional<CalendarUser> userOpt = authService.getCurrentUser(jwt);
-                currentUser = userOpt.orElse(null);
-            }
-
-            // Use service to get calendar with authorization check
-            try {
-                UserCalendar calendar = calendarService.getCalendar(calendarId, currentUser);
-                LOG.infof("Returning calendar: %s (name=%s, owner=%s)", id, calendar.name,
-                        calendar.user != null ? calendar.user.email : "anonymous");
-                return calendar;
-            } catch (IllegalArgumentException e) {
-                // Calendar not found
-                LOG.warnf("Calendar not found: %s", id);
-                return null;
-            } catch (SecurityException e) {
-                // Access denied
-                LOG.warnf("Access denied to calendar %s: %s", id, e.getMessage());
-                return null;
-            }
-
+            calendarId = UuidUtil.parse(id, UuidUtil.FIELD_CALENDAR_ID);
         } catch (IllegalArgumentException e) {
             LOG.errorf("Invalid UUID format for calendar ID: %s", id);
             throw new IllegalArgumentException("Invalid calendar ID format", e);
         }
+
+        // Get current user (may be null for anonymous access)
+        CalendarUser currentUser = null;
+        if (jwt != null && jwt.getSubject() != null) {
+            Optional<CalendarUser> userOpt = authService.getCurrentUser(jwt);
+            currentUser = userOpt.orElse(null);
+        }
+
+        // Use service to get calendar with authorization check
+        try {
+            UserCalendar calendar = calendarService.getCalendar(calendarId, currentUser);
+            LOG.infof("Returning calendar: %s (name=%s, owner=%s)", id, calendar.name,
+                    calendar.user != null ? calendar.user.email : "anonymous");
+            return calendar;
+        } catch (IllegalArgumentException e) {
+            // Calendar not found
+            LOG.warnf("Calendar not found: %s", id);
+            return null;
+        } catch (SecurityException e) {
+            // Access denied
+            LOG.warnf("Access denied to calendar %s: %s", id, e.getMessage());
+            return null;
+        }
+
     }
 
     /**
@@ -429,7 +445,9 @@ public class CalendarGraphQL {
         return user;
     }
 
-    /** Check if the current JWT user has ADMIN role. */
+    /**
+     * Check if the current JWT user has ADMIN role.
+     */
     private boolean isCurrentUserAdmin() {
         return jwt.getGroups() != null && jwt.getGroups().contains(Roles.ADMIN);
     }

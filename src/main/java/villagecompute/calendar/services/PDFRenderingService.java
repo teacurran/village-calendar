@@ -193,6 +193,9 @@ public class PDFRenderingService {
             // Fix CSS URI references that cause invalid URI errors
             svgContent = fixCSSUriReferences(svgContent);
 
+            // Fix transparent fill values not supported by PDF renderers
+            svgContent = fixTransparentFill(svgContent);
+
             return svgContent;
         } catch (Exception e) {
             LOG.warnf(e, "Error during SVG preprocessing, returning original content");
@@ -239,6 +242,35 @@ public class PDFRenderingService {
                     }
                 }
             }
+        }
+
+        return svgContent;
+    }
+
+    /**
+     * Fix SVG elements with fill="transparent" which is not properly supported by PDF renderers. Replaces transparent
+     * fills with "none" which is the standard SVG way to indicate no fill.
+     *
+     * @param svgContent
+     *            Original SVG content
+     * @return Fixed SVG content
+     */
+    private String fixTransparentFill(String svgContent) {
+        // Handle fill="transparent" attribute (case-insensitive)
+        if (svgContent.toLowerCase().contains("fill=\"transparent\"")
+                || svgContent.toLowerCase().contains("fill='transparent'")) {
+            LOG.debug("Fixing transparent fill values in SVG");
+
+            // Replace fill="transparent" with fill="none"
+            svgContent = svgContent.replaceAll("(?i)fill\\s*=\\s*[\"']transparent[\"']", "fill=\"none\"");
+        }
+
+        // Also handle CSS style declarations: fill:transparent or fill: transparent
+        if (svgContent.toLowerCase().contains("fill:transparent")
+                || svgContent.toLowerCase().contains("fill: transparent")) {
+            LOG.debug("Fixing transparent fill values in SVG style declarations");
+
+            svgContent = svgContent.replaceAll("(?i)fill\\s*:\\s*transparent", "fill:none");
         }
 
         return svgContent;

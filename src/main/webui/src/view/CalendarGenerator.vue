@@ -2623,17 +2623,20 @@ const addToCart = async (productCode: string = "print") => {
     return;
   }
 
+  // Get the year with a fallback to prevent "undefined" in names
+  const calendarYear = config.value.year || new Date().getFullYear();
+
   // Product display names and success messages
   const productMessages: Record<
     string,
     { name: string; successMessage: string }
   > = {
     pdf: {
-      name: `Calendar ${config.value.year} (PDF)`,
+      name: `${calendarYear} Calendar (PDF)`,
       successMessage: "Your PDF calendar has been added to the cart.",
     },
     print: {
-      name: `Calendar ${config.value.year} (Printed)`,
+      name: `${calendarYear} Calendar (Printed)`,
       successMessage:
         "Your printed calendar has been added to the cart. PDF download included!",
     },
@@ -2643,7 +2646,7 @@ const addToCart = async (productCode: string = "print") => {
 
   try {
     const calendarData = {
-      year: config.value.year,
+      year: calendarYear,
       name: productInfo.name,
       productCode: productCode,
       configuration: buildFullConfiguration(),
@@ -2680,10 +2683,10 @@ const addToCart = async (productCode: string = "print") => {
 
     // Add to cart using GraphQL (works for both logged-in and anonymous users)
     // Price is determined by backend based on productCode
-    const description = `${calendarData.name} ${calendarData.year}`;
+    // Use productInfo.name directly as it already includes year and product type
     await cartStore.addToCart(
       "calendar", // generatorType
-      description, // User-facing description
+      productInfo.name, // User-facing description (e.g., "2026 Calendar (Printed)")
       1, // quantity
       productCode, // Backend looks up price from product catalog
       { ...calendarData, calendarId: calendarData.calendarId }, // Full configuration including generatedSvg and calendarId

@@ -1,7 +1,7 @@
 <template>
   <Popover
     ref="popoverRef"
-    appendTo="self"
+    append-to="self"
     :pt="{ root: { class: 'inline-emoji-popover' } }"
   >
     <div class="emoji-picker-content">
