@@ -385,48 +385,14 @@ public class EventService {
             boolean isHeader = true;
 
             while ((line = reader.readLine()) != null) {
-                // Skip header row
                 if (isHeader) {
                     isHeader = false;
                     continue;
                 }
-
-                // Skip empty lines
-                if (line.trim().isEmpty()) {
-                    continue;
+                Event event = parseCsvLineToEvent(calendar, line);
+                if (event != null) {
+                    createdEvents.add(event);
                 }
-
-                // Parse CSV line (simple comma split - doesn't handle quoted commas)
-                String[] parts = line.split(",", -1);
-                if (parts.length < 1) {
-                    LOG.warnf("Skipping invalid CSV line: %s", line);
-                    continue;
-                }
-
-                String dateStr = parts[0].trim();
-                String text = parts.length > 1 ? parts[1].trim() : null;
-                String emoji = parts.length > 2 ? parts[2].trim() : null;
-                String color = parts.length > 3 ? parts[3].trim() : null;
-
-                if (dateStr.isEmpty()) {
-                    LOG.warnf("Skipping CSV line with missing date: %s", line);
-                    continue;
-                }
-
-                LocalDate eventDate = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
-
-                // Validate and create event
-                validateEventInput(calendar, eventDate, text, emoji, color);
-
-                Event event = new Event();
-                event.calendar = calendar;
-                event.eventDate = eventDate;
-                event.eventText = text != null && !text.isEmpty() ? text : null;
-                event.emoji = emoji != null && !emoji.isEmpty() ? emoji : null;
-                event.color = color != null && !color.isEmpty() ? color : null;
-                event.persist();
-
-                createdEvents.add(event);
             }
 
             LOG.infof("Imported %d events from CSV for calendar %s", createdEvents.size(), calendarId);
@@ -440,6 +406,73 @@ public class EventService {
         }
 
         return createdEvents;
+    }
+
+    /**
+     * Parse a single CSV line into a persisted Event, or return null if the line should be skipped.
+     *
+     * @param calendar
+     *            Parent calendar for the event
+     * @param line
+     *            Raw CSV line
+     * @return Persisted Event, or null if line is empty/invalid and should be skipped
+     */
+    private Event parseCsvLineToEvent(UserCalendar calendar, String line) {
+        if (line.trim().isEmpty()) {
+            return null;
+        }
+
+        // Parse CSV line (simple comma split - doesn't handle quoted commas)
+        String[] parts = line.split(",", -1);
+        if (parts.length < 1) {
+            LOG.warnf("Skipping invalid CSV line: %s", line);
+            return null;
+        }
+
+        String dateStr = parts[0].trim();
+        if (dateStr.isEmpty()) {
+            LOG.warnf("Skipping CSV line with missing date: %s", line);
+            return null;
+        }
+
+        String text = csvFieldOrNull(parts, 1);
+        String emoji = csvFieldOrNull(parts, 2);
+        String color = csvFieldOrNull(parts, 3);
+
+        LocalDate eventDate = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
+
+        // Validate and create event
+        validateEventInput(calendar, eventDate, text, emoji, color);
+
+        Event event = new Event();
+        event.calendar = calendar;
+        event.eventDate = eventDate;
+        event.eventText = emptyToNull(text);
+        event.emoji = emptyToNull(emoji);
+        event.color = emptyToNull(color);
+        event.persist();
+
+        return event;
+    }
+
+    /**
+     * Get the trimmed CSV field at the given index, or null if the index is out of bounds.
+     */
+    private String csvFieldOrNull(String[] parts, int index) {
+        if (parts.length > index) {
+            return parts[index].trim();
+        }
+        return null;
+    }
+
+    /**
+     * Return the input string, or null if the string is null or empty.
+     */
+    private String emptyToNull(String value) {
+        if (value == null || value.isEmpty()) {
+            return null;
+        }
+        return value;
     }
 
     // ========== AUTHORIZATION HELPERS ==========
