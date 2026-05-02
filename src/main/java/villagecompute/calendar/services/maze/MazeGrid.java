@@ -478,25 +478,40 @@ public class MazeGrid {
      * far from the solution path).
      */
     private void markDeadEnds() {
-        // First pass: mark all non-solution cells as dead ends
+        markNonSolutionCellsAsDeadEnds();
+        resetVisitedFlags();
+        Queue<MazeCell> queue = seedQueueFromSolutionPath();
+        propagateDeadEndDepth(queue);
+    }
+
+    /**
+     * First pass: mark every cell that is not on the solution path as a dead end.
+     */
+    private void markNonSolutionCellsAsDeadEnds() {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 MazeCell cell = cells[x][y];
                 cell.isDeadEnd = !cell.onSolutionPath;
             }
         }
+    }
 
-        // Second pass: calculate dead-end depth using BFS from solution path
-        // Reset visited flags
+    /**
+     * Reset the visited flag on every cell so a fresh BFS traversal can run.
+     */
+    private void resetVisitedFlags() {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 cells[x][y].visited = false;
             }
         }
+    }
 
+    /**
+     * Seed a BFS queue with all cells on the solution path, marking them as visited at depth 0.
+     */
+    private Queue<MazeCell> seedQueueFromSolutionPath() {
         Queue<MazeCell> queue = new LinkedList<>();
-
-        // Start from all cells on the solution path
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 MazeCell cell = cells[x][y];
@@ -507,11 +522,15 @@ public class MazeGrid {
                 }
             }
         }
+        return queue;
+    }
 
-        // BFS to calculate depth of each dead-end cell
+    /**
+     * Run BFS from the seeded queue, recording each unvisited neighbor's distance from the solution path.
+     */
+    private void propagateDeadEndDepth(Queue<MazeCell> queue) {
         while (!queue.isEmpty()) {
             MazeCell current = queue.poll();
-
             for (MazeCell neighbor : getAccessibleNeighborsForType(current)) {
                 if (!neighbor.visited) {
                     neighbor.visited = true;
