@@ -1569,65 +1569,99 @@ public class CalendarRenderingService {
 
         // Rainbow days themes
         if (theme.startsWith("rainbowDays")) {
-            int hue;
-            int saturation = 100;
-            int lightness = 90;
-
-            if ("rainbowDays1".equals(theme)) {
-                // Color by day of week
-                hue = date.getDayOfWeek().getValue() * 30;
-                lightness = 90;
-            } else if ("rainbowDays2".equals(theme)) {
-                // Color by day of month
-                hue = (int) ((dayNum / 30.0) * 360);
-                saturation = 100;
-                lightness = 80;
-            } else if ("rainbowDays3".equals(theme)) {
-                // Color by day with distance-based lightness
-                hue = (int) ((dayNum / 30.0) * 360);
-                // Calculate distance from corner (Dec 31)
-                double monthWeight = 3;
-                double distance = Math.sqrt(Math.pow(12 - monthNum * monthWeight, 2) + Math.pow(31d - dayNum, 2));
-                double maxDistance = Math.sqrt(Math.pow(12 * monthWeight, 2) + Math.pow(31, 2));
-                double normalizedDistance = distance / maxDistance;
-                int lightnessMin = 80;
-                int lightnessMax = 90;
-                lightness = (int) (lightnessMin + (1 - normalizedDistance) * (lightnessMax - lightnessMin));
-            } else {
-                // Default rainbow days
-                hue = (int) ((dayNum / 30.0) * 360);
-            }
-
-            return hslToHex(hue, saturation, lightness);
+            return getRainbowDaysColor(theme, date, monthNum, dayNum);
         }
 
         // Weekend-specific themes
         if (isWeekend) {
-            if ("rainbowWeekends".equals(theme)) {
-                int hue = (int) ((date.getDayOfMonth() / 30.0) * 360);
-                return hslToHex(hue, 100, 90);
-            }
-
-            // Check for themed weekend colors (vermont, lakeshore, sunset, forest)
-            String weekendColor = getWeekendThemeColor(theme, monthNum, weekendIndex);
+            String weekendColor = getWeekendBackgroundColor(config, date, monthNum, weekendIndex);
             if (weekendColor != null) {
                 return weekendColor;
-            }
-
-            if (config.highlightWeekends) {
-                // First check if user has specified a custom weekend color
-                if (config.weekendBgColor != null && !config.weekendBgColor.isEmpty()) {
-                    return config.weekendBgColor;
-                }
-                // Otherwise use theme default
-                ThemeColors themeColors = THEMES.get(config.theme);
-                if (themeColors != null && themeColors.weekendBackground != null) {
-                    return themeColors.weekendBackground;
-                }
             }
         }
 
         return "rgba(255, 255, 255, 0)"; // Transparent
+    }
+
+    /**
+     * Computes the background color for "rainbowDays" theme variants.
+     */
+    private static String getRainbowDaysColor(String theme, LocalDate date, int monthNum, int dayNum) {
+        int hue;
+        int saturation = 100;
+        int lightness = 90;
+
+        if ("rainbowDays1".equals(theme)) {
+            // Color by day of week
+            hue = date.getDayOfWeek().getValue() * 30;
+        } else if ("rainbowDays2".equals(theme)) {
+            // Color by day of month
+            hue = (int) ((dayNum / 30.0) * 360);
+            lightness = 80;
+        } else if ("rainbowDays3".equals(theme)) {
+            // Color by day with distance-based lightness
+            hue = (int) ((dayNum / 30.0) * 360);
+            lightness = computeRainbowDays3Lightness(monthNum, dayNum);
+        } else {
+            // Default rainbow days
+            hue = (int) ((dayNum / 30.0) * 360);
+        }
+
+        return hslToHex(hue, saturation, lightness);
+    }
+
+    /**
+     * Calculates lightness for the rainbowDays3 theme based on the cell's distance from the (Dec 31) corner.
+     */
+    private static int computeRainbowDays3Lightness(int monthNum, int dayNum) {
+        double monthWeight = 3;
+        double distance = Math.sqrt(Math.pow(12 - monthNum * monthWeight, 2) + Math.pow(31d - dayNum, 2));
+        double maxDistance = Math.sqrt(Math.pow(12 * monthWeight, 2) + Math.pow(31, 2));
+        double normalizedDistance = distance / maxDistance;
+        int lightnessMin = 80;
+        int lightnessMax = 90;
+        return (int) (lightnessMin + (1 - normalizedDistance) * (lightnessMax - lightnessMin));
+    }
+
+    /**
+     * Resolves the background color to use for a weekend cell. Returns null if no weekend-specific color applies.
+     */
+    private static String getWeekendBackgroundColor(CalendarConfigType config, LocalDate date, int monthNum,
+            int weekendIndex) {
+        String theme = config.theme;
+
+        if ("rainbowWeekends".equals(theme)) {
+            int hue = (int) ((date.getDayOfMonth() / 30.0) * 360);
+            return hslToHex(hue, 100, 90);
+        }
+
+        // Check for themed weekend colors (vermont, lakeshore, sunset, forest)
+        String themedColor = getWeekendThemeColor(theme, monthNum, weekendIndex);
+        if (themedColor != null) {
+            return themedColor;
+        }
+
+        if (!config.highlightWeekends) {
+            return null;
+        }
+
+        return resolveHighlightedWeekendColor(config);
+    }
+
+    /**
+     * Returns the configured/themed weekend highlight color, or null if none is available.
+     */
+    private static String resolveHighlightedWeekendColor(CalendarConfigType config) {
+        // First check if user has specified a custom weekend color
+        if (config.weekendBgColor != null && !config.weekendBgColor.isEmpty()) {
+            return config.weekendBgColor;
+        }
+        // Otherwise use theme default
+        ThemeColors themeColors = THEMES.get(config.theme);
+        if (themeColors != null && themeColors.weekendBackground != null) {
+            return themeColors.weekendBackground;
+        }
+        return null;
     }
 
     /**
