@@ -1,17 +1,14 @@
 name: Deploy PR Preview
 
-# One-time prerequisites (manual, outside this workflow):
-#   1. Cloudflare DNS: add a wildcard CNAME *.calendar-pr.villagecompute.com
-#      pointing to the cloudflared tunnel hostname (the same target used by
-#      calendar-beta.villagecompute.com). Cloudflare terminates TLS at the
-#      edge so no in-cluster cert is needed.
-#   2. cloudflared tunnel ingress: route hostname *.calendar-pr.villagecompute.com
-#      to http://<nginx-ingress-controller>.<namespace>.svc.cluster.local
-#      (same backend used by other public hostnames).
-#   3. The shared "calendar_beta" Postgres DB is reused across PRs. PR images
-#      run with QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION=validate so they will
-#      not migrate it. If you change schema in a PR, the deploy will fail
-#      readiness — that is intentional; merge to beta first to migrate.
+# Hostname pattern: calendar-pr-<N>.preview.villagecompute.com.
+# Shared *.preview.villagecompute.com infra (DNS + tunnel rule + ACM cert
+# pack) lives in villagecompute/infra/terraform/cloudflare-{dns,tunnel,acm}.tf
+# and the cluster's nginx ingress controller dispatches by Host header.
+#
+# The shared "calendar_beta" Postgres DB is reused across PRs. PR images
+# run with QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION=validate so they will
+# not migrate it. If you change schema in a PR, the deploy will fail
+# readiness — that is intentional; merge to beta first to migrate.
 
 on:
   # Deploy after CI succeeds for a pull_request event
@@ -35,7 +32,7 @@ env:
   REGISTRY: docker.io
   IMAGE_NAME: village-calendar
   USE_WIREGUARD: ${{ secrets.USE_WIREGUARD || 'false' }}
-  PR_DOMAIN: calendar-pr.villagecompute.com
+  PR_DOMAIN: preview.villagecompute.com
 
 jobs:
   context:
@@ -100,7 +97,7 @@ jobs:
       PR_NUMBER: ${{ needs.context.outputs.pr_number }}
       HEAD_SHA: ${{ needs.context.outputs.head_sha }}
       DEPLOYMENT_NAMESPACE: calendar-pr-${{ needs.context.outputs.pr_number }}
-      INGRESS_HOST: pr-${{ needs.context.outputs.pr_number }}.calendar-pr.villagecompute.com
+      INGRESS_HOST: calendar-pr-${{ needs.context.outputs.pr_number }}.preview.villagecompute.com
 
     steps:
       - name: Checkout code at PR head
@@ -183,9 +180,10 @@ jobs:
           OBJECT_STORAGE_ACCESS_KEY: ${{ secrets.OBJECT_STORAGE_ACCESS_KEY }}
           OBJECT_STORAGE_SECRET_KEY: ${{ secrets.OBJECT_STORAGE_SECRET_KEY }}
           SESSION_ENCRYPTION_KEY: ${{ secrets.SESSION_ENCRYPTION_KEY_BETA || secrets.SESSION_ENCRYPTION_KEY }}
-          # Google OAuth: reuse beta credentials. Redirects to pr-N.calendar-pr...
-          # will be rejected by Google (wildcards not supported). Anonymous
-          # checkout flow does not require a Google login, so this is fine.
+          # Google OAuth: reuse beta credentials. Redirects to
+          # calendar-pr-N.preview... will be rejected by Google (wildcards
+          # not supported). Anonymous checkout flow does not require Google
+          # login, so this is fine.
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
@@ -283,7 +281,7 @@ jobs:
     if: needs.context.outputs.action == 'deploy'
     runs-on: ubuntu-latest
     env:
-      BASE_URL: https://pr-${{ needs.context.outputs.pr_number }}.calendar-pr.villagecompute.com
+      BASE_URL: https://calendar-pr-${{ needs.context.outputs.pr_number }}.preview.villagecompute.com
       CI: "true"
 
     steps:
