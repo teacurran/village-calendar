@@ -211,6 +211,10 @@ jobs:
             -e "k8s_namespace=${DEPLOYMENT_NAMESPACE}" \
             -e "replicas=1" \
             -e "quarkus_profile=beta" \
+            -e "cpu_request=50m" \
+            -e "cpu_limit=500m" \
+            -e "memory_request=384Mi" \
+            -e "memory_limit=1Gi" \
             ansible/deploy-calendar.yml
 
       - name: Wait for rollout

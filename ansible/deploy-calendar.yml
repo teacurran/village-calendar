@@ -281,11 +281,11 @@
 
                     resources:
                       requests:
-                        memory: "512Mi"
-                        cpu: "250m"
+                        memory: "{{ memory_request | default('512Mi') }}"
+                        cpu: "{{ cpu_request | default('250m') }}"
                       limits:
-                        memory: "2Gi"
-                        cpu: "1000m"
+                        memory: "{{ memory_limit | default('2Gi') }}"
+                        cpu: "{{ cpu_limit | default('1000m') }}"
 
                     livenessProbe:
                       httpGet:
