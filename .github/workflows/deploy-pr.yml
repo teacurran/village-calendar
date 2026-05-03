@@ -165,9 +165,10 @@ jobs:
       - name: Deploy with Ansible
         env:
           # Per-namespace remote tmp avoids collisions when multiple PR deploys
-          # land on the K3s host concurrently (default ~/.ansible/tmp/* races
-          # under load).
-          ANSIBLE_REMOTE_TMP: /tmp/ansible-${{ env.DEPLOYMENT_NAMESPACE }}
+          # land on the K3s host concurrently. Kept inside ~/.ansible/ so the
+          # SSH user owns the tree and ansible's copy/sftp transfers behave
+          # the same as with the default path.
+          ANSIBLE_REMOTE_TMP: '~/.ansible/tmp-${{ env.DEPLOYMENT_NAMESPACE }}'
           REGISTRY_USER: ${{ secrets.DOCKER_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
           # CI publishes images as sha-<full sha>
