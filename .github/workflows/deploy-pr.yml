@@ -90,12 +90,12 @@ jobs:
     needs: [context]
     if: needs.context.outputs.action == 'deploy'
     runs-on: ubuntu-latest
-    # Per-PR mutex: a new push cancels an in-flight deploy for the same PR.
-    # Distinct PRs still run in parallel — ANSIBLE_REMOTE_TMP below keeps
-    # their ansible scratch dirs from colliding on the K3s host.
+    # Global queue: only one PR-preview ansible session can hit the K3s host
+    # at a time. Same pattern deploy-beta and deploy-production rely on
+    # implicitly. Multiple PRs queue rather than racing on ~/.ansible/tmp.
     concurrency:
-      group: deploy-pr-${{ needs.context.outputs.pr_number }}
-      cancel-in-progress: true
+      group: pr-preview-deploys
+      cancel-in-progress: false
     env:
       PR_NUMBER: ${{ needs.context.outputs.pr_number }}
       HEAD_SHA: ${{ needs.context.outputs.head_sha }}
@@ -164,11 +164,6 @@ jobs:
 
       - name: Deploy with Ansible
         env:
-          # Per-namespace remote tmp avoids collisions when multiple PR deploys
-          # land on the K3s host concurrently. Kept inside ~/.ansible/ so the
-          # SSH user owns the tree and ansible's copy/sftp transfers behave
-          # the same as with the default path.
-          ANSIBLE_REMOTE_TMP: '~/.ansible/tmp-${{ env.DEPLOYMENT_NAMESPACE }}'
           REGISTRY_USER: ${{ secrets.DOCKER_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
           # CI publishes images as sha-<full sha>
