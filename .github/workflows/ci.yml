@@ -309,6 +309,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,format=long
+            type=raw,value=sha-${{ github.event.pull_request.head.sha }},enable=${{ github.event_name == 'pull_request' }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
