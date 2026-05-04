@@ -34,6 +34,12 @@ env:
   USE_WIREGUARD: ${{ secrets.USE_WIREGUARD || 'false' }}
   PR_DOMAIN: preview.villagecompute.com
 
+# workflow_run triggers default to read-only; we need write to comment on PRs.
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   context:
     name: Resolve PR context
