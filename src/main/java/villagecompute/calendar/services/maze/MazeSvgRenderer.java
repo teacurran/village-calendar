@@ -269,55 +269,85 @@ public class MazeSvgRenderer {
         // Background
         svg.append(String.format("  <rect width=\"%d\" height=\"%d\" fill=\"white\"/>%n", PAGE_WIDTH, PAGE_HEIGHT));
 
-        // Draw dead-end depth visualization if enabled
-        if (showDeadEnds) {
-            svg.append("  <g class=\"dead-end-depth\">").append(System.lineSeparator());
+        appendSigmaDeadEnds(svg, gridWidth, gridHeight, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
+        appendSigmaSolutionPath(svg, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
+        appendSigmaInnerWalls(svg, gridWidth, gridHeight, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
 
-            int maxDepth = 1;
+        // Draw outer border (hexagon outline for edge cells)
+        svg.append("  <g class=\"outer-border\">").append(System.lineSeparator());
+        drawHexOuterBorder(svg, gridWidth, gridHeight, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
+        svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
+
+        appendSigmaMarkers(svg, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
+
+        svg.append("</svg>");
+        return svg.toString();
+    }
+
+    /** Append dead-end depth visualization for sigma maze if enabled. */
+    private void appendSigmaDeadEnds(StringBuilder svg, int gridWidth, int gridHeight, double hexWidth,
+            double vertSpacing, double hexOffsetX, double hexOffsetY, double hexSize) {
+        if (!showDeadEnds) {
+            return;
+        }
+        svg.append("  <g class=\"dead-end-depth\">").append(System.lineSeparator());
+        int maxDepth = findMaxDeadEndDepth(gridWidth, gridHeight);
+        for (int y = 0; y < gridHeight; y++) {
             for (int x = 0; x < gridWidth; x++) {
-                for (int y = 0; y < gridHeight; y++) {
-                    MazeCell cell = grid.getCell(x, y);
-                    if (cell.deadEndDepth > maxDepth) {
-                        maxDepth = cell.deadEndDepth;
-                    }
+                MazeCell cell = grid.getCell(x, y);
+                if (!cell.isDeadEnd || cell.deadEndDepth <= 0) {
+                    continue;
                 }
+                double[] center = getHexCenter(x, y, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
+                double opacity = 0.1 + (0.5 * cell.deadEndDepth / maxDepth);
+                String hexPath = getHexPath(center[0], center[1], hexSize);
+                svg.append(String.format("    <path d=\"%s\" fill=\"%s\" opacity=\"%.2f\"/>%n", hexPath, deadEndColor,
+                        opacity));
             }
+        }
+        svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
+    }
 
+    /** Find maximum dead-end depth across the grid (minimum 1 to avoid divide-by-zero). */
+    private int findMaxDeadEndDepth(int gridWidth, int gridHeight) {
+        int maxDepth = 1;
+        for (int x = 0; x < gridWidth; x++) {
             for (int y = 0; y < gridHeight; y++) {
-                for (int x = 0; x < gridWidth; x++) {
-                    MazeCell cell = grid.getCell(x, y);
-                    if (cell.isDeadEnd && cell.deadEndDepth > 0) {
-                        double[] center = getHexCenter(x, y, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
-                        double opacity = 0.1 + (0.5 * cell.deadEndDepth / maxDepth);
-                        String hexPath = getHexPath(center[0], center[1], hexSize);
-                        svg.append(String.format("    <path d=\"%s\" fill=\"%s\" opacity=\"%.2f\"/>%n", hexPath,
-                                deadEndColor, opacity));
-                    }
+                MazeCell cell = grid.getCell(x, y);
+                if (cell.deadEndDepth > maxDepth) {
+                    maxDepth = cell.deadEndDepth;
                 }
             }
-            svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
         }
+        return maxDepth;
+    }
 
-        // Draw solution path if enabled
-        if (showSolution && grid.getSolutionPath() != null) {
-            svg.append("  <g class=\"solution-path\">").append(System.lineSeparator());
-            var path = grid.getSolutionPath();
-            int pathWidth = Math.max((int) (hexSize / 3), 6);
-            for (int i = 0; i < path.size() - 1; i++) {
-                int[] from = path.get(i);
-                int[] to = path.get(i + 1);
-                double[] fromCenter = getHexCenter(from[0], from[1], hexWidth, vertSpacing, hexOffsetX, hexOffsetY,
-                        hexSize);
-                double[] toCenter = getHexCenter(to[0], to[1], hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
-                svg.append(String.format(
-                        "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\" stroke=\"%s\""
-                                + " stroke-width=\"%d\" stroke-linecap=\"round\" opacity=\"0.6\"/>%n",
-                        fromCenter[0], fromCenter[1], toCenter[0], toCenter[1], pathColor, pathWidth));
-            }
-            svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
+    /** Append solution path lines for sigma maze if enabled. */
+    private void appendSigmaSolutionPath(StringBuilder svg, double hexWidth, double vertSpacing, double hexOffsetX,
+            double hexOffsetY, double hexSize) {
+        if (!showSolution || grid.getSolutionPath() == null) {
+            return;
         }
+        svg.append("  <g class=\"solution-path\">").append(System.lineSeparator());
+        var path = grid.getSolutionPath();
+        int pathWidth = Math.max((int) (hexSize / 3), 6);
+        for (int i = 0; i < path.size() - 1; i++) {
+            int[] from = path.get(i);
+            int[] to = path.get(i + 1);
+            double[] fromCenter = getHexCenter(from[0], from[1], hexWidth, vertSpacing, hexOffsetX, hexOffsetY,
+                    hexSize);
+            double[] toCenter = getHexCenter(to[0], to[1], hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
+            svg.append(String.format(
+                    "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\" stroke=\"%s\""
+                            + " stroke-width=\"%d\" stroke-linecap=\"round\" opacity=\"0.6\"/>%n",
+                    fromCenter[0], fromCenter[1], toCenter[0], toCenter[1], pathColor, pathWidth));
+        }
+        svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
+    }
 
-        // Draw hexagon walls
+    /** Append inner hexagon walls for sigma maze. */
+    private void appendSigmaInnerWalls(StringBuilder svg, int gridWidth, int gridHeight, double hexWidth,
+            double vertSpacing, double hexOffsetX, double hexOffsetY, double hexSize) {
         svg.append("  <g class=\"inner-walls\">").append(System.lineSeparator());
         for (int y = 0; y < gridHeight; y++) {
             for (int x = 0; x < gridWidth; x++) {
@@ -327,30 +357,21 @@ public class MazeSvgRenderer {
             }
         }
         svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
+    }
 
-        // Draw outer border (hexagon outline for edge cells)
-        svg.append("  <g class=\"outer-border\">").append(System.lineSeparator());
-        drawHexOuterBorder(svg, gridWidth, gridHeight, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
-        svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
-
-        // Calculate marker size
+    /** Append start and end markers for sigma maze. */
+    private void appendSigmaMarkers(StringBuilder svg, double hexWidth, double vertSpacing, double hexOffsetX,
+            double hexOffsetY, double hexSize) {
         int markerRadius = Math.max((int) (hexSize / 3), 8);
-
-        // Draw start marker
         double[] startCenter = getHexCenter(grid.getStartX(), grid.getStartY(), hexWidth, vertSpacing, hexOffsetX,
                 hexOffsetY, hexSize);
         svg.append(
                 String.format("  <circle cx=\"%.1f\" cy=\"%.1f\" r=\"%d\" fill=\"%s\"" + " class=\"start-marker\"/>%n",
                         startCenter[0], startCenter[1], markerRadius, DEFAULT_START_COLOR));
-
-        // Draw end marker
         double[] endCenter = getHexCenter(grid.getEndX(), grid.getEndY(), hexWidth, vertSpacing, hexOffsetX, hexOffsetY,
                 hexSize);
         svg.append(String.format("  <circle cx=\"%.1f\" cy=\"%.1f\" r=\"%d\" fill=\"%s\"" + " class=\"end-marker\"/>%n",
                 endCenter[0], endCenter[1], markerRadius, DEFAULT_END_COLOR));
-
-        svg.append("</svg>");
-        return svg.toString();
     }
 
     /** Calculate hex size to fit grid in printable area. */
