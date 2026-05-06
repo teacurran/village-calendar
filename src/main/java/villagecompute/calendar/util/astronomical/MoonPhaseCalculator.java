@@ -79,82 +79,55 @@ public class MoonPhaseCalculator {
         LocalDate startDate = LocalDate.of(year, 1, 1);
         LocalDate endDate = LocalDate.of(year, 12, 31);
 
-        // Calculate New Moons (approximately every 29.53 days)
-        ZonedDateTime current = startDate.atStartOfDay(ZoneId.of("UTC"));
+        ZonedDateTime start = startDate.atStartOfDay(ZoneId.of("UTC"));
         ZonedDateTime end = endDate.atStartOfDay(ZoneId.of("UTC"));
 
-        // Find all New Moons in the year
-        while (current.isBefore(end)) {
-            ZonedDateTime newMoonTime = MoonPhase.compute().phase(MoonPhase.Phase.NEW_MOON).on(current).execute()
-                    .getTime();
-
-            if (newMoonTime != null && !newMoonTime.toLocalDate().isAfter(endDate)) {
-                LocalDate phaseDate = newMoonTime.toLocalDate();
-                double illumination = calculateIllumination(phaseDate);
-                phases.add(new MoonPhaseData(phaseDate, MoonPhaseType.NEW_MOON, 0.0, illumination));
-
-                // Move to next lunation (add 29.53 days)
-                current = newMoonTime.plusDays(29);
-            } else {
-                break;
-            }
-        }
-
-        // Calculate Full Moons
-        current = startDate.atStartOfDay(ZoneId.of("UTC"));
-        while (current.isBefore(end)) {
-            ZonedDateTime fullMoonTime = MoonPhase.compute().phase(MoonPhase.Phase.FULL_MOON).on(current).execute()
-                    .getTime();
-
-            if (fullMoonTime != null && !fullMoonTime.toLocalDate().isAfter(endDate)) {
-                LocalDate phaseDate = fullMoonTime.toLocalDate();
-                double illumination = calculateIllumination(phaseDate);
-                phases.add(new MoonPhaseData(phaseDate, MoonPhaseType.FULL_MOON, 0.5, illumination));
-
-                current = fullMoonTime.plusDays(29);
-            } else {
-                break;
-            }
-        }
-
-        // Calculate First Quarters
-        current = startDate.atStartOfDay(ZoneId.of("UTC"));
-        while (current.isBefore(end)) {
-            ZonedDateTime quarterTime = MoonPhase.compute().phase(MoonPhase.Phase.FIRST_QUARTER).on(current).execute()
-                    .getTime();
-
-            if (quarterTime != null && !quarterTime.toLocalDate().isAfter(endDate)) {
-                LocalDate phaseDate = quarterTime.toLocalDate();
-                double illumination = calculateIllumination(phaseDate);
-                phases.add(new MoonPhaseData(phaseDate, MoonPhaseType.FIRST_QUARTER, 0.25, illumination));
-
-                current = quarterTime.plusDays(29);
-            } else {
-                break;
-            }
-        }
-
-        // Calculate Last Quarters
-        current = startDate.atStartOfDay(ZoneId.of("UTC"));
-        while (current.isBefore(end)) {
-            ZonedDateTime quarterTime = MoonPhase.compute().phase(MoonPhase.Phase.LAST_QUARTER).on(current).execute()
-                    .getTime();
-
-            if (quarterTime != null && !quarterTime.toLocalDate().isAfter(endDate)) {
-                LocalDate phaseDate = quarterTime.toLocalDate();
-                double illumination = calculateIllumination(phaseDate);
-                phases.add(new MoonPhaseData(phaseDate, MoonPhaseType.LAST_QUARTER, 0.75, illumination));
-
-                current = quarterTime.plusDays(29);
-            } else {
-                break;
-            }
-        }
+        collectPhaseEvents(phases, start, end, endDate, MoonPhase.Phase.NEW_MOON, MoonPhaseType.NEW_MOON, 0.0);
+        collectPhaseEvents(phases, start, end, endDate, MoonPhase.Phase.FULL_MOON, MoonPhaseType.FULL_MOON, 0.5);
+        collectPhaseEvents(phases, start, end, endDate, MoonPhase.Phase.FIRST_QUARTER, MoonPhaseType.FIRST_QUARTER,
+                0.25);
+        collectPhaseEvents(phases, start, end, endDate, MoonPhase.Phase.LAST_QUARTER, MoonPhaseType.LAST_QUARTER, 0.75);
 
         // Sort by date
         phases.sort((a, b) -> a.date.compareTo(b.date));
 
         return phases;
+    }
+
+    /**
+     * Collect all occurrences of a specific moon phase within the year window. Iterates from start, advancing
+     * approximately one lunation (29 days) past each found event, until either no event is returned or the next event
+     * falls outside the end date.
+     *
+     * @param phases
+     *            Output list to which discovered phase events are appended
+     * @param start
+     *            Window start (UTC)
+     * @param end
+     *            Window end (UTC), used as the loop guard
+     * @param endDate
+     *            Inclusive last calendar date for the year (events after this are dropped)
+     * @param suncalcPhase
+     *            The SunCalc phase enum to query
+     * @param phaseType
+     *            The MoonPhaseType to record on the resulting data
+     * @param phaseValue
+     *            The fractional phase value (0.0, 0.25, 0.5, 0.75) to record
+     */
+    private static void collectPhaseEvents(List<MoonPhaseData> phases, ZonedDateTime start, ZonedDateTime end,
+            LocalDate endDate, MoonPhase.Phase suncalcPhase, MoonPhaseType phaseType, double phaseValue) {
+        ZonedDateTime current = start;
+        while (current.isBefore(end)) {
+            ZonedDateTime phaseTime = MoonPhase.compute().phase(suncalcPhase).on(current).execute().getTime();
+            if (phaseTime == null || phaseTime.toLocalDate().isAfter(endDate)) {
+                break;
+            }
+            LocalDate phaseDate = phaseTime.toLocalDate();
+            double illumination = calculateIllumination(phaseDate);
+            phases.add(new MoonPhaseData(phaseDate, phaseType, phaseValue, illumination));
+            // Move to next lunation (add 29 days, slightly less than 29.53)
+            current = phaseTime.plusDays(29);
+        }
     }
 
     /**
