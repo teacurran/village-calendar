@@ -541,38 +541,71 @@ public class EventService {
             return; // Emoji is optional
         }
 
-        // Check length
         if (emoji.length() > 100) {
             throw new IllegalArgumentException(
                     String.format("Emoji must be 100 characters or less (got %d characters)", emoji.length()));
         }
 
-        // Check if contains valid emoji characters
-        // This is a simplified check - validates common emoji Unicode ranges
-        boolean hasEmoji = false;
-        for (int i = 0; i < emoji.length();) {
-            int codePoint = emoji.codePointAt(i);
-
-            // Check for common emoji ranges
-            // Emoticons and symbols (0x1F300-0x1F9FF)
-            // Misc symbols (0x2600-0x27BF)
-            // Variation selectors (0xFE00-0xFE0F)
-            // Zero-width joiner (0x200D)
-            // Regional indicators for flags (0x1F1E6-0x1F1FF)
-            // Skin tone modifiers (0x1F3FB-0x1F3FF)
-            if ((codePoint >= 0x1F300 && codePoint <= 0x1F9FF) || (codePoint >= 0x2600 && codePoint <= 0x27BF)
-                    || (codePoint >= 0xFE00 && codePoint <= 0xFE0F) || codePoint == 0x200D
-                    || (codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF) || (codePoint >= 0x1F3FB && codePoint <= 0x1F3FF)
-                    || Character.getType(codePoint) == Character.OTHER_SYMBOL) {
-                hasEmoji = true;
-            }
-
-            i += Character.charCount(codePoint);
-        }
-
-        if (!hasEmoji) {
+        if (!containsEmojiCharacter(emoji)) {
             throw new IllegalArgumentException("Invalid emoji: must be valid Unicode emoji sequence");
         }
+    }
+
+    /**
+     * Check if a string contains at least one valid emoji code point. Iterates code points and delegates the
+     * per-code-point classification to {@link #isEmojiCodePoint(int)}.
+     *
+     * @param emoji
+     *            non-null, non-empty emoji candidate string
+     * @return true if at least one code point is recognized as an emoji
+     */
+    private boolean containsEmojiCharacter(String emoji) {
+        for (int i = 0; i < emoji.length();) {
+            int codePoint = emoji.codePointAt(i);
+            if (isEmojiCodePoint(codePoint)) {
+                return true;
+            }
+            i += Character.charCount(codePoint);
+        }
+        return false;
+    }
+
+    /**
+     * Determine if the given Unicode code point falls within a recognized emoji range. Covers common emoji ranges:
+     * <ul>
+     * <li>Emoticons and symbols (0x1F300-0x1F9FF)</li>
+     * <li>Misc symbols (0x2600-0x27BF)</li>
+     * <li>Variation selectors (0xFE00-0xFE0F)</li>
+     * <li>Zero-width joiner (0x200D)</li>
+     * <li>Regional indicators for flags (0x1F1E6-0x1F1FF)</li>
+     * <li>Skin tone modifiers (0x1F3FB-0x1F3FF)</li>
+     * <li>Any code point classified as OTHER_SYMBOL</li>
+     * </ul>
+     *
+     * @param codePoint
+     *            Unicode code point to test
+     * @return true if the code point is a recognized emoji character
+     */
+    private boolean isEmojiCodePoint(int codePoint) {
+        if (codePoint >= 0x1F300 && codePoint <= 0x1F9FF) {
+            return true;
+        }
+        if (codePoint >= 0x2600 && codePoint <= 0x27BF) {
+            return true;
+        }
+        if (codePoint >= 0xFE00 && codePoint <= 0xFE0F) {
+            return true;
+        }
+        if (codePoint == 0x200D) {
+            return true;
+        }
+        if (codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF) {
+            return true;
+        }
+        if (codePoint >= 0x1F3FB && codePoint <= 0x1F3FF) {
+            return true;
+        }
+        return Character.getType(codePoint) == Character.OTHER_SYMBOL;
     }
 
     /**
