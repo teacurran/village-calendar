@@ -357,48 +357,61 @@ public class MazeGrid {
     /** Get blocked neighbors for hexagonal maze (cells separated by walls). */
     private List<MazeCell> getBlockedHexNeighbors(MazeCell cell) {
         List<MazeCell> neighbors = new ArrayList<>();
+        addBlockedHorizontalHexNeighbors(cell, neighbors);
+        if ((cell.y % 2) == 0) {
+            addBlockedEvenRowDiagonalHexNeighbors(cell, neighbors);
+        } else {
+            addBlockedOddRowDiagonalHexNeighbors(cell, neighbors);
+        }
+        return neighbors;
+    }
+
+    /** Add east/west blocked neighbors (shared between even and odd hex rows). */
+    private void addBlockedHorizontalHexNeighbors(MazeCell cell, List<MazeCell> neighbors) {
         int x = cell.x;
         int y = cell.y;
-        boolean evenRow = (y % 2) == 0;
-
-        // East neighbor
         if (x < width - 1 && cell.eastWall) {
             neighbors.add(cells[x + 1][y]);
         }
-        // West neighbor
         if (x > 0 && cell.westWall) {
             neighbors.add(cells[x - 1][y]);
         }
+    }
 
-        if (evenRow) {
-            if (y > 0 && x > 0 && cell.northWestWall) {
-                neighbors.add(cells[x - 1][y - 1]);
-            }
-            if (y > 0 && cell.northEastWall) {
-                neighbors.add(cells[x][y - 1]);
-            }
-            if (y < height - 1 && x > 0 && cell.southWestWall) {
-                neighbors.add(cells[x - 1][y + 1]);
-            }
-            if (y < height - 1 && cell.southEastWall) {
-                neighbors.add(cells[x][y + 1]);
-            }
-        } else {
-            if (y > 0 && cell.northWestWall) {
-                neighbors.add(cells[x][y - 1]);
-            }
-            if (y > 0 && x < width - 1 && cell.northEastWall) {
-                neighbors.add(cells[x + 1][y - 1]);
-            }
-            if (y < height - 1 && cell.southWestWall) {
-                neighbors.add(cells[x][y + 1]);
-            }
-            if (y < height - 1 && x < width - 1 && cell.southEastWall) {
-                neighbors.add(cells[x + 1][y + 1]);
-            }
+    /** Add diagonal blocked neighbors for an even-row hex cell. */
+    private void addBlockedEvenRowDiagonalHexNeighbors(MazeCell cell, List<MazeCell> neighbors) {
+        int x = cell.x;
+        int y = cell.y;
+        if (y > 0 && x > 0 && cell.northWestWall) {
+            neighbors.add(cells[x - 1][y - 1]);
         }
+        if (y > 0 && cell.northEastWall) {
+            neighbors.add(cells[x][y - 1]);
+        }
+        if (y < height - 1 && x > 0 && cell.southWestWall) {
+            neighbors.add(cells[x - 1][y + 1]);
+        }
+        if (y < height - 1 && cell.southEastWall) {
+            neighbors.add(cells[x][y + 1]);
+        }
+    }
 
-        return neighbors;
+    /** Add diagonal blocked neighbors for an odd-row hex cell. */
+    private void addBlockedOddRowDiagonalHexNeighbors(MazeCell cell, List<MazeCell> neighbors) {
+        int x = cell.x;
+        int y = cell.y;
+        if (y > 0 && cell.northWestWall) {
+            neighbors.add(cells[x][y - 1]);
+        }
+        if (y > 0 && x < width - 1 && cell.northEastWall) {
+            neighbors.add(cells[x + 1][y - 1]);
+        }
+        if (y < height - 1 && cell.southWestWall) {
+            neighbors.add(cells[x][y + 1]);
+        }
+        if (y < height - 1 && x < width - 1 && cell.southEastWall) {
+            neighbors.add(cells[x + 1][y + 1]);
+        }
     }
 
     /** Apply difficulty modifications for hexagonal mazes. */
