@@ -1367,27 +1367,18 @@ public class CalendarRenderingService {
     // Generate SVG for moon illumination visualization
     public String generateMoonIlluminationSVG(LocalDate date, int x, int y, double latitude, double longitude,
             CalendarConfigType config) {
-        StringBuilder svg = new StringBuilder();
-
         // Calculate moon illumination and position
         MoonIllumination illumination = calculateMoonIllumination(date);
         double phase = illumination.phase;
         double illuminatedFraction = illumination.fraction;
 
         // Calculate rotation angle based on observer's location
-        // If latitude and longitude are both 0 (no location selected), don't rotate
-        double rotationAngle = 0.0;
-        if (latitude != 0.0 || longitude != 0.0) {
-            // Calculate moon position for observer's location
-            MoonPosition position = calculateMoonPosition(date, latitude, longitude);
-            double parallacticAngle = position.parallacticAngle;
-
-            // The moon's terminator (shadow line) rotates based on the observer's latitude
-            rotationAngle = Math.toDegrees(parallacticAngle) * -1 - 45;
-        }
+        double rotationAngle = calculateMoonRotationAngle(date, latitude, longitude);
 
         // Moon circle radius from configuration
         int radius = config.moonSize;
+
+        StringBuilder svg = new StringBuilder();
 
         // Create a group for the moon with rotation
         svg.append(String.format("<g transform=\"translate(%d, %d) rotate(%.1f)\">%n", x, y, rotationAngle));
@@ -1398,37 +1389,7 @@ public class CalendarRenderingService {
         // Calculate the illuminated path
         // The moon phase determines which side is lit
         // phase: 0 = new moon, 0.25 = first quarter, 0.5 = full moon, 0.75 = last quarter
-
-        if (illuminatedFraction > 0 && illuminatedFraction < 1) {
-            // Create path for illuminated portion
-            boolean isWaxing = phase < 0.5;
-            boolean isRightSideLit = isWaxing;
-
-            // Calculate the ellipse width for the terminator (shadow line)
-            double ellipseWidth = Math.abs(Math.cos(phase * 2 * Math.PI)) * radius;
-
-            // For SVG arcs: sweep-flag determines clockwise (1) or counter-clockwise (0) direction
-            // We don't actually need sweepFlag for this moon rendering approach
-            // The terminator line is created by combining two arcs with different radii
-            String largeArcFlag = illuminatedFraction > 0.5 ? "1" : "0";
-
-            // Build the path
-            String path;
-            if (phase < 0.25 || phase > 0.75) {
-                // Crescent moon
-                path = String.format("M 0,-%d A %d,%d 0 %s,%s 0,%d A %.1f,%d 0 %s,%s 0,-%d", radius, radius, radius,
-                        largeArcFlag, isRightSideLit ? "1" : "0", radius, ellipseWidth, radius, largeArcFlag,
-                        isRightSideLit ? "0" : "1", radius);
-            } else {
-                // Gibbous moon
-                path = String.format("M 0,-%d A %d,%d 0 %s,%s 0,%d A %.1f,%d 0 %s,%s 0,-%d", radius, radius, radius,
-                        "1", isRightSideLit ? "1" : "0", radius, ellipseWidth, radius, "0", isRightSideLit ? "1" : "0",
-                        radius);
-            }
-
-            svg.append(String.format("<path d=\"%s\" fill=\"%s\"/>%n", path, config.moonLightColor));
-        }
-        // New moon (illuminatedFraction <= 0) is just the dark circle already drawn
+        appendIlluminatedMoonPath(svg, phase, illuminatedFraction, radius, config);
 
         // Border with configurable color and width
         svg.append(String.format("<circle r=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"%.1f\"/>%n", radius,
@@ -1437,6 +1398,56 @@ public class CalendarRenderingService {
         svg.append("</g>").append(System.lineSeparator());
 
         return svg.toString();
+    }
+
+    // Calculate rotation angle for moon terminator based on observer's location.
+    // If latitude and longitude are both 0 (no location selected), don't rotate.
+    private double calculateMoonRotationAngle(LocalDate date, double latitude, double longitude) {
+        if (latitude == 0.0 && longitude == 0.0) {
+            return 0.0;
+        }
+        // Calculate moon position for observer's location
+        MoonPosition position = calculateMoonPosition(date, latitude, longitude);
+        // The moon's terminator (shadow line) rotates based on the observer's latitude
+        return Math.toDegrees(position.parallacticAngle) * -1 - 45;
+    }
+
+    // Append the illuminated portion path for the moon, if any.
+    // New moon (illuminatedFraction <= 0) and full moon (illuminatedFraction >= 1)
+    // do not require an additional path on top of the dark background circle.
+    private void appendIlluminatedMoonPath(StringBuilder svg, double phase, double illuminatedFraction, int radius,
+            CalendarConfigType config) {
+        if (illuminatedFraction <= 0 || illuminatedFraction >= 1) {
+            return;
+        }
+
+        String path = buildMoonIlluminationPath(phase, illuminatedFraction, radius);
+        svg.append(String.format("<path d=\"%s\" fill=\"%s\"/>%n", path, config.moonLightColor));
+    }
+
+    // Build the SVG path string for the illuminated portion of the moon.
+    private String buildMoonIlluminationPath(double phase, double illuminatedFraction, int radius) {
+        // Waxing phases (phase < 0.5) light the right side
+        boolean isRightSideLit = phase < 0.5;
+        String rightSideFlag = isRightSideLit ? "1" : "0";
+        String oppositeSideFlag = isRightSideLit ? "0" : "1";
+
+        // Calculate the ellipse width for the terminator (shadow line)
+        double ellipseWidth = Math.abs(Math.cos(phase * 2 * Math.PI)) * radius;
+
+        // For SVG arcs: large-arc-flag determines whether the longer arc is drawn
+        String largeArcFlag = illuminatedFraction > 0.5 ? "1" : "0";
+
+        // The terminator line is created by combining two arcs with different radii
+        boolean isCrescent = phase < 0.25 || phase > 0.75;
+        if (isCrescent) {
+            // Crescent moon: both arcs use the large-arc flag, terminator sweeps opposite
+            return String.format("M 0,-%d A %d,%d 0 %s,%s 0,%d A %.1f,%d 0 %s,%s 0,-%d", radius, radius, radius,
+                    largeArcFlag, rightSideFlag, radius, ellipseWidth, radius, largeArcFlag, oppositeSideFlag, radius);
+        }
+        // Gibbous moon: outer arc uses large-arc flag "1", terminator uses sweep matching lit side
+        return String.format("M 0,-%d A %d,%d 0 %s,%s 0,%d A %.1f,%d 0 %s,%s 0,-%d", radius, radius, radius, "1",
+                rightSideFlag, radius, ellipseWidth, radius, "0", rightSideFlag, radius);
     }
 
     // Moon illumination data class
