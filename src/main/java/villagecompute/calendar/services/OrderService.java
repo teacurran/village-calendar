@@ -782,42 +782,12 @@ public class OrderService {
         if (description == null) {
             description = (String) cartItem.get("templateName"); // Legacy fallback
         }
-        Integer year = Year.now().getValue();
         String configurationStr = (String) cartItem.get("configuration");
-        if (configurationStr != null) {
-            try {
-                JsonNode config = objectMapper.readTree(configurationStr);
-                if (config.has("year")) {
-                    year = config.get("year").asInt(year);
-                }
-            } catch (Exception e) {
-                LOG.warnf("Could not parse configuration for year: %s", e.getMessage());
-            }
-        }
-        Integer quantity = cartItem.get("quantity") != null ? ((Number) cartItem.get("quantity")).intValue() : 1;
-        Double unitPrice = cartItem.get("unitPrice") != null ? ((Number) cartItem.get("unitPrice")).doubleValue()
-                : 29.99;
-        Double lineTotal = cartItem.get("lineTotal") != null ? ((Number) cartItem.get("lineTotal")).doubleValue()
-                : unitPrice * quantity;
-
-        // Determine product type from configuration or description
-        String productType = CalendarOrderItem.TYPE_PRINT;
-        if (configurationStr != null) {
-            try {
-                JsonNode config = objectMapper.readTree(configurationStr);
-                if (config.has("productType")) {
-                    String pt = config.get("productType").asText();
-                    if ("pdf".equalsIgnoreCase(pt) || "digital".equalsIgnoreCase(pt)) {
-                        productType = CalendarOrderItem.TYPE_PDF;
-                    }
-                }
-            } catch (Exception e) {
-                LOG.warnf("Could not parse configuration for product type: %s", e.getMessage());
-            }
-        }
-        if (description != null && description.toLowerCase().contains("pdf")) {
-            productType = CalendarOrderItem.TYPE_PDF;
-        }
+        Integer year = extractYearFromConfig(configurationStr, Year.now().getValue());
+        Integer quantity = extractQuantity(cartItem);
+        Double unitPrice = extractUnitPrice(cartItem);
+        Double lineTotal = extractLineTotal(cartItem, unitPrice, quantity);
+        String productType = determineProductType(configurationStr, description);
 
         // Create a UserCalendar to store the calendar configuration (result not needed - persisted as side effect)
         createCalendarFromConfig(order.user, description, year, configurationStr);
@@ -835,13 +805,7 @@ public class OrderService {
         item.itemStatus = CalendarOrderItem.STATUS_PENDING;
 
         // Store configuration as JSON
-        if (configurationStr != null && !configurationStr.isEmpty()) {
-            try {
-                item.configuration = objectMapper.readTree(configurationStr);
-            } catch (Exception e) {
-                LOG.warnf("Failed to parse item configuration: %s", e.getMessage());
-            }
-        }
+        applyConfigurationJson(item, configurationStr);
 
         item.persist();
 
@@ -852,6 +816,92 @@ public class OrderService {
                 unitPrice, lineTotal, item.assets.size());
 
         return item;
+    }
+
+    /** Extract the year from a configuration JSON string, falling back to the provided default. */
+    private Integer extractYearFromConfig(String configurationStr, Integer defaultYear) {
+        if (configurationStr == null) {
+            return defaultYear;
+        }
+        try {
+            JsonNode config = objectMapper.readTree(configurationStr);
+            if (config.has("year")) {
+                return config.get("year").asInt(defaultYear);
+            }
+        } catch (Exception e) {
+            LOG.warnf("Could not parse configuration for year: %s", e.getMessage());
+        }
+        return defaultYear;
+    }
+
+    /** Extract quantity from cart item data, defaulting to 1. */
+    private Integer extractQuantity(Map<String, Object> cartItem) {
+        Object value = cartItem.get("quantity");
+        if (value == null) {
+            return 1;
+        }
+        return ((Number) value).intValue();
+    }
+
+    /** Extract unit price from cart item data, defaulting to 29.99. */
+    private Double extractUnitPrice(Map<String, Object> cartItem) {
+        Object value = cartItem.get("unitPrice");
+        if (value == null) {
+            return 29.99;
+        }
+        return ((Number) value).doubleValue();
+    }
+
+    /** Extract line total from cart item data, defaulting to unitPrice * quantity. */
+    private Double extractLineTotal(Map<String, Object> cartItem, Double unitPrice, Integer quantity) {
+        Object value = cartItem.get("lineTotal");
+        if (value == null) {
+            return unitPrice * quantity;
+        }
+        return ((Number) value).doubleValue();
+    }
+
+    /** Determine the product type (print or PDF) from configuration JSON and/or description. */
+    private String determineProductType(String configurationStr, String description) {
+        if (isPdfFromConfiguration(configurationStr) || isPdfFromDescription(description)) {
+            return CalendarOrderItem.TYPE_PDF;
+        }
+        return CalendarOrderItem.TYPE_PRINT;
+    }
+
+    /** Check whether the configuration JSON declares a PDF/digital product type. */
+    private boolean isPdfFromConfiguration(String configurationStr) {
+        if (configurationStr == null) {
+            return false;
+        }
+        try {
+            JsonNode config = objectMapper.readTree(configurationStr);
+            if (!config.has("productType")) {
+                return false;
+            }
+            String pt = config.get("productType").asText();
+            return "pdf".equalsIgnoreCase(pt) || "digital".equalsIgnoreCase(pt);
+        } catch (Exception e) {
+            LOG.warnf("Could not parse configuration for product type: %s", e.getMessage());
+            return false;
+        }
+    }
+
+    /** Check whether the description suggests a PDF product. */
+    private boolean isPdfFromDescription(String description) {
+        return description != null && description.toLowerCase().contains("pdf");
+    }
+
+    /** Parse a configuration JSON string and assign it to the order item, logging warnings on failure. */
+    private void applyConfigurationJson(CalendarOrderItem item, String configurationStr) {
+        if (configurationStr == null || configurationStr.isEmpty()) {
+            return;
+        }
+        try {
+            item.configuration = objectMapper.readTree(configurationStr);
+        } catch (Exception e) {
+            LOG.warnf("Failed to parse item configuration: %s", e.getMessage());
+        }
     }
 
     /**

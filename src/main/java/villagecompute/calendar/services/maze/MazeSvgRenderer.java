@@ -95,87 +95,13 @@ public class MazeSvgRenderer {
         svg.append(String.format("  <rect width=\"%d\" height=\"%d\" fill=\"white\"/>%n", PAGE_WIDTH, PAGE_HEIGHT));
 
         // Draw dead-end depth visualization if enabled (before walls so it appears behind)
-        if (showDeadEnds) {
-            svg.append("  <g class=\"dead-end-depth\">").append(System.lineSeparator());
-
-            // Find maximum depth for gradient calculation
-            int maxDepth = 1;
-            for (int x = 0; x < gridWidth; x++) {
-                for (int y = 0; y < gridHeight; y++) {
-                    MazeCell cell = grid.getCell(x, y);
-                    if (cell.deadEndDepth > maxDepth) {
-                        maxDepth = cell.deadEndDepth;
-                    }
-                }
-            }
-
-            // Draw cells colored by depth - deeper dead ends are more visible
-            for (int x = 0; x < gridWidth; x++) {
-                for (int y = 0; y < gridHeight; y++) {
-                    MazeCell cell = grid.getCell(x, y);
-                    if (cell.isDeadEnd && cell.deadEndDepth > 0) {
-                        int cellX = offsetX + x * cellSize;
-                        int cellY = offsetY + y * cellSize;
-                        // Deeper = more opaque (worse wrong turns)
-                        double opacity = 0.1 + (0.5 * cell.deadEndDepth / maxDepth);
-                        svg.append(String.format(
-                                "    <rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\""
-                                        + " fill=\"%s\" opacity=\"%.2f\"/>%n",
-                                cellX, cellY, cellSize, cellSize, deadEndColor, opacity));
-                    }
-                }
-            }
-            svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
-        }
+        appendOrthogonalDeadEnds(svg, gridWidth, gridHeight);
 
         // Draw solution path if enabled
-        if (showSolution && grid.getSolutionPath() != null) {
-            svg.append("  <g class=\"solution-path\">").append(System.lineSeparator());
-            var path = grid.getSolutionPath();
-            int pathWidth = Math.max(cellSize / 4, 6);
-            for (int i = 0; i < path.size() - 1; i++) {
-                int[] from = path.get(i);
-                int[] to = path.get(i + 1);
-                int x1 = offsetX + from[0] * cellSize + cellSize / 2;
-                int y1 = offsetY + from[1] * cellSize + cellSize / 2;
-                int x2 = offsetX + to[0] * cellSize + cellSize / 2;
-                int y2 = offsetY + to[1] * cellSize + cellSize / 2;
-                svg.append(String.format(
-                        "    <line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke=\"%s\""
-                                + " stroke-width=\"%d\" stroke-linecap=\"round\"" + " opacity=\"0.6\"/>%n",
-                        x1, y1, x2, y2, pathColor, pathWidth));
-            }
-            svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
-        }
+        appendOrthogonalSolutionPath(svg);
 
         // Draw internal walls first (thin)
-        svg.append("  <g class=\"inner-walls\">").append(System.lineSeparator());
-        for (int x = 0; x < gridWidth; x++) {
-            for (int y = 0; y < gridHeight; y++) {
-                MazeCell cell = grid.getCell(x, y);
-                int cellX = offsetX + x * cellSize;
-                int cellY = offsetY + y * cellSize;
-
-                // East wall (only if not on right edge - outer border handles that)
-                if (cell.eastWall && x < gridWidth - 1) {
-                    svg.append(String.format(
-                            "    <line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\"" + " stroke=\"%s\" stroke-width=\"%d\""
-                                    + " stroke-linecap=\"square\"/>%n",
-                            cellX + cellSize, cellY, cellX + cellSize, cellY + cellSize, innerWallColor,
-                            INNER_WALL_THICKNESS));
-                }
-
-                // South wall (only if not on bottom edge - outer border handles that)
-                if (cell.southWall && y < gridHeight - 1) {
-                    svg.append(String.format(
-                            "    <line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\"" + " stroke=\"%s\" stroke-width=\"%d\""
-                                    + " stroke-linecap=\"square\"/>%n",
-                            cellX, cellY + cellSize, cellX + cellSize, cellY + cellSize, innerWallColor,
-                            INNER_WALL_THICKNESS));
-                }
-            }
-        }
-        svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
+        appendOrthogonalInnerWalls(svg, gridWidth, gridHeight);
 
         // Draw outer border (thick rectangle)
         svg.append("  <g class=\"outer-border\">").append(System.lineSeparator());
@@ -185,6 +111,114 @@ public class MazeSvgRenderer {
                 offsetX, offsetY, mazeWidth, mazeHeight, outerWallColor, OUTER_WALL_THICKNESS));
         svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
 
+        // Draw start/end markers
+        appendOrthogonalMarkers(svg);
+
+        svg.append("</svg>");
+        return svg.toString();
+    }
+
+    private void appendOrthogonalDeadEnds(StringBuilder svg, int gridWidth, int gridHeight) {
+        if (!showDeadEnds) {
+            return;
+        }
+        svg.append("  <g class=\"dead-end-depth\">").append(System.lineSeparator());
+
+        int maxDepth = findMaxDeadEndDepth(gridWidth, gridHeight);
+
+        // Draw cells colored by depth - deeper dead ends are more visible
+        for (int x = 0; x < gridWidth; x++) {
+            for (int y = 0; y < gridHeight; y++) {
+                appendDeadEndCell(svg, x, y, maxDepth);
+            }
+        }
+        svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
+    }
+
+    private int findMaxDeadEndDepth(int gridWidth, int gridHeight) {
+        int maxDepth = 1;
+        for (int x = 0; x < gridWidth; x++) {
+            for (int y = 0; y < gridHeight; y++) {
+                MazeCell cell = grid.getCell(x, y);
+                if (cell.deadEndDepth > maxDepth) {
+                    maxDepth = cell.deadEndDepth;
+                }
+            }
+        }
+        return maxDepth;
+    }
+
+    private void appendDeadEndCell(StringBuilder svg, int x, int y, int maxDepth) {
+        MazeCell cell = grid.getCell(x, y);
+        if (!cell.isDeadEnd || cell.deadEndDepth <= 0) {
+            return;
+        }
+        int cellX = offsetX + x * cellSize;
+        int cellY = offsetY + y * cellSize;
+        // Deeper = more opaque (worse wrong turns)
+        double opacity = 0.1 + (0.5 * cell.deadEndDepth / maxDepth);
+        svg.append(String.format(
+                "    <rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"" + " fill=\"%s\" opacity=\"%.2f\"/>%n", cellX,
+                cellY, cellSize, cellSize, deadEndColor, opacity));
+    }
+
+    private void appendOrthogonalSolutionPath(StringBuilder svg) {
+        if (!showSolution || grid.getSolutionPath() == null) {
+            return;
+        }
+        svg.append("  <g class=\"solution-path\">").append(System.lineSeparator());
+        var path = grid.getSolutionPath();
+        int pathWidth = Math.max(cellSize / 4, 6);
+        for (int i = 0; i < path.size() - 1; i++) {
+            int[] from = path.get(i);
+            int[] to = path.get(i + 1);
+            int x1 = offsetX + from[0] * cellSize + cellSize / 2;
+            int y1 = offsetY + from[1] * cellSize + cellSize / 2;
+            int x2 = offsetX + to[0] * cellSize + cellSize / 2;
+            int y2 = offsetY + to[1] * cellSize + cellSize / 2;
+            svg.append(String.format(
+                    "    <line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" stroke=\"%s\""
+                            + " stroke-width=\"%d\" stroke-linecap=\"round\"" + " opacity=\"0.6\"/>%n",
+                    x1, y1, x2, y2, pathColor, pathWidth));
+        }
+        svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
+    }
+
+    private void appendOrthogonalInnerWalls(StringBuilder svg, int gridWidth, int gridHeight) {
+        svg.append("  <g class=\"inner-walls\">").append(System.lineSeparator());
+        for (int x = 0; x < gridWidth; x++) {
+            for (int y = 0; y < gridHeight; y++) {
+                appendInnerWallsForCell(svg, x, y, gridWidth, gridHeight);
+            }
+        }
+        svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
+    }
+
+    private void appendInnerWallsForCell(StringBuilder svg, int x, int y, int gridWidth, int gridHeight) {
+        MazeCell cell = grid.getCell(x, y);
+        int cellX = offsetX + x * cellSize;
+        int cellY = offsetY + y * cellSize;
+
+        // East wall (only if not on right edge - outer border handles that)
+        boolean drawEast = cell.eastWall && x < gridWidth - 1;
+        if (drawEast) {
+            svg.append(String.format(
+                    "    <line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\"" + " stroke=\"%s\" stroke-width=\"%d\""
+                            + " stroke-linecap=\"square\"/>%n",
+                    cellX + cellSize, cellY, cellX + cellSize, cellY + cellSize, innerWallColor, INNER_WALL_THICKNESS));
+        }
+
+        // South wall (only if not on bottom edge - outer border handles that)
+        boolean drawSouth = cell.southWall && y < gridHeight - 1;
+        if (drawSouth) {
+            svg.append(String.format(
+                    "    <line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\"" + " stroke=\"%s\" stroke-width=\"%d\""
+                            + " stroke-linecap=\"square\"/>%n",
+                    cellX, cellY + cellSize, cellX + cellSize, cellY + cellSize, innerWallColor, INNER_WALL_THICKNESS));
+        }
+    }
+
+    private void appendOrthogonalMarkers(StringBuilder svg) {
         // Calculate marker size based on cell size
         int markerRadius = Math.max(cellSize / 5, 8);
 
@@ -199,9 +233,6 @@ public class MazeSvgRenderer {
         int endY = offsetY + grid.getEndY() * cellSize + cellSize / 2;
         svg.append(String.format("  <circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"%s\"" + " class=\"end-marker\"/>%n",
                 endX, endY, markerRadius, DEFAULT_END_COLOR));
-
-        svg.append("</svg>");
-        return svg.toString();
     }
 
     private String renderDelta() {

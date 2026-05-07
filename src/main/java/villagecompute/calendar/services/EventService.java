@@ -385,48 +385,14 @@ public class EventService {
             boolean isHeader = true;
 
             while ((line = reader.readLine()) != null) {
-                // Skip header row
                 if (isHeader) {
                     isHeader = false;
                     continue;
                 }
-
-                // Skip empty lines
-                if (line.trim().isEmpty()) {
-                    continue;
+                Event event = parseCsvLineToEvent(calendar, line);
+                if (event != null) {
+                    createdEvents.add(event);
                 }
-
-                // Parse CSV line (simple comma split - doesn't handle quoted commas)
-                String[] parts = line.split(",", -1);
-                if (parts.length < 1) {
-                    LOG.warnf("Skipping invalid CSV line: %s", line);
-                    continue;
-                }
-
-                String dateStr = parts[0].trim();
-                String text = parts.length > 1 ? parts[1].trim() : null;
-                String emoji = parts.length > 2 ? parts[2].trim() : null;
-                String color = parts.length > 3 ? parts[3].trim() : null;
-
-                if (dateStr.isEmpty()) {
-                    LOG.warnf("Skipping CSV line with missing date: %s", line);
-                    continue;
-                }
-
-                LocalDate eventDate = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
-
-                // Validate and create event
-                validateEventInput(calendar, eventDate, text, emoji, color);
-
-                Event event = new Event();
-                event.calendar = calendar;
-                event.eventDate = eventDate;
-                event.eventText = text != null && !text.isEmpty() ? text : null;
-                event.emoji = emoji != null && !emoji.isEmpty() ? emoji : null;
-                event.color = color != null && !color.isEmpty() ? color : null;
-                event.persist();
-
-                createdEvents.add(event);
             }
 
             LOG.infof("Imported %d events from CSV for calendar %s", createdEvents.size(), calendarId);
@@ -440,6 +406,73 @@ public class EventService {
         }
 
         return createdEvents;
+    }
+
+    /**
+     * Parse a single CSV line into a persisted Event, or return null if the line should be skipped.
+     *
+     * @param calendar
+     *            Parent calendar for the event
+     * @param line
+     *            Raw CSV line
+     * @return Persisted Event, or null if line is empty/invalid and should be skipped
+     */
+    private Event parseCsvLineToEvent(UserCalendar calendar, String line) {
+        if (line.trim().isEmpty()) {
+            return null;
+        }
+
+        // Parse CSV line (simple comma split - doesn't handle quoted commas)
+        String[] parts = line.split(",", -1);
+        if (parts.length < 1) {
+            LOG.warnf("Skipping invalid CSV line: %s", line);
+            return null;
+        }
+
+        String dateStr = parts[0].trim();
+        if (dateStr.isEmpty()) {
+            LOG.warnf("Skipping CSV line with missing date: %s", line);
+            return null;
+        }
+
+        String text = csvFieldOrNull(parts, 1);
+        String emoji = csvFieldOrNull(parts, 2);
+        String color = csvFieldOrNull(parts, 3);
+
+        LocalDate eventDate = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
+
+        // Validate and create event
+        validateEventInput(calendar, eventDate, text, emoji, color);
+
+        Event event = new Event();
+        event.calendar = calendar;
+        event.eventDate = eventDate;
+        event.eventText = emptyToNull(text);
+        event.emoji = emptyToNull(emoji);
+        event.color = emptyToNull(color);
+        event.persist();
+
+        return event;
+    }
+
+    /**
+     * Get the trimmed CSV field at the given index, or null if the index is out of bounds.
+     */
+    private String csvFieldOrNull(String[] parts, int index) {
+        if (parts.length > index) {
+            return parts[index].trim();
+        }
+        return null;
+    }
+
+    /**
+     * Return the input string, or null if the string is null or empty.
+     */
+    private String emptyToNull(String value) {
+        if (value == null || value.isEmpty()) {
+            return null;
+        }
+        return value;
     }
 
     // ========== AUTHORIZATION HELPERS ==========
@@ -541,38 +574,71 @@ public class EventService {
             return; // Emoji is optional
         }
 
-        // Check length
         if (emoji.length() > 100) {
             throw new IllegalArgumentException(
                     String.format("Emoji must be 100 characters or less (got %d characters)", emoji.length()));
         }
 
-        // Check if contains valid emoji characters
-        // This is a simplified check - validates common emoji Unicode ranges
-        boolean hasEmoji = false;
-        for (int i = 0; i < emoji.length();) {
-            int codePoint = emoji.codePointAt(i);
-
-            // Check for common emoji ranges
-            // Emoticons and symbols (0x1F300-0x1F9FF)
-            // Misc symbols (0x2600-0x27BF)
-            // Variation selectors (0xFE00-0xFE0F)
-            // Zero-width joiner (0x200D)
-            // Regional indicators for flags (0x1F1E6-0x1F1FF)
-            // Skin tone modifiers (0x1F3FB-0x1F3FF)
-            if ((codePoint >= 0x1F300 && codePoint <= 0x1F9FF) || (codePoint >= 0x2600 && codePoint <= 0x27BF)
-                    || (codePoint >= 0xFE00 && codePoint <= 0xFE0F) || codePoint == 0x200D
-                    || (codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF) || (codePoint >= 0x1F3FB && codePoint <= 0x1F3FF)
-                    || Character.getType(codePoint) == Character.OTHER_SYMBOL) {
-                hasEmoji = true;
-            }
-
-            i += Character.charCount(codePoint);
-        }
-
-        if (!hasEmoji) {
+        if (!containsEmojiCharacter(emoji)) {
             throw new IllegalArgumentException("Invalid emoji: must be valid Unicode emoji sequence");
         }
+    }
+
+    /**
+     * Check if a string contains at least one valid emoji code point. Iterates code points and delegates the
+     * per-code-point classification to {@link #isEmojiCodePoint(int)}.
+     *
+     * @param emoji
+     *            non-null, non-empty emoji candidate string
+     * @return true if at least one code point is recognized as an emoji
+     */
+    private boolean containsEmojiCharacter(String emoji) {
+        for (int i = 0; i < emoji.length();) {
+            int codePoint = emoji.codePointAt(i);
+            if (isEmojiCodePoint(codePoint)) {
+                return true;
+            }
+            i += Character.charCount(codePoint);
+        }
+        return false;
+    }
+
+    /**
+     * Determine if the given Unicode code point falls within a recognized emoji range. Covers common emoji ranges:
+     * <ul>
+     * <li>Emoticons and symbols (0x1F300-0x1F9FF)</li>
+     * <li>Misc symbols (0x2600-0x27BF)</li>
+     * <li>Variation selectors (0xFE00-0xFE0F)</li>
+     * <li>Zero-width joiner (0x200D)</li>
+     * <li>Regional indicators for flags (0x1F1E6-0x1F1FF)</li>
+     * <li>Skin tone modifiers (0x1F3FB-0x1F3FF)</li>
+     * <li>Any code point classified as OTHER_SYMBOL</li>
+     * </ul>
+     *
+     * @param codePoint
+     *            Unicode code point to test
+     * @return true if the code point is a recognized emoji character
+     */
+    private boolean isEmojiCodePoint(int codePoint) {
+        if (codePoint >= 0x1F300 && codePoint <= 0x1F9FF) {
+            return true;
+        }
+        if (codePoint >= 0x2600 && codePoint <= 0x27BF) {
+            return true;
+        }
+        if (codePoint >= 0xFE00 && codePoint <= 0xFE0F) {
+            return true;
+        }
+        if (codePoint == 0x200D) {
+            return true;
+        }
+        if (codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF) {
+            return true;
+        }
+        if (codePoint >= 0x1F3FB && codePoint <= 0x1F3FF) {
+            return true;
+        }
+        return Character.getType(codePoint) == Character.OTHER_SYMBOL;
     }
 
     /**

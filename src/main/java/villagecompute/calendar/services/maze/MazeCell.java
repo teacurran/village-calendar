@@ -70,60 +70,54 @@ public class MazeCell {
 
         // Pointy-top hexagon neighbors depend on whether we're in an even or odd row
         if (dy == -1) {
-            // Moving north (up)
-            if (evenRow) {
-                if (dx == -1) {
-                    // NW neighbor
-                    this.northWestWall = false;
-                    other.southEastWall = false;
-                } else if (dx == 0) {
-                    // NE neighbor
-                    this.northEastWall = false;
-                    other.southWestWall = false;
-                }
-            } else {
-                if (dx == 0) {
-                    // NW neighbor
-                    this.northWestWall = false;
-                    other.southEastWall = false;
-                } else if (dx == 1) {
-                    // NE neighbor
-                    this.northEastWall = false;
-                    other.southWestWall = false;
-                }
-            }
+            removeHexWallNorth(other, dx, evenRow);
         } else if (dy == 1) {
-            // Moving south (down)
-            if (evenRow) {
-                if (dx == -1) {
-                    // SW neighbor
-                    this.southWestWall = false;
-                    other.northEastWall = false;
-                } else if (dx == 0) {
-                    // SE neighbor
-                    this.southEastWall = false;
-                    other.northWestWall = false;
-                }
-            } else {
-                if (dx == 0) {
-                    // SW neighbor
-                    this.southWestWall = false;
-                    other.northEastWall = false;
-                } else if (dx == 1) {
-                    // SE neighbor
-                    this.southEastWall = false;
-                    other.northWestWall = false;
-                }
-            }
+            removeHexWallSouth(other, dx, evenRow);
         } else if (dy == 0) {
-            // Moving east/west (same row)
-            if (dx == 1) {
-                this.eastWall = false;
-                other.westWall = false;
-            } else if (dx == -1) {
-                this.westWall = false;
-                other.eastWall = false;
-            }
+            removeHexWallSameRow(other, dx);
+        }
+    }
+
+    /** Handle wall removal when moving to a northern (dy == -1) hexagonal neighbor. */
+    private void removeHexWallNorth(MazeCell other, int dx, boolean evenRow) {
+        int nwDx = evenRow ? -1 : 0;
+        int neDx = evenRow ? 0 : 1;
+
+        if (dx == nwDx) {
+            // NW neighbor
+            this.northWestWall = false;
+            other.southEastWall = false;
+        } else if (dx == neDx) {
+            // NE neighbor
+            this.northEastWall = false;
+            other.southWestWall = false;
+        }
+    }
+
+    /** Handle wall removal when moving to a southern (dy == 1) hexagonal neighbor. */
+    private void removeHexWallSouth(MazeCell other, int dx, boolean evenRow) {
+        int swDx = evenRow ? -1 : 0;
+        int seDx = evenRow ? 0 : 1;
+
+        if (dx == swDx) {
+            // SW neighbor
+            this.southWestWall = false;
+            other.northEastWall = false;
+        } else if (dx == seDx) {
+            // SE neighbor
+            this.southEastWall = false;
+            other.northWestWall = false;
+        }
+    }
+
+    /** Handle wall removal when moving east/west within the same row (dy == 0). */
+    private void removeHexWallSameRow(MazeCell other, int dx) {
+        if (dx == 1) {
+            this.eastWall = false;
+            other.westWall = false;
+        } else if (dx == -1) {
+            this.westWall = false;
+            other.eastWall = false;
         }
     }
 }
