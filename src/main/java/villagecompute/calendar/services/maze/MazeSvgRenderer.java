@@ -3,6 +3,14 @@ package villagecompute.calendar.services.maze;
 /** Renders a MazeGrid to SVG format. Designed for 35" x 23" page with 1" margins on all sides. */
 public class MazeSvgRenderer {
 
+    /** Bundle of pre-computed hexagonal layout values for sigma maze rendering. */
+    private record HexGeometry(double hexWidth, double vertSpacing, double offsetX, double offsetY, double hexSize) {
+    }
+
+    /** Bundle of grid dimensions (width, height in cells). */
+    private record GridDimensions(int width, int height) {
+    }
+
     /** SVG closing tag for groups */
     private static final String SVG_GROUP_CLOSE = "  </g>";
 
@@ -323,14 +331,15 @@ public class MazeSvgRenderer {
             for (int x = 0; x < gridWidth; x++) {
                 MazeCell cell = grid.getCell(x, y);
                 double[] center = getHexCenter(x, y, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
-                drawHexWalls(svg, cell, x, y, center, hexSize, gridWidth, gridHeight);
+                drawHexWalls(svg, cell, x, y, center, hexSize, new GridDimensions(gridWidth, gridHeight));
             }
         }
         svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
 
         // Draw outer border (hexagon outline for edge cells)
         svg.append("  <g class=\"outer-border\">").append(System.lineSeparator());
-        drawHexOuterBorder(svg, gridWidth, gridHeight, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
+        drawHexOuterBorder(svg, new GridDimensions(gridWidth, gridHeight),
+                new HexGeometry(hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize));
         svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
 
         // Calculate marker size
@@ -391,7 +400,7 @@ public class MazeSvgRenderer {
 
     /** Draw walls for a single hexagon cell. */
     private void drawHexWalls(StringBuilder svg, MazeCell cell, int x, int y, double[] center, double hexSize,
-            int gridWidth, int gridHeight) {
+            GridDimensions dims) {
         // Calculate vertex positions for pointy-top hexagon
         double[][] vertices = new double[6][2];
         for (int i = 0; i < 6; i++) {
@@ -405,7 +414,7 @@ public class MazeSvgRenderer {
 
         // Draw internal walls only (edges shared between cells)
         // NE wall: vertices 0-1 (if wall exists and not at edge)
-        if (cell.northEastWall && hasNENeighbor(x, y, gridWidth, gridHeight, evenRow)) {
+        if (cell.northEastWall && hasNENeighbor(x, y, dims.width(), dims.height(), evenRow)) {
             svg.append(String.format(
                     "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
                             + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
@@ -414,7 +423,7 @@ public class MazeSvgRenderer {
         }
 
         // E wall: vertices 1-2 (if wall exists and not at right edge)
-        if (cell.eastWall && x < gridWidth - 1) {
+        if (cell.eastWall && x < dims.width() - 1) {
             svg.append(String.format(
                     "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
                             + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
@@ -423,7 +432,7 @@ public class MazeSvgRenderer {
         }
 
         // SE wall: vertices 2-3 (if wall exists and not at edge)
-        if (cell.southEastWall && hasSENeighbor(x, y, gridWidth, gridHeight, evenRow)) {
+        if (cell.southEastWall && hasSENeighbor(x, y, dims.width(), dims.height(), evenRow)) {
             svg.append(String.format(
                     "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
                             + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
@@ -460,13 +469,13 @@ public class MazeSvgRenderer {
     }
 
     /** Draw outer border for hexagonal maze. */
-    private void drawHexOuterBorder(StringBuilder svg, int gridWidth, int gridHeight, double hexWidth,
-            double vertSpacing, double offsetX, double offsetY, double hexSize) {
+    private void drawHexOuterBorder(StringBuilder svg, GridDimensions dims, HexGeometry geom) {
         // Draw border walls for edge cells
-        for (int y = 0; y < gridHeight; y++) {
-            for (int x = 0; x < gridWidth; x++) {
-                double[][] vertices = computeHexVertices(x, y, hexWidth, vertSpacing, offsetX, offsetY, hexSize);
-                drawHexCellBorderWalls(svg, x, y, gridWidth, gridHeight, vertices);
+        for (int y = 0; y < dims.height(); y++) {
+            for (int x = 0; x < dims.width(); x++) {
+                double[][] vertices = computeHexVertices(x, y, geom.hexWidth(), geom.vertSpacing(), geom.offsetX(),
+                        geom.offsetY(), geom.hexSize());
+                drawHexCellBorderWalls(svg, x, y, dims.width(), dims.height(), vertices);
             }
         }
     }
