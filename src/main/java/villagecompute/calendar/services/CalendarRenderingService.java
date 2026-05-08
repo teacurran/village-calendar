@@ -661,6 +661,14 @@ public class CalendarRenderingService {
     // =============================================
 
     /**
+     * Context bundle for rendering a single day cell. Groups date, weekday/weekend metadata, locale, and config/theme
+     * to keep helper signatures small.
+     */
+    private record DayCellContext(LocalDate date, DayOfWeek dayOfWeek, boolean isWeekend, int monthNum,
+            int weekendIndex, Locale locale, CalendarConfigType config, ThemeColors theme) {
+    }
+
+    /**
      * Renders all content inside a day cell. Shared between grid and weekday-grid layouts. Both layouts calculate cell
      * position based on their own structure, then call this method to render identical day content.
      *
@@ -668,30 +676,19 @@ public class CalendarRenderingService {
      *            StringBuilder to append SVG content to
      * @param cell
      *            Cell position and dimensions
-     * @param date
-     *            The date being rendered
-     * @param dayOfWeek
-     *            Day of week for this date
-     * @param isWeekend
-     *            Whether this is a weekend day
-     * @param monthNum
-     *            Month number (1-12)
-     * @param weekendIndex
-     *            Weekend index for Vermont colors
-     * @param locale
-     *            Locale for day name formatting
-     * @param config
-     *            Calendar configuration
-     * @param theme
-     *            Theme colors
+     * @param ctx
+     *            Day cell rendering context (date, weekday metadata, locale, config, theme)
      */
-    private void renderDayCell(StringBuilder svg, Cell cell, LocalDate date, DayOfWeek dayOfWeek, boolean isWeekend,
-            int monthNum, int weekendIndex, Locale locale, CalendarConfigType config, ThemeColors theme) {
+    private void renderDayCell(StringBuilder svg, Cell cell, DayCellContext ctx) {
 
+        LocalDate date = ctx.date();
+        CalendarConfigType config = ctx.config();
+        ThemeColors theme = ctx.theme();
         int day = date.getDayOfMonth();
 
         // Cell background
-        String cellBackground = getCellBackgroundColor(config, date, monthNum, day, isWeekend, weekendIndex);
+        String cellBackground = getCellBackgroundColor(config, date, ctx.monthNum(), day, ctx.isWeekend(),
+                ctx.weekendIndex());
         renderCellBackground(svg, cell, cellBackground);
 
         // Moon display
@@ -727,7 +724,7 @@ public class CalendarRenderingService {
         renderDayNumber(svg, cell, day, isHoliday, isCustomDate, config, theme);
 
         // Day name
-        renderDayName(svg, cell, dayOfWeek, locale, config, theme);
+        renderDayName(svg, cell, ctx.dayOfWeek(), ctx.locale(), config, theme);
 
         // Grid lines
         renderGridLines(svg, cell, config);
@@ -939,12 +936,13 @@ public class CalendarRenderingService {
 
         // Generate each month row
         Locale locale = Locale.forLanguageTag(config.locale);
+        GridLayout layout = new GridLayout(cellWidth, cellHeight, headerHeight, weekdayAligned);
+        GridContext gridCtx = new GridContext(layout, locale, config, theme);
         for (int monthNum = 1; monthNum <= 12; monthNum++) {
-            generateMonthRow(svg, year, monthNum, cellWidth, cellHeight, headerHeight, weekdayAligned, locale, config,
-                    theme);
+            generateMonthRow(svg, year, monthNum, gridCtx);
         }
 
-        appendOuterBorder(svg, weekdayAligned, config, cellWidth, cellHeight, headerHeight);
+        appendOuterBorder(svg, layout, config);
         svg.append(SVG_CLOSE_TAG);
         return svg.toString();
     }
@@ -963,23 +961,37 @@ public class CalendarRenderingService {
                 + " sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n", yearFill, year));
     }
 
-    private void generateMonthRow(StringBuilder svg, int year, int monthNum, int cellWidth, int cellHeight,
-            int headerHeight, boolean weekdayAligned, Locale locale, CalendarConfigType config, ThemeColors theme) {
+    /**
+     * Layout dimensions shared by grid-rendering helpers.
+     */
+    private record GridLayout(int cellWidth, int cellHeight, int headerHeight, boolean weekdayAligned) {
+    }
+
+    /**
+     * Context bundle for grid-row helpers: layout + locale + config + theme.
+     */
+    private record GridContext(GridLayout layout, Locale locale, CalendarConfigType config, ThemeColors theme) {
+    }
+
+    private void generateMonthRow(StringBuilder svg, int year, int monthNum, GridContext ctx) {
+        GridLayout layout = ctx.layout();
+        CalendarConfigType config = ctx.config();
         YearMonth yearMonth = YearMonth.of(year, monthNum);
         int daysInMonth = yearMonth.lengthOfMonth();
-        int rowY = (monthNum - 1) * cellHeight + headerHeight;
+        int rowY = (monthNum - 1) * layout.cellHeight() + layout.headerHeight();
 
-        appendMonthLabel(svg, monthNum, cellWidth, cellHeight, rowY, weekdayAligned, locale, config, theme);
+        appendMonthLabel(svg, monthNum, rowY, ctx);
 
+        boolean weekdayAligned = layout.weekdayAligned();
         int startCol = weekdayAligned ? yearMonth.atDay(1).getDayOfWeek().getValue() % 7 : 0;
         int maxDay = weekdayAligned ? daysInMonth : 31;
         int weekendIndex = 0;
 
         for (int day = 1; day <= maxDay; day++) {
-            int cellX = calculateCellX(weekdayAligned, day, startCol, cellWidth);
+            int cellX = calculateCellX(weekdayAligned, day, startCol, layout.cellWidth());
             int cellY = rowY;
 
-            Cell cell = new Cell(cellX, cellY, cellWidth, cellHeight);
+            Cell cell = new Cell(cellX, cellY, layout.cellWidth(), layout.cellHeight());
 
             if (!weekdayAligned && day > daysInMonth) {
                 renderEmptyCell(svg, cell, config);
@@ -992,15 +1004,20 @@ public class CalendarRenderingService {
             if (isWeekend) {
                 weekendIndex++;
             }
-            renderDayCell(svg, cell, date, dayOfWeek, isWeekend, monthNum, weekendIndex - 1, locale, config, theme);
+            DayCellContext dayCtx = new DayCellContext(date, dayOfWeek, isWeekend, monthNum, weekendIndex - 1,
+                    ctx.locale(), config, ctx.theme());
+            renderDayCell(svg, cell, dayCtx);
         }
     }
 
-    private void appendMonthLabel(StringBuilder svg, int monthNum, int cellWidth, int cellHeight, int rowY,
-            boolean weekdayAligned, Locale locale, CalendarConfigType config, ThemeColors theme) {
-        String monthName = Month.of(monthNum).getDisplayName(TextStyle.SHORT, locale);
-        String monthFill = config.monthColor != null ? config.monthColor : theme.monthHeader;
-        if (weekdayAligned) {
+    private void appendMonthLabel(StringBuilder svg, int monthNum, int rowY, GridContext ctx) {
+        GridLayout layout = ctx.layout();
+        CalendarConfigType config = ctx.config();
+        int cellWidth = layout.cellWidth();
+        int cellHeight = layout.cellHeight();
+        String monthName = Month.of(monthNum).getDisplayName(TextStyle.SHORT, ctx.locale());
+        String monthFill = config.monthColor != null ? config.monthColor : ctx.theme().monthHeader;
+        if (layout.weekdayAligned()) {
             svg.append(renderMonthName(monthName, cellWidth - 5, rowY + cellHeight / 2 + 4, cellWidth,
                     config.rotateMonthNames, "end", monthFill));
         } else {
@@ -1017,13 +1034,13 @@ public class CalendarRenderingService {
         return day * cellWidth;
     }
 
-    private void appendOuterBorder(StringBuilder svg, boolean weekdayAligned, CalendarConfigType config, int cellWidth,
-            int cellHeight, int headerHeight) {
-        if (!weekdayAligned && config.showGrid) {
+    private void appendOuterBorder(StringBuilder svg, GridLayout layout, CalendarConfigType config) {
+        if (!layout.weekdayAligned() && config.showGrid) {
             svg.append(String.format(
                     "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\""
                             + " stroke=\"%s\" stroke-width=\"2\"/>%n",
-                    cellWidth, headerHeight - 1, cellWidth * 31, cellHeight * 12 + 2, config.gridLineColor));
+                    layout.cellWidth(), layout.headerHeight() - 1, layout.cellWidth() * 31,
+                    layout.cellHeight() * 12 + 2, config.gridLineColor));
         }
     }
 
