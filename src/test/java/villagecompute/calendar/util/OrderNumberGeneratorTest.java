@@ -32,26 +32,6 @@ class OrderNumberGeneratorTest {
     }
 
     @Test
-    void testGenerateOrderNumberWithYearAndCount() {
-        // Year and count are ignored in secure implementation (kept for API compatibility)
-        String orderNumber = OrderNumberGenerator.generateOrderNumber(2025, 0);
-
-        assertNotNull(orderNumber);
-        assertTrue(ORDER_NUMBER_PATTERN.matcher(orderNumber).matches(),
-                "Order number should match format VC-XXXX-XXXX, got: " + orderNumber);
-    }
-
-    @Test
-    void testGenerateOrderNumberWithCountOnly() {
-        // Count is ignored in secure implementation (kept for API compatibility)
-        String orderNumber = OrderNumberGenerator.generateOrderNumber(5);
-
-        assertNotNull(orderNumber);
-        assertTrue(ORDER_NUMBER_PATTERN.matcher(orderNumber).matches(),
-                "Order number should match format VC-XXXX-XXXX, got: " + orderNumber);
-    }
-
-    @Test
     void testOrderNumbersAreUnique() {
         // Generate many order numbers and verify uniqueness
         Set<String> orderNumbers = new HashSet<>();
@@ -111,15 +91,4 @@ class OrderNumberGeneratorTest {
         assertNotEquals(random1, random2);
     }
 
-    @Test
-    void testLegacyMethodsStillWork() {
-        // Ensure the legacy method signatures still work (for backwards compatibility)
-        String order1 = OrderNumberGenerator.generateOrderNumber(2025, 100);
-        String order2 = OrderNumberGenerator.generateOrderNumber(50);
-
-        assertNotNull(order1);
-        assertNotNull(order2);
-        assertTrue(ORDER_NUMBER_PATTERN.matcher(order1).matches());
-        assertTrue(ORDER_NUMBER_PATTERN.matcher(order2).matches());
-    }
 }
