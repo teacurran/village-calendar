@@ -30,6 +30,8 @@ public class CalendarService {
 
     private static final Logger LOG = Logger.getLogger(CalendarService.class);
 
+    private static final String CALENDAR_NOT_FOUND_FORMAT = "Calendar not found: %s";
+
     @Inject
     UserCalendarRepository calendarRepository;
 
@@ -133,8 +135,8 @@ public class CalendarService {
         // Find calendar
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
-            LOG.errorf("Calendar not found: %s", id);
-            throw new IllegalArgumentException("Calendar not found: " + id);
+            LOG.errorf(CALENDAR_NOT_FOUND_FORMAT, id);
+            throw new IllegalArgumentException(String.format(CALENDAR_NOT_FOUND_FORMAT, id));
         }
 
         // Authorization check
@@ -178,8 +180,8 @@ public class CalendarService {
         // Find calendar
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
-            LOG.errorf("Calendar not found: %s", id);
-            throw new IllegalArgumentException("Calendar not found: " + id);
+            LOG.errorf(CALENDAR_NOT_FOUND_FORMAT, id);
+            throw new IllegalArgumentException(String.format(CALENDAR_NOT_FOUND_FORMAT, id));
         }
 
         // Authorization check
@@ -212,8 +214,8 @@ public class CalendarService {
         // Find calendar
         UserCalendar calendar = UserCalendar.findById(id);
         if (calendar == null) {
-            LOG.errorf("Calendar not found: %s", id);
-            throw new IllegalArgumentException("Calendar not found: " + id);
+            LOG.errorf(CALENDAR_NOT_FOUND_FORMAT, id);
+            throw new IllegalArgumentException(String.format(CALENDAR_NOT_FOUND_FORMAT, id));
         }
 
         // Authorization check (read access)

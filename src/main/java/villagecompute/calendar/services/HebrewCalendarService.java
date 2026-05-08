@@ -31,6 +31,9 @@ public class HebrewCalendarService {
 
     private static final String ADAR_II = "Adar II"; // Used in leap years
 
+    private static final String SUKKOT_CHOL_HAMOED = "Sukkot (Chol HaMoed)";
+    private static final String PASSOVER_CHOL_HAMOED = "Passover (Chol HaMoed)";
+
     // Days in each Hebrew month (non-leap year)
     private static final int[] MONTH_DAYS_REGULAR = {30, // Tishrei
             29, // Cheshvan (can be 29 or 30)
@@ -185,10 +188,10 @@ public class HebrewCalendarService {
             holidays.put("1-10", "Yom Kippur");
             holidays.put("1-15", "Sukkot (Day 1)");
             holidays.put("1-16", "Sukkot (Day 2)");
-            holidays.put("1-17", "Sukkot (Chol HaMoed)");
-            holidays.put("1-18", "Sukkot (Chol HaMoed)");
-            holidays.put("1-19", "Sukkot (Chol HaMoed)");
-            holidays.put("1-20", "Sukkot (Chol HaMoed)");
+            holidays.put("1-17", SUKKOT_CHOL_HAMOED);
+            holidays.put("1-18", SUKKOT_CHOL_HAMOED);
+            holidays.put("1-19", SUKKOT_CHOL_HAMOED);
+            holidays.put("1-20", SUKKOT_CHOL_HAMOED);
             holidays.put("1-21", "Sukkot (Hoshana Rabbah)");
             holidays.put("1-22", "Shemini Atzeret");
             holidays.put("1-23", "Simchat Torah");
@@ -217,10 +220,10 @@ public class HebrewCalendarService {
             int nisanMonth = isHebrewLeapYear(hebrewYear) ? 8 : 7;
             holidays.put(nisanMonth + "-15", "Passover (Day 1)");
             holidays.put(nisanMonth + "-16", "Passover (Day 2)");
-            holidays.put(nisanMonth + "-17", "Passover (Chol HaMoed)");
-            holidays.put(nisanMonth + "-18", "Passover (Chol HaMoed)");
-            holidays.put(nisanMonth + "-19", "Passover (Chol HaMoed)");
-            holidays.put(nisanMonth + "-20", "Passover (Chol HaMoed)");
+            holidays.put(nisanMonth + "-17", PASSOVER_CHOL_HAMOED);
+            holidays.put(nisanMonth + "-18", PASSOVER_CHOL_HAMOED);
+            holidays.put(nisanMonth + "-19", PASSOVER_CHOL_HAMOED);
+            holidays.put(nisanMonth + "-20", PASSOVER_CHOL_HAMOED);
             holidays.put(nisanMonth + "-21", "Passover (Day 7)");
             holidays.put(nisanMonth + "-22", "Passover (Day 8)");
 
