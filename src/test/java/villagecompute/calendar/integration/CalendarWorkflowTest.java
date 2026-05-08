@@ -40,7 +40,7 @@ import io.restassured.http.ContentType;
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class CalendarWorkflowTest {
+class CalendarWorkflowTest {
 
     @Inject
     ObjectMapper objectMapper;

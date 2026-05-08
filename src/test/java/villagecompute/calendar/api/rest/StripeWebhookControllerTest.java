@@ -45,7 +45,7 @@ import io.restassured.http.ContentType;
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class StripeWebhookControllerTest {
+class StripeWebhookControllerTest {
 
     @Inject
     ObjectMapper objectMapper;

@@ -30,7 +30,7 @@ import io.restassured.http.ContentType;
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class CartWorkflowTest {
+class CartWorkflowTest {
 
     @AfterEach
     @Transactional
