@@ -19,7 +19,7 @@ public class ProductService {
     /** Product code for digital PDF download */
     public static final String PRODUCT_CODE_PDF = "pdf";
 
-    /** Product definition with all attributes */
+    /** Product definition with all attributes. Use {@link #builder()} to construct instances. */
     public static class Product {
         public final String code;
         public final String name;
@@ -30,31 +30,93 @@ public class ProductService {
         public final String badge;
         public final int displayOrder;
 
-        public Product(String code, String name, String description, BigDecimal price, List<String> features,
-                String icon, String badge, int displayOrder) {
-            this.code = code;
-            this.name = name;
-            this.description = description;
-            this.price = price;
-            this.features = features;
-            this.icon = icon;
-            this.badge = badge;
-            this.displayOrder = displayOrder;
+        private Product(Builder b) {
+            this.code = b.code;
+            this.name = b.name;
+            this.description = b.description;
+            this.price = b.price;
+            this.features = b.features;
+            this.icon = b.icon;
+            this.badge = b.badge;
+            this.displayOrder = b.displayOrder;
+        }
+
+        /** Create a new {@link Builder} for fluent construction of a {@link Product}. */
+        public static Builder builder() {
+            return new Builder();
+        }
+
+        /** Fluent builder for {@link Product}. Avoids the multi-parameter constructor (sonar:S107). */
+        public static class Builder {
+            private String code;
+            private String name;
+            private String description;
+            private BigDecimal price;
+            private List<String> features;
+            private String icon;
+            private String badge;
+            private int displayOrder;
+
+            public Builder code(String value) {
+                this.code = value;
+                return this;
+            }
+
+            public Builder name(String value) {
+                this.name = value;
+                return this;
+            }
+
+            public Builder description(String value) {
+                this.description = value;
+                return this;
+            }
+
+            public Builder price(BigDecimal value) {
+                this.price = value;
+                return this;
+            }
+
+            public Builder features(List<String> value) {
+                this.features = value;
+                return this;
+            }
+
+            public Builder icon(String value) {
+                this.icon = value;
+                return this;
+            }
+
+            public Builder badge(String value) {
+                this.badge = value;
+                return this;
+            }
+
+            public Builder displayOrder(int value) {
+                this.displayOrder = value;
+                return this;
+            }
+
+            public Product build() {
+                return new Product(this);
+            }
         }
     }
 
     // Product catalog - single source of truth for pricing
     private static final Map<String, Product> PRODUCTS = Map.of(PRODUCT_CODE_PRINT,
-            new Product(PRODUCT_CODE_PRINT, "Printed 35\" x 23\" Poster",
-                    "Beautiful printed calendar shipped directly to your door.", new BigDecimal("25.00"),
-                    List.of("Premium quality paper stock", "Vibrant, long-lasting colors", "PDF download included free",
-                            "Ships within 3-5 business days"),
-                    "pi-print", "Most Popular", 1),
+            Product.builder().code(PRODUCT_CODE_PRINT).name("Printed 35\" x 23\" Poster")
+                    .description("Beautiful printed calendar shipped directly to your door.")
+                    .price(new BigDecimal("25.00"))
+                    .features(List.of("Premium quality paper stock", "Vibrant, long-lasting colors",
+                            "PDF download included free", "Ships within 3-5 business days"))
+                    .icon("pi-print").badge("Most Popular").displayOrder(1).build(),
             PRODUCT_CODE_PDF,
-            new Product(PRODUCT_CODE_PDF, "Digital PDF Download",
-                    "High-resolution PDF file ready for printing at home or any" + " print shop.",
-                    new BigDecimal("5.00"), List.of("Instant download after purchase", "Unlimited personal prints"),
-                    "pi-file-pdf", null, 2));
+            Product.builder().code(PRODUCT_CODE_PDF).name("Digital PDF Download")
+                    .description("High-resolution PDF file ready for printing at home or any print shop.")
+                    .price(new BigDecimal("5.00"))
+                    .features(List.of("Instant download after purchase", "Unlimited personal prints"))
+                    .icon("pi-file-pdf").badge(null).displayOrder(2).build());
 
     /** Get all available products, sorted by display order */
     public List<Product> getAllProducts() {
