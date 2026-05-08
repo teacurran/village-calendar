@@ -25,9 +25,39 @@ public class MazeGenerationService {
     private static final double ASPECT_RATIO = 33.0 / 21.0; // ~1.57
 
     private static final String COLOR_BLACK = "#000000";
+    private static final String COLOR_DEFAULT_PATH = "#4CAF50";
 
     @Inject
     ObjectMapper objectMapper;
+
+    /**
+     * Configuration bundle for maze generation. Groups the parameters that control maze structure, rendering, and
+     * solution/dead-end highlighting so the service API stays under SonarQube's java:S107 threshold.
+     *
+     * @param type
+     *            Maze tessellation type
+     * @param size
+     *            1-20, controls cell count
+     * @param difficulty
+     *            1-5, controls shortcuts (1=many, 5=none)
+     * @param seed
+     *            Random seed (null for random)
+     * @param showSolution
+     *            Whether to show the solution path
+     * @param innerWallColor
+     *            Color for inner walls
+     * @param outerWallColor
+     *            Color for the outer border
+     * @param pathColor
+     *            Color for the solution path
+     * @param showDeadEnds
+     *            Whether to highlight dead-end paths
+     * @param deadEndColor
+     *            Color for dead-end highlighting (null for default)
+     */
+    public record MazeGenerationConfig(MazeType type, int size, int difficulty, Long seed, boolean showSolution,
+            String innerWallColor, String outerWallColor, String pathColor, boolean showDeadEnds, String deadEndColor) {
+    }
 
     /**
      * Convert size (1-20) to grid dimensions. Size 1 = ~15 cells wide (simple maze, ~2.2" paths) Size 20 = ~132 cells
@@ -50,37 +80,17 @@ public class MazeGenerationService {
     /**
      * Generate a maze and return the SVG representation. The maze fills the 35"x23" page with 1" margins on all sides.
      *
-     * @param type
-     *            Maze tessellation type
-     * @param size
-     *            1-20, controls cell count
-     * @param difficulty
-     *            1-5, controls shortcuts (1=many, 5=none)
-     * @param seed
-     *            Random seed (null for random)
-     * @param showSolution
-     *            Whether to show the solution path
-     * @param showDeadEnds
-     *            Whether to highlight dead-end paths
-     * @param deadEndColor
-     *            Color for dead-end highlighting (null for default orange)
+     * @param config
+     *            Maze generation configuration (type, size, difficulty, seed, colors, solution/dead-end options)
      */
-    public String generateMazeSvg(MazeType type, int size, int difficulty, Long seed, boolean showSolution,
-            String innerWallColor, String outerWallColor, String pathColor, boolean showDeadEnds, String deadEndColor) {
-        int[] dims = sizeToGridDimensions(size);
-        MazeGrid grid = new MazeGrid(dims[0], dims[1], type, difficulty, seed);
+    public String generateMazeSvg(MazeGenerationConfig config) {
+        int[] dims = sizeToGridDimensions(config.size());
+        MazeGrid grid = new MazeGrid(dims[0], dims[1], config.type(), config.difficulty(), config.seed());
         grid.generate();
 
-        MazeSvgRenderer renderer = new MazeSvgRenderer(grid, innerWallColor, outerWallColor, pathColor, showSolution,
-                showDeadEnds, deadEndColor);
+        MazeSvgRenderer renderer = new MazeSvgRenderer(grid, config.innerWallColor(), config.outerWallColor(),
+                config.pathColor(), config.showSolution(), config.showDeadEnds(), config.deadEndColor());
         return renderer.render();
-    }
-
-    /** Generate a maze and return the SVG representation (without dead-end highlighting). */
-    public String generateMazeSvg(MazeType type, int size, int difficulty, Long seed, boolean showSolution,
-            String innerWallColor, String outerWallColor, String pathColor) {
-        return generateMazeSvg(type, size, difficulty, seed, showSolution, innerWallColor, outerWallColor, pathColor,
-                false, null);
     }
 
     /**
@@ -96,7 +106,7 @@ public class MazeGenerationService {
         boolean showSolution = getConfigBoolean(maze.configuration, "showSolution", false);
         String innerWallColor = getConfigString(maze.configuration, "innerWallColor", COLOR_BLACK);
         String outerWallColor = getConfigString(maze.configuration, "outerWallColor", COLOR_BLACK);
-        String pathColor = getConfigString(maze.configuration, "pathColor", "#4CAF50");
+        String pathColor = getConfigString(maze.configuration, "pathColor", COLOR_DEFAULT_PATH);
 
         MazeSvgRenderer renderer = new MazeSvgRenderer(grid, innerWallColor, outerWallColor, pathColor, showSolution);
         maze.generatedSvg = renderer.render();
@@ -119,8 +129,8 @@ public class MazeGenerationService {
      * Generate a preview SVG for given parameters (without persisting). Uses a fixed seed for consistent preview.
      */
     public String generatePreview(MazeType type, int size, int difficulty, boolean showSolution, boolean showDeadEnds) {
-        return generateMazeSvg(type, size, difficulty, 12345L, showSolution, COLOR_BLACK, COLOR_BLACK, "#4CAF50",
-                showDeadEnds, null);
+        return generateMazeSvg(new MazeGenerationConfig(type, size, difficulty, 12345L, showSolution, COLOR_BLACK,
+                COLOR_BLACK, COLOR_DEFAULT_PATH, showDeadEnds, null));
     }
 
     /**
@@ -138,14 +148,16 @@ public class MazeGenerationService {
     }
 
     private boolean getConfigBoolean(JsonNode config, String key, boolean defaultValue) {
-        if (config == null || !config.has(key))
+        if (config == null || !config.has(key)) {
             return defaultValue;
+        }
         return config.get(key).asBoolean(defaultValue);
     }
 
     private String getConfigString(JsonNode config, String key, String defaultValue) {
-        if (config == null || !config.has(key))
+        if (config == null || !config.has(key)) {
             return defaultValue;
+        }
         return config.get(key).asText(defaultValue);
     }
 }
