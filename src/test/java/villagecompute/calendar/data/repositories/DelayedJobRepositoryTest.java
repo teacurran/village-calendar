@@ -1,5 +1,7 @@
 package villagecompute.calendar.data.repositories;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Instant;
@@ -153,13 +155,9 @@ class DelayedJobRepositoryTest {
         DelayedJob job1 = createJob(QUEUE_CANCELLATION, "actor-123", now.minus(10, ChronoUnit.MINUTES));
         repository.persist(job1);
 
-        // Delay to ensure different created timestamps
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            // Restore interrupt flag; test will continue and may fail on assertion
-            Thread.currentThread().interrupt();
-        }
+        // Wait until wall clock advances past job1.created so job2 gets a strictly later created timestamp
+        Instant job1Created = job1.created;
+        await().atMost(1, SECONDS).until(() -> Instant.now().isAfter(job1Created));
 
         DelayedJob job2 = createJob(QUEUE_ORDER_EMAIL, "actor-123", now.minus(5, ChronoUnit.MINUTES));
         repository.persist(job2);
@@ -224,13 +222,7 @@ class DelayedJobRepositoryTest {
         failed1.failureReason = "Network error";
         repository.persist(failed1);
 
-        // Delay to ensure different failedAt timestamps
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            // Restore interrupt flag; test will continue and may fail on assertion
-            Thread.currentThread().interrupt();
-        }
+        // No wait needed: failedAt timestamps below are explicitly set via now.minus(...) and are already distinct.
 
         DelayedJob failed2 = createJob(QUEUE_ORDER_EMAIL, "actor-2", now.minus(20, ChronoUnit.MINUTES));
         failed2.completedWithFailure = true;

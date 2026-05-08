@@ -1,5 +1,7 @@
 package villagecompute.calendar.data.models;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Instant;
@@ -433,13 +435,8 @@ class CalendarUserTest {
         entityManager.flush();
         Instant originalUpdated = user.updated;
 
-        // Wait to ensure timestamp changes
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            // Restore interrupt flag; test will continue and may fail on assertion
-            Thread.currentThread().interrupt();
-        }
+        // Wait until wall clock advances past originalUpdated so the next persist gets a distinct timestamp
+        await().atMost(1, SECONDS).until(() -> Instant.now().isAfter(originalUpdated));
 
         // When
         user.displayName = "Modified Display Name";
