@@ -96,8 +96,8 @@ class TemplateServiceTest {
     @Transactional
     void testCreateTemplate_Success() {
         // Given: Valid input
-        TemplateInput input = new TemplateInput("Modern Calendar", "A modern calendar design", validConfiguration, null,
-                true, false, 0, null);
+        TemplateInput input = TemplateInput.builder().name("Modern Calendar").description("A modern calendar design")
+                .configuration(validConfiguration).isActive(true).isFeatured(false).displayOrder(0).build();
 
         // When: Create template
         CalendarTemplate result = templateService.createTemplate(input);
@@ -118,12 +118,8 @@ class TemplateServiceTest {
     @Transactional
     void testCreateTemplate_DefaultValues() {
         // Given: Input with minimal fields
-        TemplateInput input = new TemplateInput("Minimal Template", null, validConfiguration, null, null, // isActive
-                                                                                                          // not
-                                                                                                          // specified
-                null, // isFeatured not specified
-                null, // displayOrder not specified
-                null);
+        TemplateInput input = TemplateInput.builder().name("Minimal Template").configuration(validConfiguration)
+                .build();
 
         // When: Create template
         CalendarTemplate result = templateService.createTemplate(input);
@@ -144,8 +140,8 @@ class TemplateServiceTest {
         existing.configuration = validConfigurationNode;
         existing.persist();
 
-        TemplateInput input = new TemplateInput("Existing Template", "Description", validConfiguration, null, true,
-                false, 0, null);
+        TemplateInput input = TemplateInput.builder().name("Existing Template").description("Description")
+                .configuration(validConfiguration).isActive(true).isFeatured(false).displayOrder(0).build();
 
         // When/Then: Should throw exception
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -159,8 +155,9 @@ class TemplateServiceTest {
     @Transactional
     void testCreateTemplate_InvalidConfiguration_Null() {
         // Given: Input with null configuration
-        TemplateInput input = new TemplateInput("Test Template", "Description", null, // Invalid: null configuration
-                null, true, false, 0, null);
+        TemplateInput input = TemplateInput.builder().name("Test Template").description("Description")
+                .configuration(null) // Invalid: null configuration
+                .isActive(true).isFeatured(false).displayOrder(0).build();
 
         // When/Then: Should throw exception
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -176,8 +173,8 @@ class TemplateServiceTest {
         // Given: Configuration with invalid JSON
         String invalidJson = "{ this is not valid json }";
 
-        TemplateInput input = new TemplateInput("Test Template", "Description", invalidJson, null, true, false, 0,
-                null);
+        TemplateInput input = TemplateInput.builder().name("Test Template").description("Description")
+                .configuration(invalidJson).isActive(true).isFeatured(false).displayOrder(0).build();
 
         // When/Then: Should throw exception
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -193,8 +190,8 @@ class TemplateServiceTest {
         // Given: Configuration is a JSON array, not an object
         String arrayConfig = "[1, 2, 3]";
 
-        TemplateInput input = new TemplateInput("Test Template", "Description", arrayConfig, null, true, false, 0,
-                null);
+        TemplateInput input = TemplateInput.builder().name("Test Template").description("Description")
+                .configuration(arrayConfig).isActive(true).isFeatured(false).displayOrder(0).build();
 
         // When/Then: Should throw exception
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -224,8 +221,8 @@ class TemplateServiceTest {
         UUID templateId = existingTemplate.id;
 
         // When: Update template
-        TemplateInput input = new TemplateInput("Updated Name", "Updated Description", validConfiguration, null, false,
-                true, 5, null);
+        TemplateInput input = TemplateInput.builder().name("Updated Name").description("Updated Description")
+                .configuration(validConfiguration).isActive(false).isFeatured(true).displayOrder(5).build();
 
         CalendarTemplate result = templateService.updateTemplate(templateId, input);
 
@@ -278,7 +275,8 @@ class TemplateServiceTest {
         // Given: Non-existent template ID
         UUID templateId = UUID.randomUUID();
 
-        TemplateInput input = new TemplateInput("Test", "Description", validConfiguration, null, true, false, 0, null);
+        TemplateInput input = TemplateInput.builder().name("Test").description("Description")
+                .configuration(validConfiguration).isActive(true).isFeatured(false).displayOrder(0).build();
 
         // When/Then: Should throw exception
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -303,8 +301,8 @@ class TemplateServiceTest {
         template2.persist();
 
         // When: Try to update template1 with template2's name
-        TemplateInput input = new TemplateInput("Conflicting Name", "Description", validConfiguration, null, true,
-                false, 0, null);
+        TemplateInput input = TemplateInput.builder().name("Conflicting Name").description("Description")
+                .configuration(validConfiguration).isActive(true).isFeatured(false).displayOrder(0).build();
 
         // Then: Should throw exception
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
@@ -324,8 +322,8 @@ class TemplateServiceTest {
         template.persist();
 
         // When: Update with same name
-        TemplateInput input = new TemplateInput("Same Name", "Updated Description", validConfiguration, null, true,
-                false, 0, null);
+        TemplateInput input = TemplateInput.builder().name("Same Name").description("Updated Description")
+                .configuration(validConfiguration).isActive(true).isFeatured(false).displayOrder(0).build();
 
         // Then: Should succeed
         CalendarTemplate result = templateService.updateTemplate(template.id, input);
