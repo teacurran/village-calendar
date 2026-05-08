@@ -29,6 +29,7 @@ import villagecompute.calendar.services.jobs.DelayedJobHandler;
 import villagecompute.calendar.services.jobs.OrderCancellationJobHandler;
 import villagecompute.calendar.services.jobs.OrderEmailJobHandler;
 import villagecompute.calendar.services.jobs.ShippingNotificationJobHandler;
+import villagecompute.calendar.types.CheckoutRequestType;
 import villagecompute.calendar.util.OrderNumberGenerator;
 
 import io.opentelemetry.api.trace.Span;
@@ -693,30 +694,22 @@ public class OrderService {
      * Process a completed checkout and create a single order with multiple items. This is called after Stripe payment
      * is confirmed.
      *
-     * @param paymentIntentId
-     *            Stripe PaymentIntent ID
-     * @param email
-     *            Customer email
-     * @param shippingAddress
-     *            Shipping address map
-     * @param billingAddress
-     *            Billing address map (optional)
-     * @param items
-     *            Cart items (list of maps with item details)
-     * @param subtotal
-     *            Order subtotal
-     * @param shippingCost
-     *            Shipping cost
-     * @param taxAmount
-     *            Tax amount
-     * @param totalAmount
-     *            Total amount charged
+     * @param request
+     *            Checkout request containing payment, customer, address, item, and totals data
      * @return The order number
      */
     @Transactional
-    public String processCheckout(String paymentIntentId, String email, Map<String, Object> shippingAddress,
-            Map<String, Object> billingAddress, List<Map<String, Object>> items, Double subtotal, Double shippingCost,
-            Double taxAmount, Double totalAmount) {
+    public String processCheckout(CheckoutRequestType request) {
+        List<Map<String, Object>> items = request.items();
+        String paymentIntentId = request.paymentIntentId();
+        String email = request.email();
+        Map<String, Object> shippingAddress = request.shippingAddress();
+        Map<String, Object> billingAddress = request.billingAddress();
+        Double subtotal = request.subtotal();
+        Double shippingCost = request.shippingCost();
+        Double taxAmount = request.taxAmount();
+        Double totalAmount = request.totalAmount();
+
         LOG.infof("Processing checkout for email %s with %d items, PaymentIntent: %s", email,
                 items != null ? items.size() : 0, paymentIntentId);
 
@@ -764,15 +757,6 @@ public class OrderService {
         enqueueEmailJob(order, OrderEmailJobHandler.class);
 
         return orderNumber;
-    }
-
-    /** Overload for backwards compatibility (without billingAddress) */
-    @Transactional
-    public String processCheckout(String paymentIntentId, String email, Map<String, Object> shippingAddress,
-            List<Map<String, Object>> items, Double subtotal, Double shippingCost, Double taxAmount,
-            Double totalAmount) {
-        return processCheckout(paymentIntentId, email, shippingAddress, null, items, subtotal, shippingCost, taxAmount,
-                totalAmount);
     }
 
     /** Create an order item from cart item data */
