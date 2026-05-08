@@ -36,11 +36,14 @@ class ProductGraphQLUnitTest {
 
     @BeforeEach
     void setUp() {
-        testPrintProduct = new ProductService.Product("print", "Printed Poster", "A beautiful printed poster",
-                new BigDecimal("25.00"), List.of("Premium quality", "Ships fast"), "pi-print", "Most Popular", 1);
+        testPrintProduct = ProductService.Product.builder().code("print").name("Printed Poster")
+                .description("A beautiful printed poster").price(new BigDecimal("25.00"))
+                .features(List.of("Premium quality", "Ships fast")).icon("pi-print").badge("Most Popular")
+                .displayOrder(1).build();
 
-        testPdfProduct = new ProductService.Product("pdf", "Digital PDF", "High-resolution PDF download",
-                new BigDecimal("5.00"), List.of("Instant download"), "pi-file-pdf", null, 2);
+        testPdfProduct = ProductService.Product.builder().code("pdf").name("Digital PDF")
+                .description("High-resolution PDF download").price(new BigDecimal("5.00"))
+                .features(List.of("Instant download")).icon("pi-file-pdf").badge(null).displayOrder(2).build();
     }
 
     @Nested
