@@ -308,20 +308,6 @@ public class MazeSvgRenderer {
         svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
     }
 
-    /** Find maximum dead-end depth across the grid (minimum 1 to avoid divide-by-zero). */
-    private int findMaxDeadEndDepth(int gridWidth, int gridHeight) {
-        int maxDepth = 1;
-        for (int x = 0; x < gridWidth; x++) {
-            for (int y = 0; y < gridHeight; y++) {
-                MazeCell cell = grid.getCell(x, y);
-                if (cell.deadEndDepth > maxDepth) {
-                    maxDepth = cell.deadEndDepth;
-                }
-            }
-        }
-        return maxDepth;
-    }
-
     /** Append solution path lines for sigma maze if enabled. */
     private void appendSigmaSolutionPath(StringBuilder svg, double hexWidth, double vertSpacing, double hexOffsetX,
             double hexOffsetY, double hexSize) {
