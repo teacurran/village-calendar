@@ -557,135 +557,149 @@ public class OrderGraphQL {
         LOG.infof("Mutation: createCheckoutSession(cartId=%s, email=%s)", input.cartId, input.customerEmail);
 
         try {
-            // Get cart items and create line items
-            List<PaymentService.CheckoutLineItem> lineItems = new java.util.ArrayList<>();
-
-            // Parse cart items from input
-            if (input.items != null) {
-                for (CheckoutItemInput item : input.items) {
-                    // Get price from ProductService if unitPrice is not provided
-                    long unitAmountCents;
-                    if (item.unitPrice != null && item.unitPrice > 0) {
-                        unitAmountCents = Math.round(item.unitPrice * 100);
-                    } else {
-                        // Look up price from product catalog
-                        String productCode = item.productCode != null ? item.productCode : PRODUCT_CODE_PRINT;
-                        BigDecimal price = productService.getPrice(productCode);
-                        unitAmountCents = price.multiply(BigDecimal.valueOf(100)).longValue();
-                        LOG.infof("Using product catalog price for '%s': $%.2f", productCode, price);
-                    }
-                    lineItems.add(new PaymentService.CheckoutLineItem(item.name,
-                            item.description != null ? item.description : "Calendar " + item.year, unitAmountCents,
-                            item.quantity));
-                }
-            }
-
+            List<PaymentService.CheckoutLineItem> lineItems = buildLineItems(input.items);
             if (lineItems.isEmpty()) {
                 throw new IllegalArgumentException("No items in cart");
             }
 
-            // Create a pending order
-            // For now, we'll create a minimal order that will be updated when the session completes
-            CalendarOrder order = new CalendarOrder();
+            CalendarOrder order = createPendingOrder(lineItems);
+            persistOrderItems(order, input.items);
 
-            // Get current user if authenticated
-            Optional<CalendarUser> currentUser = authService.getCurrentUser(jwt);
-            if (currentUser.isPresent()) {
-                order.user = currentUser.get();
-            }
+            Map<String, String> sessionDetails = invokeCheckoutSession(order, lineItems, input);
+            finalizeOrderWithSession(order, sessionDetails);
 
-            // Set order details
-            order.status = CalendarOrder.STATUS_PENDING;
-
-            // Calculate totals from line items
-            BigDecimal subtotal = lineItems.stream()
-                    .map(i -> BigDecimal.valueOf(i.unitAmountCents * i.quantity).divide(BigDecimal.valueOf(100)))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            order.subtotal = subtotal;
-            order.totalPrice = subtotal; // Will be updated with tax/shipping from Stripe
-
-            // Generate order number
-            order.orderNumber = OrderNumberGenerator.generateSecureOrderNumber();
-
-            order.persist();
-            LOG.infof("Created pending order %s for checkout session", order.id);
-
-            // Create order items from input
-            if (input.items != null) {
-                for (CheckoutItemInput itemInput : input.items) {
-                    CalendarOrderItem orderItem = new CalendarOrderItem();
-                    orderItem.order = order;
-
-                    // Determine product type from productCode
-                    String productCode = itemInput.productCode != null ? itemInput.productCode : PRODUCT_CODE_PRINT;
-                    orderItem.productType = "pdf".equalsIgnoreCase(productCode) ? CalendarOrderItem.TYPE_PDF
-                            : CalendarOrderItem.TYPE_PRINT;
-
-                    orderItem.description = itemInput.name;
-                    orderItem.generatorType = CalendarOrderItem.GENERATOR_CALENDAR;
-                    orderItem.setYear(itemInput.year != null ? itemInput.year : java.time.Year.now().getValue());
-                    orderItem.quantity = itemInput.quantity != null ? itemInput.quantity : 1;
-
-                    // Get unit price
-                    if (itemInput.unitPrice != null && itemInput.unitPrice > 0) {
-                        orderItem.unitPrice = BigDecimal.valueOf(itemInput.unitPrice);
-                    } else {
-                        orderItem.unitPrice = productService.getPrice(productCode);
-                    }
-
-                    // Calculate line total
-                    orderItem.calculateLineTotal();
-
-                    // Parse and store configuration
-                    if (itemInput.configuration != null && !itemInput.configuration.isEmpty()) {
-                        try {
-                            orderItem.configuration = objectMapper.readTree(itemInput.configuration);
-                        } catch (Exception e) {
-                            LOG.warnf("Failed to parse item configuration: %s", e.getMessage());
-                        }
-                    }
-
-                    orderItem.itemStatus = CalendarOrderItem.STATUS_PENDING;
-                    orderItem.persist();
-                    order.items.add(orderItem);
-
-                    LOG.infof("Created order item: %s (%s) x%d @ $%.2f", orderItem.description, orderItem.productType,
-                            orderItem.quantity, orderItem.unitPrice);
-                }
-            }
-
-            // Determine if shipping is required (any print products)
-            boolean shippingRequired = input.items != null
-                    && input.items.stream().anyMatch(item -> PRODUCT_CODE_PRINT.equals(item.productCode));
-
-            // Build success/cancel URLs
-            String baseUrl = input.returnUrl != null ? input.returnUrl : "https://villagecompute.com";
-            String successUrl = baseUrl + "/order-confirmation";
-
-            // Create checkout session
-            Map<String, String> sessionDetails = paymentService.createCheckoutSession(order.id.toString(),
-                    order.orderNumber, lineItems, input.customerEmail, successUrl, baseUrl, shippingRequired);
-
-            // Update order with session ID
-            order.notes = String.format("[%s] Checkout session created: %s%n", java.time.Instant.now(),
-                    sessionDetails.get(KEY_SESSION_ID));
-            order.persist();
-
-            // Return response
-            CheckoutSessionResponse response = new CheckoutSessionResponse();
-            response.clientSecret = sessionDetails.get(KEY_CLIENT_SECRET);
-            response.sessionId = sessionDetails.get(KEY_SESSION_ID);
-            response.orderId = order.id.toString();
-            response.orderNumber = order.orderNumber;
-
-            LOG.infof("Created checkout session %s for order %s", response.sessionId, order.id);
-
-            return response;
+            return buildCheckoutResponse(order, sessionDetails);
 
         } catch (StripeException e) {
             LOG.errorf(e, "Failed to create checkout session");
             throw new PaymentException("Failed to create checkout session: " + e.getMessage(), e);
         }
+    }
+
+    /** Build Stripe line items from checkout item inputs. */
+    private List<PaymentService.CheckoutLineItem> buildLineItems(List<CheckoutItemInput> items) {
+        List<PaymentService.CheckoutLineItem> lineItems = new java.util.ArrayList<>();
+        if (items == null) {
+            return lineItems;
+        }
+        for (CheckoutItemInput item : items) {
+            long unitAmountCents = resolveUnitAmountCents(item);
+            String description = item.description != null ? item.description : "Calendar " + item.year;
+            lineItems.add(new PaymentService.CheckoutLineItem(item.name, description, unitAmountCents, item.quantity));
+        }
+        return lineItems;
+    }
+
+    /** Resolve the unit amount in cents, preferring an explicit unitPrice over the catalog price. */
+    private long resolveUnitAmountCents(CheckoutItemInput item) {
+        if (item.unitPrice != null && item.unitPrice > 0) {
+            return Math.round(item.unitPrice * 100);
+        }
+        String productCode = item.productCode != null ? item.productCode : PRODUCT_CODE_PRINT;
+        BigDecimal price = productService.getPrice(productCode);
+        LOG.infof("Using product catalog price for '%s': $%.2f", productCode, price);
+        return price.multiply(BigDecimal.valueOf(100)).longValue();
+    }
+
+    /** Create and persist a pending order with subtotal calculated from line items. */
+    private CalendarOrder createPendingOrder(List<PaymentService.CheckoutLineItem> lineItems) {
+        CalendarOrder order = new CalendarOrder();
+        authService.getCurrentUser(jwt).ifPresent(user -> order.user = user);
+        order.status = CalendarOrder.STATUS_PENDING;
+
+        BigDecimal subtotal = lineItems.stream()
+                .map(i -> BigDecimal.valueOf(i.unitAmountCents * i.quantity).divide(BigDecimal.valueOf(100)))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        order.subtotal = subtotal;
+        order.totalPrice = subtotal; // Will be updated with tax/shipping from Stripe
+        order.orderNumber = OrderNumberGenerator.generateSecureOrderNumber();
+
+        order.persist();
+        LOG.infof("Created pending order %s for checkout session", order.id);
+        return order;
+    }
+
+    /** Create and persist order items for the given order. */
+    private void persistOrderItems(CalendarOrder order, List<CheckoutItemInput> items) {
+        if (items == null) {
+            return;
+        }
+        for (CheckoutItemInput itemInput : items) {
+            CalendarOrderItem orderItem = buildOrderItem(order, itemInput);
+            orderItem.persist();
+            order.items.add(orderItem);
+            LOG.infof("Created order item: %s (%s) x%d @ $%.2f", orderItem.description, orderItem.productType,
+                    orderItem.quantity, orderItem.unitPrice);
+        }
+    }
+
+    /** Build a single order item from a checkout item input. */
+    private CalendarOrderItem buildOrderItem(CalendarOrder order, CheckoutItemInput itemInput) {
+        CalendarOrderItem orderItem = new CalendarOrderItem();
+        orderItem.order = order;
+
+        String productCode = itemInput.productCode != null ? itemInput.productCode : PRODUCT_CODE_PRINT;
+        orderItem.productType = "pdf".equalsIgnoreCase(productCode) ? CalendarOrderItem.TYPE_PDF
+                : CalendarOrderItem.TYPE_PRINT;
+
+        orderItem.description = itemInput.name;
+        orderItem.generatorType = CalendarOrderItem.GENERATOR_CALENDAR;
+        orderItem.setYear(itemInput.year != null ? itemInput.year : java.time.Year.now().getValue());
+        orderItem.quantity = itemInput.quantity != null ? itemInput.quantity : 1;
+        orderItem.unitPrice = resolveOrderItemUnitPrice(itemInput, productCode);
+        orderItem.calculateLineTotal();
+        applyConfiguration(orderItem, itemInput.configuration);
+        orderItem.itemStatus = CalendarOrderItem.STATUS_PENDING;
+        return orderItem;
+    }
+
+    /** Resolve the unit price for an order item, preferring an explicit unitPrice over the catalog price. */
+    private BigDecimal resolveOrderItemUnitPrice(CheckoutItemInput itemInput, String productCode) {
+        if (itemInput.unitPrice != null && itemInput.unitPrice > 0) {
+            return BigDecimal.valueOf(itemInput.unitPrice);
+        }
+        return productService.getPrice(productCode);
+    }
+
+    /** Parse and store configuration JSON on the order item, logging a warning on failure. */
+    private void applyConfiguration(CalendarOrderItem orderItem, String configurationJson) {
+        if (configurationJson == null || configurationJson.isEmpty()) {
+            return;
+        }
+        try {
+            orderItem.configuration = objectMapper.readTree(configurationJson);
+        } catch (Exception e) {
+            LOG.warnf("Failed to parse item configuration: %s", e.getMessage());
+        }
+    }
+
+    /** Invoke the payment service to create a Stripe checkout session. */
+    private Map<String, String> invokeCheckoutSession(CalendarOrder order,
+            List<PaymentService.CheckoutLineItem> lineItems, CheckoutSessionInput input) throws StripeException {
+        boolean shippingRequired = input.items != null
+                && input.items.stream().anyMatch(item -> PRODUCT_CODE_PRINT.equals(item.productCode));
+        String baseUrl = input.returnUrl != null ? input.returnUrl : "https://villagecompute.com";
+        String successUrl = baseUrl + "/order-confirmation";
+        return paymentService.createCheckoutSession(order.id.toString(), order.orderNumber, lineItems,
+                input.customerEmail, successUrl, baseUrl, shippingRequired);
+    }
+
+    /** Append session details to order notes and persist. */
+    private void finalizeOrderWithSession(CalendarOrder order, Map<String, String> sessionDetails) {
+        order.notes = String.format("[%s] Checkout session created: %s%n", java.time.Instant.now(),
+                sessionDetails.get(KEY_SESSION_ID));
+        order.persist();
+    }
+
+    /** Build the CheckoutSessionResponse from the order and Stripe session details. */
+    private CheckoutSessionResponse buildCheckoutResponse(CalendarOrder order, Map<String, String> sessionDetails) {
+        CheckoutSessionResponse response = new CheckoutSessionResponse();
+        response.clientSecret = sessionDetails.get(KEY_CLIENT_SECRET);
+        response.sessionId = sessionDetails.get(KEY_SESSION_ID);
+        response.orderId = order.id.toString();
+        response.orderNumber = order.orderNumber;
+        LOG.infof("Created checkout session %s for order %s", response.sessionId, order.id);
+        return response;
     }
 
     // ============================================================================
