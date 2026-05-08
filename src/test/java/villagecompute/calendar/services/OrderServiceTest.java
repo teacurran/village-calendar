@@ -21,6 +21,7 @@ import villagecompute.calendar.data.models.CalendarOrderItem;
 import villagecompute.calendar.data.models.CalendarTemplate;
 import villagecompute.calendar.data.models.CalendarUser;
 import villagecompute.calendar.data.models.UserCalendar;
+import villagecompute.calendar.types.CheckoutRequestType;
 
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -769,8 +770,8 @@ class OrderServiceTest {
         Double totalAmount = 65.97;
 
         // When
-        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, subtotal,
-                shippingCost, taxAmount, totalAmount);
+        String orderNumber = orderService.processCheckout(new CheckoutRequestType(paymentIntentId, email,
+                shippingAddress, items, subtotal, shippingCost, taxAmount, totalAmount));
 
         // Then
         assertNotNull(orderNumber);
@@ -803,8 +804,8 @@ class OrderServiceTest {
         java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
 
         // When
-        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, billingAddress,
-                items, 0.0, 0.0, 0.0, 0.0);
+        String orderNumber = orderService.processCheckout(new CheckoutRequestType(paymentIntentId, email,
+                shippingAddress, billingAddress, items, 0.0, 0.0, 0.0, 0.0));
 
         // Then
         assertNotNull(orderNumber);
@@ -1012,8 +1013,8 @@ class OrderServiceTest {
         items.add(item);
 
         // When
-        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 29.99, 5.99,
-                0.0, 35.98);
+        String orderNumber = orderService.processCheckout(
+                new CheckoutRequestType(paymentIntentId, email, shippingAddress, items, 29.99, 5.99, 0.0, 35.98));
 
         // Then
         assertNotNull(orderNumber);
@@ -1041,8 +1042,8 @@ class OrderServiceTest {
         items.add(item);
 
         // When
-        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 9.99, 0.0,
-                0.0, 9.99);
+        String orderNumber = orderService.processCheckout(
+                new CheckoutRequestType(paymentIntentId, email, shippingAddress, items, 9.99, 0.0, 0.0, 9.99));
 
         // Then
         assertNotNull(orderNumber);
@@ -1070,8 +1071,8 @@ class OrderServiceTest {
         items.add(item);
 
         // When
-        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 9.99, 0.0,
-                0.0, 9.99);
+        String orderNumber = orderService.processCheckout(
+                new CheckoutRequestType(paymentIntentId, email, shippingAddress, items, 9.99, 0.0, 0.0, 9.99));
 
         // Then
         assertNotNull(orderNumber);
@@ -1098,8 +1099,8 @@ class OrderServiceTest {
         items.add(item);
 
         // When
-        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 9.99, 0.0,
-                0.0, 9.99);
+        String orderNumber = orderService.processCheckout(
+                new CheckoutRequestType(paymentIntentId, email, shippingAddress, items, 9.99, 0.0, 0.0, 9.99));
 
         // Then
         assertNotNull(orderNumber);
@@ -1120,8 +1121,8 @@ class OrderServiceTest {
         java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
 
         // When
-        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, null, null,
-                null, null);
+        String orderNumber = orderService.processCheckout(
+                new CheckoutRequestType(paymentIntentId, email, shippingAddress, items, null, null, null, null));
 
         // Then
         assertNotNull(orderNumber);
@@ -1143,8 +1144,8 @@ class OrderServiceTest {
         shippingAddress.put("lastName", "Items");
 
         // When
-        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, null, 0.0, 0.0, 0.0,
-                0.0);
+        String orderNumber = orderService.processCheckout(
+                new CheckoutRequestType(paymentIntentId, email, shippingAddress, null, 0.0, 0.0, 0.0, 0.0));
 
         // Then
         assertNotNull(orderNumber);
@@ -1165,8 +1166,8 @@ class OrderServiceTest {
         java.util.List<java.util.Map<String, Object>> items = new java.util.ArrayList<>();
 
         // When
-        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 0.0, 0.0, 0.0,
-                0.0);
+        String orderNumber = orderService.processCheckout(
+                new CheckoutRequestType(paymentIntentId, email, shippingAddress, items, 0.0, 0.0, 0.0, 0.0));
 
         // Then
         assertNotNull(orderNumber);
@@ -1194,8 +1195,8 @@ class OrderServiceTest {
         items.add(item);
 
         // When - should not throw, just log warning
-        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 29.99, 5.99,
-                0.0, 35.98);
+        String orderNumber = orderService.processCheckout(
+                new CheckoutRequestType(paymentIntentId, email, shippingAddress, items, 29.99, 5.99, 0.0, 35.98));
 
         // Then
         assertNotNull(orderNumber);
@@ -1223,8 +1224,8 @@ class OrderServiceTest {
         items.add(item);
 
         // When
-        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 29.99, 5.99,
-                0.0, 35.98);
+        String orderNumber = orderService.processCheckout(
+                new CheckoutRequestType(paymentIntentId, email, shippingAddress, items, 29.99, 5.99, 0.0, 35.98));
 
         // Then
         assertNotNull(orderNumber);
@@ -1249,8 +1250,8 @@ class OrderServiceTest {
         items.add(item);
 
         // When
-        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 29.99, 5.99,
-                0.0, 35.98);
+        String orderNumber = orderService.processCheckout(
+                new CheckoutRequestType(paymentIntentId, email, shippingAddress, items, 29.99, 5.99, 0.0, 35.98));
 
         // Then
         assertNotNull(orderNumber);
@@ -1278,8 +1279,8 @@ class OrderServiceTest {
         items.add(item);
 
         // When
-        String orderNumber = orderService.processCheckout(paymentIntentId, email, shippingAddress, items, 29.99, 5.99,
-                0.0, 35.98);
+        String orderNumber = orderService.processCheckout(
+                new CheckoutRequestType(paymentIntentId, email, shippingAddress, items, 29.99, 5.99, 0.0, 35.98));
 
         // Then
         assertNotNull(orderNumber);

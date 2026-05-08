@@ -17,6 +17,7 @@ import com.stripe.exception.StripeException;
 
 import villagecompute.calendar.services.OrderService;
 import villagecompute.calendar.services.PaymentService;
+import villagecompute.calendar.types.CheckoutRequestType;
 import villagecompute.calendar.types.ErrorType;
 
 /** Payment Resource - REST API for Stripe payment processing */
@@ -126,8 +127,8 @@ public class PaymentResource {
                     : null;
 
             // Process checkout and create orders in database
-            String orderNumber = orderService.processCheckout(request.paymentIntentId, email, shippingAddress, items,
-                    subtotal, shippingCost, taxAmount, totalAmount);
+            String orderNumber = orderService.processCheckout(new CheckoutRequestType(request.paymentIntentId, email,
+                    shippingAddress, items, subtotal, shippingCost, taxAmount, totalAmount));
 
             LOG.infof("Payment confirmed, order %s created for PaymentIntent %s", orderNumber, request.paymentIntentId);
 
