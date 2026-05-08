@@ -411,6 +411,8 @@ class UserCalendarTest {
         try {
             Thread.sleep(10);
         } catch (InterruptedException e) {
+            // Restore interrupt flag; test will continue and may fail on assertion
+            Thread.currentThread().interrupt();
         }
 
         // When

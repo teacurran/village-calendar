@@ -157,6 +157,8 @@ class DelayedJobRepositoryTest {
         try {
             Thread.sleep(10);
         } catch (InterruptedException e) {
+            // Restore interrupt flag; test will continue and may fail on assertion
+            Thread.currentThread().interrupt();
         }
 
         DelayedJob job2 = createJob(QUEUE_ORDER_EMAIL, "actor-123", now.minus(5, ChronoUnit.MINUTES));
@@ -226,6 +228,8 @@ class DelayedJobRepositoryTest {
         try {
             Thread.sleep(10);
         } catch (InterruptedException e) {
+            // Restore interrupt flag; test will continue and may fail on assertion
+            Thread.currentThread().interrupt();
         }
 
         DelayedJob failed2 = createJob(QUEUE_ORDER_EMAIL, "actor-2", now.minus(20, ChronoUnit.MINUTES));
