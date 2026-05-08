@@ -50,7 +50,7 @@ class CalendarServiceTest {
 
     @BeforeEach
     @Transactional
-    void setUp() throws Exception {
+    void setUp() {
         // Create test users
         testUser = new CalendarUser();
         testUser.oauthProvider = "GOOGLE";
