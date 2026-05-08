@@ -63,7 +63,7 @@ class OrderResolverTest {
 
     @BeforeEach
     @Transactional
-    void setUp() throws Exception {
+    void setUp() {
         // Clean up existing test data (order matters due to FK constraints)
         CalendarOrderItem.deleteAll();
         CalendarOrder.deleteAll();
@@ -407,7 +407,7 @@ class OrderResolverTest {
     @Test
     @Order(40)
     @Transactional
-    void testOrderService_CreateOrder() throws Exception {
+    void testOrderService_CreateOrder() {
         JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "456 Oak Ave").put("city", "Memphis")
                 .put("state", "TN").put("postalCode", "38101").put("country", "US");
 
@@ -439,7 +439,7 @@ class OrderResolverTest {
     @Test
     @Order(42)
     @Transactional
-    void testOrderService_CannotCancelShippedOrder() throws Exception {
+    void testOrderService_CannotCancelShippedOrder() {
         // Create a new order for this test
         JsonNode shippingAddress = objectMapper.createObjectNode().put("street", "789 Pine St").put("city", "Knoxville")
                 .put("state", "TN").put("postalCode", "37902").put("country", "US");

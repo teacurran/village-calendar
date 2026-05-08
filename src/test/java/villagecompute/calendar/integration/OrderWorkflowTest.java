@@ -404,7 +404,7 @@ class OrderWorkflowTest {
 
     @Test
     @org.junit.jupiter.api.Order(6)
-    void testOrderItem_YearStoredInConfiguration() throws Exception {
+    void testOrderItem_YearStoredInConfiguration() {
         // Given: Create an order with items using programmatic transaction
         CalendarOrder order = QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder newOrder = new CalendarOrder();
@@ -455,7 +455,7 @@ class OrderWorkflowTest {
 
     @Test
     @org.junit.jupiter.api.Order(7)
-    void testOrderItem_YearDefaultsToCurrentYear() throws Exception {
+    void testOrderItem_YearDefaultsToCurrentYear() {
         // Given: Create an order item without setting year
         CalendarOrderItem item = QuarkusTransaction.requiringNew().call(() -> {
             CalendarOrder newOrder = new CalendarOrder();

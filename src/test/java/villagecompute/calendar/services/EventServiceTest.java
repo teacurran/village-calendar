@@ -522,7 +522,7 @@ class EventServiceTest {
 
     @Test
     @Transactional
-    void testImportEventsFromJson_Success() throws Exception {
+    void testImportEventsFromJson_Success() {
         // Given
         String json = """
                 [
@@ -568,7 +568,7 @@ class EventServiceTest {
 
     @Test
     @Transactional
-    void testImportEventsFromJson_SkipInvalidEntries() throws Exception {
+    void testImportEventsFromJson_SkipInvalidEntries() {
         // Given - Array with missing date in second entry
         String json = """
                 [

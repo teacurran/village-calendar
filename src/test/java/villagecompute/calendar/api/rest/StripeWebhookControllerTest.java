@@ -73,7 +73,7 @@ class StripeWebhookControllerTest {
     private static final String TEST_CHARGE_ID = "ch_test_123456789";
 
     @BeforeEach
-    void setup() throws Exception {
+    void setup() {
         // Wrap in programmatic transaction that commits immediately
         // This ensures test data is visible to HTTP requests made by RestAssured
         QuarkusTransaction.requiringNew().run(() -> {

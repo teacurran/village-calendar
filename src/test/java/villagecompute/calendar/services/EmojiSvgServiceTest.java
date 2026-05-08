@@ -645,7 +645,7 @@ class EmojiSvgServiceTest {
         return (Map<String, String>) field.get(null);
     }
 
-    private EmojiSvgService createServiceWithTestCaches() throws Exception {
+    private EmojiSvgService createServiceWithTestCaches() {
         EmojiSvgService service = new EmojiSvgService();
         // Don't call init() - we'll populate caches manually
         return service;
