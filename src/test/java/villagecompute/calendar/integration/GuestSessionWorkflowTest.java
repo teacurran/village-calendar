@@ -34,7 +34,7 @@ import io.quarkus.test.junit.QuarkusTest;
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class GuestSessionWorkflowTest {
+class GuestSessionWorkflowTest {
 
     @Inject
     ObjectMapper objectMapper;
