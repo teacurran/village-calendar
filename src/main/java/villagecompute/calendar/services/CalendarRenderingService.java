@@ -553,55 +553,77 @@ public class CalendarRenderingService {
         String[] words = title.split(" ");
 
         if (words.length == 1 || title.length() <= 10) {
-            // Single word or short title - render on one line at bottom
-            int textY = cell.y() + cell.height() - 3;
-            String escapedTitle = escapeXml(title);
-            // Truncate only if single word is too long
-            String displayTitle = title.length() > 12 ? escapedTitle.substring(0, 11) + "…" : escapedTitle;
-            svg.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, textY, textSize, textColor, displayTitle));
-        } else {
-            // Multi-word title - wrap to two lines with baseline at bottom
-            StringBuilder line1 = new StringBuilder();
-            StringBuilder line2 = new StringBuilder();
-            int charCount = 0;
+            renderSingleLineEventTitle(svg, title, cell, textX, textSize, textColor);
+            return;
+        }
 
-            for (String word : words) {
-                if (charCount + word.length() <= 8 && line2.isEmpty()) {
-                    if (!line1.isEmpty()) {
-                        line1.append(" ");
-                    }
-                    line1.append(word);
-                    charCount += word.length() + 1;
-                } else {
-                    if (!line2.isEmpty()) {
-                        line2.append(" ");
-                    }
-                    line2.append(word);
-                }
+        renderWrappedEventTitle(svg, words, cell, textX, textSize, lineHeight, textColor);
+    }
+
+    /** Renders a short event title on a single line at the bottom of the cell. */
+    private void renderSingleLineEventTitle(StringBuilder svg, String title, Cell cell, int textX, int textSize,
+            String textColor) {
+        int textY = cell.y() + cell.height() - 3;
+        String escapedTitle = escapeXml(title);
+        // Truncate only if single word is too long
+        String displayTitle = title.length() > 12 ? escapedTitle.substring(0, 11) + "…" : escapedTitle;
+        svg.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, textY, textSize, textColor, displayTitle));
+    }
+
+    /** Renders a multi-word event title wrapped onto two lines with baseline at bottom. */
+    private void renderWrappedEventTitle(StringBuilder svg, String[] words, Cell cell, int textX, int textSize,
+            int lineHeight, String textColor) {
+        WrappedTitle wrapped = wrapEventTitleWords(words);
+        String line1 = wrapped.line1();
+        String line2 = truncateLine(wrapped.line2(), 12);
+
+        // Position: line2 at bottom, line1 above it
+        int line2Y = cell.y() + cell.height() - 3;
+        int line1Y = line2Y - lineHeight;
+
+        appendTitleLine(svg, line1, textX, line1Y, textSize, textColor);
+        appendTitleLine(svg, line2, textX, line2Y, textSize, textColor);
+    }
+
+    /** Distributes words between two lines, keeping the first line under 8 characters. */
+    private WrappedTitle wrapEventTitleWords(String[] words) {
+        StringBuilder line1 = new StringBuilder();
+        StringBuilder line2 = new StringBuilder();
+        int charCount = 0;
+
+        for (String word : words) {
+            boolean fitsOnLine1 = charCount + word.length() <= 8 && line2.isEmpty();
+            StringBuilder target = fitsOnLine1 ? line1 : line2;
+            if (!target.isEmpty()) {
+                target.append(" ");
             }
-
-            // Truncate line2 if too long
-            String line2Str = line2.toString();
-            if (line2Str.length() > 12) {
-                line2Str = line2Str.substring(0, 11) + "…";
-            }
-
-            // Position: line2 at bottom, line1 above it
-            int line2Y = cell.y() + cell.height() - 3;
-            int line1Y = line2Y - lineHeight;
-
-            // Render line 1 (top line)
-            if (!line1.isEmpty()) {
-                svg.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, line1Y, textSize, textColor,
-                        escapeXml(line1.toString())));
-            }
-
-            // Render line 2 (bottom line)
-            if (!line2Str.isEmpty()) {
-                svg.append(
-                        String.format(SVG_TEXT_SIMPLE_FORMAT, textX, line2Y, textSize, textColor, escapeXml(line2Str)));
+            target.append(word);
+            if (fitsOnLine1) {
+                charCount += word.length() + 1;
             }
         }
+
+        return new WrappedTitle(line1.toString(), line2.toString());
+    }
+
+    /** Truncates a line to maxLength characters with ellipsis if it exceeds the limit. */
+    private String truncateLine(String line, int maxLength) {
+        if (line.length() > maxLength) {
+            return line.substring(0, maxLength - 1) + "…";
+        }
+        return line;
+    }
+
+    /** Appends a single SVG text line if non-empty. */
+    private void appendTitleLine(StringBuilder svg, String line, int textX, int textY, int textSize, String textColor) {
+        if (line.isEmpty()) {
+            return;
+        }
+        svg.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, textY, textSize, textColor, escapeXml(line)));
+    }
+
+    /** Holds the result of distributing words between two title lines. */
+    private record WrappedTitle(String line1, String line2) {
     }
 
     /** Renders day number in cell */
