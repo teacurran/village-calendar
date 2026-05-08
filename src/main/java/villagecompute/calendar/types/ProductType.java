@@ -19,15 +19,76 @@ public class ProductType {
     public ProductType() {
     }
 
-    public ProductType(String code, String name, String description, Double price, List<String> features, String icon,
-            String badge, Integer displayOrder) {
-        this.code = code;
-        this.name = name;
-        this.description = description;
-        this.price = price;
-        this.features = features;
-        this.icon = icon;
-        this.badge = badge;
-        this.displayOrder = displayOrder;
+    /** Returns a new builder for constructing {@link ProductType} instances. */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /** Builder for {@link ProductType}. */
+    public static final class Builder {
+        private String code;
+        private String name;
+        private String description;
+        private Double price;
+        private List<String> features;
+        private String icon;
+        private String badge;
+        private Integer displayOrder;
+
+        private Builder() {
+        }
+
+        public Builder code(String code) {
+            this.code = code;
+            return this;
+        }
+
+        public Builder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Builder description(String description) {
+            this.description = description;
+            return this;
+        }
+
+        public Builder price(Double price) {
+            this.price = price;
+            return this;
+        }
+
+        public Builder features(List<String> features) {
+            this.features = features;
+            return this;
+        }
+
+        public Builder icon(String icon) {
+            this.icon = icon;
+            return this;
+        }
+
+        public Builder badge(String badge) {
+            this.badge = badge;
+            return this;
+        }
+
+        public Builder displayOrder(Integer displayOrder) {
+            this.displayOrder = displayOrder;
+            return this;
+        }
+
+        public ProductType build() {
+            ProductType product = new ProductType();
+            product.code = this.code;
+            product.name = this.name;
+            product.description = this.description;
+            product.price = this.price;
+            product.features = this.features;
+            product.icon = this.icon;
+            product.badge = this.badge;
+            product.displayOrder = this.displayOrder;
+            return product;
+        }
     }
 }
