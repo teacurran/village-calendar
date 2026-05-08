@@ -40,7 +40,7 @@ public class ProductGraphQL {
     }
 
     private ProductType toGraphQLProduct(ProductService.Product p) {
-        return new ProductType(p.code, p.name, p.description, p.price.doubleValue(), p.features, p.icon, p.badge,
-                p.displayOrder);
+        return ProductType.builder().code(p.code).name(p.name).description(p.description).price(p.price.doubleValue())
+                .features(p.features).icon(p.icon).badge(p.badge).displayOrder(p.displayOrder).build();
     }
 }
