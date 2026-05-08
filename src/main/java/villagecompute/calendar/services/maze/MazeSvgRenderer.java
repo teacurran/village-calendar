@@ -412,7 +412,7 @@ public class MazeSvgRenderer {
 
         // Draw internal walls only (edges shared between cells)
         // NE wall: vertices 0-1 (if wall exists and not at edge)
-        if (cell.northEastWall && hasNENeighbor(x, y, gridWidth, gridHeight, evenRow)) {
+        if (cell.northEastWall && hasNENeighbor(x, y, gridWidth, evenRow)) {
             svg.append(String.format(
                     "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
                             + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
@@ -443,7 +443,7 @@ public class MazeSvgRenderer {
     }
 
     /** Check if cell has NE neighbor. */
-    private boolean hasNENeighbor(int x, int y, int gridWidth, int gridHeight, boolean evenRow) {
+    private boolean hasNENeighbor(int x, int y, int gridWidth, boolean evenRow) {
         if (y == 0) {
             return false;
         }

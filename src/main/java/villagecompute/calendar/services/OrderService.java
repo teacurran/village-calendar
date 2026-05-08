@@ -86,7 +86,7 @@ public class OrderService {
         order.shippingAddress = shippingAddress;
 
         // Calculate tax and shipping
-        BigDecimal tax = calculateTax(order);
+        BigDecimal tax = calculateTax();
         BigDecimal shipping = calculateShipping(order);
 
         // Store the breakdown for Stripe reporting
@@ -102,9 +102,7 @@ public class OrderService {
         order.status = CalendarOrder.STATUS_PENDING;
 
         // Generate unique order number
-        int currentYear = Year.now().getValue();
-        long orderCountThisYear = CalendarOrder.countOrdersByYear(currentYear);
-        String orderNumber = OrderNumberGenerator.generateOrderNumber(currentYear, orderCountThisYear);
+        String orderNumber = OrderNumberGenerator.generateSecureOrderNumber();
         order.orderNumber = orderNumber;
 
         // Persist the order
@@ -606,11 +604,9 @@ public class OrderService {
      * Calculate tax for an order. TODO: Integrate with Stripe Tax API for automated tax calculation. For MVP, returns
      * zero as a placeholder.
      *
-     * @param order
-     *            Order to calculate tax for
      * @return Tax amount (currently always zero)
      */
-    private BigDecimal calculateTax(CalendarOrder order) {
+    private BigDecimal calculateTax() {
         // TODO: Future enhancement - integrate with Stripe Tax API
         // This will provide automated tax calculation based on:
         // - Shipping address (state/country)
@@ -717,9 +713,7 @@ public class OrderService {
         CalendarUser user = findOrCreateGuestUser(email, shippingAddress);
 
         // Generate order number
-        int currentYear = Year.now().getValue();
-        long orderCountThisYear = CalendarOrder.countOrdersByYear(currentYear);
-        String orderNumber = OrderNumberGenerator.generateOrderNumber(currentYear, orderCountThisYear);
+        String orderNumber = OrderNumberGenerator.generateSecureOrderNumber();
 
         // Convert addresses to JsonNode
         JsonNode shippingAddressJson = objectMapper.valueToTree(shippingAddress);
