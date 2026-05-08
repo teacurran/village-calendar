@@ -465,75 +465,76 @@ public class MazeSvgRenderer {
         // Draw border walls for edge cells
         for (int y = 0; y < gridHeight; y++) {
             for (int x = 0; x < gridWidth; x++) {
-                double[] center = getHexCenter(x, y, hexWidth, vertSpacing, offsetX, offsetY, hexSize);
-                double[][] vertices = new double[6][2];
-                for (int i = 0; i < 6; i++) {
-                    double angle = Math.PI / 6 + i * Math.PI / 3;
-                    vertices[i][0] = center[0] + hexSize * Math.cos(angle);
-                    vertices[i][1] = center[1] - hexSize * Math.sin(angle);
-                }
-
-                boolean evenRow = (y % 2) == 0;
-
-                // Top edge (y == 0): draw top-left (5-0) and top-right (0-1) if no neighbor
-                if (y == 0) {
-                    // Top-left wall (vertices 5-0)
-                    if (evenRow || x == 0) {
-                        svg.append(String.format(
-                                "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
-                                        + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
-                                vertices[5][0], vertices[5][1], vertices[0][0], vertices[0][1], outerWallColor,
-                                OUTER_WALL_THICKNESS));
-                    }
-                    // Top-right wall (vertices 0-1)
-                    if (evenRow || x == gridWidth - 1) {
-                        svg.append(String.format(
-                                "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
-                                        + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
-                                vertices[0][0], vertices[0][1], vertices[1][0], vertices[1][1], outerWallColor,
-                                OUTER_WALL_THICKNESS));
-                    }
-                }
-
-                // Bottom edge (y == gridHeight - 1): draw bottom walls
-                if (y == gridHeight - 1) {
-                    // Bottom-left wall (vertices 4-3)
-                    if (evenRow || x == 0) {
-                        svg.append(String.format(
-                                "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
-                                        + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
-                                vertices[4][0], vertices[4][1], vertices[3][0], vertices[3][1], outerWallColor,
-                                OUTER_WALL_THICKNESS));
-                    }
-                    // Bottom-right wall (vertices 3-2)
-                    if (evenRow || x == gridWidth - 1) {
-                        svg.append(String.format(
-                                "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
-                                        + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
-                                vertices[3][0], vertices[3][1], vertices[2][0], vertices[2][1], outerWallColor,
-                                OUTER_WALL_THICKNESS));
-                    }
-                }
-
-                // Left edge (x == 0): draw left wall (vertices 4-5)
-                if (x == 0) {
-                    svg.append(String.format(
-                            "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
-                                    + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
-                            vertices[4][0], vertices[4][1], vertices[5][0], vertices[5][1], outerWallColor,
-                            OUTER_WALL_THICKNESS));
-                }
-
-                // Right edge (x == gridWidth - 1): draw right wall (vertices 1-2)
-                if (x == gridWidth - 1) {
-                    svg.append(String.format(
-                            "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
-                                    + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
-                            vertices[1][0], vertices[1][1], vertices[2][0], vertices[2][1], outerWallColor,
-                            OUTER_WALL_THICKNESS));
-                }
+                double[][] vertices = computeHexVertices(x, y, hexWidth, vertSpacing, offsetX, offsetY, hexSize);
+                drawHexCellBorderWalls(svg, x, y, gridWidth, gridHeight, vertices);
             }
         }
+    }
+
+    /** Compute the six vertex coordinates of a hexagon cell. */
+    private double[][] computeHexVertices(int x, int y, double hexWidth, double vertSpacing, double offsetX,
+            double offsetY, double hexSize) {
+        double[] center = getHexCenter(x, y, hexWidth, vertSpacing, offsetX, offsetY, hexSize);
+        double[][] vertices = new double[6][2];
+        for (int i = 0; i < 6; i++) {
+            double angle = Math.PI / 6 + i * Math.PI / 3;
+            vertices[i][0] = center[0] + hexSize * Math.cos(angle);
+            vertices[i][1] = center[1] - hexSize * Math.sin(angle);
+        }
+        return vertices;
+    }
+
+    /** Draw any outer-border walls for a single hex cell at (x, y). */
+    private void drawHexCellBorderWalls(StringBuilder svg, int x, int y, int gridWidth, int gridHeight,
+            double[][] vertices) {
+        boolean evenRow = (y % 2) == 0;
+        boolean leftColumn = (x == 0);
+        boolean rightColumn = (x == gridWidth - 1);
+
+        if (y == 0) {
+            drawHexTopBorder(svg, vertices, evenRow, leftColumn, rightColumn);
+        }
+        if (y == gridHeight - 1) {
+            drawHexBottomBorder(svg, vertices, evenRow, leftColumn, rightColumn);
+        }
+        if (leftColumn) {
+            appendHexBorderLine(svg, vertices, 4, 5);
+        }
+        if (rightColumn) {
+            appendHexBorderLine(svg, vertices, 1, 2);
+        }
+    }
+
+    /** Draw top-edge walls (vertices 5-0 and 0-1) when needed. */
+    private void drawHexTopBorder(StringBuilder svg, double[][] vertices, boolean evenRow, boolean leftColumn,
+            boolean rightColumn) {
+        if (evenRow || leftColumn) {
+            appendHexBorderLine(svg, vertices, 5, 0);
+        }
+        if (evenRow || rightColumn) {
+            appendHexBorderLine(svg, vertices, 0, 1);
+        }
+    }
+
+    /** Draw bottom-edge walls (vertices 4-3 and 3-2) when needed. */
+    private void drawHexBottomBorder(StringBuilder svg, double[][] vertices, boolean evenRow, boolean leftColumn,
+            boolean rightColumn) {
+        if (evenRow || leftColumn) {
+            appendHexBorderLine(svg, vertices, 4, 3);
+        }
+        if (evenRow || rightColumn) {
+            appendHexBorderLine(svg, vertices, 3, 2);
+        }
+    }
+
+    /** Append a single SVG line element between two hexagon vertices. */
+    private void appendHexBorderLine(StringBuilder svg, double[][] vertices, int from, int to) {
+        svg.append(
+                String.format(
+                        "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
+                                + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
+                        vertices[from][0], vertices[from][1], vertices[to][0], vertices[to][1], outerWallColor,
+                        OUTER_WALL_THICKNESS));
     }
 
     private String renderTheta() {
