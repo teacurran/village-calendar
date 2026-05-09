@@ -243,7 +243,7 @@ class CalendarServiceIntegrationTest {
         // Then: SVG should be generated correctly
         assertNotNull(publicUrl, "Public URL should be generated");
         assertNotNull(calendar.generatedSvg, "SVG should be generated");
-        assertTrue(calendar.generatedSvg.length() > 0, "SVG should not be empty");
+        assertFalse(calendar.generatedSvg.isEmpty(), "SVG should not be empty");
 
         // Verify SVG contains expected elements
         assertTrue(calendar.generatedSvg.contains("2025"), "SVG should contain year");
