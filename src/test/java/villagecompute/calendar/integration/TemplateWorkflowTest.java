@@ -1,6 +1,5 @@
 package villagecompute.calendar.integration;
 
-import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import jakarta.inject.Inject;
