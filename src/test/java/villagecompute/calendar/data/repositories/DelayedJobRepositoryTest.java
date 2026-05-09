@@ -1,6 +1,6 @@
 package villagecompute.calendar.data.repositories;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -155,9 +155,10 @@ class DelayedJobRepositoryTest {
         DelayedJob job1 = createJob(QUEUE_CANCELLATION, "actor-123", now.minus(10, ChronoUnit.MINUTES));
         repository.persist(job1);
 
-        // Wait until wall clock advances past job1.created so job2 gets a strictly later created timestamp
-        Instant job1Created = job1.created;
-        await().atMost(1, SECONDS).until(() -> Instant.now().isAfter(job1Created));
+        // Wait briefly so job2's DB-assigned `created` timestamp is strictly later than job1's.
+        // We can't reference job1.created here — Panache persist() doesn't flush within an
+        // @Transactional method, so the DB-default value isn't populated until later.
+        await().pollDelay(10, MILLISECONDS).until(() -> true);
 
         DelayedJob job2 = createJob(QUEUE_ORDER_EMAIL, "actor-123", now.minus(5, ChronoUnit.MINUTES));
         repository.persist(job2);
