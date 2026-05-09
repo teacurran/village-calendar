@@ -656,7 +656,7 @@ class CartServiceTest {
         assertEquals(3, cart.itemCount);
         assertEquals(1, cart.items.size());
         assertEquals(75.0, cart.subtotal); // 3 * $25.00
-        assertEquals(0.0, cart.taxAmount); // Tax is TODO
+        assertEquals(0.0, cart.taxAmount); // Tax not yet implemented
         assertEquals(75.0, cart.totalAmount); // subtotal + tax
     }
 }

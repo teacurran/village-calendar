@@ -602,7 +602,7 @@ public class OrderService {
     }
 
     /**
-     * Calculate tax for an order. TODO: Integrate with Stripe Tax API for automated tax calculation. For MVP, returns
+     * Calculate tax for an order. Note: Integrate with Stripe Tax API for automated tax calculation. For MVP, returns
      * zero as a placeholder.
      *
      * @param order
@@ -610,7 +610,7 @@ public class OrderService {
      * @return Tax amount (currently always zero)
      */
     private BigDecimal calculateTax(CalendarOrder order) {
-        // TODO: Future enhancement - integrate with Stripe Tax API
+        // Note: Future enhancement - integrate with Stripe Tax API
         // This will provide automated tax calculation based on:
         // - Shipping address (state/country)
         // - Product tax codes

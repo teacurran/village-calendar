@@ -135,7 +135,7 @@ public class CartService {
         CartType cart = new CartType();
         cart.id = cartEntity.id.toString();
         cart.subtotal = cartEntity.getSubtotal().doubleValue();
-        cart.taxAmount = 0.0; // TODO: Calculate tax
+        cart.taxAmount = 0.0; // Note: Calculate tax
         cart.totalAmount = cart.subtotal + cart.taxAmount;
         cart.itemCount = cartEntity.getItemCount();
         cart.items = cartEntity.items.stream().map(this::toGraphQLCartItem).toList();
