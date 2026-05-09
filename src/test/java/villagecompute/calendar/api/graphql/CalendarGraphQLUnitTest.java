@@ -439,9 +439,10 @@ class CalendarGraphQLUnitTest {
         void updateUserAdmin_RemoveOwnAdminStatus_ThrowsIllegalArgumentException() {
             // Admin cannot remove their own admin status (lockout prevention)
             when(authService.requireCurrentUser(jwt)).thenReturn(adminUser);
+            String adminUserId = adminUser.id.toString();
 
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                    () -> calendarGraphQL.updateUserAdmin(adminUser.id.toString(), false));
+                    () -> calendarGraphQL.updateUserAdmin(adminUserId, false));
 
             assertEquals("Cannot remove admin status from yourself", exception.getMessage());
         }

@@ -269,9 +269,12 @@ class EventServiceTest {
 
     @Test
     void testAddEvent_NullCalendarId_ThrowsException() {
+        // Given
+        LocalDate eventDate = LocalDate.of(2025, 1, 1);
+
         // When & Then
         assertThrows(IllegalArgumentException.class,
-                () -> eventService.addEvent(null, LocalDate.of(2025, 1, 1), "Test", null, null, testUser));
+                () -> eventService.addEvent(null, eventDate, "Test", null, null, testUser));
     }
 
     @Test
@@ -343,10 +346,11 @@ class EventServiceTest {
     void testUpdateEvent_InvalidData_ThrowsException() {
         // Given
         Event event = eventService.addEvent(testCalendar.id, LocalDate.of(2025, 6, 1), "Test", null, null, testUser);
+        String tooLongText = "a".repeat(501);
 
         // When & Then - Invalid text length
         assertThrows(IllegalArgumentException.class,
-                () -> eventService.updateEvent(event.id, "a".repeat(501), null, null, testUser));
+                () -> eventService.updateEvent(event.id, tooLongText, null, null, testUser));
 
         // When & Then - Invalid emoji
         assertThrows(IllegalArgumentException.class,
@@ -448,9 +452,13 @@ class EventServiceTest {
     @Test
     @Transactional
     void testListEvents_InvalidDateRange_ThrowsException() {
+        // Given - end date before start date
+        LocalDate startDate = LocalDate.of(2025, 12, 1);
+        LocalDate endDate = LocalDate.of(2025, 1, 1);
+
         // When & Then
-        assertThrows(IllegalArgumentException.class, () -> eventService.listEvents(testCalendar.id,
-                LocalDate.of(2025, 12, 1), LocalDate.of(2025, 1, 1), testUser));
+        assertThrows(IllegalArgumentException.class,
+                () -> eventService.listEvents(testCalendar.id, startDate, endDate, testUser));
     }
 
     @Test
