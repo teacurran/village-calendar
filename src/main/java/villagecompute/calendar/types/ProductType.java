@@ -17,6 +17,7 @@ public class ProductType {
     public Integer displayOrder;
 
     public ProductType() {
+        // intentionally empty — default constructor required by JSON/GraphQL deserialization
     }
 
     public ProductType(String code, String name, String description, Double price, List<String> features, String icon,

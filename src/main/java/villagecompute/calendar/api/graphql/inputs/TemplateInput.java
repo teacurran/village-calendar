@@ -62,6 +62,7 @@ public class TemplateInput {
 
     // Default constructor required by SmallRye GraphQL
     public TemplateInput() {
+        // intentionally empty — default constructor required by SmallRye GraphQL deserialization
     }
 
     // Constructor for testing

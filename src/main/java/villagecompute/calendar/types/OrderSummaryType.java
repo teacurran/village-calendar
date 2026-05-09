@@ -49,6 +49,7 @@ public class OrderSummaryType {
     public int totalItemCount;
 
     public OrderSummaryType() {
+        // intentionally empty — default constructor required by JSON deserialization
     }
 
     /**
