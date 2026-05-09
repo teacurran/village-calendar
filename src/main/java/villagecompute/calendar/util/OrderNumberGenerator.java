@@ -17,6 +17,10 @@ public class OrderNumberGenerator {
     // Alphanumeric characters excluding confusing ones (0, O, I, l, 1)
     private static final String CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
+    private OrderNumberGenerator() {
+        // Utility class — not instantiable.
+    }
+
     /**
      * Generate a unique, non-guessable order number. Uses cryptographically secure random characters.
      *
