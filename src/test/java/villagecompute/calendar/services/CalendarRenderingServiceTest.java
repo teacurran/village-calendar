@@ -887,8 +887,8 @@ class CalendarRenderingServiceTest {
     }
 
     // ========== MONOCHROME MODE BRANCH TESTS ==========
-    // Tests for: boolean isMonochrome = EMOJI_FONT_NOTO_MONO.equals(config.emojiFont)
-    // || (config.emojiFont != null && config.emojiFont.startsWith("mono-"));
+    // Tests the isMonochrome branch in the renderer, which is true when emojiFont equals
+    // EMOJI_FONT_NOTO_MONO or starts with the "mono-" prefix.
 
     @ParameterizedTest(
             name = "emojiFont={0}")
@@ -967,9 +967,9 @@ class CalendarRenderingServiceTest {
     }
 
     // ========== EVENT DISPLAY MODE BRANCH TESTS ==========
-    // Tests for: boolean largeEmoji = "large".equals(...) || "large-text".equals(...)
-    // boolean smallEmoji = "small".equals(...) || "small-text".equals(...)
-    // boolean showHolidayText = ("large-text"... || "small-text"... || "text"...) && !holidayName.isEmpty()
+    // Tests the eventDisplayMode branches in the renderer: large vs large-text emoji sizing,
+    // small vs small-text sizing, and the showHolidayText flag (enabled for large-text,
+    // small-text, or text modes when a holiday name is present).
 
     @ParameterizedTest
     @ValueSource(
@@ -1056,10 +1056,10 @@ class CalendarRenderingServiceTest {
     }
 
     // ========== MOON DISPLAY MODE BRANCH TESTS ==========
-    // Tests for: boolean shouldShowMoon = "illumination".equals(...)
-    // || ("phases".equals(...) && isMoonPhaseDay(date))
-    // || ("full-only".equals(...) && isFullMoonDay(date))
-    // Tests for: boolean largeMoonEnabled = !"none".equals(...) && config.moonSize >= 15
+    // Tests the shouldShowMoon flag for each moonDisplayMode option (illumination always shows;
+    // phases shows on moon phase days; full-only shows only on full moon days), and the
+    // largeMoonEnabled flag (enabled when moonDisplayMode is not "none" and moonSize is at
+    // least 15).
 
     @ParameterizedTest
     @ValueSource(
@@ -1922,8 +1922,9 @@ class CalendarRenderingServiceTest {
     }
 
     // ========== RENDER EMOJI TEXT FALLBACK TESTS ==========
-    // Tests for: if (emojiSvgService != null && emojiSvgService.hasEmojiSvg(emoji))
-    // When hasEmojiSvg returns false, falls back to text rendering
+    // Tests the text-fallback branch in renderEmoji: when emojiSvgService is non-null but
+    // hasEmojiSvg returns false for the supplied character, the renderer falls back to plain
+    // text rendering instead of an embedded SVG glyph.
 
     @Test
     void testRenderEmoji_TextFallback_HasEmojiSvgFalse_Centered() {
