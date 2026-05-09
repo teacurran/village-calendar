@@ -65,7 +65,7 @@ public class MazeGenerationService {
      */
     private int[] sizeToGridDimensions(int size) {
         // Clamp size to 1-20
-        size = Math.max(1, Math.min(20, size));
+        size = Math.clamp(size, 1, 20);
 
         // Width: 15 cells at size 1, 132 cells at size 20
         // At 132 cells: 3300 printable units / 132 = 25 units per cell = 0.25" (1/4 inch)
