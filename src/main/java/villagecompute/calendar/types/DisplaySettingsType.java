@@ -45,6 +45,7 @@ public class DisplaySettingsType {
     public Boolean textWrap;
 
     public DisplaySettingsType() {
+        // intentionally empty — default constructor required by Jackson deserialization
     }
 
     @Override

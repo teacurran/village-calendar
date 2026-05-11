@@ -18,6 +18,7 @@ public class CartItemType {
     public String configuration;
 
     public CartItemType() {
+        // intentionally empty — default constructor required by JSON/GraphQL deserialization
     }
 
     /** Create a CartItemType from the entity. */

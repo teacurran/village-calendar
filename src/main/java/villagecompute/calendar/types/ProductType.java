@@ -17,6 +17,7 @@ public class ProductType {
     public Integer displayOrder;
 
     public ProductType() {
+        // intentionally empty — default constructor required by JSON/GraphQL deserialization
     }
 
     /** Returns a new builder for constructing {@link ProductType} instances. */
