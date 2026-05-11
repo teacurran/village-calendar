@@ -64,6 +64,11 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
     @CheckedTemplate(
             basePath = "email-templates/OrderEmailJobHandler")
     public static class Templates {
+
+        private Templates() {
+            // Utility class — not instantiable.
+        }
+
         /**
          * Order confirmation email template for customers.
          *

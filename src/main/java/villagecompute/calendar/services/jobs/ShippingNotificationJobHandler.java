@@ -48,6 +48,11 @@ public class ShippingNotificationJobHandler implements DelayedJobHandler {
     @CheckedTemplate(
             basePath = "email-templates/ShippingNotificationJobHandler")
     public static class Templates {
+
+        private Templates() {
+            // Utility class — not instantiable.
+        }
+
         /**
          * Shipping notification email template.
          *
