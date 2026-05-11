@@ -1,5 +1,7 @@
 package villagecompute.calendar.data.repositories;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Instant;
@@ -153,13 +155,10 @@ class DelayedJobRepositoryTest {
         DelayedJob job1 = createJob(QUEUE_CANCELLATION, "actor-123", now.minus(10, ChronoUnit.MINUTES));
         repository.persist(job1);
 
-        // Delay to ensure different created timestamps
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            // Restore interrupt flag; test will continue and may fail on assertion
-            Thread.currentThread().interrupt();
-        }
+        // Wait briefly so job2's DB-assigned `created` timestamp is strictly later than job1's.
+        // We can't reference job1.created here — Panache persist() doesn't flush within an
+        // @Transactional method, so the DB-default value isn't populated until later.
+        await().pollDelay(10, MILLISECONDS).until(() -> true);
 
         DelayedJob job2 = createJob(QUEUE_ORDER_EMAIL, "actor-123", now.minus(5, ChronoUnit.MINUTES));
         repository.persist(job2);
@@ -224,13 +223,7 @@ class DelayedJobRepositoryTest {
         failed1.failureReason = "Network error";
         repository.persist(failed1);
 
-        // Delay to ensure different failedAt timestamps
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            // Restore interrupt flag; test will continue and may fail on assertion
-            Thread.currentThread().interrupt();
-        }
+        // No wait needed: failedAt timestamps below are explicitly set via now.minus(...) and are already distinct.
 
         DelayedJob failed2 = createJob(QUEUE_ORDER_EMAIL, "actor-2", now.minus(20, ChronoUnit.MINUTES));
         failed2.completedWithFailure = true;
