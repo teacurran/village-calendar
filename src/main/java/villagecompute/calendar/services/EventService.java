@@ -39,6 +39,8 @@ public class EventService {
     // Hex color pattern (e.g., #FF5733 or #ABC)
     private static final Pattern HEX_COLOR_PATTERN = Pattern.compile("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$");
 
+    private static final String EVENT_NOT_FOUND_FORMAT = "Event not found: %s";
+
     @Inject
     CalendarService calendarService;
 
@@ -138,8 +140,8 @@ public class EventService {
         // Find event
         Event event = Event.findById(eventId);
         if (event == null) {
-            LOG.errorf("Event not found: %s", eventId);
-            throw new IllegalArgumentException("Event not found: " + eventId);
+            LOG.errorf(EVENT_NOT_FOUND_FORMAT, eventId);
+            throw new IllegalArgumentException(String.format(EVENT_NOT_FOUND_FORMAT, eventId));
         }
 
         // Check write access to calendar
@@ -189,8 +191,8 @@ public class EventService {
         // Find event
         Event event = Event.findById(eventId);
         if (event == null) {
-            LOG.errorf("Event not found: %s", eventId);
-            throw new IllegalArgumentException("Event not found: " + eventId);
+            LOG.errorf(EVENT_NOT_FOUND_FORMAT, eventId);
+            throw new IllegalArgumentException(String.format(EVENT_NOT_FOUND_FORMAT, eventId));
         }
 
         // Check write access
@@ -266,8 +268,8 @@ public class EventService {
 
         Event event = Event.findById(eventId);
         if (event == null) {
-            LOG.errorf("Event not found: %s", eventId);
-            throw new IllegalArgumentException("Event not found: " + eventId);
+            LOG.errorf(EVENT_NOT_FOUND_FORMAT, eventId);
+            throw new IllegalArgumentException(String.format(EVENT_NOT_FOUND_FORMAT, eventId));
         }
 
         // Check read access to calendar

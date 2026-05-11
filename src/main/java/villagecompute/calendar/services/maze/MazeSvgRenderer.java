@@ -6,6 +6,24 @@ public class MazeSvgRenderer {
     /** SVG closing tag for groups */
     private static final String SVG_GROUP_CLOSE = "  </g>";
 
+    /** SVG document closing tag */
+    private static final String SVG_DOC_CLOSE = "</svg>";
+
+    /** Format fragment with width/height attributes that closes the opening tag */
+    private static final String SVG_WIDTH_HEIGHT_OPEN_TAIL = " width=\"%d\" height=\"%d\">%n";
+
+    /** Format string for the white background rectangle */
+    private static final String SVG_BACKGROUND_RECT_FORMAT = "  <rect width=\"%d\" height=\"%d\" fill=\"white\"/>%n";
+
+    /** Format fragment with stroke color and width attributes */
+    private static final String SVG_STROKE_ATTRS_TAIL = " stroke=\"%s\" stroke-width=\"%d\"/>%n";
+
+    /** Format fragment for the start-marker class attribute */
+    private static final String SVG_START_MARKER_CLASS_TAIL = " class=\"start-marker\"/>%n";
+
+    /** Format fragment for the end-marker class attribute */
+    private static final String SVG_END_MARKER_CLASS_TAIL = " class=\"end-marker\"/>%n";
+
     // Page dimensions at 100 DPI
     private static final int PAGE_WIDTH = 3500; // 35 inches
     private static final int PAGE_HEIGHT = 2300; // 23 inches
@@ -88,11 +106,11 @@ public class MazeSvgRenderer {
 
         StringBuilder svg = new StringBuilder();
         svg.append(String.format(
-                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\"" + " width=\"%d\" height=\"%d\">%n",
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\"" + SVG_WIDTH_HEIGHT_OPEN_TAIL,
                 PAGE_WIDTH, PAGE_HEIGHT, PAGE_WIDTH, PAGE_HEIGHT));
 
         // Background
-        svg.append(String.format("  <rect width=\"%d\" height=\"%d\" fill=\"white\"/>%n", PAGE_WIDTH, PAGE_HEIGHT));
+        svg.append(String.format(SVG_BACKGROUND_RECT_FORMAT, PAGE_WIDTH, PAGE_HEIGHT));
 
         // Draw dead-end depth visualization if enabled (before walls so it appears behind)
         appendOrthogonalDeadEnds(svg, gridWidth, gridHeight);
@@ -106,9 +124,8 @@ public class MazeSvgRenderer {
         // Draw outer border (thick rectangle)
         svg.append("  <g class=\"outer-border\">").append(System.lineSeparator());
         svg.append(String.format(
-                "    <rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\""
-                        + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
-                offsetX, offsetY, mazeWidth, mazeHeight, outerWallColor, OUTER_WALL_THICKNESS));
+                "    <rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\"" + SVG_STROKE_ATTRS_TAIL, offsetX,
+                offsetY, mazeWidth, mazeHeight, outerWallColor, OUTER_WALL_THICKNESS));
         svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
 
         // Draw start/end markers
@@ -225,14 +242,14 @@ public class MazeSvgRenderer {
         // Draw start marker
         int startX = offsetX + grid.getStartX() * cellSize + cellSize / 2;
         int startY = offsetY + grid.getStartY() * cellSize + cellSize / 2;
-        svg.append(String.format("  <circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"%s\"" + " class=\"start-marker\"/>%n",
+        svg.append(String.format("  <circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"%s\"" + SVG_START_MARKER_CLASS_TAIL,
                 startX, startY, markerRadius, DEFAULT_START_COLOR));
 
         // Draw end marker
         int endX = offsetX + grid.getEndX() * cellSize + cellSize / 2;
         int endY = offsetY + grid.getEndY() * cellSize + cellSize / 2;
-        svg.append(String.format("  <circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"%s\"" + " class=\"end-marker\"/>%n",
-                endX, endY, markerRadius, DEFAULT_END_COLOR));
+        svg.append(String.format("  <circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"%s\"" + SVG_END_MARKER_CLASS_TAIL, endX,
+                endY, markerRadius, DEFAULT_END_COLOR));
     }
 
     private String renderDelta() {
@@ -263,11 +280,11 @@ public class MazeSvgRenderer {
 
         StringBuilder svg = new StringBuilder();
         svg.append(String.format(
-                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\"" + " width=\"%d\" height=\"%d\">%n",
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\"" + SVG_WIDTH_HEIGHT_OPEN_TAIL,
                 PAGE_WIDTH, PAGE_HEIGHT, PAGE_WIDTH, PAGE_HEIGHT));
 
         // Background
-        svg.append(String.format("  <rect width=\"%d\" height=\"%d\" fill=\"white\"/>%n", PAGE_WIDTH, PAGE_HEIGHT));
+        svg.append(String.format(SVG_BACKGROUND_RECT_FORMAT, PAGE_WIDTH, PAGE_HEIGHT));
 
         appendSigmaDeadEnds(svg, gridWidth, gridHeight, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
         appendSigmaSolutionPath(svg, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
@@ -351,12 +368,11 @@ public class MazeSvgRenderer {
         int markerRadius = Math.max((int) (hexSize / 3), 8);
         double[] startCenter = getHexCenter(grid.getStartX(), grid.getStartY(), hexWidth, vertSpacing, hexOffsetX,
                 hexOffsetY, hexSize);
-        svg.append(
-                String.format("  <circle cx=\"%.1f\" cy=\"%.1f\" r=\"%d\" fill=\"%s\"" + " class=\"start-marker\"/>%n",
-                        startCenter[0], startCenter[1], markerRadius, DEFAULT_START_COLOR));
+        svg.append(String.format("  <circle cx=\"%.1f\" cy=\"%.1f\" r=\"%d\" fill=\"%s\"" + SVG_START_MARKER_CLASS_TAIL,
+                startCenter[0], startCenter[1], markerRadius, DEFAULT_START_COLOR));
         double[] endCenter = getHexCenter(grid.getEndX(), grid.getEndY(), hexWidth, vertSpacing, hexOffsetX, hexOffsetY,
                 hexSize);
-        svg.append(String.format("  <circle cx=\"%.1f\" cy=\"%.1f\" r=\"%d\" fill=\"%s\"" + " class=\"end-marker\"/>%n",
+        svg.append(String.format("  <circle cx=\"%.1f\" cy=\"%.1f\" r=\"%d\" fill=\"%s\"" + SVG_END_MARKER_CLASS_TAIL,
                 endCenter[0], endCenter[1], markerRadius, DEFAULT_END_COLOR));
     }
 
@@ -414,28 +430,22 @@ public class MazeSvgRenderer {
         // NE wall: vertices 0-1 (if wall exists and not at edge)
         if (cell.northEastWall && hasNENeighbor(x, y, gridWidth, evenRow)) {
             svg.append(String.format(
-                    "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
-                            + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
-                    vertices[0][0], vertices[0][1], vertices[1][0], vertices[1][1], innerWallColor,
-                    INNER_WALL_THICKNESS));
+                    "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\"" + SVG_STROKE_ATTRS_TAIL, vertices[0][0],
+                    vertices[0][1], vertices[1][0], vertices[1][1], innerWallColor, INNER_WALL_THICKNESS));
         }
 
         // E wall: vertices 1-2 (if wall exists and not at right edge)
         if (cell.eastWall && x < gridWidth - 1) {
             svg.append(String.format(
-                    "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
-                            + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
-                    vertices[1][0], vertices[1][1], vertices[2][0], vertices[2][1], innerWallColor,
-                    INNER_WALL_THICKNESS));
+                    "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\"" + SVG_STROKE_ATTRS_TAIL, vertices[1][0],
+                    vertices[1][1], vertices[2][0], vertices[2][1], innerWallColor, INNER_WALL_THICKNESS));
         }
 
         // SE wall: vertices 2-3 (if wall exists and not at edge)
         if (cell.southEastWall && hasSENeighbor(x, y, gridWidth, gridHeight, evenRow)) {
             svg.append(String.format(
-                    "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\""
-                            + " stroke=\"%s\" stroke-width=\"%d\"/>%n",
-                    vertices[2][0], vertices[2][1], vertices[3][0], vertices[3][1], innerWallColor,
-                    INNER_WALL_THICKNESS));
+                    "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\"" + SVG_STROKE_ATTRS_TAIL, vertices[2][0],
+                    vertices[2][1], vertices[3][0], vertices[3][1], innerWallColor, INNER_WALL_THICKNESS));
         }
 
         // We don't draw SW, W, NW walls here - they will be drawn by neighboring cells
@@ -557,11 +567,11 @@ public class MazeSvgRenderer {
 
         StringBuilder svg = new StringBuilder();
         svg.append(String.format(
-                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\"" + " width=\"%d\" height=\"%d\">%n",
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 %d %d\"" + SVG_WIDTH_HEIGHT_OPEN_TAIL,
                 PAGE_WIDTH, PAGE_HEIGHT, PAGE_WIDTH, PAGE_HEIGHT));
 
         // Background
-        svg.append(String.format("  <rect width=\"%d\" height=\"%d\" fill=\"white\"/>%n", PAGE_WIDTH, PAGE_HEIGHT));
+        svg.append(String.format(SVG_BACKGROUND_RECT_FORMAT, PAGE_WIDTH, PAGE_HEIGHT));
 
         // Draw concentric circles and radial walls
         svg.append("  <g class=\"walls\">").append(System.lineSeparator());
@@ -588,14 +598,14 @@ public class MazeSvgRenderer {
         int markerRadius = Math.max(ringSpacing / 4, 12);
 
         // Start marker (center)
-        svg.append(String.format("  <circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"%s\"" + " class=\"start-marker\"/>%n",
+        svg.append(String.format("  <circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"%s\"" + SVG_START_MARKER_CLASS_TAIL,
                 centerX, centerY, markerRadius, DEFAULT_START_COLOR));
 
         // End marker (edge)
-        svg.append(String.format("  <circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"%s\"" + " class=\"end-marker\"/>%n",
+        svg.append(String.format("  <circle cx=\"%d\" cy=\"%d\" r=\"%d\" fill=\"%s\"" + SVG_END_MARKER_CLASS_TAIL,
                 centerX + maxRadius - ringSpacing / 2, centerY, markerRadius, DEFAULT_END_COLOR));
 
-        svg.append("</svg>");
+        svg.append(SVG_DOC_CLOSE);
         return svg.toString();
     }
 }

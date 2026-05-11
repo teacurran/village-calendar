@@ -27,6 +27,9 @@ public class TemplateService {
     private static final Logger LOG = Logger.getLogger(TemplateService.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    private static final String TEMPLATE_NOT_FOUND_FORMAT = "Template not found: %s";
+    private static final String TEMPLATE_NOT_FOUND_MESSAGE = "Template not found";
+
     @Inject
     CalendarTemplateRepository templateRepository;
 
@@ -96,8 +99,8 @@ public class TemplateService {
         // Find existing template
         CalendarTemplate template = CalendarTemplate.<CalendarTemplate>findByIdOptional(id).orElse(null);
         if (template == null) {
-            LOG.errorf("Template not found: %s", id);
-            throw new IllegalArgumentException("Template not found");
+            LOG.errorf(TEMPLATE_NOT_FOUND_FORMAT, id);
+            throw new IllegalArgumentException(TEMPLATE_NOT_FOUND_MESSAGE);
         }
 
         // Parse and validate configuration if provided
@@ -209,8 +212,8 @@ public class TemplateService {
         // Find existing template
         CalendarTemplate template = CalendarTemplate.<CalendarTemplate>findByIdOptional(id).orElse(null);
         if (template == null) {
-            LOG.errorf("Template not found: %s", id);
-            throw new IllegalArgumentException("Template not found");
+            LOG.errorf(TEMPLATE_NOT_FOUND_FORMAT, id);
+            throw new IllegalArgumentException(TEMPLATE_NOT_FOUND_MESSAGE);
         }
 
         // Soft delete by setting isActive=false
@@ -241,8 +244,8 @@ public class TemplateService {
         // Find existing template
         CalendarTemplate template = CalendarTemplate.<CalendarTemplate>findByIdOptional(templateId).orElse(null);
         if (template == null) {
-            LOG.errorf("Template not found: %s", templateId);
-            throw new IllegalArgumentException("Template not found");
+            LOG.errorf(TEMPLATE_NOT_FOUND_FORMAT, templateId);
+            throw new IllegalArgumentException(TEMPLATE_NOT_FOUND_MESSAGE);
         }
 
         // Generate unique filename
