@@ -62,18 +62,62 @@ public class TemplateInput {
 
     // Default constructor required by SmallRye GraphQL
     public TemplateInput() {
+        // intentionally empty — default constructor required by SmallRye GraphQL deserialization
     }
 
-    // Constructor for testing
-    public TemplateInput(String name, String description, String configuration, String thumbnailUrl, Boolean isActive,
-            Boolean isFeatured, Integer displayOrder, String previewSvg) {
-        this.name = name;
-        this.description = description;
-        this.configuration = configuration;
-        this.thumbnailUrl = thumbnailUrl;
-        this.isActive = isActive;
-        this.isFeatured = isFeatured;
-        this.displayOrder = displayOrder;
-        this.previewSvg = previewSvg;
+    /**
+     * Builder for TemplateInput to avoid long constructor parameter lists. Use {@link #builder()} to start a new
+     * builder.
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        private final TemplateInput input = new TemplateInput();
+
+        public Builder name(String name) {
+            input.name = name;
+            return this;
+        }
+
+        public Builder description(String description) {
+            input.description = description;
+            return this;
+        }
+
+        public Builder configuration(String configuration) {
+            input.configuration = configuration;
+            return this;
+        }
+
+        public Builder thumbnailUrl(String thumbnailUrl) {
+            input.thumbnailUrl = thumbnailUrl;
+            return this;
+        }
+
+        public Builder isActive(Boolean isActive) {
+            input.isActive = isActive;
+            return this;
+        }
+
+        public Builder isFeatured(Boolean isFeatured) {
+            input.isFeatured = isFeatured;
+            return this;
+        }
+
+        public Builder displayOrder(Integer displayOrder) {
+            input.displayOrder = displayOrder;
+            return this;
+        }
+
+        public Builder previewSvg(String previewSvg) {
+            input.previewSvg = previewSvg;
+            return this;
+        }
+
+        public TemplateInput build() {
+            return input;
+        }
     }
 }

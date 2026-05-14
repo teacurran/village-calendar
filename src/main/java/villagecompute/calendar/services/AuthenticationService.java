@@ -29,6 +29,7 @@ public class AuthenticationService {
 
     private static final Logger LOG = Logger.getLogger(AuthenticationService.class);
     private static final Duration JWT_LIFESPAN = Duration.ofDays(1); // 24 hours
+    private static final String CLAIM_EMAIL = "email";
 
     @Inject
     SecurityIdentity securityIdentity;
@@ -62,13 +63,13 @@ public class AuthenticationService {
         String profileImageUrl = null;
 
         if (userInfo != null) {
-            email = userInfo.getString("email");
+            email = userInfo.getString(CLAIM_EMAIL);
             displayName = userInfo.getString("name");
             profileImageUrl = userInfo.getString("picture");
             LOG.infof("Extracted from UserInfo - email: %s, name: %s", email, displayName);
         } else {
             // Fallback to SecurityIdentity attributes
-            email = identity.getAttribute("email");
+            email = identity.getAttribute(CLAIM_EMAIL);
             displayName = identity.getAttribute("name");
             profileImageUrl = identity.getAttribute("picture");
             LOG.warnf("UserInfo not available, using SecurityIdentity attributes");
@@ -148,7 +149,7 @@ public class AuthenticationService {
 
         // Build JWT with required claims
         JwtClaimsBuilder claimsBuilder = Jwt.claims().subject(user.id.toString()) // User ID as subject
-                .issuer("village-calendar").claim("email", user.email)
+                .issuer("village-calendar").claim(CLAIM_EMAIL, user.email)
                 .claim("name", user.displayName != null ? user.displayName : user.email).groups(roles) // Roles for
                                                                                                        // authorization
                 .expiresIn(JWT_LIFESPAN.getSeconds());

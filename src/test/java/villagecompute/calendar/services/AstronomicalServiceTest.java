@@ -18,7 +18,7 @@ import io.quarkus.test.junit.QuarkusTest;
  * seasonal events against known astronomical data.
  */
 @QuarkusTest
-public class AstronomicalServiceTest {
+class AstronomicalServiceTest {
 
     @Inject
     AstronomicalCalculationService astronomicalCalculationService;

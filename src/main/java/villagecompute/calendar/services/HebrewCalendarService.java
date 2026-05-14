@@ -31,6 +31,9 @@ public class HebrewCalendarService {
 
     private static final String ADAR_II = "Adar II"; // Used in leap years
 
+    private static final String SUKKOT_CHOL_HAMOED = "Sukkot (Chol HaMoed)";
+    private static final String PASSOVER_CHOL_HAMOED = "Passover (Chol HaMoed)";
+
     // Days in each Hebrew month (non-leap year)
     private static final int[] MONTH_DAYS_REGULAR = {30, // Tishrei
             29, // Cheshvan (can be 29 or 30)
@@ -52,6 +55,14 @@ public class HebrewCalendarService {
         public boolean showHebrewDate = true;
         public boolean showGregorianDate = false;
         public boolean useHebrewNumerals = false;
+    }
+
+    /** Layout-wide grid dimensions shared across the calendar (cell + header sizes). */
+    private record LayoutDimensions(int cellWidth, int cellHeight, int headerHeight, int monthLabelWidth) {
+    }
+
+    /** Position and size of a single day cell within the SVG grid. */
+    private record CellRect(int x, int y, int width, int height) {
     }
 
     /**
@@ -185,10 +196,10 @@ public class HebrewCalendarService {
             holidays.put("1-10", "Yom Kippur");
             holidays.put("1-15", "Sukkot (Day 1)");
             holidays.put("1-16", "Sukkot (Day 2)");
-            holidays.put("1-17", "Sukkot (Chol HaMoed)");
-            holidays.put("1-18", "Sukkot (Chol HaMoed)");
-            holidays.put("1-19", "Sukkot (Chol HaMoed)");
-            holidays.put("1-20", "Sukkot (Chol HaMoed)");
+            holidays.put("1-17", SUKKOT_CHOL_HAMOED);
+            holidays.put("1-18", SUKKOT_CHOL_HAMOED);
+            holidays.put("1-19", SUKKOT_CHOL_HAMOED);
+            holidays.put("1-20", SUKKOT_CHOL_HAMOED);
             holidays.put("1-21", "Sukkot (Hoshana Rabbah)");
             holidays.put("1-22", "Shemini Atzeret");
             holidays.put("1-23", "Simchat Torah");
@@ -217,10 +228,10 @@ public class HebrewCalendarService {
             int nisanMonth = isHebrewLeapYear(hebrewYear) ? 8 : 7;
             holidays.put(nisanMonth + "-15", "Passover (Day 1)");
             holidays.put(nisanMonth + "-16", "Passover (Day 2)");
-            holidays.put(nisanMonth + "-17", "Passover (Chol HaMoed)");
-            holidays.put(nisanMonth + "-18", "Passover (Chol HaMoed)");
-            holidays.put(nisanMonth + "-19", "Passover (Chol HaMoed)");
-            holidays.put(nisanMonth + "-20", "Passover (Chol HaMoed)");
+            holidays.put(nisanMonth + "-17", PASSOVER_CHOL_HAMOED);
+            holidays.put(nisanMonth + "-18", PASSOVER_CHOL_HAMOED);
+            holidays.put(nisanMonth + "-19", PASSOVER_CHOL_HAMOED);
+            holidays.put(nisanMonth + "-20", PASSOVER_CHOL_HAMOED);
             holidays.put(nisanMonth + "-21", "Passover (Day 7)");
             holidays.put(nisanMonth + "-22", "Passover (Day 8)");
 
@@ -248,6 +259,7 @@ public class HebrewCalendarService {
         int cellHeight = config.compactMode ? 60 : 75;
         int headerHeight = 100;
         int monthLabelWidth = cellWidth * 2; // Wider for Hebrew month names
+        LayoutDimensions layout = new LayoutDimensions(cellWidth, cellHeight, headerHeight, monthLabelWidth);
 
         // Get number of months in this Hebrew year
         int monthsInYear = getMonthsInHebrewYear(config.hebrewYear);
@@ -255,16 +267,33 @@ public class HebrewCalendarService {
         // Grid dimensions: 32 columns (2 for month name + 30 for max days) x months rows
         int gridWidth = 32 * cellWidth;
         int gridHeight = monthsInYear * cellHeight;
-        int svgWidth = gridWidth;
         int svgHeight = gridHeight + headerHeight;
 
-        // Start SVG
+        appendSvgHeader(svg, gridWidth, svgHeight);
+        appendSvgStyles(svg);
+        appendYearHeader(svg, config.hebrewYear);
+        appendDayNumberHeaders(svg, monthLabelWidth, cellWidth, headerHeight);
+
+        // Generate grid for each Hebrew month (row)
+        Map<String, String> holidays = new HashMap<>();
+        for (int month = 1; month <= monthsInYear; month++) {
+            appendMonthRow(svg, config, month, holidays, layout);
+        }
+
+        svg.append("</svg>");
+        return svg.toString();
+    }
+
+    /** Append the opening SVG element. */
+    private void appendSvgHeader(StringBuilder svg, int svgWidth, int svgHeight) {
         svg.append(String.format(
                 "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"%d\""
                         + " viewBox=\"0 0 %d %d\" preserveAspectRatio=\"xMidYMid meet\">%n",
                 svgWidth, svgHeight, svgWidth, svgHeight));
+    }
 
-        // Add styles
+    /** Append the embedded CSS style block. */
+    private void appendSvgStyles(StringBuilder svg) {
         svg.append("<style>").append(System.lineSeparator());
         svg.append(".year-text { fill: #000; font-family: Helvetica, Arial, sans-serif; font-size:"
                 + " 60px; font-weight: bold; }%n");
@@ -278,125 +307,131 @@ public class HebrewCalendarService {
         svg.append(".holiday-text { fill: #fff; font-family: Arial, sans-serif; font-size: 7px;"
                 + " text-anchor: middle; }%n");
         svg.append("</style>").append(System.lineSeparator());
+    }
 
-        // Add year header
-        svg.append(String.format("<text x=\"50\" y=\"60\" class=\"year-text\">%d</text>%n", config.hebrewYear));
+    /** Append the Hebrew year title and Gregorian subtitle. */
+    private void appendYearHeader(StringBuilder svg, int hebrewYear) {
+        svg.append(String.format("<text x=\"50\" y=\"60\" class=\"year-text\">%d</text>%n", hebrewYear));
 
-        // Add Gregorian year subtitle
-        int gregorianStart = config.hebrewYear - 3760;
+        int gregorianStart = hebrewYear - 3760;
         int gregorianEnd = gregorianStart + 1;
         svg.append(String.format("<text x=\"50\" y=\"85\" class=\"year-subtitle\">%d-%d CE</text>%n", gregorianStart,
                 gregorianEnd));
+    }
 
-        // Add day number headers (1-30)
+    /** Append day number column headers (1..30). */
+    private void appendDayNumberHeaders(StringBuilder svg, int monthLabelWidth, int cellWidth, int headerHeight) {
         for (int day = 1; day <= 30; day++) {
             int x = monthLabelWidth + (day - 1) * cellWidth + cellWidth / 2;
             int y = headerHeight - 10;
             svg.append(String.format(
                     "<text x=\"%d\" y=\"%d\" class=\"day-header\"" + " text-anchor=\"middle\">%d</text>%n", x, y, day));
         }
+    }
 
-        // Generate grid for each Hebrew month (row)
-        Map<String, String> holidays = new HashMap<>();
+    /** Append a single month row (label + 30 day cells). */
+    private void appendMonthRow(StringBuilder svg, HebrewCalendarConfig config, int month, Map<String, String> holidays,
+            LayoutDimensions layout) {
+        String monthName = getHebrewMonthName(month, config.hebrewYear);
+        int daysInMonth = getDaysInHebrewMonth(month, config.hebrewYear);
+        int rowY = (month - 1) * layout.cellHeight() + layout.headerHeight();
 
-        for (int month = 1; month <= monthsInYear; month++) {
-            String monthName = getHebrewMonthName(month, config.hebrewYear);
-            int daysInMonth = getDaysInHebrewMonth(month, config.hebrewYear);
-            int rowY = (month - 1) * cellHeight + headerHeight;
+        appendMonthLabel(svg, monthName, rowY, layout.cellHeight(), layout.monthLabelWidth(), config.rotateMonthNames);
 
-            // Draw month name (rotated if configured)
-            if (config.rotateMonthNames) {
-                svg.append(String.format(
-                        "<text x=\"%d\" y=\"%d\" class=\"month-name\"" + " transform=\"rotate(-90 %d %d)\""
-                                + " text-anchor=\"middle\">%s</text>%n",
-                        monthLabelWidth / 2, rowY + cellHeight / 2, monthLabelWidth / 2, rowY + cellHeight / 2,
-                        monthName));
-            } else {
-                svg.append(String.format(
-                        "<text x=\"%d\" y=\"%d\" class=\"month-name\"" + " text-anchor=\"middle\">%s</text>%n",
-                        monthLabelWidth / 2, rowY + cellHeight / 2 + 5, monthName));
-            }
+        for (int day = 1; day <= 30; day++) {
+            int cellX = layout.monthLabelWidth() + (day - 1) * layout.cellWidth();
+            CellRect cell = new CellRect(cellX, rowY, layout.cellWidth(), layout.cellHeight());
+            appendDayCell(svg, config, month, day, daysInMonth, holidays, cell);
+        }
+    }
 
-            // Draw cells for each day
-            for (int day = 1; day <= 30; day++) {
-                int cellX = monthLabelWidth + (day - 1) * cellWidth;
-                int cellY = rowY;
+    /** Append the rotated or upright month name label. */
+    private void appendMonthLabel(StringBuilder svg, String monthName, int rowY, int cellHeight, int monthLabelWidth,
+            boolean rotate) {
+        if (rotate) {
+            svg.append(String.format(
+                    "<text x=\"%d\" y=\"%d\" class=\"month-name\"" + " transform=\"rotate(-90 %d %d)\""
+                            + " text-anchor=\"middle\">%s</text>%n",
+                    monthLabelWidth / 2, rowY + cellHeight / 2, monthLabelWidth / 2, rowY + cellHeight / 2, monthName));
+        } else {
+            svg.append(String.format(
+                    "<text x=\"%d\" y=\"%d\" class=\"month-name\"" + " text-anchor=\"middle\">%s</text>%n",
+                    monthLabelWidth / 2, rowY + cellHeight / 2 + 5, monthName));
+        }
+    }
 
-                // Draw cell background
-                int weekendIndex = 0; // Track weekend index for Vermont colors
-                if (day <= daysInMonth) {
-                    // Check if this is Shabbat (simplified - every 7th day starting from Saturday)
-                    // In reality, this would need proper Hebrew date to day-of-week conversion
-                    boolean isShabbat = (day % 7) == 0;
+    /** Append a single day cell, dispatching to active or empty rendering. */
+    private void appendDayCell(StringBuilder svg, HebrewCalendarConfig config, int month, int day, int daysInMonth,
+            Map<String, String> holidays, CellRect cell) {
+        if (day > daysInMonth) {
+            appendEmptyDayCell(svg, config, cell);
+            return;
+        }
+        appendActiveDayCell(svg, config, month, day, holidays, cell);
+    }
 
-                    if (isShabbat && config.highlightWeekends) {
-                        svg.append(String.format(
-                                "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"" + " class=\"shabbat-bg\"/>%n",
-                                cellX, cellY, cellWidth, cellHeight));
-                    }
+    /** Append an empty placeholder cell for days that don't exist in this month. */
+    private void appendEmptyDayCell(StringBuilder svg, HebrewCalendarConfig config, CellRect cell) {
+        if (config.showGrid) {
+            svg.append(String.format("<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\""
+                    + " fill=\"#f9f9f9\" stroke=\"#eee\"" + " stroke-width=\"0.5\"/>%n", cell.x(), cell.y(),
+                    cell.width(), cell.height()));
+        }
+    }
 
-                    // Draw grid lines if enabled
-                    if (config.showGrid) {
-                        String pdfSafeColor = CalendarRenderingService.convertColorForPDF("rgba(255, 255, 255, 0)");
-                        svg.append(String.format(
-                                "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\""
-                                        + " class=\"grid-line\" fill=\"%s\"/>%n",
-                                cellX, cellY, cellWidth, cellHeight, pdfSafeColor));
-                    }
-
-                    // Draw day number
-                    if (config.showDayNumbers) {
-                        svg.append(String.format(
-                                "<text x=\"%d\" y=\"%d\" class=\"day-text\"" + " text-anchor=\"middle\">%d</text>%n",
-                                cellX + cellWidth / 2, cellY + 15, day));
-                    }
-
-                    // Check for holidays
-                    String holidayKey = month + "-" + day;
-                    String holidayName = holidays.get(holidayKey);
-
-                    // Calculate moon illumination for this day
-                    // This is simplified - in reality would need Hebrew to Gregorian date
-                    // conversion
-                    LocalDate approximateDate = hebrewToGregorian(config.hebrewYear, month, day);
-
-                    // Draw moon with illumination
-                    if ("illumination".equals(config.moonDisplayMode)) {
-                        int moonX = cellX + cellWidth / 2;
-                        int moonY = cellY + cellHeight / 2 + config.moonOffsetY;
-
-                        // Generate moon illumination
-                        svg.append(calendarRenderingService.generateMoonIlluminationSVG(approximateDate, moonX, moonY,
-                                config.latitude, config.longitude, config));
-
-                        // If there's a holiday, display it inside the moon
-                        if (holidayName != null) {
-                            // Wrap text if too long
-                            drawWrappedTextInMoon(svg, holidayName, moonX, moonY, config.moonSize);
-                        }
-                    } else if (holidayName != null) {
-                        // Show holiday text without moon
-                        svg.append(String.format(
-                                "<text x=\"%d\" y=\"%d\" class=\"holiday-text\"" + " font-size=\"8\">%s</text>%n",
-                                cellX + cellWidth / 2, cellY + cellHeight - 10,
-                                holidayName.length() > 10 ? holidayName.substring(0, 10) : holidayName));
-                    }
-                } else {
-                    // Day doesn't exist in this month - draw empty cell with light background
-                    if (config.showGrid) {
-                        svg.append(String.format(
-                                "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\""
-                                        + " fill=\"#f9f9f9\" stroke=\"#eee\"" + " stroke-width=\"0.5\"/>%n",
-                                cellX, cellY, cellWidth, cellHeight));
-                    }
-                }
-            }
+    /** Append a populated day cell (background, grid, day number, moon, holiday). */
+    private void appendActiveDayCell(StringBuilder svg, HebrewCalendarConfig config, int month, int day,
+            Map<String, String> holidays, CellRect cell) {
+        // Check if this is Shabbat (simplified - every 7th day starting from Saturday)
+        // In reality, this would need proper Hebrew date to day-of-week conversion
+        boolean isShabbat = (day % 7) == 0;
+        if (isShabbat && config.highlightWeekends) {
+            svg.append(String.format("<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"" + " class=\"shabbat-bg\"/>%n",
+                    cell.x(), cell.y(), cell.width(), cell.height()));
         }
 
-        // Close SVG
-        svg.append("</svg>");
+        if (config.showGrid) {
+            String pdfSafeColor = CalendarRenderingService.convertColorForPDF("rgba(255, 255, 255, 0)");
+            svg.append(String.format(
+                    "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\"" + " class=\"grid-line\" fill=\"%s\"/>%n",
+                    cell.x(), cell.y(), cell.width(), cell.height(), pdfSafeColor));
+        }
 
-        return svg.toString();
+        if (config.showDayNumbers) {
+            svg.append(
+                    String.format("<text x=\"%d\" y=\"%d\" class=\"day-text\"" + " text-anchor=\"middle\">%d</text>%n",
+                            cell.x() + cell.width() / 2, cell.y() + 15, day));
+        }
+
+        String holidayName = holidays.get(month + "-" + day);
+        appendMoonOrHoliday(svg, config, month, day, holidayName, cell);
+    }
+
+    /** Append moon illumination (with optional holiday text inside) or plain holiday text. */
+    private void appendMoonOrHoliday(StringBuilder svg, HebrewCalendarConfig config, int month, int day,
+            String holidayName, CellRect cell) {
+        boolean illuminationMode = "illumination".equals(config.moonDisplayMode);
+        if (illuminationMode) {
+            // Calculate moon illumination for this day
+            // This is simplified - in reality would need Hebrew to Gregorian date conversion
+            LocalDate approximateDate = hebrewToGregorian(config.hebrewYear, month, day);
+            int moonX = cell.x() + cell.width() / 2;
+            int moonY = cell.y() + cell.height() / 2 + config.moonOffsetY;
+
+            svg.append(calendarRenderingService.generateMoonIlluminationSVG(approximateDate, moonX, moonY,
+                    config.latitude, config.longitude, config));
+
+            if (holidayName != null) {
+                drawWrappedTextInMoon(svg, holidayName, moonX, moonY, config.moonSize);
+            }
+            return;
+        }
+
+        if (holidayName != null) {
+            String displayName = holidayName.length() > 10 ? holidayName.substring(0, 10) : holidayName;
+            svg.append(String.format("<text x=\"%d\" y=\"%d\" class=\"holiday-text\"" + " font-size=\"8\">%s</text>%n",
+                    cell.x() + cell.width() / 2, cell.y() + cell.height() - 10, displayName));
+        }
     }
 
     /** Draw wrapped text inside moon circle */

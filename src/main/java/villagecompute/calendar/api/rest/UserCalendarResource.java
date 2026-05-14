@@ -105,37 +105,62 @@ public class UserCalendarResource {
                 () -> new WebApplicationException(ErrorMessages.USER_NOT_FOUND, Response.Status.UNAUTHORIZED));
 
         UserCalendar calendar;
-
         if (request.id != null) {
-            // Update existing calendar
+            Response errorResponse = findExistingCalendarForUser(request.id, user);
+            if (errorResponse != null) {
+                return errorResponse;
+            }
             calendar = UserCalendar.findById(request.id);
-            if (calendar == null) {
-                return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of(ErrorMessages.CALENDAR_NOT_FOUND))
-                        .build();
-            }
-
-            // Verify ownership
-            if (!calendar.user.id.equals(user.id)) {
-                return Response.status(Response.Status.FORBIDDEN)
-                        .entity(ErrorType.of(ErrorMessages.NOT_AUTHORIZED_UPDATE)).build();
-            }
         } else {
-            // Create new calendar
-            calendar = new UserCalendar();
-            calendar.user = user;
-            calendar.isPublic = false; // User calendars are private by default
-            // Set default year
-            calendar.year = java.time.LocalDate.now().getYear();
+            calendar = createNewCalendar(user);
         }
 
-        // Update fields
+        applyRequestUpdates(calendar, request);
+        generateSvgIfNeeded(calendar);
+
+        calendar.persist();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", calendar.id);
+        response.put("name", calendar.name);
+        response.put("success", true);
+
+        return Response.ok(response).build();
+    }
+
+    /**
+     * Validate that the existing calendar exists and is owned by the user. Returns an error Response if validation
+     * fails, or null if validation passes.
+     */
+    private Response findExistingCalendarForUser(UUID id, CalendarUser user) {
+        UserCalendar calendar = UserCalendar.findById(id);
+        if (calendar == null) {
+            return Response.status(Response.Status.NOT_FOUND).entity(ErrorType.of(ErrorMessages.CALENDAR_NOT_FOUND))
+                    .build();
+        }
+        if (!calendar.user.id.equals(user.id)) {
+            return Response.status(Response.Status.FORBIDDEN).entity(ErrorType.of(ErrorMessages.NOT_AUTHORIZED_UPDATE))
+                    .build();
+        }
+        return null;
+    }
+
+    /** Create a new UserCalendar with default values. */
+    private UserCalendar createNewCalendar(CalendarUser user) {
+        UserCalendar calendar = new UserCalendar();
+        calendar.user = user;
+        calendar.isPublic = false; // User calendars are private by default
+        calendar.year = java.time.LocalDate.now().getYear();
+        return calendar;
+    }
+
+    /** Apply non-null fields from the request onto the calendar. */
+    private void applyRequestUpdates(UserCalendar calendar, SaveCalendarRequest request) {
         if (request.name != null) {
             calendar.name = request.name;
         }
         if (request.configuration != null) {
             calendar.configuration = request.configuration;
-
-            // Extract year from configuration if present
             if (request.configuration.has("year")) {
                 calendar.year = request.configuration.get("year").asInt();
             }
@@ -149,26 +174,20 @@ public class UserCalendarResource {
                 calendar.template = template;
             }
         }
+    }
 
-        // Generate SVG if not provided and we have configuration
-        if (calendar.generatedSvg == null && calendar.configuration != null) {
-            try {
-                String configJson = objectMapper.writeValueAsString(calendar.configuration);
-                CalendarConfigType config = objectMapper.readValue(configJson, CalendarConfigType.class);
-                calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
-            } catch (Exception e) {
-                Log.error("Error generating calendar SVG", e);
-            }
+    /** Generate an SVG for the calendar if one is not already present and we have a configuration. */
+    private void generateSvgIfNeeded(UserCalendar calendar) {
+        if (calendar.generatedSvg != null || calendar.configuration == null) {
+            return;
         }
-
-        calendar.persist();
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", calendar.id);
-        response.put("name", calendar.name);
-        response.put("success", true);
-
-        return Response.ok(response).build();
+        try {
+            String configJson = objectMapper.writeValueAsString(calendar.configuration);
+            CalendarConfigType config = objectMapper.readValue(configJson, CalendarConfigType.class);
+            calendar.generatedSvg = calendarRenderingService.generateCalendarSVG(config);
+        } catch (Exception e) {
+            Log.error("Error generating calendar SVG", e);
+        }
     }
 
     /** Get preview SVG for a calendar */

@@ -18,25 +18,14 @@ public class CartItemType {
     public String configuration;
 
     public CartItemType() {
-    }
-
-    public CartItemType(String id, String generatorType, String description, Integer quantity, Double unitPrice,
-            Double lineTotal, String productCode, String configuration, List<AssetType> assets) {
-        this.id = id;
-        this.generatorType = generatorType;
-        this.description = description;
-        this.quantity = quantity;
-        this.unitPrice = unitPrice;
-        this.lineTotal = lineTotal;
-        this.productCode = productCode;
-        this.configuration = configuration;
-        this.assets = assets;
+        // intentionally empty — default constructor required by JSON/GraphQL deserialization
     }
 
     /** Create a CartItemType from the entity. */
     public static CartItemType fromEntity(villagecompute.calendar.data.models.CartItem entity) {
-        if (entity == null)
+        if (entity == null) {
             return null;
+        }
 
         CartItemType item = new CartItemType();
         item.id = entity.id.toString();

@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -15,6 +16,7 @@ import jakarta.transaction.Transactional;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
@@ -79,6 +81,9 @@ public class PaymentService {
 
     @Inject
     DelayedJobService delayedJobService;
+
+    @Inject
+    ObjectMapper objectMapper;
 
     @PostConstruct
     void init() {
@@ -651,26 +656,9 @@ public class PaymentService {
         String sessionId = session.getId();
         LOG.infof("Processing checkout.session.completed for session: %s", sessionId);
 
-        Map<String, String> metadata = session.getMetadata();
-        String orderId = metadata != null ? metadata.get(METADATA_ORDER_ID) : null;
-
-        if (orderId == null) {
-            LOG.warnf("No orderId in session metadata for session: %s", sessionId);
-            return false;
-        }
-
-        // Find the order
-        java.util.UUID orderUuid;
-        try {
-            orderUuid = java.util.UUID.fromString(orderId);
-        } catch (IllegalArgumentException e) {
-            LOG.errorf("Invalid orderId format in session %s: %s", sessionId, orderId);
-            return false;
-        }
-        Optional<CalendarOrder> orderOpt = orderService.getOrderById(orderUuid);
+        Optional<CalendarOrder> orderOpt = resolveOrderFromSession(session);
         if (orderOpt.isEmpty()) {
-            LOG.warnf("Order not found for session %s, orderId: %s", sessionId, orderId);
-            throw new IllegalStateException("Order not found for session: " + sessionId);
+            return false;
         }
 
         CalendarOrder order = orderOpt.get();
@@ -686,96 +674,155 @@ public class PaymentService {
         order.paidAt = Instant.now();
         order.stripePaymentIntentId = session.getPaymentIntent();
 
-        // Update totals from Stripe session (which includes shipping and tax)
+        applyOrderTotalsFromSession(order, session);
+        LOG.infof("Updated order totals from Stripe: subtotal=$%.2f, shipping=$%.2f, tax=$%.2f," + " total=$%.2f",
+                order.subtotal, order.shippingCost, order.taxAmount, order.totalPrice);
+
+        applyCustomerEmailFromSession(order, session);
+        applyShippingAddressFromSession(order, session);
+        appendPaymentNote(order, sessionId);
+
+        order.persist();
+        LOG.infof("Order %s marked as PAID via Checkout Session", order.id);
+
+        enqueueOrderConfirmationEmail(order);
+
+        return true;
+    }
+
+    /**
+     * Resolve a CalendarOrder from a Stripe Session's metadata. Returns empty Optional when the orderId is missing or
+     * malformed (caller should treat as a no-op). Throws {@link IllegalStateException} when the orderId is well-formed
+     * but no matching order exists.
+     */
+    private Optional<CalendarOrder> resolveOrderFromSession(Session session) {
+        String sessionId = session.getId();
+        Map<String, String> metadata = session.getMetadata();
+        String orderId = metadata != null ? metadata.get(METADATA_ORDER_ID) : null;
+
+        if (orderId == null) {
+            LOG.warnf("No orderId in session metadata for session: %s", sessionId);
+            return Optional.empty();
+        }
+
+        UUID orderUuid;
+        try {
+            orderUuid = UUID.fromString(orderId);
+        } catch (IllegalArgumentException e) {
+            LOG.errorf("Invalid orderId format in session %s: %s", sessionId, orderId);
+            return Optional.empty();
+        }
+
+        Optional<CalendarOrder> orderOpt = orderService.getOrderById(orderUuid);
+        if (orderOpt.isEmpty()) {
+            LOG.warnf("Order not found for session %s, orderId: %s", sessionId, orderId);
+            throw new IllegalStateException("Order not found for session: " + sessionId);
+        }
+        return orderOpt;
+    }
+
+    /** Update the order's monetary totals (total, subtotal, shipping, tax) from the Stripe session amounts. */
+    private void applyOrderTotalsFromSession(CalendarOrder order, Session session) {
         if (session.getAmountTotal() != null) {
             order.totalPrice = BigDecimal.valueOf(session.getAmountTotal()).divide(BigDecimal.valueOf(100));
         }
         if (session.getAmountSubtotal() != null) {
             order.subtotal = BigDecimal.valueOf(session.getAmountSubtotal()).divide(BigDecimal.valueOf(100));
         }
-        if (session.getTotalDetails() != null) {
-            if (session.getTotalDetails().getAmountShipping() != null) {
-                order.shippingCost = BigDecimal.valueOf(session.getTotalDetails().getAmountShipping())
-                        .divide(BigDecimal.valueOf(100));
-            }
-            if (session.getTotalDetails().getAmountTax() != null) {
-                order.taxAmount = BigDecimal.valueOf(session.getTotalDetails().getAmountTax())
-                        .divide(BigDecimal.valueOf(100));
-            }
+
+        Session.TotalDetails totalDetails = session.getTotalDetails();
+        if (totalDetails == null) {
+            return;
+        }
+        if (totalDetails.getAmountShipping() != null) {
+            order.shippingCost = BigDecimal.valueOf(totalDetails.getAmountShipping()).divide(BigDecimal.valueOf(100));
+        }
+        if (totalDetails.getAmountTax() != null) {
+            order.taxAmount = BigDecimal.valueOf(totalDetails.getAmountTax()).divide(BigDecimal.valueOf(100));
+        }
+    }
+
+    /**
+     * Capture the customer email from a Stripe session. Prefers session.customerEmail and falls back to
+     * customerDetails.email when the primary value is missing or empty.
+     */
+    private void applyCustomerEmailFromSession(CalendarOrder order, Session session) {
+        String primary = session.getCustomerEmail();
+        if (primary != null && !primary.isEmpty()) {
+            order.customerEmail = primary;
+            LOG.infof("Set customer email for order %s: %s", order.id, order.customerEmail);
+            return;
         }
 
-        LOG.infof("Updated order totals from Stripe: subtotal=$%.2f, shipping=$%.2f, tax=$%.2f," + " total=$%.2f",
-                order.subtotal, order.shippingCost, order.taxAmount, order.totalPrice);
-
-        // Always capture customer email from session (required for confirmation emails)
-        if (session.getCustomerEmail() != null && !session.getCustomerEmail().isEmpty()) {
-            order.customerEmail = session.getCustomerEmail();
-            LOG.infof("Set customer email for order %s: %s", order.id, order.customerEmail);
-        } else if (session.getCustomerDetails() != null && session.getCustomerDetails().getEmail() != null) {
-            // Fallback to customer details email
-            order.customerEmail = session.getCustomerDetails().getEmail();
+        Session.CustomerDetails details = session.getCustomerDetails();
+        if (details != null && details.getEmail() != null) {
+            order.customerEmail = details.getEmail();
             LOG.infof("Set customer email from customer details for order %s: %s", order.id, order.customerEmail);
         }
+    }
 
-        // Store shipping address if collected (as JSON)
-        if (session.getCollectedInformation() != null
-                && session.getCollectedInformation().getShippingDetails() != null) {
-            var shipping = session.getCollectedInformation().getShippingDetails();
-            var address = shipping.getAddress();
-            if (address != null) {
-                // Store as JSON in the shippingAddress field
-                // Format to match frontend expectations (firstName/lastName, address1, etc.)
-                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                try {
-                    Map<String, Object> addressMap = new HashMap<>();
-
-                    // Parse name into firstName/lastName (Stripe only gives full name)
-                    String fullName = shipping.getName();
-                    if (fullName != null && !fullName.isEmpty()) {
-                        String[] nameParts = fullName.trim().split("\\s+", 2);
-                        addressMap.put("firstName", nameParts[0]);
-                        addressMap.put("lastName", nameParts.length > 1 ? nameParts[1] : "");
-                        addressMap.put("name", fullName); // Keep original for reference
-                    }
-
-                    // Map Stripe field names to frontend expected names
-                    addressMap.put("address1", address.getLine1());
-                    addressMap.put("line1", address.getLine1()); // Keep both formats
-                    addressMap.put("address2", address.getLine2());
-                    addressMap.put("line2", address.getLine2());
-                    addressMap.put("city", address.getCity());
-                    addressMap.put("state", address.getState());
-                    addressMap.put("postalCode", address.getPostalCode());
-                    addressMap.put("country", address.getCountry());
-
-                    order.shippingAddress = mapper.valueToTree(addressMap);
-
-                    LOG.infof("Stored shipping address for order %s: %s, %s %s", order.id, address.getLine1(),
-                            address.getCity(), address.getState());
-                } catch (Exception e) {
-                    LOG.warnf("Failed to store shipping address for order %s: %s", order.id, e.getMessage());
-                }
-            }
+    /** Persist any shipping address collected by the Stripe Checkout session as JSON on the order. */
+    private void applyShippingAddressFromSession(CalendarOrder order, Session session) {
+        if (session.getCollectedInformation() == null
+                || session.getCollectedInformation().getShippingDetails() == null) {
+            return;
+        }
+        var shipping = session.getCollectedInformation().getShippingDetails();
+        var address = shipping.getAddress();
+        if (address == null) {
+            return;
         }
 
-        // Add note
+        try {
+            Map<String, Object> addressMap = new HashMap<>();
+            addNameFields(addressMap, shipping.getName());
+            addressMap.put("address1", address.getLine1());
+            addressMap.put("line1", address.getLine1());
+            addressMap.put("address2", address.getLine2());
+            addressMap.put("line2", address.getLine2());
+            addressMap.put("city", address.getCity());
+            addressMap.put("state", address.getState());
+            addressMap.put("postalCode", address.getPostalCode());
+            addressMap.put("country", address.getCountry());
+
+            String addressJson = objectMapper.writeValueAsString(addressMap);
+            order.shippingAddress = objectMapper.readTree(addressJson);
+            LOG.infof("Stored shipping address for order %s: %s, %s %s", order.id, address.getLine1(),
+                    address.getCity(), address.getState());
+        } catch (Exception e) {
+            LOG.warnf("Failed to store shipping address for order %s: %s", order.id, e.getMessage());
+        }
+    }
+
+    /** Parse the Stripe-supplied full name into firstName/lastName fields and add them to the address map. */
+    private void addNameFields(Map<String, Object> addressMap, String fullName) {
+        if (fullName == null || fullName.isEmpty()) {
+            return;
+        }
+        String[] nameParts = fullName.trim().split("\\s+", 2);
+        addressMap.put("firstName", nameParts[0]);
+        addressMap.put("lastName", nameParts.length > 1 ? nameParts[1] : "");
+        addressMap.put("name", fullName);
+    }
+
+    /** Append a timestamped payment-succeeded note to the order, preserving any existing notes. */
+    private void appendPaymentNote(CalendarOrder order, String sessionId) {
         String timestamp = Instant.now().toString();
         String noteEntry = String.format("[%s] Payment succeeded via Checkout Session %s%n", timestamp, sessionId);
         order.notes = order.notes == null ? noteEntry : order.notes + noteEntry;
+    }
 
-        order.persist();
-        LOG.infof("Order %s marked as PAID via Checkout Session", order.id);
-
-        // Enqueue confirmation email
+    /**
+     * Enqueue the confirmation email job. Failures are logged but swallowed so the scheduled processor can pick the job
+     * up later.
+     */
+    private void enqueueOrderConfirmationEmail(CalendarOrder order) {
         try {
             delayedJobService.enqueue(OrderEmailJobHandler.class, order.id.toString());
             LOG.infof("Enqueued order confirmation email job for order %s", order.id);
         } catch (Exception e) {
-            // Log but don't fail - scheduled processor will pick it up
             LOG.error("Failed to enqueue email job for order " + order.id, e);
         }
-
-        return true;
     }
 
     /** Line item for checkout session */

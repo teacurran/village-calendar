@@ -32,7 +32,7 @@ import io.restassured.RestAssured;
 
 /** Tests for OrderResource - secure PDF download functionality */
 @QuarkusTest
-public class OrderResourceTest {
+class OrderResourceTest {
 
     @Inject
     OrderService orderService;

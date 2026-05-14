@@ -68,36 +68,14 @@ public class AssetResource {
             }
 
             // Priority 1: Check for assets (mazes and new-style items)
-            if (cartItem.assets != null && !cartItem.assets.isEmpty()) {
-                ItemAsset mainAsset = cartItem.getMainAsset();
-                if (mainAsset != null && mainAsset.svgContent != null) {
-                    return Response.ok(mainAsset.svgContent).header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.IMAGE_SVG)
-                            .header(MimeTypes.HEADER_CACHE_CONTROL, SVG_CACHE_CONTROL).build();
-                }
+            String svg = extractSvgFromAssets(cartItem);
+            if (svg == null) {
+                // Priority 2: Check for SVG in configuration (legacy calendars)
+                svg = extractSvgFromConfiguration(cartItem.configuration);
             }
 
-            // Priority 2: Check for SVG in configuration (legacy calendars)
-            if (cartItem.configuration != null) {
-                // Configuration is stored as a JSON string, try to extract svgContent
-                String config = cartItem.configuration;
-                if (config.contains("\"svgContent\"")) {
-                    // Simple extraction - find svgContent value
-                    int start = config.indexOf("\"svgContent\":\"");
-                    if (start >= 0) {
-                        start += "\"svgContent\":\"".length();
-                        int end = config.indexOf("\"", start);
-                        // Handle escaped quotes in SVG
-                        while (end > 0 && config.charAt(end - 1) == '\\') {
-                            end = config.indexOf("\"", end + 1);
-                        }
-                        if (end > start) {
-                            String svg = config.substring(start, end).replace("\\\"", "\"").replace("\\n", "\n")
-                                    .replace("\\\\", "\\");
-                            return Response.ok(svg).header(MimeTypes.HEADER_CONTENT_TYPE, MimeTypes.IMAGE_SVG)
-                                    .header(MimeTypes.HEADER_CACHE_CONTROL, SVG_CACHE_CONTROL).build();
-                        }
-                    }
-                }
+            if (svg != null) {
+                return svgResponse(svg, MimeTypes.IMAGE_SVG);
             }
 
             // No SVG available
@@ -112,5 +90,65 @@ public class AssetResource {
             LOG.errorf(e, "Error fetching cart item thumbnail %s", itemId);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Error fetching thumbnail").build();
         }
+    }
+
+    /**
+     * Returns the main asset's SVG content for the given cart item, or {@code null} if none is available.
+     */
+    private String extractSvgFromAssets(CartItem cartItem) {
+        if (cartItem.assets == null || cartItem.assets.isEmpty()) {
+            return null;
+        }
+        ItemAsset mainAsset = cartItem.getMainAsset();
+        if (mainAsset == null || mainAsset.svgContent == null) {
+            return null;
+        }
+        return mainAsset.svgContent;
+    }
+
+    /**
+     * Extracts an SVG value from a legacy JSON configuration string, or returns {@code null} when one cannot be found.
+     */
+    private String extractSvgFromConfiguration(String configuration) {
+        if (configuration == null || !configuration.contains("\"svgContent\"")) {
+            return null;
+        }
+        final String marker = "\"svgContent\":\"";
+        int start = configuration.indexOf(marker);
+        if (start < 0) {
+            return null;
+        }
+        start += marker.length();
+        int end = findUnescapedQuote(configuration, start);
+        if (end <= start) {
+            return null;
+        }
+        return decodeJsonStringValue(configuration.substring(start, end));
+    }
+
+    /**
+     * Finds the index of the next unescaped double-quote starting at {@code from}, or -1 if not found.
+     */
+    private int findUnescapedQuote(String source, int from) {
+        int end = source.indexOf('"', from);
+        while (end > 0 && source.charAt(end - 1) == '\\') {
+            end = source.indexOf('"', end + 1);
+        }
+        return end;
+    }
+
+    /**
+     * Decodes a JSON-escaped string value (handles escaped quotes, newlines, and backslashes).
+     */
+    private String decodeJsonStringValue(String value) {
+        return value.replace("\\\"", "\"").replace("\\n", "\n").replace("\\\\", "\\");
+    }
+
+    /**
+     * Builds a successful SVG response with the standard caching headers.
+     */
+    private Response svgResponse(String svg, String contentType) {
+        return Response.ok(svg).header(MimeTypes.HEADER_CONTENT_TYPE, contentType)
+                .header(MimeTypes.HEADER_CACHE_CONTROL, SVG_CACHE_CONTROL).build();
     }
 }

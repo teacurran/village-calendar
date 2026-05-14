@@ -18,6 +18,10 @@ import java.util.Map;
  */
 public class HebrewCalendarConverter {
 
+    private HebrewCalendarConverter() {
+        // Utility class — not instantiable.
+    }
+
     /** Data class representing a Hebrew date mapping. */
     public static class HebrewDateMapping {
         public LocalDate gregorianDate;

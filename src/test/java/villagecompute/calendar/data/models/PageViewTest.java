@@ -1,5 +1,7 @@
 package villagecompute.calendar.data.models;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Instant;
@@ -399,11 +401,8 @@ class PageViewTest {
         entityManager.flush();
         Instant originalUpdated = pageView.updated;
 
-        // Wait to ensure timestamp changes
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-        }
+        // Wait until wall clock advances past originalUpdated so the next persist gets a distinct timestamp
+        await().atMost(1, SECONDS).until(() -> Instant.now().isAfter(originalUpdated));
 
         // When
         pageView.path = "/updated/path";

@@ -17,28 +17,8 @@ public class OrderNumberGenerator {
     // Alphanumeric characters excluding confusing ones (0, O, I, l, 1)
     private static final String CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
-    /**
-     * Generate a unique, non-guessable order number. Uses cryptographically secure random characters.
-     *
-     * @param year
-     *            The year for the order (unused, kept for API compatibility)
-     * @param orderCountThisYear
-     *            The count of orders (unused, kept for API compatibility)
-     * @return Formatted order number (e.g., "VC-A3F2-K9M1")
-     */
-    public static String generateOrderNumber(int year, long orderCountThisYear) {
-        return generateSecureOrderNumber();
-    }
-
-    /**
-     * Generate order number using current year.
-     *
-     * @param orderCountThisYear
-     *            The count of orders (unused, kept for API compatibility)
-     * @return Formatted order number (e.g., "VC-A3F2-K9M1")
-     */
-    public static String generateOrderNumber(long orderCountThisYear) {
-        return generateSecureOrderNumber();
+    private OrderNumberGenerator() {
+        // Utility class — not instantiable.
     }
 
     /**

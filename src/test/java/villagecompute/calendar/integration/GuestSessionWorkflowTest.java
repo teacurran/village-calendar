@@ -1,6 +1,5 @@
 package villagecompute.calendar.integration;
 
-import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
@@ -34,7 +33,7 @@ import io.quarkus.test.junit.QuarkusTest;
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class GuestSessionWorkflowTest {
+class GuestSessionWorkflowTest {
 
     @Inject
     ObjectMapper objectMapper;

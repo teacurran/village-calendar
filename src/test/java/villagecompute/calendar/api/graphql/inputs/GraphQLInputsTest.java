@@ -329,9 +329,10 @@ class GraphQLInputsTest {
     }
 
     @Test
-    void testTemplateInput_ParameterizedConstructor_SetsAllFields() {
-        TemplateInput input = new TemplateInput("Nature Template", "A beautiful nature template",
-                "{\"theme\":\"nature\"}", "https://example.com/thumb.jpg", true, true, 1, "<svg></svg>");
+    void testTemplateInput_Builder_SetsAllFields() {
+        TemplateInput input = TemplateInput.builder().name("Nature Template").description("A beautiful nature template")
+                .configuration("{\"theme\":\"nature\"}").thumbnailUrl("https://example.com/thumb.jpg").isActive(true)
+                .isFeatured(true).displayOrder(1).previewSvg("<svg></svg>").build();
 
         assertEquals("Nature Template", input.name);
         assertEquals("A beautiful nature template", input.description);

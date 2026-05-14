@@ -553,55 +553,77 @@ public class CalendarRenderingService {
         String[] words = title.split(" ");
 
         if (words.length == 1 || title.length() <= 10) {
-            // Single word or short title - render on one line at bottom
-            int textY = cell.y() + cell.height() - 3;
-            String escapedTitle = escapeXml(title);
-            // Truncate only if single word is too long
-            String displayTitle = title.length() > 12 ? escapedTitle.substring(0, 11) + "…" : escapedTitle;
-            svg.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, textY, textSize, textColor, displayTitle));
-        } else {
-            // Multi-word title - wrap to two lines with baseline at bottom
-            StringBuilder line1 = new StringBuilder();
-            StringBuilder line2 = new StringBuilder();
-            int charCount = 0;
+            renderSingleLineEventTitle(svg, title, cell, textX, textSize, textColor);
+            return;
+        }
 
-            for (String word : words) {
-                if (charCount + word.length() <= 8 && line2.isEmpty()) {
-                    if (!line1.isEmpty()) {
-                        line1.append(" ");
-                    }
-                    line1.append(word);
-                    charCount += word.length() + 1;
-                } else {
-                    if (!line2.isEmpty()) {
-                        line2.append(" ");
-                    }
-                    line2.append(word);
-                }
+        renderWrappedEventTitle(svg, words, cell, textX, textSize, lineHeight, textColor);
+    }
+
+    /** Renders a short event title on a single line at the bottom of the cell. */
+    private void renderSingleLineEventTitle(StringBuilder svg, String title, Cell cell, int textX, int textSize,
+            String textColor) {
+        int textY = cell.y() + cell.height() - 3;
+        String escapedTitle = escapeXml(title);
+        // Truncate only if single word is too long
+        String displayTitle = title.length() > 12 ? escapedTitle.substring(0, 11) + "…" : escapedTitle;
+        svg.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, textY, textSize, textColor, displayTitle));
+    }
+
+    /** Renders a multi-word event title wrapped onto two lines with baseline at bottom. */
+    private void renderWrappedEventTitle(StringBuilder svg, String[] words, Cell cell, int textX, int textSize,
+            int lineHeight, String textColor) {
+        WrappedTitle wrapped = wrapEventTitleWords(words);
+        String line1 = wrapped.line1();
+        String line2 = truncateLine(wrapped.line2(), 12);
+
+        // Position: line2 at bottom, line1 above it
+        int line2Y = cell.y() + cell.height() - 3;
+        int line1Y = line2Y - lineHeight;
+
+        appendTitleLine(svg, line1, textX, line1Y, textSize, textColor);
+        appendTitleLine(svg, line2, textX, line2Y, textSize, textColor);
+    }
+
+    /** Distributes words between two lines, keeping the first line under 8 characters. */
+    private WrappedTitle wrapEventTitleWords(String[] words) {
+        StringBuilder line1 = new StringBuilder();
+        StringBuilder line2 = new StringBuilder();
+        int charCount = 0;
+
+        for (String word : words) {
+            boolean fitsOnLine1 = charCount + word.length() <= 8 && line2.isEmpty();
+            StringBuilder target = fitsOnLine1 ? line1 : line2;
+            if (!target.isEmpty()) {
+                target.append(" ");
             }
-
-            // Truncate line2 if too long
-            String line2Str = line2.toString();
-            if (line2Str.length() > 12) {
-                line2Str = line2Str.substring(0, 11) + "…";
-            }
-
-            // Position: line2 at bottom, line1 above it
-            int line2Y = cell.y() + cell.height() - 3;
-            int line1Y = line2Y - lineHeight;
-
-            // Render line 1 (top line)
-            if (!line1.isEmpty()) {
-                svg.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, line1Y, textSize, textColor,
-                        escapeXml(line1.toString())));
-            }
-
-            // Render line 2 (bottom line)
-            if (!line2Str.isEmpty()) {
-                svg.append(
-                        String.format(SVG_TEXT_SIMPLE_FORMAT, textX, line2Y, textSize, textColor, escapeXml(line2Str)));
+            target.append(word);
+            if (fitsOnLine1) {
+                charCount += word.length() + 1;
             }
         }
+
+        return new WrappedTitle(line1.toString(), line2.toString());
+    }
+
+    /** Truncates a line to maxLength characters with ellipsis if it exceeds the limit. */
+    private String truncateLine(String line, int maxLength) {
+        if (line.length() > maxLength) {
+            return line.substring(0, maxLength - 1) + "…";
+        }
+        return line;
+    }
+
+    /** Appends a single SVG text line if non-empty. */
+    private void appendTitleLine(StringBuilder svg, String line, int textX, int textY, int textSize, String textColor) {
+        if (line.isEmpty()) {
+            return;
+        }
+        svg.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, textY, textSize, textColor, escapeXml(line)));
+    }
+
+    /** Holds the result of distributing words between two title lines. */
+    private record WrappedTitle(String line1, String line2) {
     }
 
     /** Renders day number in cell */
@@ -661,6 +683,14 @@ public class CalendarRenderingService {
     // =============================================
 
     /**
+     * Context bundle for rendering a single day cell. Groups date, weekday/weekend metadata, locale, and config/theme
+     * to keep helper signatures small.
+     */
+    private record DayCellContext(LocalDate date, DayOfWeek dayOfWeek, boolean isWeekend, int monthNum,
+            int weekendIndex, Locale locale, CalendarConfigType config, ThemeColors theme) {
+    }
+
+    /**
      * Renders all content inside a day cell. Shared between grid and weekday-grid layouts. Both layouts calculate cell
      * position based on their own structure, then call this method to render identical day content.
      *
@@ -668,30 +698,19 @@ public class CalendarRenderingService {
      *            StringBuilder to append SVG content to
      * @param cell
      *            Cell position and dimensions
-     * @param date
-     *            The date being rendered
-     * @param dayOfWeek
-     *            Day of week for this date
-     * @param isWeekend
-     *            Whether this is a weekend day
-     * @param monthNum
-     *            Month number (1-12)
-     * @param weekendIndex
-     *            Weekend index for Vermont colors
-     * @param locale
-     *            Locale for day name formatting
-     * @param config
-     *            Calendar configuration
-     * @param theme
-     *            Theme colors
+     * @param ctx
+     *            Day cell rendering context (date, weekday metadata, locale, config, theme)
      */
-    private void renderDayCell(StringBuilder svg, Cell cell, LocalDate date, DayOfWeek dayOfWeek, boolean isWeekend,
-            int monthNum, int weekendIndex, Locale locale, CalendarConfigType config, ThemeColors theme) {
+    private void renderDayCell(StringBuilder svg, Cell cell, DayCellContext ctx) {
 
+        LocalDate date = ctx.date();
+        CalendarConfigType config = ctx.config();
+        ThemeColors theme = ctx.theme();
         int day = date.getDayOfMonth();
 
         // Cell background
-        String cellBackground = getCellBackgroundColor(config, date, monthNum, day, isWeekend, weekendIndex);
+        String cellBackground = getCellBackgroundColor(config, date, ctx.monthNum(), day, ctx.isWeekend(),
+                ctx.weekendIndex());
         renderCellBackground(svg, cell, cellBackground);
 
         // Moon display
@@ -727,7 +746,7 @@ public class CalendarRenderingService {
         renderDayNumber(svg, cell, day, isHoliday, isCustomDate, config, theme);
 
         // Day name
-        renderDayName(svg, cell, dayOfWeek, locale, config, theme);
+        renderDayName(svg, cell, ctx.dayOfWeek(), ctx.locale(), config, theme);
 
         // Grid lines
         renderGridLines(svg, cell, config);
@@ -939,12 +958,13 @@ public class CalendarRenderingService {
 
         // Generate each month row
         Locale locale = Locale.forLanguageTag(config.locale);
+        GridLayout layout = new GridLayout(cellWidth, cellHeight, headerHeight, weekdayAligned);
+        GridContext gridCtx = new GridContext(layout, locale, config, theme);
         for (int monthNum = 1; monthNum <= 12; monthNum++) {
-            generateMonthRow(svg, year, monthNum, cellWidth, cellHeight, headerHeight, weekdayAligned, locale, config,
-                    theme);
+            generateMonthRow(svg, year, monthNum, gridCtx);
         }
 
-        appendOuterBorder(svg, weekdayAligned, config, cellWidth, cellHeight, headerHeight);
+        appendOuterBorder(svg, layout, config);
         svg.append(SVG_CLOSE_TAG);
         return svg.toString();
     }
@@ -963,23 +983,37 @@ public class CalendarRenderingService {
                 + " sans-serif\" font-size=\"80px\" font-weight=\"bold\">%d</text>%n", yearFill, year));
     }
 
-    private void generateMonthRow(StringBuilder svg, int year, int monthNum, int cellWidth, int cellHeight,
-            int headerHeight, boolean weekdayAligned, Locale locale, CalendarConfigType config, ThemeColors theme) {
+    /**
+     * Layout dimensions shared by grid-rendering helpers.
+     */
+    private record GridLayout(int cellWidth, int cellHeight, int headerHeight, boolean weekdayAligned) {
+    }
+
+    /**
+     * Context bundle for grid-row helpers: layout + locale + config + theme.
+     */
+    private record GridContext(GridLayout layout, Locale locale, CalendarConfigType config, ThemeColors theme) {
+    }
+
+    private void generateMonthRow(StringBuilder svg, int year, int monthNum, GridContext ctx) {
+        GridLayout layout = ctx.layout();
+        CalendarConfigType config = ctx.config();
         YearMonth yearMonth = YearMonth.of(year, monthNum);
         int daysInMonth = yearMonth.lengthOfMonth();
-        int rowY = (monthNum - 1) * cellHeight + headerHeight;
+        int rowY = (monthNum - 1) * layout.cellHeight() + layout.headerHeight();
 
-        appendMonthLabel(svg, monthNum, cellWidth, cellHeight, rowY, weekdayAligned, locale, config, theme);
+        appendMonthLabel(svg, monthNum, rowY, ctx);
 
+        boolean weekdayAligned = layout.weekdayAligned();
         int startCol = weekdayAligned ? yearMonth.atDay(1).getDayOfWeek().getValue() % 7 : 0;
         int maxDay = weekdayAligned ? daysInMonth : 31;
         int weekendIndex = 0;
 
         for (int day = 1; day <= maxDay; day++) {
-            int cellX = calculateCellX(weekdayAligned, day, startCol, cellWidth);
+            int cellX = calculateCellX(weekdayAligned, day, startCol, layout.cellWidth());
             int cellY = rowY;
 
-            Cell cell = new Cell(cellX, cellY, cellWidth, cellHeight);
+            Cell cell = new Cell(cellX, cellY, layout.cellWidth(), layout.cellHeight());
 
             if (!weekdayAligned && day > daysInMonth) {
                 renderEmptyCell(svg, cell, config);
@@ -992,15 +1026,20 @@ public class CalendarRenderingService {
             if (isWeekend) {
                 weekendIndex++;
             }
-            renderDayCell(svg, cell, date, dayOfWeek, isWeekend, monthNum, weekendIndex - 1, locale, config, theme);
+            DayCellContext dayCtx = new DayCellContext(date, dayOfWeek, isWeekend, monthNum, weekendIndex - 1,
+                    ctx.locale(), config, ctx.theme());
+            renderDayCell(svg, cell, dayCtx);
         }
     }
 
-    private void appendMonthLabel(StringBuilder svg, int monthNum, int cellWidth, int cellHeight, int rowY,
-            boolean weekdayAligned, Locale locale, CalendarConfigType config, ThemeColors theme) {
-        String monthName = Month.of(monthNum).getDisplayName(TextStyle.SHORT, locale);
-        String monthFill = config.monthColor != null ? config.monthColor : theme.monthHeader;
-        if (weekdayAligned) {
+    private void appendMonthLabel(StringBuilder svg, int monthNum, int rowY, GridContext ctx) {
+        GridLayout layout = ctx.layout();
+        CalendarConfigType config = ctx.config();
+        int cellWidth = layout.cellWidth();
+        int cellHeight = layout.cellHeight();
+        String monthName = Month.of(monthNum).getDisplayName(TextStyle.SHORT, ctx.locale());
+        String monthFill = config.monthColor != null ? config.monthColor : ctx.theme().monthHeader;
+        if (layout.weekdayAligned()) {
             svg.append(renderMonthName(monthName, cellWidth - 5, rowY + cellHeight / 2 + 4, cellWidth,
                     config.rotateMonthNames, "end", monthFill));
         } else {
@@ -1017,13 +1056,13 @@ public class CalendarRenderingService {
         return day * cellWidth;
     }
 
-    private void appendOuterBorder(StringBuilder svg, boolean weekdayAligned, CalendarConfigType config, int cellWidth,
-            int cellHeight, int headerHeight) {
-        if (!weekdayAligned && config.showGrid) {
+    private void appendOuterBorder(StringBuilder svg, GridLayout layout, CalendarConfigType config) {
+        if (!layout.weekdayAligned() && config.showGrid) {
             svg.append(String.format(
                     "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" fill=\"none\""
                             + " stroke=\"%s\" stroke-width=\"2\"/>%n",
-                    cellWidth, headerHeight - 1, cellWidth * 31, cellHeight * 12 + 2, config.gridLineColor));
+                    layout.cellWidth(), layout.headerHeight() - 1, layout.cellWidth() * 31,
+                    layout.cellHeight() * 12 + 2, config.gridLineColor));
         }
     }
 
@@ -1367,27 +1406,18 @@ public class CalendarRenderingService {
     // Generate SVG for moon illumination visualization
     public String generateMoonIlluminationSVG(LocalDate date, int x, int y, double latitude, double longitude,
             CalendarConfigType config) {
-        StringBuilder svg = new StringBuilder();
-
         // Calculate moon illumination and position
         MoonIllumination illumination = calculateMoonIllumination(date);
         double phase = illumination.phase;
         double illuminatedFraction = illumination.fraction;
 
         // Calculate rotation angle based on observer's location
-        // If latitude and longitude are both 0 (no location selected), don't rotate
-        double rotationAngle = 0.0;
-        if (latitude != 0.0 || longitude != 0.0) {
-            // Calculate moon position for observer's location
-            MoonPosition position = calculateMoonPosition(date, latitude, longitude);
-            double parallacticAngle = position.parallacticAngle;
-
-            // The moon's terminator (shadow line) rotates based on the observer's latitude
-            rotationAngle = Math.toDegrees(parallacticAngle) * -1 - 45;
-        }
+        double rotationAngle = calculateMoonRotationAngle(date, latitude, longitude);
 
         // Moon circle radius from configuration
         int radius = config.moonSize;
+
+        StringBuilder svg = new StringBuilder();
 
         // Create a group for the moon with rotation
         svg.append(String.format("<g transform=\"translate(%d, %d) rotate(%.1f)\">%n", x, y, rotationAngle));
@@ -1398,37 +1428,7 @@ public class CalendarRenderingService {
         // Calculate the illuminated path
         // The moon phase determines which side is lit
         // phase: 0 = new moon, 0.25 = first quarter, 0.5 = full moon, 0.75 = last quarter
-
-        if (illuminatedFraction > 0 && illuminatedFraction < 1) {
-            // Create path for illuminated portion
-            boolean isWaxing = phase < 0.5;
-            boolean isRightSideLit = isWaxing;
-
-            // Calculate the ellipse width for the terminator (shadow line)
-            double ellipseWidth = Math.abs(Math.cos(phase * 2 * Math.PI)) * radius;
-
-            // For SVG arcs: sweep-flag determines clockwise (1) or counter-clockwise (0) direction
-            // We don't actually need sweepFlag for this moon rendering approach
-            // The terminator line is created by combining two arcs with different radii
-            String largeArcFlag = illuminatedFraction > 0.5 ? "1" : "0";
-
-            // Build the path
-            String path;
-            if (phase < 0.25 || phase > 0.75) {
-                // Crescent moon
-                path = String.format("M 0,-%d A %d,%d 0 %s,%s 0,%d A %.1f,%d 0 %s,%s 0,-%d", radius, radius, radius,
-                        largeArcFlag, isRightSideLit ? "1" : "0", radius, ellipseWidth, radius, largeArcFlag,
-                        isRightSideLit ? "0" : "1", radius);
-            } else {
-                // Gibbous moon
-                path = String.format("M 0,-%d A %d,%d 0 %s,%s 0,%d A %.1f,%d 0 %s,%s 0,-%d", radius, radius, radius,
-                        "1", isRightSideLit ? "1" : "0", radius, ellipseWidth, radius, "0", isRightSideLit ? "1" : "0",
-                        radius);
-            }
-
-            svg.append(String.format("<path d=\"%s\" fill=\"%s\"/>%n", path, config.moonLightColor));
-        }
-        // New moon (illuminatedFraction <= 0) is just the dark circle already drawn
+        appendIlluminatedMoonPath(svg, phase, illuminatedFraction, radius, config);
 
         // Border with configurable color and width
         svg.append(String.format("<circle r=\"%d\" fill=\"none\" stroke=\"%s\" stroke-width=\"%.1f\"/>%n", radius,
@@ -1437,6 +1437,56 @@ public class CalendarRenderingService {
         svg.append("</g>").append(System.lineSeparator());
 
         return svg.toString();
+    }
+
+    // Calculate rotation angle for moon terminator based on observer's location.
+    // If latitude and longitude are both 0 (no location selected), don't rotate.
+    private double calculateMoonRotationAngle(LocalDate date, double latitude, double longitude) {
+        if (latitude == 0.0 && longitude == 0.0) {
+            return 0.0;
+        }
+        // Calculate moon position for observer's location
+        MoonPosition position = calculateMoonPosition(date, latitude, longitude);
+        // The moon's terminator (shadow line) rotates based on the observer's latitude
+        return Math.toDegrees(position.parallacticAngle) * -1 - 45;
+    }
+
+    // Append the illuminated portion path for the moon, if any.
+    // New moon (illuminatedFraction <= 0) and full moon (illuminatedFraction >= 1)
+    // do not require an additional path on top of the dark background circle.
+    private void appendIlluminatedMoonPath(StringBuilder svg, double phase, double illuminatedFraction, int radius,
+            CalendarConfigType config) {
+        if (illuminatedFraction <= 0 || illuminatedFraction >= 1) {
+            return;
+        }
+
+        String path = buildMoonIlluminationPath(phase, illuminatedFraction, radius);
+        svg.append(String.format("<path d=\"%s\" fill=\"%s\"/>%n", path, config.moonLightColor));
+    }
+
+    // Build the SVG path string for the illuminated portion of the moon.
+    private String buildMoonIlluminationPath(double phase, double illuminatedFraction, int radius) {
+        // Waxing phases (phase < 0.5) light the right side
+        boolean isRightSideLit = phase < 0.5;
+        String rightSideFlag = isRightSideLit ? "1" : "0";
+        String oppositeSideFlag = isRightSideLit ? "0" : "1";
+
+        // Calculate the ellipse width for the terminator (shadow line)
+        double ellipseWidth = Math.abs(Math.cos(phase * 2 * Math.PI)) * radius;
+
+        // For SVG arcs: large-arc-flag determines whether the longer arc is drawn
+        String largeArcFlag = illuminatedFraction > 0.5 ? "1" : "0";
+
+        // The terminator line is created by combining two arcs with different radii
+        boolean isCrescent = phase < 0.25 || phase > 0.75;
+        if (isCrescent) {
+            // Crescent moon: both arcs use the large-arc flag, terminator sweeps opposite
+            return String.format("M 0,-%d A %d,%d 0 %s,%s 0,%d A %.1f,%d 0 %s,%s 0,-%d", radius, radius, radius,
+                    largeArcFlag, rightSideFlag, radius, ellipseWidth, radius, largeArcFlag, oppositeSideFlag, radius);
+        }
+        // Gibbous moon: outer arc uses large-arc flag "1", terminator uses sweep matching lit side
+        return String.format("M 0,-%d A %d,%d 0 %s,%s 0,%d A %.1f,%d 0 %s,%s 0,-%d", radius, radius, radius, "1",
+                rightSideFlag, radius, ellipseWidth, radius, "0", rightSideFlag, radius);
     }
 
     // Moon illumination data class
@@ -1569,65 +1619,99 @@ public class CalendarRenderingService {
 
         // Rainbow days themes
         if (theme.startsWith("rainbowDays")) {
-            int hue;
-            int saturation = 100;
-            int lightness = 90;
-
-            if ("rainbowDays1".equals(theme)) {
-                // Color by day of week
-                hue = date.getDayOfWeek().getValue() * 30;
-                lightness = 90;
-            } else if ("rainbowDays2".equals(theme)) {
-                // Color by day of month
-                hue = (int) ((dayNum / 30.0) * 360);
-                saturation = 100;
-                lightness = 80;
-            } else if ("rainbowDays3".equals(theme)) {
-                // Color by day with distance-based lightness
-                hue = (int) ((dayNum / 30.0) * 360);
-                // Calculate distance from corner (Dec 31)
-                double monthWeight = 3;
-                double distance = Math.sqrt(Math.pow(12 - monthNum * monthWeight, 2) + Math.pow(31d - dayNum, 2));
-                double maxDistance = Math.sqrt(Math.pow(12 * monthWeight, 2) + Math.pow(31, 2));
-                double normalizedDistance = distance / maxDistance;
-                int lightnessMin = 80;
-                int lightnessMax = 90;
-                lightness = (int) (lightnessMin + (1 - normalizedDistance) * (lightnessMax - lightnessMin));
-            } else {
-                // Default rainbow days
-                hue = (int) ((dayNum / 30.0) * 360);
-            }
-
-            return hslToHex(hue, saturation, lightness);
+            return getRainbowDaysColor(theme, date, monthNum, dayNum);
         }
 
         // Weekend-specific themes
         if (isWeekend) {
-            if ("rainbowWeekends".equals(theme)) {
-                int hue = (int) ((date.getDayOfMonth() / 30.0) * 360);
-                return hslToHex(hue, 100, 90);
-            }
-
-            // Check for themed weekend colors (vermont, lakeshore, sunset, forest)
-            String weekendColor = getWeekendThemeColor(theme, monthNum, weekendIndex);
+            String weekendColor = getWeekendBackgroundColor(config, date, monthNum, weekendIndex);
             if (weekendColor != null) {
                 return weekendColor;
-            }
-
-            if (config.highlightWeekends) {
-                // First check if user has specified a custom weekend color
-                if (config.weekendBgColor != null && !config.weekendBgColor.isEmpty()) {
-                    return config.weekendBgColor;
-                }
-                // Otherwise use theme default
-                ThemeColors themeColors = THEMES.get(config.theme);
-                if (themeColors != null && themeColors.weekendBackground != null) {
-                    return themeColors.weekendBackground;
-                }
             }
         }
 
         return "rgba(255, 255, 255, 0)"; // Transparent
+    }
+
+    /**
+     * Computes the background color for "rainbowDays" theme variants.
+     */
+    private static String getRainbowDaysColor(String theme, LocalDate date, int monthNum, int dayNum) {
+        int hue;
+        int saturation = 100;
+        int lightness = 90;
+
+        if ("rainbowDays1".equals(theme)) {
+            // Color by day of week
+            hue = date.getDayOfWeek().getValue() * 30;
+        } else if ("rainbowDays2".equals(theme)) {
+            // Color by day of month
+            hue = (int) ((dayNum / 30.0) * 360);
+            lightness = 80;
+        } else if ("rainbowDays3".equals(theme)) {
+            // Color by day with distance-based lightness
+            hue = (int) ((dayNum / 30.0) * 360);
+            lightness = computeRainbowDays3Lightness(monthNum, dayNum);
+        } else {
+            // Default rainbow days
+            hue = (int) ((dayNum / 30.0) * 360);
+        }
+
+        return hslToHex(hue, saturation, lightness);
+    }
+
+    /**
+     * Calculates lightness for the rainbowDays3 theme based on the cell's distance from the (Dec 31) corner.
+     */
+    private static int computeRainbowDays3Lightness(int monthNum, int dayNum) {
+        double monthWeight = 3;
+        double distance = Math.sqrt(Math.pow(12 - monthNum * monthWeight, 2) + Math.pow(31d - dayNum, 2));
+        double maxDistance = Math.sqrt(Math.pow(12 * monthWeight, 2) + Math.pow(31, 2));
+        double normalizedDistance = distance / maxDistance;
+        int lightnessMin = 80;
+        int lightnessMax = 90;
+        return (int) (lightnessMin + (1 - normalizedDistance) * (lightnessMax - lightnessMin));
+    }
+
+    /**
+     * Resolves the background color to use for a weekend cell. Returns null if no weekend-specific color applies.
+     */
+    private static String getWeekendBackgroundColor(CalendarConfigType config, LocalDate date, int monthNum,
+            int weekendIndex) {
+        String theme = config.theme;
+
+        if ("rainbowWeekends".equals(theme)) {
+            int hue = (int) ((date.getDayOfMonth() / 30.0) * 360);
+            return hslToHex(hue, 100, 90);
+        }
+
+        // Check for themed weekend colors (vermont, lakeshore, sunset, forest)
+        String themedColor = getWeekendThemeColor(theme, monthNum, weekendIndex);
+        if (themedColor != null) {
+            return themedColor;
+        }
+
+        if (!config.highlightWeekends) {
+            return null;
+        }
+
+        return resolveHighlightedWeekendColor(config);
+    }
+
+    /**
+     * Returns the configured/themed weekend highlight color, or null if none is available.
+     */
+    private static String resolveHighlightedWeekendColor(CalendarConfigType config) {
+        // First check if user has specified a custom weekend color
+        if (config.weekendBgColor != null && !config.weekendBgColor.isEmpty()) {
+            return config.weekendBgColor;
+        }
+        // Otherwise use theme default
+        ThemeColors themeColors = THEMES.get(config.theme);
+        if (themeColors != null && themeColors.weekendBackground != null) {
+            return themeColors.weekendBackground;
+        }
+        return null;
     }
 
     /**

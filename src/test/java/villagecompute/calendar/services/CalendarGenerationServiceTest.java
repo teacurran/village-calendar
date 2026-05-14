@@ -29,7 +29,7 @@ import villagecompute.calendar.types.CalendarConfigType;
  * Unit tests for CalendarGenerationService. Tests PDF generation pipeline with mocked dependencies.
  */
 @ExtendWith(MockitoExtension.class)
-public class CalendarGenerationServiceTest {
+class CalendarGenerationServiceTest {
 
     @InjectMocks
     CalendarGenerationService calendarGenerationService;
@@ -53,7 +53,7 @@ public class CalendarGenerationServiceTest {
     private CalendarUser testUser;
 
     @BeforeEach
-    public void setup() throws Exception {
+    void setup() throws Exception {
         // Inject objectMapper into the service manually (since @InjectMocks doesn't handle @Inject)
         java.lang.reflect.Field objectMapperField = CalendarGenerationService.class.getDeclaredField("objectMapper");
         objectMapperField.setAccessible(true);

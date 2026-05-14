@@ -1,6 +1,5 @@
 package villagecompute.calendar.integration;
 
-import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import jakarta.inject.Inject;
@@ -31,7 +30,7 @@ import io.quarkus.test.junit.QuarkusTest;
  */
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class TemplateWorkflowTest {
+class TemplateWorkflowTest {
 
     @Inject
     ObjectMapper objectMapper;

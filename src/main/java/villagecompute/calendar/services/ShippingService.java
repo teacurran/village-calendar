@@ -22,6 +22,7 @@ public class ShippingService {
 
     // Domestic shipping rate constants
     private static final String US_COUNTRY_CODE = "US";
+    private static final String FIELD_COUNTRY = "country";
 
     // Inject shipping rates from configuration
     @ConfigProperty(
@@ -72,13 +73,13 @@ public class ShippingService {
         JsonNode address = order.shippingAddress;
 
         // Validate that country field exists
-        if (!address.has("country") || address.get("country").isNull()) {
+        if (!address.has(FIELD_COUNTRY) || address.get(FIELD_COUNTRY).isNull()) {
             LOG.errorf("Order %s shipping address missing country field", order.id);
             throw new IllegalArgumentException("Country is required in shipping address");
         }
 
         // Extract and normalize country code
-        String country = address.get("country").asText("").trim().toUpperCase();
+        String country = address.get(FIELD_COUNTRY).asText("").trim().toUpperCase();
 
         if (country.isEmpty()) {
             LOG.errorf("Order %s has empty country code", order.id);
@@ -128,13 +129,13 @@ public class ShippingService {
         }
 
         // Validate that country field exists
-        if (!address.has("country") || address.get("country").isNull()) {
+        if (!address.has(FIELD_COUNTRY) || address.get(FIELD_COUNTRY).isNull()) {
             LOG.error("Shipping address missing country field");
             throw new IllegalArgumentException("Country is required in shipping address");
         }
 
         // Extract and normalize country code
-        String country = address.get("country").asText("").trim().toUpperCase();
+        String country = address.get(FIELD_COUNTRY).asText("").trim().toUpperCase();
 
         if (country.isEmpty()) {
             LOG.error("Country code is empty");

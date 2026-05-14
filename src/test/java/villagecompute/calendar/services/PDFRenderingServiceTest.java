@@ -18,7 +18,7 @@ import io.quarkus.test.junit.QuarkusTest;
  * xlink:href references which require proper namespace handling.
  */
 @QuarkusTest
-public class PDFRenderingServiceTest {
+class PDFRenderingServiceTest {
 
     @Inject
     PDFRenderingService pdfRenderingService;
@@ -30,7 +30,7 @@ public class PDFRenderingServiceTest {
     EmojiSvgService emojiSvgService;
 
     @Test
-    public void testBasicSvgToPdf() {
+    void testBasicSvgToPdf() {
         // Basic SVG without xlink references
         String basicSvg = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -48,7 +48,7 @@ public class PDFRenderingServiceTest {
     }
 
     @Test
-    public void testSvgWithXlinkHref() {
+    void testSvgWithXlinkHref() {
         // SVG with xlink:href references (similar to what some Noto emojis use)
         // Uses a symbol element that can be referenced via <use>
         String svgWithXlink = """
@@ -75,7 +75,7 @@ public class PDFRenderingServiceTest {
     }
 
     @Test
-    public void testCalendarWithSecularHolidays() {
+    void testCalendarWithSecularHolidays() {
         // Generate a calendar with secular holidays (which may use emojis with xlink:href)
         CalendarConfigType config = new CalendarConfigType();
         config.year = 2025;
@@ -99,7 +99,7 @@ public class PDFRenderingServiceTest {
     }
 
     @Test
-    public void testEmojiSvgWithXlinkInCalendar() {
+    void testEmojiSvgWithXlinkInCalendar() {
         // Test specific emojis that use xlink:href (like the dancing woman emoji)
         // emoji_u1f483.svg is known to use xlink:href
         if (emojiSvgService.hasEmojiSvg("💃")) {
@@ -123,7 +123,7 @@ public class PDFRenderingServiceTest {
     }
 
     @Test
-    public void testAllEmojisWithXlinkReferences() {
+    void testAllEmojisWithXlinkReferences() {
         // Test that all emojis that use xlink:href can be rendered to PDF
         // These emojis are known to use xlink:href based on grep results
         String[] emojisWithXlink = {"🎃", "💃", "🙏", "🤲"};
@@ -152,7 +152,7 @@ public class PDFRenderingServiceTest {
     }
 
     @Test
-    public void testMonochromeCalendarWithSecularHolidays() {
+    void testMonochromeCalendarWithSecularHolidays() {
         // Test monochrome mode with secular holidays
         CalendarConfigType config = new CalendarConfigType();
         config.year = 2025;
@@ -175,7 +175,7 @@ public class PDFRenderingServiceTest {
     }
 
     @Test
-    public void testComplexCalendarWithAllFeatures() {
+    void testComplexCalendarWithAllFeatures() {
         // Test a complex calendar with all features that could cause CSS URI reference issues
         CalendarConfigType config = new CalendarConfigType();
         config.year = 2025;
@@ -228,7 +228,7 @@ public class PDFRenderingServiceTest {
     }
 
     @Test
-    public void testEmojiFontConsistency() {
+    void testEmojiFontConsistency() {
         // Test that emoji font setting is properly applied in both SVG generation and PDF
         // conversion
         CalendarConfigType config = new CalendarConfigType();

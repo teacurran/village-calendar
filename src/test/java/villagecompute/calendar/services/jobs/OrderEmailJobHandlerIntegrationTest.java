@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import villagecompute.calendar.data.models.*;
 import villagecompute.calendar.services.OrderService;
+import villagecompute.calendar.types.CheckoutRequestType;
 
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -81,15 +82,16 @@ class OrderEmailJobHandlerIntegrationTest {
     @Transactional
     void testOrderConfirmationTemplate_ProcessCheckoutOrder_WithItems() {
         // Given - Simulate a real checkout with items (the modern order flow)
-        String orderNumber = orderService.processCheckout("pi_test_checkout_" + System.currentTimeMillis(),
-                "customer@example.com", createShippingAddressMap(), createBillingAddressMap(),
-                List.of(Map.of("templateName", "Classic Calendar", "year", 2025, "quantity", 2, "unitPrice", 29.99,
-                        "lineTotal", 59.98, "configuration", "{\"productType\": \"print\"}")),
-                59.98, // subtotal
-                5.99, // shipping
-                0.0, // tax
-                65.97 // total
-        );
+        String orderNumber = orderService
+                .processCheckout(new CheckoutRequestType("pi_test_checkout_" + System.currentTimeMillis(),
+                        "customer@example.com", createShippingAddressMap(), createBillingAddressMap(),
+                        List.of(Map.of("templateName", "Classic Calendar", "year", 2025, "quantity", 2, "unitPrice",
+                                29.99, "lineTotal", 59.98, "configuration", "{\"productType\": \"print\"}")),
+                        59.98, // subtotal
+                        5.99, // shipping
+                        0.0, // tax
+                        65.97 // total
+                ));
 
         // Find the order that was created
         CalendarOrder order = CalendarOrder.find("orderNumber", orderNumber).firstResult();
@@ -122,13 +124,14 @@ class OrderEmailJobHandlerIntegrationTest {
     @Transactional
     void testAdminNotificationTemplate_ProcessCheckoutOrder_WithItems() {
         // Given - Simulate a real checkout with items
-        String orderNumber = orderService.processCheckout("pi_test_admin_" + System.currentTimeMillis(),
-                "admin-test@example.com", createShippingAddressMap(), null, // no billing address
-                List.of(Map.of("templateName", "Modern Calendar", "year", 2025, "quantity", 1, "unitPrice", 34.99,
-                        "lineTotal", 34.99),
-                        Map.of("templateName", "PDF Calendar", "year", 2025, "quantity", 1, "unitPrice", 9.99,
-                                "lineTotal", 9.99, "configuration", "{\"productType\": \"pdf\"}")),
-                44.98, 5.99, 0.0, 50.97);
+        String orderNumber = orderService
+                .processCheckout(new CheckoutRequestType("pi_test_admin_" + System.currentTimeMillis(),
+                        "admin-test@example.com", createShippingAddressMap(), null, // no billing address
+                        List.of(Map.of("templateName", "Modern Calendar", "year", 2025, "quantity", 1, "unitPrice",
+                                34.99, "lineTotal", 34.99),
+                                Map.of("templateName", "PDF Calendar", "year", 2025, "quantity", 1, "unitPrice", 9.99,
+                                        "lineTotal", 9.99, "configuration", "{\"productType\": \"pdf\"}")),
+                        44.98, 5.99, 0.0, 50.97));
 
         CalendarOrder order = CalendarOrder.find("orderNumber", orderNumber).firstResult();
         assertNotNull(order, "Order should have been created");
@@ -157,10 +160,11 @@ class OrderEmailJobHandlerIntegrationTest {
     void testOrderConfirmationTemplate_GuestCheckout_NoUser() {
         // Given - Guest checkout (user will be created but order.user may be null in some
         // scenarios)
-        String orderNumber = orderService.processCheckout("pi_test_guest_" + System.currentTimeMillis(),
-                "guest@example.com", createShippingAddressMap(), null, List.of(Map.of("templateName", "Guest Calendar",
-                        "year", 2025, "quantity", 1, "unitPrice", 29.99, "lineTotal", 29.99)),
-                29.99, 5.99, 0.0, 35.98);
+        String orderNumber = orderService
+                .processCheckout(new CheckoutRequestType("pi_test_guest_" + System.currentTimeMillis(),
+                        "guest@example.com", createShippingAddressMap(), null, List.of(Map.of("templateName",
+                                "Guest Calendar", "year", 2025, "quantity", 1, "unitPrice", 29.99, "lineTotal", 29.99)),
+                        29.99, 5.99, 0.0, 35.98));
 
         CalendarOrder order = CalendarOrder.find("orderNumber", orderNumber).firstResult();
         assertNotNull(order, "Order should have been created");

@@ -27,6 +27,9 @@ public class TemplateService {
     private static final Logger LOG = Logger.getLogger(TemplateService.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    private static final String TEMPLATE_NOT_FOUND_FORMAT = "Template not found: %s";
+    private static final String TEMPLATE_NOT_FOUND_MESSAGE = "Template not found";
+
     @Inject
     CalendarTemplateRepository templateRepository;
 
@@ -96,27 +99,77 @@ public class TemplateService {
         // Find existing template
         CalendarTemplate template = CalendarTemplate.<CalendarTemplate>findByIdOptional(id).orElse(null);
         if (template == null) {
-            LOG.errorf("Template not found: %s", id);
-            throw new IllegalArgumentException("Template not found");
+            LOG.errorf(TEMPLATE_NOT_FOUND_FORMAT, id);
+            throw new IllegalArgumentException(TEMPLATE_NOT_FOUND_MESSAGE);
         }
 
         // Parse and validate configuration if provided
-        JsonNode configNode = null;
-        if (input.configuration != null && !input.configuration.isBlank()) {
-            configNode = parseConfiguration(input.configuration);
-            validateTemplateConfiguration(configNode);
-        }
+        JsonNode configNode = parseAndValidateConfigurationIfProvided(input.configuration);
 
         // Check for name conflicts (if name is being changed)
-        if (input.name != null && !input.name.equals(template.name)) {
-            Optional<CalendarTemplate> existing = templateRepository.findByName(input.name);
-            if (existing.isPresent() && !existing.get().id.equals(id)) {
-                LOG.errorf("Template with name '%s' already exists", input.name);
-                throw new IllegalArgumentException("Template with this name already exists");
-            }
-        }
+        validateNameConflict(id, input.name, template.name);
 
         // Apply updates
+        applyTemplateUpdates(template, input, configNode);
+
+        // Persist changes
+        template.persist();
+
+        LOG.infof("Updated template: ID=%s, name=%s", template.id, template.name);
+
+        return template;
+    }
+
+    /**
+     * Parse and validate configuration JSON if a non-blank value was provided.
+     *
+     * @param configurationJson
+     *            Optional JSON configuration string
+     * @return Parsed JsonNode, or null when no configuration was provided
+     */
+    private JsonNode parseAndValidateConfigurationIfProvided(String configurationJson) {
+        if (configurationJson == null || configurationJson.isBlank()) {
+            return null;
+        }
+        JsonNode configNode = parseConfiguration(configurationJson);
+        validateTemplateConfiguration(configNode);
+        return configNode;
+    }
+
+    /**
+     * Ensure the requested new name does not collide with another template's name.
+     *
+     * @param id
+     *            ID of the template being updated
+     * @param newName
+     *            Requested new name (may be null when name is not changing)
+     * @param currentName
+     *            Current name of the template being updated
+     * @throws IllegalArgumentException
+     *             if another template already uses the requested name
+     */
+    private void validateNameConflict(UUID id, String newName, String currentName) {
+        if (newName == null || newName.equals(currentName)) {
+            return;
+        }
+        Optional<CalendarTemplate> existing = templateRepository.findByName(newName);
+        if (existing.isPresent() && !existing.get().id.equals(id)) {
+            LOG.errorf("Template with name '%s' already exists", newName);
+            throw new IllegalArgumentException("Template with this name already exists");
+        }
+    }
+
+    /**
+     * Apply non-null fields from the input onto the template entity.
+     *
+     * @param template
+     *            Template entity to mutate
+     * @param input
+     *            Update payload
+     * @param configNode
+     *            Parsed configuration JsonNode, or null when configuration is unchanged
+     */
+    private void applyTemplateUpdates(CalendarTemplate template, TemplateInput input, JsonNode configNode) {
         if (input.name != null) {
             template.name = input.name;
         }
@@ -141,13 +194,6 @@ public class TemplateService {
         if (input.previewSvg != null) {
             template.previewSvg = input.previewSvg;
         }
-
-        // Persist changes
-        template.persist();
-
-        LOG.infof("Updated template: ID=%s, name=%s", template.id, template.name);
-
-        return template;
     }
 
     /**
@@ -166,8 +212,8 @@ public class TemplateService {
         // Find existing template
         CalendarTemplate template = CalendarTemplate.<CalendarTemplate>findByIdOptional(id).orElse(null);
         if (template == null) {
-            LOG.errorf("Template not found: %s", id);
-            throw new IllegalArgumentException("Template not found");
+            LOG.errorf(TEMPLATE_NOT_FOUND_FORMAT, id);
+            throw new IllegalArgumentException(TEMPLATE_NOT_FOUND_MESSAGE);
         }
 
         // Soft delete by setting isActive=false
@@ -198,8 +244,8 @@ public class TemplateService {
         // Find existing template
         CalendarTemplate template = CalendarTemplate.<CalendarTemplate>findByIdOptional(templateId).orElse(null);
         if (template == null) {
-            LOG.errorf("Template not found: %s", templateId);
-            throw new IllegalArgumentException("Template not found");
+            LOG.errorf(TEMPLATE_NOT_FOUND_FORMAT, templateId);
+            throw new IllegalArgumentException(TEMPLATE_NOT_FOUND_MESSAGE);
         }
 
         // Generate unique filename
