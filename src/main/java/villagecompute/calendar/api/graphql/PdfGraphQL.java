@@ -49,10 +49,6 @@ public class PdfGraphQL {
         LOG.infof("Query pdfJob called with id=%s (STUB IMPLEMENTATION)", id);
 
         // TODO: Implement actual PDF job retrieval
-        // Example implementation:
-        // UUID jobId = UUID.fromString(id);
-        // return PdfJob.findById(jobId);
-
         return null;
     }
 

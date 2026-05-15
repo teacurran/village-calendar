@@ -266,9 +266,8 @@ class PaymentWorkflowTest {
         // Note: Without JWT authentication in tests, we can't easily test authorization
         // at GraphQL layer. This test documents the expected behavior.
         // In production, testUser2 trying to cancel testUser's order would fail with 401/403.
-
-        // The authorization check happens in OrderService.cancelOrder() method
-        // which checks: if (!isAdmin && !order.user.id.equals(userId))
+        // The authorization check happens in OrderService.cancelOrder() method,
+        // which verifies the user is an admin or owns the order before allowing cancellation.
 
         // For now, verify order exists and belongs to testUser
         CalendarOrder verifyOrder = CalendarOrder.<CalendarOrder>findById(order.id);
