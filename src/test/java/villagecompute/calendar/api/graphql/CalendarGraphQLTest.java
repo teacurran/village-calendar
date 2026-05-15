@@ -5,11 +5,15 @@ import static org.hamcrest.Matchers.*;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -150,98 +154,235 @@ class CalendarGraphQLTest {
                 .statusCode(200).body("data.me", nullValue()).body("errors", nullValue());
     }
 
-    @Test
+    /**
+     * Parameterized test verifying that authenticated queries return errors when invoked without authentication.
+     * Consolidates tests for: myCalendars, calendars, calendars(year), allUsers, allUsers(limit), myCalendars(year),
+     * and calendars(userId). Queries with a `{userId}` placeholder are substituted with the current testUser id at
+     * runtime so the factory method can remain static.
+     */
+    @ParameterizedTest(
+            name = "[{index}] {0}")
+    @MethodSource("unauthenticatedQueryProvider")
     @Order(4)
-    void testQuery_MyCalendars_Unauthenticated() {
-        // Test: `myCalendars` without authentication should return error
-        String query = """
+    void testQuery_Unauthenticated_ReturnsErrors(final String description, final String queryTemplate) {
+        String query = queryTemplate.replace("{userId}", testUser.id.toString());
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    private static Stream<Arguments> unauthenticatedQueryProvider() {
+        return Stream.of(Arguments.of("myCalendars", """
                 query {
                     myCalendars {
                         id
                         name
                     }
                 }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
+                """), Arguments.of("calendars", """
+                query {
+                    calendars {
+                        id
+                        name
+                    }
+                }
+                """), Arguments.of("calendars with year", """
+                query {
+                    calendars(year: 2025) {
+                        id
+                        name
+                    }
+                }
+                """), Arguments.of("allUsers", """
+                query {
+                    allUsers {
+                        id
+                        email
+                    }
+                }
+                """), Arguments.of("allUsers with limit", """
+                query {
+                    allUsers(limit: 10) {
+                        id
+                        email
+                    }
+                }
+                """), Arguments.of("myCalendars with year", """
+                query {
+                    myCalendars(year: 2025) {
+                        id
+                        name
+                    }
+                }
+                """), Arguments.of("calendars with userId", """
+                query {
+                    calendars(userId: "{userId}") {
+                        id
+                        name
+                    }
+                }
+                """));
     }
 
     // ============================================================================
     // MUTATION TESTS - UNAUTHORIZED ACCESS
     // ============================================================================
 
-    @Test
+    /**
+     * Parameterized test verifying that mutations return errors when called unauthenticated, with invalid input, or
+     * with missing required fields. Consolidates create/update/delete calendar variants, updateUserAdmin,
+     * convertGuestSession, and createCalendar field-validation tests. Placeholders `{templateId}`, `{userId}`, and
+     * `{randomUuid}` are substituted at test invocation time so the static factory method can rely on test state.
+     */
+    @ParameterizedTest(
+            name = "[{index}] {0}")
+    @MethodSource("errorReturningMutationProvider")
     @Order(10)
-    void testMutation_CreateCalendar_Unauthenticated() {
-        // Test: Create calendar without authentication should fail
-        String mutation = String.format("""
-                mutation {
-                    createCalendar(input: {
-                        name: "Unauthorized Calendar"
-                        year: 2025
-                        templateId: "%s"
-                    }) {
-                        id
-                    }
-                }
-                """, testTemplate.id.toString());
-
+    void testMutation_ReturnsErrors(final String description, final String mutationTemplate) {
+        String mutation = mutationTemplate.replace("{templateId}", testTemplate.id.toString())
+                .replace("{userId}", testUser.id.toString()).replace("{randomUuid}", UUID.randomUUID().toString());
         given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
                 .statusCode(200).body("errors", notNullValue());
     }
 
-    @Test
-    @Order(11)
-    void testMutation_UpdateCalendar_Unauthenticated() {
-        // Test: Update calendar without authentication should fail
-        String mutation = String.format("""
+    private static Stream<Arguments> errorReturningMutationProvider() {
+        return Stream.of(Arguments.of("createCalendar unauthenticated", """
+                mutation {
+                    createCalendar(input: {
+                        name: "Unauthorized Calendar"
+                        year: 2025
+                        templateId: "{templateId}"
+                    }) {
+                        id
+                    }
+                }
+                """), Arguments.of("updateCalendar unauthenticated", """
                 mutation {
                     updateCalendar(
-                        id: "%s"
+                        id: "{randomUuid}"
                         input: { name: "Unauthorized Update" }
                     ) {
                         id
                     }
                 }
-                """, UUID.randomUUID().toString());
-
-        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    @Test
-    @Order(12)
-    void testMutation_DeleteCalendar_Unauthenticated() {
-        // Test: Delete calendar without authentication should fail
-        String mutation = String.format("""
+                """), Arguments.of("deleteCalendar unauthenticated", """
                 mutation {
-                    deleteCalendar(id: "%s")
+                    deleteCalendar(id: "{randomUuid}")
                 }
-                """, UUID.randomUUID().toString());
-
-        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
+                """), Arguments.of("createCalendar invalid templateId (non-existent)", """
+                mutation {
+                    createCalendar(input: {
+                        name: "Test Calendar"
+                        year: 2025
+                        templateId: "00000000-0000-0000-0000-000000000099"
+                    }) {
+                        id
+                    }
+                }
+                """), Arguments.of("createCalendar invalid templateId format", """
+                mutation {
+                    createCalendar(input: {
+                        name: "Test Calendar"
+                        year: 2025
+                        templateId: "not-a-uuid"
+                    }) {
+                        id
+                    }
+                }
+                """), Arguments.of("updateUserAdmin unauthenticated", """
+                mutation {
+                    updateUserAdmin(userId: "{userId}", isAdmin: true) {
+                        id
+                        isAdmin
+                    }
+                }
+                """), Arguments.of("convertGuestSession unauthenticated", """
+                mutation {
+                    convertGuestSession(sessionId: "test-session-123") {
+                        id
+                        email
+                    }
+                }
+                """), Arguments.of("updateCalendar invalid id format", """
+                mutation {
+                    updateCalendar(
+                        id: "not-a-valid-uuid"
+                        input: { name: "Test Update" }
+                    ) {
+                        id
+                    }
+                }
+                """), Arguments.of("deleteCalendar invalid id format", """
+                mutation {
+                    deleteCalendar(id: "not-a-valid-uuid")
+                }
+                """), Arguments.of("createCalendar missing name", """
+                mutation {
+                    createCalendar(input: {
+                        year: 2025
+                        templateId: "{templateId}"
+                    }) {
+                        id
+                    }
+                }
+                """), Arguments.of("createCalendar missing year", """
+                mutation {
+                    createCalendar(input: {
+                        name: "Test"
+                        templateId: "{templateId}"
+                    }) {
+                        id
+                    }
+                }
+                """), Arguments.of("createCalendar missing templateId", """
+                mutation {
+                    createCalendar(input: {
+                        name: "Test"
+                        year: 2025
+                    }) {
+                        id
+                    }
+                }
+                """), Arguments.of("updateUserAdmin invalid userId", """
+                mutation {
+                    updateUserAdmin(userId: "invalid-uuid", isAdmin: true) {
+                        id
+                    }
+                }
+                """));
     }
 
     // ============================================================================
     // VALIDATION TESTS
     // ============================================================================
 
-    @Test
+    /**
+     * Parameterized test verifying that queries with invalid UUID formats return errors. Consolidates
+     * template(invalid-uuid) and calendar(not-a-uuid) variants.
+     */
+    @ParameterizedTest(
+            name = "[{index}] {0}")
+    @MethodSource("invalidUuidQueryProvider")
     @Order(20)
-    void testValidation_Template_InvalidId() {
-        // Test: Query with invalid UUID should return null or error
-        String query = """
+    void testQuery_InvalidUuidFormat_ReturnsErrors(final String description, final String query) {
+        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
+                .statusCode(200).body("errors", notNullValue());
+    }
+
+    private static Stream<Arguments> invalidUuidQueryProvider() {
+        return Stream.of(Arguments.of("template with invalid UUID", """
                 query {
                     template(id: "invalid-uuid") {
                         id
                     }
                 }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
+                """), Arguments.of("calendar with invalid UUID", """
+                query {
+                    calendar(id: "not-a-uuid") {
+                        id
+                        name
+                    }
+                }
+                """));
     }
 
     @Test
@@ -420,23 +561,6 @@ class CalendarGraphQLTest {
                 .statusCode(200).body("data.calendar", nullValue()).body("errors", nullValue());
     }
 
-    @Test
-    @Order(43)
-    void testQuery_Calendar_InvalidId() {
-        // Test: Invalid UUID format should return error
-        String query = """
-                query {
-                    calendar(id: "not-a-uuid") {
-                        id
-                        name
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
     // ============================================================================
     // FIELD RESOLVER TESTS
     // ============================================================================
@@ -488,46 +612,6 @@ class CalendarGraphQLTest {
     // ============================================================================
     // VALIDATION EDGE CASES
     // ============================================================================
-
-    @Test
-    @Order(60)
-    void testMutation_CreateCalendar_InvalidTemplateId() {
-        // Test: Creating calendar with non-existent template should fail
-        String mutation = String.format("""
-                mutation {
-                    createCalendar(input: {
-                        name: "Test Calendar"
-                        year: 2025
-                        templateId: "%s"
-                    }) {
-                        id
-                    }
-                }
-                """, "00000000-0000-0000-0000-000000000099");
-
-        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue()); // Should fail due to authentication
-    }
-
-    @Test
-    @Order(61)
-    void testMutation_CreateCalendar_InvalidTemplateIdFormat() {
-        // Test: Creating calendar with invalid UUID format should fail
-        String mutation = """
-                mutation {
-                    createCalendar(input: {
-                        name: "Test Calendar"
-                        year: 2025
-                        templateId: "not-a-uuid"
-                    }) {
-                        id
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
 
     // ==========================================================================
     // DATALOADER INTEGRATION TESTS
@@ -715,249 +799,8 @@ class CalendarGraphQLTest {
                 .statusCode(200).body("data.currentUser", nullValue()).body("errors", nullValue());
     }
 
-    @Test
-    @Order(81)
-    void testQuery_Calendars_Unauthenticated() {
-        // Test: `calendars` query without authentication should return error
-        String query = """
-                query {
-                    calendars {
-                        id
-                        name
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    @Test
-    @Order(82)
-    void testQuery_CalendarsWithYear_Unauthenticated() {
-        // Test: `calendars` with year filter without authentication should return error
-        String query = """
-                query {
-                    calendars(year: 2025) {
-                        id
-                        name
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    @Test
-    @Order(83)
-    void testQuery_AllUsers_Unauthenticated() {
-        // Test: `allUsers` admin query without authentication should return error
-        String query = """
-                query {
-                    allUsers {
-                        id
-                        email
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    @Test
-    @Order(84)
-    void testQuery_AllUsersWithLimit_Unauthenticated() {
-        // Test: `allUsers` with limit without authentication should return error
-        String query = """
-                query {
-                    allUsers(limit: 10) {
-                        id
-                        email
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    @Test
-    @Order(85)
-    void testQuery_MyCalendarsWithYear_Unauthenticated() {
-        // Test: `myCalendars` with year filter without authentication should return error
-        String query = """
-                query {
-                    myCalendars(year: 2025) {
-                        id
-                        name
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
     // ============================================================================
     // ADDITIONAL MUTATION TESTS
     // ============================================================================
 
-    @Test
-    @Order(90)
-    void testMutation_UpdateUserAdmin_Unauthenticated() {
-        // Test: `updateUserAdmin` mutation without authentication should return error
-        String mutation = String.format("""
-                mutation {
-                    updateUserAdmin(userId: "%s", isAdmin: true) {
-                        id
-                        isAdmin
-                    }
-                }
-                """, testUser.id.toString());
-
-        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    @Test
-    @Order(91)
-    void testMutation_ConvertGuestSession_Unauthenticated() {
-        // Test: `convertGuestSession` mutation without authentication should return error
-        String mutation = """
-                mutation {
-                    convertGuestSession(sessionId: "test-session-123") {
-                        id
-                        email
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    @Test
-    @Order(92)
-    void testMutation_UpdateCalendar_InvalidId() {
-        // Test: Update calendar with invalid UUID format should fail
-        String mutation = """
-                mutation {
-                    updateCalendar(
-                        id: "not-a-valid-uuid"
-                        input: { name: "Test Update" }
-                    ) {
-                        id
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    @Test
-    @Order(93)
-    void testMutation_DeleteCalendar_InvalidId() {
-        // Test: Delete calendar with invalid UUID format should fail
-        String mutation = """
-                mutation {
-                    deleteCalendar(id: "not-a-valid-uuid")
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    @Test
-    @Order(94)
-    void testMutation_CreateCalendar_MissingName() {
-        // Test: Create calendar without required name field should fail
-        String mutation = String.format("""
-                mutation {
-                    createCalendar(input: {
-                        year: 2025
-                        templateId: "%s"
-                    }) {
-                        id
-                    }
-                }
-                """, testTemplate.id.toString());
-
-        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    @Test
-    @Order(95)
-    void testMutation_CreateCalendar_MissingYear() {
-        // Test: Create calendar without required year field should fail
-        String mutation = String.format("""
-                mutation {
-                    createCalendar(input: {
-                        name: "Test"
-                        templateId: "%s"
-                    }) {
-                        id
-                    }
-                }
-                """, testTemplate.id.toString());
-
-        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    @Test
-    @Order(96)
-    void testMutation_CreateCalendar_MissingTemplateId() {
-        // Test: Create calendar without required templateId field should fail
-        String mutation = """
-                mutation {
-                    createCalendar(input: {
-                        name: "Test"
-                        year: 2025
-                    }) {
-                        id
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    @Test
-    @Order(97)
-    void testMutation_UpdateUserAdmin_InvalidUserId() {
-        // Test: Update user admin with invalid UUID should fail (even if authenticated)
-        String mutation = """
-                mutation {
-                    updateUserAdmin(userId: "invalid-uuid", isAdmin: true) {
-                        id
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    @Test
-    @Order(98)
-    void testQuery_CalendarsWithUserId_Unauthenticated() {
-        // Test: `calendars` query with userId (admin operation) without authentication should return error
-        String query = String.format("""
-                query {
-                    calendars(userId: "%s") {
-                        id
-                        name
-                    }
-                }
-                """, testUser.id.toString());
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
 }
