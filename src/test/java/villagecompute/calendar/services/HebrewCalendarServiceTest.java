@@ -225,7 +225,7 @@ class HebrewCalendarServiceTest {
         HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
         config.hebrewYear = 5784;
 
-        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains("<svg") || svg.isEmpty());
@@ -335,7 +335,7 @@ class HebrewCalendarServiceTest {
         config.hebrewYear = 5784;
         config.compactMode = true;
 
-        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains("<svg"));
@@ -347,7 +347,7 @@ class HebrewCalendarServiceTest {
         config.hebrewYear = 5784;
         config.compactMode = false;
 
-        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains("<svg"));
@@ -359,7 +359,7 @@ class HebrewCalendarServiceTest {
         config.hebrewYear = 5784;
         config.rotateMonthNames = true;
 
-        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains("rotate"));
@@ -371,7 +371,7 @@ class HebrewCalendarServiceTest {
         config.hebrewYear = 5784;
         config.rotateMonthNames = false;
 
-        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains("<svg"));
@@ -383,7 +383,7 @@ class HebrewCalendarServiceTest {
         config.hebrewYear = 5784;
         config.showGrid = true;
 
-        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains("grid-line"));
@@ -395,7 +395,7 @@ class HebrewCalendarServiceTest {
         config.hebrewYear = 5784;
         config.showGrid = false;
 
-        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains("<svg"));
@@ -407,7 +407,7 @@ class HebrewCalendarServiceTest {
         config.hebrewYear = 5784;
         config.highlightWeekends = true;
 
-        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains("<svg"));
@@ -419,7 +419,7 @@ class HebrewCalendarServiceTest {
         config.hebrewYear = 5784;
         config.showDayNumbers = true;
 
-        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains("day-text"));
@@ -431,7 +431,7 @@ class HebrewCalendarServiceTest {
         config.hebrewYear = 5784;
         config.showDayNumbers = false;
 
-        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains("<svg"));
@@ -443,7 +443,7 @@ class HebrewCalendarServiceTest {
         config.hebrewYear = 5784;
         config.moonDisplayMode = "illumination";
 
-        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains("<svg"));
@@ -455,7 +455,7 @@ class HebrewCalendarServiceTest {
         config.hebrewYear = 5784;
         config.moonDisplayMode = "none";
 
-        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config);
 
         assertNotNull(svg);
         assertTrue(svg.contains("<svg"));
@@ -466,7 +466,7 @@ class HebrewCalendarServiceTest {
         HebrewCalendarService.HebrewCalendarConfig config = new HebrewCalendarService.HebrewCalendarConfig();
         config.hebrewYear = 5784; // Leap year
 
-        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config, "jewish");
+        String svg = hebrewCalendarService.generateHebrewCalendarSVG(config);
 
         assertNotNull(svg);
         // Should contain Adar II for leap year

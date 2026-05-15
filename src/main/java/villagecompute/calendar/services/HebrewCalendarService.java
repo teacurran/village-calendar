@@ -251,7 +251,7 @@ public class HebrewCalendarService {
     }
 
     /** Generate Hebrew calendar SVG in grid layout */
-    public String generateHebrewCalendarSVG(HebrewCalendarConfig config, String holidaySet) {
+    public String generateHebrewCalendarSVG(HebrewCalendarConfig config) {
         StringBuilder svg = new StringBuilder();
 
         // Grid layout dimensions (similar to Gregorian grid)

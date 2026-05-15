@@ -160,9 +160,7 @@ public class CalendarResource {
             hebrewConfig.moonLightColor = config.moonLightColor;
             hebrewConfig.latitude = config.latitude;
             hebrewConfig.longitude = config.longitude;
-            // Pass holiday set for Hebrew calendar (default to HEBREW_RELIGIOUS if not specified)
-            String holidaySet = request.holidaySet != null ? request.holidaySet : "HEBREW_RELIGIOUS";
-            svg = hebrewCalendarService.generateHebrewCalendarSVG(hebrewConfig, holidaySet);
+            svg = hebrewCalendarService.generateHebrewCalendarSVG(hebrewConfig);
         } else {
             svg = calendarRenderingService.generateCalendarSVG(config);
         }
@@ -322,10 +320,7 @@ public class CalendarResource {
                     hebrewConfig.moonLightColor = config.moonLightColor;
                     hebrewConfig.latitude = config.latitude;
                     hebrewConfig.longitude = config.longitude;
-                    String holidaySet = request.regenerateConfig.holidaySet != null
-                            ? request.regenerateConfig.holidaySet
-                            : "HEBREW_RELIGIOUS";
-                    svgContent = hebrewCalendarService.generateHebrewCalendarSVG(hebrewConfig, holidaySet);
+                    svgContent = hebrewCalendarService.generateHebrewCalendarSVG(hebrewConfig);
                 } else {
                     svgContent = calendarRenderingService.generateCalendarSVG(config);
                 }
