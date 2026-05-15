@@ -182,14 +182,14 @@ class TypesTest {
     void displaySettingsType_Equals_Null_ReturnsFalse() {
         DisplaySettingsType settings = new DisplaySettingsType();
 
-        assertNotEquals(settings, null);
+        assertNotEquals(null, settings);
     }
 
     @Test
     void displaySettingsType_Equals_DifferentClass_ReturnsFalse() {
         DisplaySettingsType settings = new DisplaySettingsType();
 
-        assertNotEquals(settings, "not a DisplaySettingsType");
+        assertNotEquals("not a DisplaySettingsType", settings);
     }
 
     @Test
@@ -256,14 +256,14 @@ class TypesTest {
     void holidayType_Equals_Null_ReturnsFalse() {
         HolidayType holiday = new HolidayType("Christmas", "🎄");
 
-        assertNotEquals(holiday, null);
+        assertNotEquals(null, holiday);
     }
 
     @Test
     void holidayType_Equals_DifferentClass_ReturnsFalse() {
         HolidayType holiday = new HolidayType("Christmas", "🎄");
 
-        assertNotEquals(holiday, "not a HolidayType");
+        assertNotEquals("not a HolidayType", holiday);
     }
 
     @Test
@@ -340,14 +340,14 @@ class TypesTest {
     void customDateEntryType_Equals_Null_ReturnsFalse() {
         CustomDateEntryType entry = new CustomDateEntryType("🎂", "Birthday");
 
-        assertNotEquals(entry, null);
+        assertNotEquals(null, entry);
     }
 
     @Test
     void customDateEntryType_Equals_DifferentClass_ReturnsFalse() {
         CustomDateEntryType entry = new CustomDateEntryType("🎂", "Birthday");
 
-        assertNotEquals(entry, "not a CustomDateEntryType");
+        assertNotEquals("not a CustomDateEntryType", entry);
     }
 
     @Test
