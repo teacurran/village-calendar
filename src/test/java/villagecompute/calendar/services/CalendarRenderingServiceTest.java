@@ -687,6 +687,16 @@ class CalendarRenderingServiceTest {
 
     @Test
     void testGetCellBackgroundColor_Weekend_WithHighlight() {
+        // Verifies that a custom weekendBgColor is honored when highlightWeekends is enabled on a Saturday cell.
+        assertCustomWeekendHighlightProducesColor();
+    }
+
+    /**
+     * Shared assertion used by both the high-level "weekend with highlight" test and the branch-coverage "Saturday"
+     * test below: configuring a custom weekendBgColor with highlightWeekends=true must yield a non-null background
+     * color for a Saturday cell.
+     */
+    private void assertCustomWeekendHighlightProducesColor() {
         CalendarConfigType config = new CalendarConfigType();
         config.highlightWeekends = true;
         config.weekendBgColor = "#f0f0f0";
@@ -897,16 +907,7 @@ class CalendarRenderingServiceTest {
             strings = {"noto-mono", "mono-red", "noto-color"})
     void testRenderEmoji_EmojiFontVariants(String emojiFont) {
         // Tests all emojiFont branches: null, empty, noto-mono, mono-* variants, and non-mono fonts
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.emojiFont = emojiFont;
-        config.eventDisplayMode = "large";
-        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉"));
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
+        assertCalendarRendersWithEmojiFont(emojiFont);
     }
 
     @ParameterizedTest
@@ -914,6 +915,12 @@ class CalendarRenderingServiceTest {
             strings = {"mono-red", "mono-blue", "mono-green", "mono-orange", "mono-purple", "mono-pink", "mono-teal",
                     "mono-brown", "mono-navy", "mono-coral"})
     void testGenerateCalendarSVG_WithMonochromeColorVariants(String emojiFont) {
+        // Tests every monochrome color variant individually for coverage of color-specific code paths
+        assertCalendarRendersWithEmojiFont(emojiFont);
+    }
+
+    /** Shared assertion: a calendar with a custom emoji on Jan 15 renders to non-empty SVG for the given emojiFont. */
+    private void assertCalendarRendersWithEmojiFont(String emojiFont) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
         config.emojiFont = emojiFont;
@@ -1420,15 +1427,9 @@ class CalendarRenderingServiceTest {
 
     @Test
     void testGetCellBackgroundColor_Saturday() {
-        // Branch: dayOfWeek == SATURDAY = TRUE (short-circuits to isWeekend=true)
-        CalendarConfigType config = new CalendarConfigType();
-        config.highlightWeekends = true;
-        config.weekendBgColor = "#f0f0f0";
-
-        LocalDate saturday = LocalDate.of(2025, 1, 4);
-        String color = CalendarRenderingService.getCellBackgroundColor(config, saturday, 1, 4, true, 0);
-
-        assertNotNull(color);
+        // Branch: dayOfWeek == SATURDAY = TRUE (short-circuits to isWeekend=true).
+        // Delegates to the shared helper used by testGetCellBackgroundColor_Weekend_WithHighlight.
+        assertCustomWeekendHighlightProducesColor();
     }
 
     @Test
