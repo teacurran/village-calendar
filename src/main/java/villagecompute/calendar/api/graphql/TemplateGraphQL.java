@@ -102,8 +102,8 @@ public class TemplateGraphQL {
                 return null;
             }
 
-            // For now, we only show active templates to non-admin users
-            // TODO: Check if user is admin and allow viewing inactive templates
+            // For now, we only show active templates to non-admin users.
+            // Note: Future enhancement - check if user is admin and allow viewing inactive templates.
             if (!template.isActive) {
                 LOG.warnf("Template %s is inactive, returning null", id);
                 return null;

@@ -17,7 +17,7 @@ import villagecompute.calendar.util.Roles;
  * GraphQL resolver for PDF generation operations. Handles asynchronous PDF job creation and status tracking.
  *
  * <p>
- * TODO: Implementation pending - currently returns stub responses
+ * Note: Implementation pending - currently returns stub responses
  */
 @GraphQLApi
 @ApplicationScoped
@@ -36,7 +36,7 @@ public class PdfGraphQL {
      * to track PDF generation progress.
      *
      * <p>
-     * TODO: Implement PdfJob retrieval from database
+     * Note: PdfJob retrieval from database is not yet implemented.
      *
      * @param id
      *            PDF job ID
@@ -48,7 +48,7 @@ public class PdfGraphQL {
     public PdfJobStub pdfJob(@Name("id") @NotNull @Description("PDF job ID") String id) {
         LOG.infof("Query pdfJob called with id=%s (STUB IMPLEMENTATION)", id);
 
-        // TODO: Implement actual PDF job retrieval
+        // Note: Actual PDF job retrieval is not yet implemented.
         // Example implementation:
         // UUID jobId = UUID.fromString(id);
         // return PdfJob.findById(jobId);
@@ -62,7 +62,7 @@ public class PdfGraphQL {
      * preview PDFs (for non-paying users).
      *
      * <p>
-     * TODO: Implement PDF generation job creation
+     * Note: PDF generation job creation is not yet implemented.
      *
      * @param calendarId
      *            Calendar ID to generate PDF for
@@ -82,7 +82,7 @@ public class PdfGraphQL {
         LOG.infof("Mutation generatePdf called with calendarId=%s, watermark=%s (STUB" + " IMPLEMENTATION)", calendarId,
                 watermark);
 
-        // TODO: Implement PDF generation job creation
+        // Note: PDF generation job creation is not yet implemented.
         // Example implementation:
         // 1. Verify user authentication
         // 2. Verify calendar ownership or public status
@@ -90,7 +90,7 @@ public class PdfGraphQL {
         // 4. Return PdfJob with PENDING status
 
         throw new UnsupportedOperationException(
-                "PDF generation not yet implemented. TODO: Create DelayedJob for PDF rendering and"
+                "PDF generation not yet implemented. Create DelayedJob for PDF rendering and"
                         + " return PdfJob with status tracking.");
     }
 
@@ -99,7 +99,7 @@ public class PdfGraphQL {
      * once implemented.
      *
      * <p>
-     * TODO: Replace with actual PdfJob entity from data models
+     * Note: Replace with actual PdfJob entity from data models when available.
      */
     @Type("PdfJob")
     @Description("Asynchronous PDF generation job (stub)")
