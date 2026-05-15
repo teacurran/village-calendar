@@ -3,6 +3,14 @@ package villagecompute.calendar.services.maze;
 /** Renders a MazeGrid to SVG format. Designed for 35" x 23" page with 1" margins on all sides. */
 public class MazeSvgRenderer {
 
+    /** Geometry parameters for laying out a pointy-top hexagonal grid. */
+    private record HexGeometry(double hexWidth, double vertSpacing, double offsetX, double offsetY, double hexSize) {
+    }
+
+    /** Grid dimensions in cells. */
+    private record GridDimensions(int width, int height) {
+    }
+
     /** SVG closing tag for groups */
     private static final String SVG_GROUP_CLOSE = "  </g>";
 
@@ -258,25 +266,26 @@ public class MazeSvgRenderer {
     }
 
     private String renderSigma() {
-        int gridWidth = grid.getWidth();
-        int gridHeight = grid.getHeight();
+        GridDimensions dims = new GridDimensions(grid.getWidth(), grid.getHeight());
 
         // Calculate hexagon dimensions for pointy-top hexagons
         // For a pointy-top hex with "size" being the distance from center to vertex:
         // width = size * sqrt(3), height = size * 2
         // Horizontal spacing = width, vertical spacing = height * 3/4
-        double hexSize = calculateHexSize(gridWidth, gridHeight);
+        double hexSize = calculateHexSize(dims.width(), dims.height());
         double hexWidth = hexSize * Math.sqrt(3);
         double hexHeight = hexSize * 2;
         double vertSpacing = hexHeight * 0.75;
 
         // Calculate actual maze dimensions
-        double actualMazeWidth = gridWidth * hexWidth + hexWidth / 2; // Extra for odd row offset
-        double actualMazeHeight = (gridHeight - 1) * vertSpacing + hexHeight;
+        double actualMazeWidth = dims.width() * hexWidth + hexWidth / 2; // Extra for odd row offset
+        double actualMazeHeight = (dims.height() - 1) * vertSpacing + hexHeight;
 
         // Center the maze
         double hexOffsetX = MARGIN + (PRINTABLE_WIDTH - actualMazeWidth) / 2;
         double hexOffsetY = MARGIN + (PRINTABLE_HEIGHT - actualMazeHeight) / 2;
+
+        HexGeometry geom = new HexGeometry(hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
 
         StringBuilder svg = new StringBuilder();
         svg.append(String.format(
@@ -286,38 +295,37 @@ public class MazeSvgRenderer {
         // Background
         svg.append(String.format(SVG_BACKGROUND_RECT_FORMAT, PAGE_WIDTH, PAGE_HEIGHT));
 
-        appendSigmaDeadEnds(svg, gridWidth, gridHeight, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
-        appendSigmaSolutionPath(svg, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
-        appendSigmaInnerWalls(svg, gridWidth, gridHeight, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
+        appendSigmaDeadEnds(svg, dims, geom);
+        appendSigmaSolutionPath(svg, geom);
+        appendSigmaInnerWalls(svg, dims, geom);
 
         // Draw outer border (hexagon outline for edge cells)
         svg.append("  <g class=\"outer-border\">").append(System.lineSeparator());
-        drawHexOuterBorder(svg, gridWidth, gridHeight, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
+        drawHexOuterBorder(svg, dims, geom);
         svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
 
-        appendSigmaMarkers(svg, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
+        appendSigmaMarkers(svg, geom);
 
         svg.append("</svg>");
         return svg.toString();
     }
 
     /** Append dead-end depth visualization for sigma maze if enabled. */
-    private void appendSigmaDeadEnds(StringBuilder svg, int gridWidth, int gridHeight, double hexWidth,
-            double vertSpacing, double hexOffsetX, double hexOffsetY, double hexSize) {
+    private void appendSigmaDeadEnds(StringBuilder svg, GridDimensions dims, HexGeometry geom) {
         if (!showDeadEnds) {
             return;
         }
         svg.append("  <g class=\"dead-end-depth\">").append(System.lineSeparator());
-        int maxDepth = findMaxDeadEndDepth(gridWidth, gridHeight);
-        for (int y = 0; y < gridHeight; y++) {
-            for (int x = 0; x < gridWidth; x++) {
+        int maxDepth = findMaxDeadEndDepth(dims.width(), dims.height());
+        for (int y = 0; y < dims.height(); y++) {
+            for (int x = 0; x < dims.width(); x++) {
                 MazeCell cell = grid.getCell(x, y);
                 if (!cell.isDeadEnd || cell.deadEndDepth <= 0) {
                     continue;
                 }
-                double[] center = getHexCenter(x, y, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
+                double[] center = getHexCenter(x, y, geom);
                 double opacity = 0.1 + (0.5 * cell.deadEndDepth / maxDepth);
-                String hexPath = getHexPath(center[0], center[1], hexSize);
+                String hexPath = getHexPath(center[0], center[1], geom.hexSize());
                 svg.append(String.format("    <path d=\"%s\" fill=\"%s\" opacity=\"%.2f\"/>%n", hexPath, deadEndColor,
                         opacity));
             }
@@ -326,20 +334,18 @@ public class MazeSvgRenderer {
     }
 
     /** Append solution path lines for sigma maze if enabled. */
-    private void appendSigmaSolutionPath(StringBuilder svg, double hexWidth, double vertSpacing, double hexOffsetX,
-            double hexOffsetY, double hexSize) {
+    private void appendSigmaSolutionPath(StringBuilder svg, HexGeometry geom) {
         if (!showSolution || grid.getSolutionPath() == null) {
             return;
         }
         svg.append("  <g class=\"solution-path\">").append(System.lineSeparator());
         var path = grid.getSolutionPath();
-        int pathWidth = Math.max((int) (hexSize / 3), 6);
+        int pathWidth = Math.max((int) (geom.hexSize() / 3), 6);
         for (int i = 0; i < path.size() - 1; i++) {
             int[] from = path.get(i);
             int[] to = path.get(i + 1);
-            double[] fromCenter = getHexCenter(from[0], from[1], hexWidth, vertSpacing, hexOffsetX, hexOffsetY,
-                    hexSize);
-            double[] toCenter = getHexCenter(to[0], to[1], hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
+            double[] fromCenter = getHexCenter(from[0], from[1], geom);
+            double[] toCenter = getHexCenter(to[0], to[1], geom);
             svg.append(String.format(
                     "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\" stroke=\"%s\""
                             + " stroke-width=\"%d\" stroke-linecap=\"round\" opacity=\"0.6\"/>%n",
@@ -349,29 +355,25 @@ public class MazeSvgRenderer {
     }
 
     /** Append inner hexagon walls for sigma maze. */
-    private void appendSigmaInnerWalls(StringBuilder svg, int gridWidth, int gridHeight, double hexWidth,
-            double vertSpacing, double hexOffsetX, double hexOffsetY, double hexSize) {
+    private void appendSigmaInnerWalls(StringBuilder svg, GridDimensions dims, HexGeometry geom) {
         svg.append("  <g class=\"inner-walls\">").append(System.lineSeparator());
-        for (int y = 0; y < gridHeight; y++) {
-            for (int x = 0; x < gridWidth; x++) {
+        for (int y = 0; y < dims.height(); y++) {
+            for (int x = 0; x < dims.width(); x++) {
                 MazeCell cell = grid.getCell(x, y);
-                double[] center = getHexCenter(x, y, hexWidth, vertSpacing, hexOffsetX, hexOffsetY, hexSize);
-                drawHexWalls(svg, cell, x, y, center, hexSize, gridWidth, gridHeight);
+                double[] center = getHexCenter(x, y, geom);
+                drawHexWalls(svg, cell, x, y, center, geom.hexSize(), dims);
             }
         }
         svg.append(SVG_GROUP_CLOSE).append(System.lineSeparator());
     }
 
     /** Append start and end markers for sigma maze. */
-    private void appendSigmaMarkers(StringBuilder svg, double hexWidth, double vertSpacing, double hexOffsetX,
-            double hexOffsetY, double hexSize) {
-        int markerRadius = Math.max((int) (hexSize / 3), 8);
-        double[] startCenter = getHexCenter(grid.getStartX(), grid.getStartY(), hexWidth, vertSpacing, hexOffsetX,
-                hexOffsetY, hexSize);
+    private void appendSigmaMarkers(StringBuilder svg, HexGeometry geom) {
+        int markerRadius = Math.max((int) (geom.hexSize() / 3), 8);
+        double[] startCenter = getHexCenter(grid.getStartX(), grid.getStartY(), geom);
         svg.append(String.format("  <circle cx=\"%.1f\" cy=\"%.1f\" r=\"%d\" fill=\"%s\"" + SVG_START_MARKER_CLASS_TAIL,
                 startCenter[0], startCenter[1], markerRadius, DEFAULT_START_COLOR));
-        double[] endCenter = getHexCenter(grid.getEndX(), grid.getEndY(), hexWidth, vertSpacing, hexOffsetX, hexOffsetY,
-                hexSize);
+        double[] endCenter = getHexCenter(grid.getEndX(), grid.getEndY(), geom);
         svg.append(String.format("  <circle cx=\"%.1f\" cy=\"%.1f\" r=\"%d\" fill=\"%s\"" + SVG_END_MARKER_CLASS_TAIL,
                 endCenter[0], endCenter[1], markerRadius, DEFAULT_END_COLOR));
     }
@@ -387,11 +389,10 @@ public class MazeSvgRenderer {
     }
 
     /** Get center point of a hexagon at grid position (x, y). */
-    private double[] getHexCenter(int x, int y, double hexWidth, double vertSpacing, double offsetX, double offsetY,
-            double hexSize) {
+    private double[] getHexCenter(int x, int y, HexGeometry geom) {
         boolean oddRow = (y % 2) == 1;
-        double cx = offsetX + x * hexWidth + hexWidth / 2 + (oddRow ? hexWidth / 2 : 0);
-        double cy = offsetY + y * vertSpacing + hexSize;
+        double cx = geom.offsetX() + x * geom.hexWidth() + geom.hexWidth() / 2 + (oddRow ? geom.hexWidth() / 2 : 0);
+        double cy = geom.offsetY() + y * geom.vertSpacing() + geom.hexSize();
         return new double[]{cx, cy};
     }
 
@@ -414,7 +415,7 @@ public class MazeSvgRenderer {
 
     /** Draw walls for a single hexagon cell. */
     private void drawHexWalls(StringBuilder svg, MazeCell cell, int x, int y, double[] center, double hexSize,
-            int gridWidth, int gridHeight) {
+            GridDimensions dims) {
         // Calculate vertex positions for pointy-top hexagon
         double[][] vertices = new double[6][2];
         for (int i = 0; i < 6; i++) {
@@ -428,21 +429,21 @@ public class MazeSvgRenderer {
 
         // Draw internal walls only (edges shared between cells)
         // NE wall: vertices 0-1 (if wall exists and not at edge)
-        if (cell.northEastWall && hasNENeighbor(x, y, gridWidth, evenRow)) {
+        if (cell.northEastWall && hasNENeighbor(x, y, dims.width(), evenRow)) {
             svg.append(String.format(
                     "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\"" + SVG_STROKE_ATTRS_TAIL, vertices[0][0],
                     vertices[0][1], vertices[1][0], vertices[1][1], innerWallColor, INNER_WALL_THICKNESS));
         }
 
         // E wall: vertices 1-2 (if wall exists and not at right edge)
-        if (cell.eastWall && x < gridWidth - 1) {
+        if (cell.eastWall && x < dims.width() - 1) {
             svg.append(String.format(
                     "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\"" + SVG_STROKE_ATTRS_TAIL, vertices[1][0],
                     vertices[1][1], vertices[2][0], vertices[2][1], innerWallColor, INNER_WALL_THICKNESS));
         }
 
         // SE wall: vertices 2-3 (if wall exists and not at edge)
-        if (cell.southEastWall && hasSENeighbor(x, y, gridWidth, gridHeight, evenRow)) {
+        if (cell.southEastWall && hasSENeighbor(x, y, dims, evenRow)) {
             svg.append(String.format(
                     "    <line x1=\"%.1f\" y1=\"%.1f\" x2=\"%.1f\" y2=\"%.1f\"" + SVG_STROKE_ATTRS_TAIL, vertices[2][0],
                     vertices[2][1], vertices[3][0], vertices[3][1], innerWallColor, INNER_WALL_THICKNESS));
@@ -465,53 +466,50 @@ public class MazeSvgRenderer {
     }
 
     /** Check if cell has SE neighbor. */
-    private boolean hasSENeighbor(int x, int y, int gridWidth, int gridHeight, boolean evenRow) {
-        if (y >= gridHeight - 1) {
+    private boolean hasSENeighbor(int x, int y, GridDimensions dims, boolean evenRow) {
+        if (y >= dims.height() - 1) {
             return false;
         }
         if (evenRow) {
             return true; // SE is at (x, y+1)
         } else {
-            return x < gridWidth - 1; // SE is at (x+1, y+1)
+            return x < dims.width() - 1; // SE is at (x+1, y+1)
         }
     }
 
     /** Draw outer border for hexagonal maze. */
-    private void drawHexOuterBorder(StringBuilder svg, int gridWidth, int gridHeight, double hexWidth,
-            double vertSpacing, double offsetX, double offsetY, double hexSize) {
+    private void drawHexOuterBorder(StringBuilder svg, GridDimensions dims, HexGeometry geom) {
         // Draw border walls for edge cells
-        for (int y = 0; y < gridHeight; y++) {
-            for (int x = 0; x < gridWidth; x++) {
-                double[][] vertices = computeHexVertices(x, y, hexWidth, vertSpacing, offsetX, offsetY, hexSize);
-                drawHexCellBorderWalls(svg, x, y, gridWidth, gridHeight, vertices);
+        for (int y = 0; y < dims.height(); y++) {
+            for (int x = 0; x < dims.width(); x++) {
+                double[][] vertices = computeHexVertices(x, y, geom);
+                drawHexCellBorderWalls(svg, x, y, dims, vertices);
             }
         }
     }
 
     /** Compute the six vertex coordinates of a hexagon cell. */
-    private double[][] computeHexVertices(int x, int y, double hexWidth, double vertSpacing, double offsetX,
-            double offsetY, double hexSize) {
-        double[] center = getHexCenter(x, y, hexWidth, vertSpacing, offsetX, offsetY, hexSize);
+    private double[][] computeHexVertices(int x, int y, HexGeometry geom) {
+        double[] center = getHexCenter(x, y, geom);
         double[][] vertices = new double[6][2];
         for (int i = 0; i < 6; i++) {
             double angle = Math.PI / 6 + i * Math.PI / 3;
-            vertices[i][0] = center[0] + hexSize * Math.cos(angle);
-            vertices[i][1] = center[1] - hexSize * Math.sin(angle);
+            vertices[i][0] = center[0] + geom.hexSize() * Math.cos(angle);
+            vertices[i][1] = center[1] - geom.hexSize() * Math.sin(angle);
         }
         return vertices;
     }
 
     /** Draw any outer-border walls for a single hex cell at (x, y). */
-    private void drawHexCellBorderWalls(StringBuilder svg, int x, int y, int gridWidth, int gridHeight,
-            double[][] vertices) {
+    private void drawHexCellBorderWalls(StringBuilder svg, int x, int y, GridDimensions dims, double[][] vertices) {
         boolean evenRow = (y % 2) == 0;
         boolean leftColumn = (x == 0);
-        boolean rightColumn = (x == gridWidth - 1);
+        boolean rightColumn = (x == dims.width() - 1);
 
         if (y == 0) {
             drawHexTopBorder(svg, vertices, evenRow, leftColumn, rightColumn);
         }
-        if (y == gridHeight - 1) {
+        if (y == dims.height() - 1) {
             drawHexBottomBorder(svg, vertices, evenRow, leftColumn, rightColumn);
         }
         if (leftColumn) {
