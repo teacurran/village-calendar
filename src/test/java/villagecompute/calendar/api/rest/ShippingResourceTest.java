@@ -7,6 +7,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
@@ -53,58 +57,43 @@ class ShippingResourceTest {
                 .statusCode(200).body("options", hasSize(3));
     }
 
-    @Test
-    void testCalculateCalendarShipping_NoCountry_Returns400() {
+    /**
+     * Verifies that a missing, empty, or blank country value returns HTTP 400. Consolidates three previously-similar
+     * tests (S5976).
+     */
+    @ParameterizedTest(
+            name = "country=[{0}] returns 400")
+    @NullSource
+    @ValueSource(
+            strings = {"", "   "})
+    void testCalculateCalendarShipping_InvalidCountry_Returns400(String country) {
         Map<String, Object> request = new HashMap<>();
-        request.put("state", "TN");
+        if (country != null) {
+            request.put("country", country);
+        }
+        // For null case: also exercise the original "no country key with state present" scenario
+        if (country == null) {
+            request.put("state", "TN");
+        }
 
         given().contentType(ContentType.JSON).body(request).when().post("/api/shipping/calculate-calendar").then()
                 .statusCode(400);
     }
 
-    @Test
-    void testCalculateCalendarShipping_EmptyCountry_Returns400() {
+    /**
+     * Verifies that unsupported countries return HTTP 400 with an explanatory message. Consolidates three
+     * previously-similar tests (S5976).
+     */
+    @ParameterizedTest(
+            name = "country={0} returns 400 with message containing \"{1}\"")
+    @CsvSource({"CA, Canada", "MX, Mexico", "UK, United States"})
+    void testCalculateCalendarShipping_UnsupportedCountry_Returns400WithMessage(String countryCode,
+            String expectedMessageFragment) {
         Map<String, Object> request = new HashMap<>();
-        request.put("country", "");
+        request.put("country", countryCode);
 
         given().contentType(ContentType.JSON).body(request).when().post("/api/shipping/calculate-calendar").then()
-                .statusCode(400);
-    }
-
-    @Test
-    void testCalculateCalendarShipping_BlankCountry_Returns400() {
-        Map<String, Object> request = new HashMap<>();
-        request.put("country", "   ");
-
-        given().contentType(ContentType.JSON).body(request).when().post("/api/shipping/calculate-calendar").then()
-                .statusCode(400);
-    }
-
-    @Test
-    void testCalculateCalendarShipping_Canada_Returns400WithMessage() {
-        Map<String, Object> request = new HashMap<>();
-        request.put("country", "CA");
-
-        given().contentType(ContentType.JSON).body(request).when().post("/api/shipping/calculate-calendar").then()
-                .statusCode(400).body(containsString("Canada"));
-    }
-
-    @Test
-    void testCalculateCalendarShipping_Mexico_Returns400WithMessage() {
-        Map<String, Object> request = new HashMap<>();
-        request.put("country", "MX");
-
-        given().contentType(ContentType.JSON).body(request).when().post("/api/shipping/calculate-calendar").then()
-                .statusCode(400).body(containsString("Mexico"));
-    }
-
-    @Test
-    void testCalculateCalendarShipping_UnsupportedCountry_Returns400() {
-        Map<String, Object> request = new HashMap<>();
-        request.put("country", "UK");
-
-        given().contentType(ContentType.JSON).body(request).when().post("/api/shipping/calculate-calendar").then()
-                .statusCode(400).body(containsString("United States"));
+                .statusCode(400).body(containsString(expectedMessageFragment));
     }
 
     @Test
