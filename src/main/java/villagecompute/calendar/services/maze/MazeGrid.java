@@ -26,7 +26,7 @@ public class MazeGrid {
         this.width = width;
         this.height = height;
         this.type = type;
-        this.difficulty = Math.max(1, Math.min(5, difficulty));
+        this.difficulty = Math.clamp(difficulty, 1, 5);
         this.random = seed != null ? new Random(seed) : new Random();
         this.cells = new MazeCell[width][height];
         this.endX = width - 1;
