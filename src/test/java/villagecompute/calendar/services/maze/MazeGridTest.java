@@ -265,6 +265,7 @@ class MazeGridTest {
         }
         // Note: There's a tiny chance this could fail if we get identical random sequences
         // but statistically this is virtually impossible
+        assertTrue(different, "Two mazes generated without a seed should produce different solution paths");
     }
 
     @Test
