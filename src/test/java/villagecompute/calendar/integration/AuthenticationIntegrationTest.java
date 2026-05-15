@@ -173,9 +173,9 @@ class AuthenticationIntegrationTest {
         assertEquals(3, jwtParts.length, "JWT should have three parts (header.payload.signature)");
 
         // Verify each part is not empty
-        assertTrue(jwtParts[0].length() > 0, "JWT header should not be empty");
-        assertTrue(jwtParts[1].length() > 0, "JWT payload should not be empty");
-        assertTrue(jwtParts[2].length() > 0, "JWT signature should not be empty");
+        assertFalse(jwtParts[0].isEmpty(), "JWT header should not be empty");
+        assertFalse(jwtParts[1].isEmpty(), "JWT payload should not be empty");
+        assertFalse(jwtParts[2].isEmpty(), "JWT signature should not be empty");
 
         testUser = user;
     }

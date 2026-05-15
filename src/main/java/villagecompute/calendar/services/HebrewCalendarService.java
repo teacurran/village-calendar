@@ -445,16 +445,16 @@ public class HebrewCalendarService {
         int maxCharsPerLine = radius / 3;
 
         for (String word : words) {
-            if (currentLine.length() + word.length() + 1 > maxCharsPerLine && currentLine.length() > 0) {
+            if (currentLine.length() + word.length() + 1 > maxCharsPerLine && !currentLine.isEmpty()) {
                 lines.add(currentLine.toString());
                 currentLine = new StringBuilder();
             }
-            if (currentLine.length() > 0) {
+            if (!currentLine.isEmpty()) {
                 currentLine.append(" ");
             }
             currentLine.append(word);
         }
-        if (currentLine.length() > 0) {
+        if (!currentLine.isEmpty()) {
             lines.add(currentLine.toString());
         }
 
