@@ -40,16 +40,17 @@ class AuthenticationServiceTest {
     @Transactional
     void setUp() {
         // Clean up any existing test users and related data
-        CalendarUser testUser = CalendarUser.find("email", TEST_EMAIL).firstResult();
-        if (testUser != null) {
-            cleanupUserData(testUser.id);
-        }
+        cleanupTestUserIfPresent();
     }
 
     @AfterEach
     @Transactional
     void tearDown() {
-        // Clean up test users and related data
+        // Reuse same cleanup logic as setUp to avoid duplicated implementations (S4144)
+        cleanupTestUserIfPresent();
+    }
+
+    private void cleanupTestUserIfPresent() {
         CalendarUser testUser = CalendarUser.find("email", TEST_EMAIL).firstResult();
         if (testUser != null) {
             cleanupUserData(testUser.id);

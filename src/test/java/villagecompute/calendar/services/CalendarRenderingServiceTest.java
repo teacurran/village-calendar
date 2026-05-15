@@ -897,16 +897,7 @@ class CalendarRenderingServiceTest {
             strings = {"noto-mono", "mono-red", "noto-color"})
     void testRenderEmoji_EmojiFontVariants(String emojiFont) {
         // Tests all emojiFont branches: null, empty, noto-mono, mono-* variants, and non-mono fonts
-        CalendarConfigType config = new CalendarConfigType();
-        config.year = TEST_YEAR;
-        config.emojiFont = emojiFont;
-        config.eventDisplayMode = "large";
-        config.customDates.put(java.time.LocalDate.of(2025, 1, 15), new CustomDateEntryType("🎉"));
-
-        String svg = calendarRenderingService.generateCalendarSVG(config);
-
-        assertNotNull(svg);
-        assertTrue(svg.contains(SVG_OPEN_TAG));
+        assertEmojiFontProducesValidSvg(emojiFont);
     }
 
     @ParameterizedTest
@@ -914,6 +905,12 @@ class CalendarRenderingServiceTest {
             strings = {"mono-red", "mono-blue", "mono-green", "mono-orange", "mono-purple", "mono-pink", "mono-teal",
                     "mono-brown", "mono-navy", "mono-coral"})
     void testGenerateCalendarSVG_WithMonochromeColorVariants(String emojiFont) {
+        // Shares helper with testRenderEmoji_EmojiFontVariants to dedupe body (S4144);
+        // distinct @ValueSource inputs ensure both parameterized tests cover their intended branches.
+        assertEmojiFontProducesValidSvg(emojiFont);
+    }
+
+    private void assertEmojiFontProducesValidSvg(String emojiFont) {
         CalendarConfigType config = new CalendarConfigType();
         config.year = TEST_YEAR;
         config.emojiFont = emojiFont;
@@ -1421,14 +1418,8 @@ class CalendarRenderingServiceTest {
     @Test
     void testGetCellBackgroundColor_Saturday() {
         // Branch: dayOfWeek == SATURDAY = TRUE (short-circuits to isWeekend=true)
-        CalendarConfigType config = new CalendarConfigType();
-        config.highlightWeekends = true;
-        config.weekendBgColor = "#f0f0f0";
-
-        LocalDate saturday = LocalDate.of(2025, 1, 4);
-        String color = CalendarRenderingService.getCellBackgroundColor(config, saturday, 1, 4, true, 0);
-
-        assertNotNull(color);
+        // Delegates to weekend-with-highlight test to avoid duplicated implementation (S4144)
+        testGetCellBackgroundColor_Weekend_WithHighlight();
     }
 
     @Test
@@ -1447,13 +1438,8 @@ class CalendarRenderingServiceTest {
     @Test
     void testGetCellBackgroundColor_WeekdayWithHighlight() {
         // Branch: dayOfWeek == SATURDAY = FALSE, dayOfWeek == SUNDAY = FALSE (isWeekend=false)
-        CalendarConfigType config = new CalendarConfigType();
-        config.highlightWeekends = true;
-
-        LocalDate wednesday = LocalDate.of(2025, 1, 8);
-        String color = CalendarRenderingService.getCellBackgroundColor(config, wednesday, 1, 8, false, 0);
-
-        assertNotNull(color);
+        // Delegates to existing weekday test to avoid duplicated implementation (S4144)
+        testGetCellBackgroundColor_Weekday();
     }
 
     @Test
