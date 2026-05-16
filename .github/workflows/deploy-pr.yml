@@ -11,9 +11,14 @@ name: Deploy PR Preview
 # readiness — that is intentional; merge to beta first to migrate.
 
 on:
-  # Deploy after CI succeeds for a pull_request event
+  # Deploy after CI succeeds for a pull_request event. We listen for both
+  # the JVM CI workflow (PRs against main/beta) and the Native Build workflow
+  # (PRs against feature/native-build) — whichever finishes pushes a
+  # sha-<head> image to docker.io, and this deploy pulls that tag unchanged.
   workflow_run:
-    workflows: ["Continuous Integration"]
+    workflows:
+      - "Continuous Integration"
+      - "Native Build (GraalVM)"
     types: [completed]
   # Tear down when PR closes (merged or not)
   pull_request:
