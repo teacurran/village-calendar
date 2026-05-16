@@ -501,30 +501,13 @@ class EmojiSvgServiceTest {
 
     // ========== extractSvgInnerContent Branch Coverage Tests ==========
 
-    @Test
-    void testExtractSvgInnerContent_NoSvgTag_ReturnsOriginal() throws Exception {
+    @ParameterizedTest(
+            name = "extractSvgInnerContent returns original for input: {0}")
+    @ValueSource(
+            strings = {"<div>no svg here</div>", "<svg viewBox=\"0 0 100 100\" this tag never closes",
+                    "<svg viewBox=\"0 0 100 100\"><circle/>"})
+    void testExtractSvgInnerContent_MalformedOrMissingSvg_ReturnsOriginal(String input) throws Exception {
         EmojiSvgService testService = createServiceWithTestCaches();
-        String input = "<div>no svg here</div>";
-
-        String result = invokeExtractSvgInnerContent(testService, input);
-
-        assertEquals(input, result);
-    }
-
-    @Test
-    void testExtractSvgInnerContent_NoClosingBracket_ReturnsOriginal() throws Exception {
-        EmojiSvgService testService = createServiceWithTestCaches();
-        String input = "<svg viewBox=\"0 0 100 100\" this tag never closes";
-
-        String result = invokeExtractSvgInnerContent(testService, input);
-
-        assertEquals(input, result);
-    }
-
-    @Test
-    void testExtractSvgInnerContent_NoClosingSvgTag_ReturnsOriginal() throws Exception {
-        EmojiSvgService testService = createServiceWithTestCaches();
-        String input = "<svg viewBox=\"0 0 100 100\"><circle/>";
 
         String result = invokeExtractSvgInnerContent(testService, input);
 

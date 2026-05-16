@@ -9,6 +9,9 @@ import java.util.Optional;
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -102,28 +105,14 @@ class ProductServiceTest {
         assertFalse(pdf.features.isEmpty());
     }
 
-    @Test
-    void testGetProduct_InvalidCode_ReturnsEmpty() {
+    @ParameterizedTest(
+            name = "getProduct({0}) returns empty")
+    @NullAndEmptySource
+    @ValueSource(
+            strings = {"nonexistent"})
+    void testGetProduct_InvalidCode_ReturnsEmpty(String code) {
         // When
-        Optional<ProductService.Product> product = productService.getProduct("nonexistent");
-
-        // Then
-        assertFalse(product.isPresent());
-    }
-
-    @Test
-    void testGetProduct_NullCode_ReturnsEmpty() {
-        // When
-        Optional<ProductService.Product> product = productService.getProduct(null);
-
-        // Then
-        assertFalse(product.isPresent());
-    }
-
-    @Test
-    void testGetProduct_EmptyCode_ReturnsEmpty() {
-        // When
-        Optional<ProductService.Product> product = productService.getProduct("");
+        Optional<ProductService.Product> product = productService.getProduct(code);
 
         // Then
         assertFalse(product.isPresent());
