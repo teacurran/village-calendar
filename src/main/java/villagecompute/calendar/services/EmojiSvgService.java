@@ -500,7 +500,7 @@ public class EmojiSvgService {
         EMOJI_TO_FILENAME.put("🪦", "emoji_u1faa6"); // Headstone
         EMOJI_TO_FILENAME.put("🕊️", "emoji_u1f54a"); // Dove
         EMOJI_TO_FILENAME.put("🙏", "emoji_u1f64f"); // Folded Hands
-        EMOJI_TO_FILENAME.put("🏳️‍🌈", "emoji_u1f3f3_200d_1f308"); // Rainbow Flag
+        EMOJI_TO_FILENAME.put("🏳️\u200d🌈", "emoji_u1f3f3_200d_1f308"); // Rainbow Flag
         EMOJI_TO_FILENAME.put("🕯️", "emoji_u1f56f"); // Candle
         EMOJI_TO_FILENAME.put("🐣", "emoji_u1f423"); // Hatching Chick
         EMOJI_TO_FILENAME.put("📜", "emoji_u1f4dc"); // Scroll
