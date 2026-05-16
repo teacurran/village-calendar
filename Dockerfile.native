@@ -61,18 +61,20 @@ FROM registry.access.redhat.com/ubi9/ubi-minimal:9.6 AS runtime
 
 WORKDIR /work
 
-# Install fonts + fontconfig for PDF rendering (parallels the JVM Dockerfile's
-# Alpine package set: fontconfig + DejaVu + Noto Emoji).
+# Install fonts + fontconfig for PDF rendering.
 #
-# Note: UBI9-minimal AppStream only ships the monochrome `google-noto-emoji-fonts`
-# package (the color variant `google-noto-color-emoji-fonts` is in Fedora/EPEL but
-# not in the RHEL9 AppStream that UBI9 inherits). The JVM Dockerfile likewise
-# uses Alpine's monochrome `font-noto-emoji`, so we match that here.
+# Note: UBI9-minimal does not ship google-noto-emoji-* packages in its
+# AppStream/BaseOS subset (those packages live in the full RHEL9 AppStream which
+# the minimal image cannot reach without RHN entitlement). To keep the runtime
+# image lean and not require external repos, we install DejaVu (wide Unicode
+# coverage for Latin/Greek/Cyrillic/etc.) + fontconfig only. Emoji glyphs will
+# fall back to DejaVu's text-style coverage; if true emoji support is required,
+# fetch the Noto Emoji RPM separately or switch the runtime base to `ubi9`.
 RUN microdnf install -y --setopt=install_weak_deps=0 \
         fontconfig \
         dejavu-sans-fonts \
         dejavu-serif-fonts \
-        google-noto-emoji-fonts \
+        dejavu-sans-mono-fonts \
     && microdnf clean all \
     && fc-cache -f
 
