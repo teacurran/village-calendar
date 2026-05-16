@@ -73,7 +73,7 @@ class EmojiSvgServiceTest {
     }
 
     @Test
-    void testHasEmojiSvg_InNeitherCache_ReturnsFalse() throws Exception {
+    void testHasEmojiSvg_InNeitherCache_ReturnsFalse() {
         EmojiSvgService testService = createServiceWithTestCaches();
 
         // Don't add to any cache
@@ -198,7 +198,7 @@ class EmojiSvgServiceTest {
     }
 
     @Test
-    void testGetStandaloneSvg_NonExistentEmoji_ReturnsNull() throws Exception {
+    void testGetStandaloneSvg_NonExistentEmoji_ReturnsNull() {
         EmojiSvgService testService = createServiceWithTestCaches();
 
         String result = testService.getStandaloneSvg("nonexistent", false, null);
@@ -304,7 +304,7 @@ class EmojiSvgServiceTest {
     }
 
     @Test
-    void testGetEmojiAsSvg_NonExistentEmoji_ReturnsNull() throws Exception {
+    void testGetEmojiAsSvg_NonExistentEmoji_ReturnsNull() {
         EmojiSvgService testService = createServiceWithTestCaches();
 
         String result = testService.getEmojiAsSvg("nonexistent", 10, 20, 50);

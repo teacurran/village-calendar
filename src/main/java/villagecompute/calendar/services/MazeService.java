@@ -63,8 +63,8 @@ public class MazeService {
         // Set basic properties
         maze.name = input.name != null ? input.name : "My Maze";
         maze.mazeType = input.mazeType != null ? input.mazeType : MazeType.ORTHOGONAL;
-        maze.size = input.size != null ? Math.max(1, Math.min(20, input.size)) : 10;
-        maze.difficulty = input.difficulty != null ? Math.max(1, Math.min(20, input.difficulty)) : 10;
+        maze.size = input.size != null ? Math.clamp(input.size, 1, 20) : 10;
+        maze.difficulty = input.difficulty != null ? Math.clamp(input.difficulty, 1, 20) : 10;
         maze.seed = input.seed != null ? input.seed : System.currentTimeMillis();
 
         // Set session or user
@@ -119,11 +119,11 @@ public class MazeService {
             needsRegeneration = true;
         }
         if (input.size != null && !input.size.equals(maze.size)) {
-            maze.size = Math.max(1, Math.min(20, input.size));
+            maze.size = Math.clamp(input.size, 1, 20);
             needsRegeneration = true;
         }
         if (input.difficulty != null && !input.difficulty.equals(maze.difficulty)) {
-            maze.difficulty = Math.max(1, Math.min(20, input.difficulty));
+            maze.difficulty = Math.clamp(input.difficulty, 1, 20);
             needsRegeneration = true;
         }
         if (input.seed != null) {

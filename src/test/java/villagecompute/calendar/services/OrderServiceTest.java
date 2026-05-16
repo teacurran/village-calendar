@@ -639,10 +639,11 @@ class OrderServiceTest {
     void testCreateShipment_OrderNotFound() {
         // Given
         UUID nonExistentId = UUID.randomUUID();
+        List<UUID> emptyItemIds = List.of();
 
         // When & Then
         assertThrows(IllegalArgumentException.class,
-                () -> orderService.createShipment(nonExistentId, java.util.List.of(), "USPS", "TRACK123"));
+                () -> orderService.createShipment(nonExistentId, emptyItemIds, "USPS", "TRACK123"));
     }
 
     @Test

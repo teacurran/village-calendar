@@ -174,11 +174,13 @@ class EmailServiceTest {
         String subject = "Test";
         String body = "Test body";
 
+        int beforeCount = getTotalMailCount();
+
         // When
         emailService.sendEmail(to, subject, body);
 
-        // Then - should not throw, but email is blocked
-        // No assertion needed - test passes if no exception thrown
+        // Then - should not throw, and email is blocked
+        assertEquals(beforeCount, getTotalMailCount(), "Email with null address should be blocked");
     }
 
     @Test
@@ -204,11 +206,13 @@ class EmailServiceTest {
         String subject = "Test";
         String htmlBody = "<p>Test</p>";
 
+        int beforeCount = getTotalMailCount();
+
         // When
         emailService.sendHtmlEmail(to, subject, htmlBody);
 
-        // Then - should not throw, but email is blocked
-        // No assertion needed - test passes if no exception thrown
+        // Then - should not throw, and email is blocked
+        assertEquals(beforeCount, getTotalMailCount(), "HTML email with null address should be blocked");
     }
 
     // ========== ENVIRONMENT PREFIX TESTS ==========

@@ -563,10 +563,11 @@ public class CalendarRenderingService {
     /** Renders a short event title on a single line at the bottom of the cell. */
     private void renderSingleLineEventTitle(StringBuilder svg, String title, Cell cell, int textX, int textSize,
             String textColor) {
+        String safeTitle = title == null ? "" : title;
         int textY = cell.y() + cell.height() - 3;
-        String escapedTitle = escapeXml(title);
+        String escapedTitle = escapeXml(safeTitle);
         // Truncate only if single word is too long
-        String displayTitle = title.length() > 12 ? escapedTitle.substring(0, 11) + "…" : escapedTitle;
+        String displayTitle = safeTitle.length() > 12 ? escapedTitle.substring(0, 11) + "…" : escapedTitle;
         svg.append(String.format(SVG_TEXT_SIMPLE_FORMAT, textX, textY, textSize, textColor, displayTitle));
     }
 
