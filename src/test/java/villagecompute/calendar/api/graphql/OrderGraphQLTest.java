@@ -11,6 +11,8 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -353,14 +355,16 @@ class OrderGraphQLTest {
     // GRAPHQL MUTATION UNAUTHENTICATED TESTS
     // ==================================================================
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(
+            strings = {"PRINT", "PDF"})
     @Order(40)
-    void testPlaceOrder_UnauthenticatedWithPrint() {
+    void testPlaceOrder_UnauthenticatedWithProductType(String productType) {
         String mutation = String.format("""
                 mutation {
                     placeOrder(input: {
                         calendarId: "%s"
-                        productType: PRINT
+                        productType: %s
                         quantity: 1
                         shippingAddress: {
                             street: "123 Test St"
@@ -377,36 +381,7 @@ class OrderGraphQLTest {
                         clientSecret
                     }
                 }
-                """, testCalendar.id);
-
-        given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue()); // Requires authentication
-    }
-
-    @Test
-    @Order(41)
-    void testPlaceOrder_UnauthenticatedWithPdf() {
-        String mutation = String.format("""
-                mutation {
-                    placeOrder(input: {
-                        calendarId: "%s"
-                        productType: PDF
-                        quantity: 1
-                        shippingAddress: {
-                            street: "123 Test St"
-                            city: "Nashville"
-                            state: "TN"
-                            postalCode: "37201"
-                            country: "US"
-                        }
-                    }) {
-                        order {
-                            id
-                        }
-                        clientSecret
-                    }
-                }
-                """, testCalendar.id);
+                """, testCalendar.id, productType);
 
         given().contentType(ContentType.JSON).body(Map.of("query", mutation)).when().post("/graphql").then()
                 .statusCode(200).body("errors", notNullValue()); // Requires authentication
@@ -569,34 +544,14 @@ class OrderGraphQLTest {
     // MYORDERS QUERY - Unauthenticated
     // ==================================================================
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(
+            strings = {"query { myOrders { id orderNumber } }",
+                    "query { myOrders(status: \"pending\") { id orderNumber } }",
+                    "query { order(id: \"not-a-uuid\") { id } }", "query { orders { id } }",
+                    "query { allOrders { id } }", "query { allOrders(status: \"pending\", limit: 10) { id } }"})
     @Order(60)
-    void testMyOrders_Unauthenticated() {
-        String query = """
-                query {
-                    myOrders {
-                        id
-                        orderNumber
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue()); // Requires authentication
-    }
-
-    @Test
-    @Order(61)
-    void testMyOrders_WithStatusFilter_Unauthenticated() {
-        String query = """
-                query {
-                    myOrders(status: "pending") {
-                        id
-                        orderNumber
-                    }
-                }
-                """;
-
+    void testOrderQuery_Unauthenticated_ReturnsErrors(String query) {
         given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
                 .statusCode(200).body("errors", notNullValue());
     }
@@ -626,39 +581,9 @@ class OrderGraphQLTest {
                 .statusCode(200).body("errors", notNullValue()); // Requires authentication
     }
 
-    @Test
-    @Order(63)
-    void testOrder_InvalidId() {
-        String query = """
-                query {
-                    order(id: "not-a-uuid") {
-                        id
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue()); // Should fail due to invalid UUID or auth
-    }
-
     // ==================================================================
     // ORDERS QUERY (with userId filter) - Unauthenticated
     // ==================================================================
-
-    @Test
-    @Order(64)
-    void testOrders_Unauthenticated() {
-        String query = """
-                query {
-                    orders {
-                        id
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
 
     @Test
     @Order(65)
@@ -670,40 +595,6 @@ class OrderGraphQLTest {
                     }
                 }
                 """, java.util.UUID.randomUUID());
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue());
-    }
-
-    // ==================================================================
-    // ALLORDERS QUERY - Admin only
-    // ==================================================================
-
-    @Test
-    @Order(66)
-    void testAllOrders_Unauthenticated() {
-        String query = """
-                query {
-                    allOrders {
-                        id
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue()); // Requires ADMIN role
-    }
-
-    @Test
-    @Order(67)
-    void testAllOrders_WithFilters_Unauthenticated() {
-        String query = """
-                query {
-                    allOrders(status: "pending", limit: 10) {
-                        id
-                    }
-                }
-                """;
 
         given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
                 .statusCode(200).body("errors", notNullValue());

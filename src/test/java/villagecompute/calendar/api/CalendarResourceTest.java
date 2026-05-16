@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
@@ -71,21 +73,13 @@ class CalendarResourceTest {
                 .contentType(CONTENT_TYPE_SVG);
     }
 
-    @Test
-    void testGenerate_WithWeekNumbers() {
+    @ParameterizedTest
+    @CsvSource({"showWeekNumbers, true", "compactMode, true", "showDayNames, false", "showDayNumbers, false",
+            "showGrid, false", "rotateMonthNames, true"})
+    void testGenerate_WithSingleBooleanOption(String optionKey, boolean optionValue) {
         Map<String, Object> request = new HashMap<>();
         request.put("year", TEST_YEAR);
-        request.put("showWeekNumbers", true);
-
-        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
-                .contentType(CONTENT_TYPE_SVG);
-    }
-
-    @Test
-    void testGenerate_CompactMode() {
-        Map<String, Object> request = new HashMap<>();
-        request.put("year", TEST_YEAR);
-        request.put("compactMode", true);
+        request.put(optionKey, optionValue);
 
         given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
                 .contentType(CONTENT_TYPE_SVG);
@@ -139,51 +133,11 @@ class CalendarResourceTest {
     }
 
     @Test
-    void testGenerate_WithoutDayNames() {
-        Map<String, Object> request = new HashMap<>();
-        request.put("year", TEST_YEAR);
-        request.put("showDayNames", false);
-
-        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
-                .contentType(CONTENT_TYPE_SVG);
-    }
-
-    @Test
-    void testGenerate_WithoutDayNumbers() {
-        Map<String, Object> request = new HashMap<>();
-        request.put("year", TEST_YEAR);
-        request.put("showDayNumbers", false);
-
-        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
-                .contentType(CONTENT_TYPE_SVG);
-    }
-
-    @Test
-    void testGenerate_WithoutGrid() {
-        Map<String, Object> request = new HashMap<>();
-        request.put("year", TEST_YEAR);
-        request.put("showGrid", false);
-
-        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
-                .contentType(CONTENT_TYPE_SVG);
-    }
-
-    @Test
     void testGenerate_WithHighlightWeekends() {
         Map<String, Object> request = new HashMap<>();
         request.put("year", TEST_YEAR);
         request.put("highlightWeekends", true);
         request.put("weekendBgColor", "#f5f5f5");
-
-        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
-                .contentType(CONTENT_TYPE_SVG);
-    }
-
-    @Test
-    void testGenerate_WithRotatedMonthNames() {
-        Map<String, Object> request = new HashMap<>();
-        request.put("year", TEST_YEAR);
-        request.put("rotateMonthNames", true);
 
         given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
                 .contentType(CONTENT_TYPE_SVG);
