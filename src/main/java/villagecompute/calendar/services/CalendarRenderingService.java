@@ -134,7 +134,7 @@ public class CalendarRenderingService {
         MONOCHROME_EMOJI_SUBSTITUTIONS.put("🏔️", "⛰️"); // Snow Mountain -> Mountain (Double Ninth)
         // Secular
         MONOCHROME_EMOJI_SUBSTITUTIONS.put("🦫", "🐿️"); // Beaver -> Chipmunk (Groundhog Day)
-        MONOCHROME_EMOJI_SUBSTITUTIONS.put("🏳️‍🌈", "🌈"); // Pride Flag -> Rainbow
+        MONOCHROME_EMOJI_SUBSTITUTIONS.put("🏳️\u200d🌈", "🌈"); // Pride Flag -> Rainbow
     }
 
     // Emoji color variants mapping (emojiFont value -> hex color)
