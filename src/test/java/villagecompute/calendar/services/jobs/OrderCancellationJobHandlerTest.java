@@ -185,10 +185,9 @@ class OrderCancellationJobHandlerTest {
 
     @Test
     void run_withInvalidUuid_throwsIllegalArgumentException() {
-        // Given - a non-UUID actor id
-        // When / Then - UUID.fromString rejects this with IllegalArgumentException, which
-        // is NOT caught by the handler's try/catch (those wrap exceptions only after the
-        // status checks). Verify that propagation behavior.
+        // Given a non-UUID actor id, the UUID parser rejects it with IllegalArgumentException.
+        // The handler does not catch this case because its try/catch only wraps exceptions
+        // raised after the status checks. This test verifies that propagation behavior.
         assertThrows(IllegalArgumentException.class, () -> handler.run("not-a-uuid"));
     }
 
