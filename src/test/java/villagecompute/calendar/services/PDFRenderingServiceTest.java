@@ -6,8 +6,12 @@ import java.util.List;
 
 import jakarta.inject.Inject;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.junit.jupiter.api.Test;
 
+import villagecompute.calendar.exceptions.RenderingException;
 import villagecompute.calendar.types.CalendarConfigType;
 import villagecompute.calendar.types.CustomDateEntryType;
 
@@ -256,5 +260,252 @@ class PDFRenderingServiceTest {
         byte[] colorPdf = pdfRenderingService.renderSVGToPDF(colorSvg, 2025);
         assertNotNull(colorPdf, "Color PDF output should not be null");
         assertTrue(colorPdf.length > 1000, "Color PDF should have substantial content");
+    }
+
+    // ------------------------------------------------------------------------
+    // Additional coverage: null/empty inputs, error paths, PNG rendering,
+    // SVG preprocessing branches, and PDF metadata cleaning.
+    // ------------------------------------------------------------------------
+
+    @Test
+    void testRenderSVGToPDFRejectsNullContent() {
+        // Null input should produce IllegalArgumentException, not RenderingException
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
+            pdfRenderingService.renderSVGToPDF(null, 2025);
+        });
+        assertTrue(ex.getMessage().contains("null or empty"), "Should mention null/empty in message");
+    }
+
+    @Test
+    void testRenderSVGToPDFRejectsEmptyContent() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
+            pdfRenderingService.renderSVGToPDF("", 2025);
+        });
+        assertTrue(ex.getMessage().contains("null or empty"), "Should mention null/empty in message");
+    }
+
+    @Test
+    void testRenderSVGToPDFThrowsRenderingExceptionOnInvalidSvg() {
+        // Malformed SVG should result in a RenderingException (not the underlying TranscoderException)
+        String invalidSvg = "<svg><not-properly-closed";
+        RenderingException ex = assertThrows(RenderingException.class, () -> {
+            pdfRenderingService.renderSVGToPDF(invalidSvg, 2025);
+        });
+        assertTrue(ex.getMessage().contains("PDF rendering failed"),
+                "RenderingException message should mention PDF rendering failed");
+        assertNotNull(ex.getCause(), "RenderingException should wrap original cause");
+    }
+
+    @Test
+    void testRenderSVGToPNGProducesValidPng() {
+        String basicSvg = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50">
+                    <rect x="0" y="0" width="50" height="50" fill="red"/>
+                </svg>
+                """;
+
+        byte[] png = pdfRenderingService.renderSVGToPNG(basicSvg, 100);
+        assertNotNull(png, "PNG output should not be null");
+        assertTrue(png.length > 0, "PNG should have content");
+        // PNG signature: 0x89 P N G
+        assertEquals((byte) 0x89, png[0], "PNG should start with 0x89");
+        assertEquals('P', png[1]);
+        assertEquals('N', png[2]);
+        assertEquals('G', png[3]);
+    }
+
+    @Test
+    void testRenderSVGToPNGRejectsNullContent() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
+            pdfRenderingService.renderSVGToPNG(null, 100);
+        });
+        assertTrue(ex.getMessage().contains("null or empty"));
+    }
+
+    @Test
+    void testRenderSVGToPNGRejectsEmptyContent() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            pdfRenderingService.renderSVGToPNG("", 100);
+        });
+    }
+
+    @Test
+    void testRenderSVGToPNGThrowsRenderingExceptionOnInvalidSvg() {
+        String invalidSvg = "<svg<<not-valid";
+        RenderingException ex = assertThrows(RenderingException.class, () -> {
+            pdfRenderingService.renderSVGToPNG(invalidSvg, 100);
+        });
+        assertTrue(ex.getMessage().contains("PNG rendering failed"),
+                "RenderingException should mention PNG rendering failed");
+    }
+
+    @Test
+    void testRenderSVGToPNGDataUriProducesDataUri() {
+        String basicSvg = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50">
+                    <rect x="0" y="0" width="50" height="50" fill="green"/>
+                </svg>
+                """;
+
+        String dataUri = pdfRenderingService.renderSVGToPNGDataUri(basicSvg, 100);
+        assertNotNull(dataUri, "Data URI should not be null");
+        assertTrue(dataUri.startsWith("data:image/png;base64,"), "Data URI should start with PNG data URI prefix");
+        String base64Body = dataUri.substring("data:image/png;base64,".length());
+        assertTrue(base64Body.length() > 0, "Base64 body should not be empty");
+        // Decode and check PNG signature
+        byte[] decoded = java.util.Base64.getDecoder().decode(base64Body);
+        assertEquals((byte) 0x89, decoded[0], "Decoded payload should be a PNG");
+    }
+
+    @Test
+    void testPreprocessingHandlesTransparentFillAttribute() {
+        // SVG using fill="transparent" should be accepted; preprocessor swaps to fill="none"
+        String svg = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60">
+                    <rect x="5" y="5" width="50" height="50" fill="transparent" stroke="black"/>
+                </svg>
+                """;
+
+        byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, 2025);
+        assertNotNull(pdf, "PDF should be produced even with transparent fill");
+        assertEquals("%PDF", new String(pdf, 0, 4));
+    }
+
+    @Test
+    void testPreprocessingHandlesTransparentFillInStyle() {
+        // CSS-style transparent fill (fill:transparent) should also be accepted
+        String svg = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60">
+                    <rect x="5" y="5" width="50" height="50" style="fill: transparent; stroke: black"/>
+                </svg>
+                """;
+
+        byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, 2025);
+        assertNotNull(pdf);
+        assertEquals("%PDF", new String(pdf, 0, 4));
+    }
+
+    @Test
+    void testPreprocessingHandlesClipPathUrlReference() {
+        // clip-path attribute referencing url(#id) - the preprocessor rewrites to bare #id
+        String svg = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+                    <defs>
+                        <clipPath id="clipBox">
+                            <rect x="0" y="0" width="40" height="40"/>
+                        </clipPath>
+                    </defs>
+                    <rect x="0" y="0" width="80" height="80" fill="blue" clip-path="url(#clipBox)"/>
+                </svg>
+                """;
+
+        byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, 2025);
+        assertNotNull(pdf);
+        assertEquals("%PDF", new String(pdf, 0, 4));
+    }
+
+    @Test
+    void testPreprocessingHandlesClipPathInStyleForm() {
+        // clip-path in style attribute also exercised by preprocessor
+        String svg = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+                    <defs>
+                        <clipPath id="clipBox2">
+                            <rect x="0" y="0" width="40" height="40"/>
+                        </clipPath>
+                    </defs>
+                    <rect x="0" y="0" width="80" height="80" fill="orange" style="clip-path:url(#clipBox2)"/>
+                </svg>
+                """;
+
+        byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, 2025);
+        assertNotNull(pdf);
+        assertEquals("%PDF", new String(pdf, 0, 4));
+    }
+
+    @Test
+    void testPreprocessingAcceptsSvgWithoutXmlPrologue() {
+        // SVG that doesn't lead with "<" should still be handled by the preprocessor's guard,
+        // which short-circuits preprocessing. Wrap the SVG so we get something Batik can attempt.
+        // (Just leading whitespace + content starting with "<" - exercises the trim path.)
+        String svg = "\n\n   <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\""
+                + " viewBox=\"0 0 40 40\"><rect width=\"40\" height=\"40\" fill=\"purple\"/></svg>";
+
+        byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, 2025);
+        assertNotNull(pdf);
+        assertEquals("%PDF", new String(pdf, 0, 4));
+    }
+
+    @Test
+    void testPreprocessingAddsXlinkNamespaceWhenMissing() {
+        // SVG uses xlink:href but does NOT declare xmlns:xlink - preprocessor should add it.
+        String svg = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+                    <defs>
+                        <symbol id="sym1" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="20" fill="teal"/>
+                        </symbol>
+                    </defs>
+                    <use xlink:href="#sym1" x="0" y="0" width="100" height="100"/>
+                </svg>
+                """;
+
+        byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, 2025);
+        assertNotNull(pdf, "PDF should render even if xlink namespace was missing");
+        assertEquals("%PDF", new String(pdf, 0, 4));
+    }
+
+    @Test
+    void testPdfMetadataIsCleanedAndYearApplied() throws Exception {
+        // Verify cleanPdfMetadata behavior: producer, creator, title (with year), subject; author/keywords blank.
+        String svg = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+                    <rect width="80" height="80" fill="navy"/>
+                </svg>
+                """;
+
+        int targetYear = 2030;
+        byte[] pdf = pdfRenderingService.renderSVGToPDF(svg, targetYear);
+        assertNotNull(pdf);
+        assertEquals("%PDF", new String(pdf, 0, 4));
+
+        try (PDDocument doc = Loader.loadPDF(pdf)) {
+            PDDocumentInformation info = doc.getDocumentInformation();
+            assertEquals("villagecompute.com", info.getProducer(), "Producer should be cleaned to villagecompute.com");
+            assertEquals("Village Compute Calendar Generator", info.getCreator(),
+                    "Creator should be Village Compute Calendar Generator");
+            assertEquals("Calendar " + targetYear, info.getTitle(), "Title should reflect the year passed in");
+            assertEquals("Calendar", info.getSubject(), "Subject should be Calendar");
+            // Author/Keywords intentionally blanked out
+            assertEquals("", info.getAuthor(), "Author should be blanked");
+            assertEquals("", info.getKeywords(), "Keywords should be blanked");
+        }
+    }
+
+    @Test
+    void testPdfMetadataYearVariesWithInput() throws Exception {
+        // Ensure the year parameter is actually threaded through to the metadata title
+        String svg = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+                    <rect width="40" height="40" fill="black"/>
+                </svg>
+                """;
+
+        byte[] pdf1999 = pdfRenderingService.renderSVGToPDF(svg, 1999);
+        byte[] pdf2099 = pdfRenderingService.renderSVGToPDF(svg, 2099);
+
+        try (PDDocument d1 = Loader.loadPDF(pdf1999); PDDocument d2 = Loader.loadPDF(pdf2099)) {
+            assertEquals("Calendar 1999", d1.getDocumentInformation().getTitle());
+            assertEquals("Calendar 2099", d2.getDocumentInformation().getTitle());
+        }
     }
 }
