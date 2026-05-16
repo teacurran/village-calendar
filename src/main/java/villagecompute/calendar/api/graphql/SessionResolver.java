@@ -123,7 +123,7 @@ public class SessionResolver {
                 year, templateId);
 
         // Validate session ID format
-        if (sessionId == null || sessionId.isBlank()) {
+        if (sessionId.isBlank()) {
             throw new IllegalArgumentException("Session ID is required");
         }
 
