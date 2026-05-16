@@ -19,55 +19,10 @@ class CalendarConfigTypeTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
-    @Test
-    void defaultConstructor_SetsDefaultValues() {
-        CalendarConfigType config = new CalendarConfigType();
-
-        assertEquals(LocalDate.now().getYear(), config.year);
-        assertEquals("default", config.theme);
-        assertEquals("none", config.moonDisplayMode);
-        assertFalse(config.showWeekNumbers);
-        assertFalse(config.compactMode);
-        assertTrue(config.showDayNames);
-        assertTrue(config.showDayNumbers);
-        assertTrue(config.showGrid);
-        assertTrue(config.highlightWeekends);
-        assertFalse(config.rotateMonthNames);
-        assertEquals(0, config.latitude);
-        assertEquals(0, config.longitude);
-        assertEquals(LocalTime.of(20, 0), config.observationTime);
-        assertEquals("America/New_York", config.timeZone);
-        assertEquals(20, config.moonSize);
-        assertEquals(25, config.moonOffsetX);
-        assertEquals(36, config.moonOffsetY);
-        assertEquals("#666666", config.moonBorderColor);
-        assertEquals(1.5, config.moonBorderWidth);
-        assertNull(config.yearColor);
-        assertNull(config.monthColor);
-        assertNull(config.dayTextColor);
-        assertNull(config.dayNameColor);
-        assertNotNull(config.gridLineColor);
-        assertNull(config.weekendBgColor);
-        assertEquals("#ff5252", config.holidayColor);
-        assertNotNull(config.customDateColor);
-        assertNotNull(config.moonDarkColor);
-        assertNotNull(config.moonLightColor);
-        assertEquals("bottom-left", config.emojiPosition);
-        assertNotNull(config.customDates);
-        assertTrue(config.customDates.isEmpty());
-        assertNotNull(config.holidays);
-        assertTrue(config.holidays.isEmpty());
-        assertNotNull(config.holidaySets);
-        assertTrue(config.holidaySets.isEmpty());
-        assertEquals("large", config.eventDisplayMode);
-        assertEquals("noto-color", config.emojiFont);
-        assertEquals("en-US", config.locale);
-        assertEquals(DayOfWeek.SUNDAY, config.firstDayOfWeek);
-        assertEquals("grid", config.layoutStyle);
-    }
-
-    @Test
-    void copyConstructor_CopiesAllFields() {
+    /**
+     * Builds a CalendarConfigType populated with non-default values used by copy-constructor tests.
+     */
+    private static CalendarConfigType buildPopulatedConfig() {
         CalendarConfigType original = new CalendarConfigType();
         original.year = 2025;
         original.theme = "dark";
@@ -107,13 +62,100 @@ class CalendarConfigTypeTest {
         original.locale = "fr-FR";
         original.firstDayOfWeek = DayOfWeek.MONDAY;
         original.layoutStyle = "weekday-grid";
+        return original;
+    }
+
+    @Test
+    void defaultConstructor_SetsDefaultScalarValues() {
+        CalendarConfigType config = new CalendarConfigType();
+
+        assertEquals(LocalDate.now().getYear(), config.year);
+        assertEquals("default", config.theme);
+        assertEquals("none", config.moonDisplayMode);
+        assertEquals(0, config.latitude);
+        assertEquals(0, config.longitude);
+        assertEquals(LocalTime.of(20, 0), config.observationTime);
+        assertEquals("America/New_York", config.timeZone);
+        assertEquals("en-US", config.locale);
+        assertEquals(DayOfWeek.SUNDAY, config.firstDayOfWeek);
+        assertEquals("grid", config.layoutStyle);
+        assertEquals("large", config.eventDisplayMode);
+        assertEquals("noto-color", config.emojiFont);
+    }
+
+    @Test
+    void defaultConstructor_SetsDefaultBooleanFlags() {
+        CalendarConfigType config = new CalendarConfigType();
+
+        assertFalse(config.showWeekNumbers);
+        assertFalse(config.compactMode);
+        assertTrue(config.showDayNames);
+        assertTrue(config.showDayNumbers);
+        assertTrue(config.showGrid);
+        assertTrue(config.highlightWeekends);
+        assertFalse(config.rotateMonthNames);
+    }
+
+    @Test
+    void defaultConstructor_SetsDefaultMoonAndColorValues() {
+        CalendarConfigType config = new CalendarConfigType();
+
+        assertEquals(20, config.moonSize);
+        assertEquals(25, config.moonOffsetX);
+        assertEquals(36, config.moonOffsetY);
+        assertEquals("#666666", config.moonBorderColor);
+        assertEquals(1.5, config.moonBorderWidth);
+        assertNull(config.yearColor);
+        assertNull(config.monthColor);
+        assertNull(config.dayTextColor);
+        assertNull(config.dayNameColor);
+        assertNotNull(config.gridLineColor);
+        assertNull(config.weekendBgColor);
+        assertEquals("#ff5252", config.holidayColor);
+        assertNotNull(config.customDateColor);
+        assertNotNull(config.moonDarkColor);
+        assertNotNull(config.moonLightColor);
+        assertEquals("bottom-left", config.emojiPosition);
+    }
+
+    @Test
+    void defaultConstructor_InitializesEmptyCollections() {
+        CalendarConfigType config = new CalendarConfigType();
+
+        assertNotNull(config.customDates);
+        assertTrue(config.customDates.isEmpty());
+        assertNotNull(config.holidays);
+        assertTrue(config.holidays.isEmpty());
+        assertNotNull(config.holidaySets);
+        assertTrue(config.holidaySets.isEmpty());
+    }
+
+    @Test
+    void copyConstructor_CopiesScalarAndTimeFields() {
+        CalendarConfigType original = buildPopulatedConfig();
 
         CalendarConfigType copy = new CalendarConfigType(original);
 
-        // Verify all scalar fields
         assertEquals(original.year, copy.year);
         assertEquals(original.theme, copy.theme);
         assertEquals(original.moonDisplayMode, copy.moonDisplayMode);
+        assertEquals(original.latitude, copy.latitude);
+        assertEquals(original.longitude, copy.longitude);
+        assertEquals(original.observationTime, copy.observationTime);
+        assertEquals(original.timeZone, copy.timeZone);
+        assertEquals(original.eventDisplayMode, copy.eventDisplayMode);
+        assertEquals(original.emojiFont, copy.emojiFont);
+        assertEquals(original.locale, copy.locale);
+        assertEquals(original.firstDayOfWeek, copy.firstDayOfWeek);
+        assertEquals(original.layoutStyle, copy.layoutStyle);
+    }
+
+    @Test
+    void copyConstructor_CopiesBooleanFlags() {
+        CalendarConfigType original = buildPopulatedConfig();
+
+        CalendarConfigType copy = new CalendarConfigType(original);
+
         assertEquals(original.showWeekNumbers, copy.showWeekNumbers);
         assertEquals(original.compactMode, copy.compactMode);
         assertEquals(original.showDayNames, copy.showDayNames);
@@ -121,10 +163,14 @@ class CalendarConfigTypeTest {
         assertEquals(original.showGrid, copy.showGrid);
         assertEquals(original.highlightWeekends, copy.highlightWeekends);
         assertEquals(original.rotateMonthNames, copy.rotateMonthNames);
-        assertEquals(original.latitude, copy.latitude);
-        assertEquals(original.longitude, copy.longitude);
-        assertEquals(original.observationTime, copy.observationTime);
-        assertEquals(original.timeZone, copy.timeZone);
+    }
+
+    @Test
+    void copyConstructor_CopiesMoonAndColorFields() {
+        CalendarConfigType original = buildPopulatedConfig();
+
+        CalendarConfigType copy = new CalendarConfigType(original);
+
         assertEquals(original.moonSize, copy.moonSize);
         assertEquals(original.moonOffsetX, copy.moonOffsetX);
         assertEquals(original.moonOffsetY, copy.moonOffsetY);
@@ -141,11 +187,13 @@ class CalendarConfigTypeTest {
         assertEquals(original.moonDarkColor, copy.moonDarkColor);
         assertEquals(original.moonLightColor, copy.moonLightColor);
         assertEquals(original.emojiPosition, copy.emojiPosition);
-        assertEquals(original.eventDisplayMode, copy.eventDisplayMode);
-        assertEquals(original.emojiFont, copy.emojiFont);
-        assertEquals(original.locale, copy.locale);
-        assertEquals(original.firstDayOfWeek, copy.firstDayOfWeek);
-        assertEquals(original.layoutStyle, copy.layoutStyle);
+    }
+
+    @Test
+    void copyConstructor_DeepCopiesCollections() {
+        CalendarConfigType original = buildPopulatedConfig();
+
+        CalendarConfigType copy = new CalendarConfigType(original);
 
         // Verify collections are copied (not same reference)
         assertNotSame(original.customDates, copy.customDates);
