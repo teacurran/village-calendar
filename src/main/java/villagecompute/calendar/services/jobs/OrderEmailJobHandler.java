@@ -118,8 +118,14 @@ public class OrderEmailJobHandler implements DelayedJobHandler {
         }
 
         // Get customer email (prefer customerEmail field, fall back to user.email)
-        String customerEmail = order.customerEmail != null ? order.customerEmail
-                : (order.user != null ? order.user.email : null);
+        String customerEmail;
+        if (order.customerEmail != null) {
+            customerEmail = order.customerEmail;
+        } else if (order.user != null) {
+            customerEmail = order.user.email;
+        } else {
+            customerEmail = null;
+        }
 
         if (customerEmail == null) {
             LOG.errorf("No customer email found for order: %s", actorId);
