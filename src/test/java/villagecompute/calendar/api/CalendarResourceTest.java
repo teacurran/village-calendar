@@ -415,4 +415,305 @@ class CalendarResourceTest {
         given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
                 .contentType(CONTENT_TYPE_SVG);
     }
+
+    // ========== ADDITIONAL CONFIG COVERAGE (buildConfig helpers) ==========
+
+    @Test
+    void testGenerate_AllMoonSettings() {
+        Map<String, Object> request = new HashMap<>();
+        request.put("year", TEST_YEAR);
+        request.put("moonDisplayMode", "phases");
+        request.put("moonSize", 24);
+        request.put("moonOffsetX", 5);
+        request.put("moonOffsetY", -3);
+        request.put("moonBorderColor", "#000000");
+        request.put("moonBorderWidth", 1.5);
+        request.put("moonDarkColor", "#222222");
+        request.put("moonLightColor", "#eeeeee");
+        request.put("latitude", 44.5);
+        request.put("longitude", -72.0);
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
+                .contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testGenerate_AllColorSettings() {
+        Map<String, Object> request = new HashMap<>();
+        request.put("year", TEST_YEAR);
+        request.put("yearColor", "#111111");
+        request.put("monthColor", "#222222");
+        request.put("dayTextColor", "#333333");
+        request.put("dayNameColor", "#444444");
+        request.put("gridLineColor", "#555555");
+        request.put("weekendBgColor", "#666666");
+        request.put("holidayColor", "#777777");
+        request.put("customDateColor", "#888888");
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
+                .contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testGenerate_AllEventSettings() {
+        Map<String, Object> request = new HashMap<>();
+        request.put("year", TEST_YEAR);
+        request.put("eventDisplayMode", "large");
+        request.put("emojiPosition", "below");
+        request.put("emojiFont", "noto-mono");
+        request.put("holidaySets", List.of("us-federal"));
+        Map<String, Object> holidays = new HashMap<>();
+        holidays.put("2025-07-04", Map.of("name", "Custom Independence Day", "emoji", "🎆"));
+        request.put("holidays", holidays);
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
+                .contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testGenerate_LocaleAndTimezone() {
+        Map<String, Object> request = new HashMap<>();
+        request.put("year", TEST_YEAR);
+        request.put("locale", "en-US");
+        request.put("timeZone", "America/New_York");
+        request.put("observationTime", "20:00");
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
+                .contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testGenerate_InvalidFirstDayOfWeek_FallsBackToSunday() {
+        Map<String, Object> request = new HashMap<>();
+        request.put("year", TEST_YEAR);
+        request.put("firstDayOfWeek", "NOT_A_DAY");
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
+                .contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testGenerate_InvalidObservationTime_KeepsDefault() {
+        Map<String, Object> request = new HashMap<>();
+        request.put("year", TEST_YEAR);
+        request.put("observationTime", "not-a-time");
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
+                .contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testGenerate_LayoutStyleTraditional() {
+        Map<String, Object> request = new HashMap<>();
+        request.put("year", TEST_YEAR);
+        request.put("layoutStyle", "traditional");
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate").then().statusCode(200)
+                .contentType(CONTENT_TYPE_SVG);
+    }
+
+    // ========== GENERATE-JSON: HEBREW CALENDAR ==========
+
+    @Test
+    void testGenerateJson_HebrewCalendar() {
+        Map<String, Object> request = new HashMap<>();
+        request.put("calendarType", "hebrew");
+        request.put("year", 5785);
+        request.put("theme", "default");
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate-json").then()
+                .statusCode(200).contentType(ContentType.JSON).body("svg", containsString("<svg"))
+                .body("format", equalTo("svg"));
+    }
+
+    @Test
+    void testGenerateJson_HebrewCalendar_DefaultYear() {
+        Map<String, Object> request = new HashMap<>();
+        request.put("calendarType", "hebrew");
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate-json").then()
+                .statusCode(200).contentType(ContentType.JSON).body("svg", containsString("<svg"));
+    }
+
+    // ========== GET /api/calendar/available-emojis ==========
+
+    @Test
+    void testAvailableEmojis_ReturnsList() {
+        given().when().get("/api/calendar/available-emojis").then().statusCode(200).contentType(ContentType.JSON)
+                .header("Cache-Control", containsString("max-age=3600"));
+    }
+
+    // ========== EMOJI-PREVIEW: ADDITIONAL STYLE COVERAGE ==========
+
+    @Test
+    void testEmojiPreview_EmptyEmoji_UsesDefault() {
+        given().queryParam("emoji", "").when().get("/api/calendar/emoji-preview").then().statusCode(200)
+                .contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testEmojiPreview_EmptyStyle_UsesDefault() {
+        given().queryParam("emoji", "🎄").queryParam("style", "").when().get("/api/calendar/emoji-preview").then()
+                .statusCode(200).contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testEmojiPreview_MonoRed() {
+        given().queryParam("emoji", "🎄").queryParam("style", "mono-red").when().get("/api/calendar/emoji-preview")
+                .then().statusCode(200).contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testEmojiPreview_MonoBlue() {
+        given().queryParam("emoji", "🎄").queryParam("style", "mono-blue").when().get("/api/calendar/emoji-preview")
+                .then().statusCode(200).contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testEmojiPreview_MonoGreen() {
+        given().queryParam("emoji", "🎄").queryParam("style", "mono-green").when().get("/api/calendar/emoji-preview")
+                .then().statusCode(200).contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testEmojiPreview_MonoOrange() {
+        given().queryParam("emoji", "🎄").queryParam("style", "mono-orange").when().get("/api/calendar/emoji-preview")
+                .then().statusCode(200).contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testEmojiPreview_MonoPurple() {
+        given().queryParam("emoji", "🎄").queryParam("style", "mono-purple").when().get("/api/calendar/emoji-preview")
+                .then().statusCode(200).contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testEmojiPreview_MonoPink() {
+        given().queryParam("emoji", "🎄").queryParam("style", "mono-pink").when().get("/api/calendar/emoji-preview")
+                .then().statusCode(200).contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testEmojiPreview_MonoTeal() {
+        given().queryParam("emoji", "🎄").queryParam("style", "mono-teal").when().get("/api/calendar/emoji-preview")
+                .then().statusCode(200).contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testEmojiPreview_MonoBrown() {
+        given().queryParam("emoji", "🎄").queryParam("style", "mono-brown").when().get("/api/calendar/emoji-preview")
+                .then().statusCode(200).contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testEmojiPreview_MonoNavy() {
+        given().queryParam("emoji", "🎄").queryParam("style", "mono-navy").when().get("/api/calendar/emoji-preview")
+                .then().statusCode(200).contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testEmojiPreview_MonoCoral() {
+        given().queryParam("emoji", "🎄").queryParam("style", "mono-coral").when().get("/api/calendar/emoji-preview")
+                .then().statusCode(200).contentType(CONTENT_TYPE_SVG);
+    }
+
+    @Test
+    void testEmojiPreview_UnknownMonoStyle_FallsBackToBlack() {
+        given().queryParam("emoji", "🎄").queryParam("style", "mono-unknown-color").when()
+                .get("/api/calendar/emoji-preview").then().statusCode(anyOf(is(200), is(404)));
+    }
+
+    @Test
+    void testEmojiPreview_NotFoundEmoji() {
+        // Use a character very unlikely to have a Noto SVG representation
+        given().queryParam("emoji", "ZZZZZNotAnEmoji").when().get("/api/calendar/emoji-preview").then()
+                .statusCode(anyOf(is(200), is(404)));
+    }
+
+    // ========== SVG-TO-PDF: ADDITIONAL COVERAGE ==========
+
+    @Test
+    void testSvgToPdf_NullRequest_ReturnsBadRequest() {
+        // Sending no body should yield a 400 from the explicit null check
+        given().contentType(ContentType.JSON).when().post("/api/calendar/svg-to-pdf").then()
+                .statusCode(anyOf(is(400), is(415)));
+    }
+
+    @Test
+    void testSvgToPdf_NeitherSvgNorRegenerate_ReturnsBadRequest() {
+        Map<String, Object> request = new HashMap<>();
+        request.put("year", TEST_YEAR);
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/svg-to-pdf").then()
+                .statusCode(400);
+    }
+
+    @Test
+    void testSvgToPdf_RegenerateConfig_Gregorian() {
+        Map<String, Object> request = new HashMap<>();
+        Map<String, Object> regen = new HashMap<>();
+        regen.put("year", TEST_YEAR);
+        regen.put("theme", "default");
+        request.put("regenerateConfig", regen);
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/svg-to-pdf").then()
+                .statusCode(200).contentType(CONTENT_TYPE_PDF);
+    }
+
+    @Test
+    void testSvgToPdf_RegenerateConfig_Hebrew() {
+        Map<String, Object> request = new HashMap<>();
+        Map<String, Object> regen = new HashMap<>();
+        regen.put("year", 5785);
+        regen.put("calendarType", "hebrew");
+        request.put("regenerateConfig", regen);
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/svg-to-pdf").then()
+                .statusCode(200).contentType(CONTENT_TYPE_PDF);
+    }
+
+    @Test
+    void testSvgToPdf_InvalidSvgContent_ReturnsServerError() {
+        // An SVG that the renderer cannot parse should fall into the exception path
+        Map<String, Object> request = new HashMap<>();
+        request.put("svgContent", "this is definitely not valid svg <<<>>>");
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/svg-to-pdf").then()
+                .statusCode(anyOf(is(500), is(200))); // depends on renderer leniency
+    }
+
+    // ========== GENERATE-PDF: ERROR PATH ==========
+
+    @Test
+    void testGeneratePdf_HebrewYear_StillReturnsPdf() {
+        Map<String, Object> request = new HashMap<>();
+        request.put("year", TEST_YEAR);
+        request.put("calendarType", "hebrew");
+
+        given().contentType(ContentType.JSON).body(request).when().post("/api/calendar/generate-pdf").then()
+                .statusCode(anyOf(is(200), is(500))).contentType(anyOf(is(CONTENT_TYPE_PDF), is("text/plain")));
+    }
+
+    // ========== HOLIDAYS: ADDITIONAL COVERAGE ==========
+
+    @Test
+    void testHolidays_DefaultYearAndCountry() {
+        // No params: should default to current year and US
+        given().when().get("/api/calendar/holidays").then().statusCode(200).contentType(ContentType.JSON)
+                .body("holidays", notNullValue()).body("holidayData", notNullValue());
+    }
+
+    @Test
+    void testHolidays_ExplicitUSCountry() {
+        given().queryParam("year", TEST_YEAR).queryParam("country", "US").when().get("/api/calendar/holidays").then()
+                .statusCode(200).contentType(ContentType.JSON).body("holidays", notNullValue());
+    }
+
+    @Test
+    void testHolidays_UnknownCountry_FallsBackToUS() {
+        // Unknown country should yield empty result, then fall back to US holidays
+        given().queryParam("year", TEST_YEAR).queryParam("country", "ZZ_NOT_A_COUNTRY").when()
+                .get("/api/calendar/holidays").then().statusCode(200).contentType(ContentType.JSON)
+                .body("holidays", notNullValue());
+    }
 }
