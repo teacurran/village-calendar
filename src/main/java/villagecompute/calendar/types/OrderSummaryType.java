@@ -70,8 +70,13 @@ public class OrderSummaryType {
         }
 
         // Email - prefer customerEmail, fall back to user email
-        summary.customerEmail = order.customerEmail != null ? order.customerEmail
-                : (order.user != null ? order.user.email : null);
+        if (order.customerEmail != null) {
+            summary.customerEmail = order.customerEmail;
+        } else if (order.user != null) {
+            summary.customerEmail = order.user.email;
+        } else {
+            summary.customerEmail = null;
+        }
 
         // Convert shipping address JsonNode to Map
         if (order.shippingAddress != null) {
