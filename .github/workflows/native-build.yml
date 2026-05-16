@@ -1,0 +1,92 @@
+name: Native Build (GraalVM)
+
+# Builds the GraalVM native image via Dockerfile.native to validate that the
+# native compilation pipeline works. The build uses Quarkus's container-build
+# mode (Mandrel inside Docker), so no local Mandrel install is needed on the
+# runner. This workflow is intentionally narrow: it only validates the build.
+# It does NOT push the image anywhere yet — promotion to a registry comes
+# in a follow-up once the build is reliably green.
+
+on:
+  push:
+    branches:
+      - feature/native-build
+  pull_request:
+    branches:
+      - feature/native-build
+  workflow_dispatch:
+
+# Native builds are slow + RAM-heavy; never run two in parallel for the same ref.
+concurrency:
+  group: native-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-image:
+    name: Build native image via Dockerfile.native
+    runs-on: ubuntu-latest
+    # Native compilation can take 15+ min; give it room.
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Verify Dockerfile.native exists
+        run: |
+          if [ ! -f Dockerfile.native ]; then
+            echo "::error::Dockerfile.native is missing on this ref. PR #100 (native/initial-pass) should add it; if you are on feature/native-build before that lands, this workflow will fail by design."
+            exit 1
+          fi
+          echo "Dockerfile.native size: $(wc -c < Dockerfile.native) bytes"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Free disk space on runner
+        # GraalVM builds + Docker layers can exhaust the runner's disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - name: Build native image
+        # Tag locally only; we do NOT push.
+        run: |
+          set -euxo pipefail
+          docker build \
+            --file Dockerfile.native \
+            --tag village-calendar:native-${{ github.sha }} \
+            --progress=plain \
+            --build-arg DOCKER_BUILDKIT=1 \
+            .
+
+      - name: Image size + basic inspection
+        run: |
+          docker images village-calendar:native-${{ github.sha }}
+          docker inspect village-calendar:native-${{ github.sha }} --format \
+            '{{ json .Config.Cmd }}{{ "\n" }}{{ json .Config.Entrypoint }}{{ "\n" }}{{ json .Config.ExposedPorts }}'
+
+      - name: Quick smoke test
+        # Start the container, give it 30s to come up, hit /q/health/live. The
+        # native binary boots in <100ms when healthy; if it hasn't responded
+        # in 30s something is wrong (likely a runtime init failure that the
+        # native compiler missed at build time — exactly the class of bug we
+        # care about here).
+        run: |
+          set +e
+          docker run -d --rm --name vc-native -p 8030:8030 village-calendar:native-${{ github.sha }}
+          for i in $(seq 1 30); do
+            sleep 1
+            STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8030/q/health/live 2>/dev/null || echo 000)
+            if [ "$STATUS" = "200" ]; then
+              echo "Native binary healthy after ${i}s"
+              docker logs vc-native | tail -30
+              docker stop vc-native
+              exit 0
+            fi
+          done
+          echo "::error::Native binary did not become healthy within 30s"
+          docker logs vc-native | tail -100
+          docker stop vc-native || true
+          exit 1
