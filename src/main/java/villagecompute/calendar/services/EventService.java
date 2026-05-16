@@ -595,7 +595,8 @@ public class EventService {
      * @return true if at least one code point is recognized as an emoji
      */
     private boolean containsEmojiCharacter(String emoji) {
-        for (int i = 0; i < emoji.length();) {
+        int i = 0;
+        while (i < emoji.length()) {
             int codePoint = emoji.codePointAt(i);
             if (isEmojiCodePoint(codePoint)) {
                 return true;

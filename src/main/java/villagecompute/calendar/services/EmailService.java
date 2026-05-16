@@ -88,8 +88,7 @@ public class EmailService {
         String domain = email.substring(email.lastIndexOf("@") + 1).toLowerCase();
         List<String> safeDomains = getSafeTestDomainsList();
 
-        return safeDomains.stream().map(String::toLowerCase).map(String::trim)
-                .anyMatch(safeDomain -> domain.equals(safeDomain));
+        return safeDomains.stream().map(String::toLowerCase).map(String::trim).anyMatch(domain::equals);
     }
 
     /**
