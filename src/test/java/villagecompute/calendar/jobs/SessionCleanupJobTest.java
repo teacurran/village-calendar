@@ -7,6 +7,8 @@ import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import villagecompute.calendar.services.SessionService;
 
@@ -30,39 +32,16 @@ class SessionCleanupJobTest {
         reset(sessionService);
     }
 
-    @Test
-    void testCleanupExpiredSessions_Success_DeletesSessions() {
+    @ParameterizedTest(name = "deleteExpiredSessions returns {0}")
+    @ValueSource(ints = {5, 0, 1000})
+    void testCleanupExpiredSessions_VariousReturnCounts_CompletesSuccessfully(int deletedCount) {
         // Given - session service returns a count of deleted sessions
-        when(sessionService.deleteExpiredSessions()).thenReturn(5);
-
-        // When
-        sessionCleanupJob.cleanupExpiredSessions();
-
-        // Then - verify service was called
-        verify(sessionService).deleteExpiredSessions();
-    }
-
-    @Test
-    void testCleanupExpiredSessions_NoExpiredSessions_CompletesSuccessfully() {
-        // Given - no expired sessions
-        when(sessionService.deleteExpiredSessions()).thenReturn(0);
+        when(sessionService.deleteExpiredSessions()).thenReturn(deletedCount);
 
         // When
         sessionCleanupJob.cleanupExpiredSessions();
 
         // Then - verify service was called, no exception thrown
-        verify(sessionService).deleteExpiredSessions();
-    }
-
-    @Test
-    void testCleanupExpiredSessions_LargeNumberOfSessions_CompletesSuccessfully() {
-        // Given - many expired sessions
-        when(sessionService.deleteExpiredSessions()).thenReturn(1000);
-
-        // When
-        sessionCleanupJob.cleanupExpiredSessions();
-
-        // Then
         verify(sessionService).deleteExpiredSessions();
     }
 

@@ -12,6 +12,8 @@ import jakarta.transaction.Transactional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -1400,49 +1402,24 @@ class OrderServiceTest {
         assertEquals(1, count);
     }
 
-    @Test
+    @ParameterizedTest(
+            name = "page={0}, pageSize={1} returns {2} orders")
+    @CsvSource({"0, 2, 2", // first page
+            "1, 2, 2", // second page
+            "2, 2, 1" // last partial page (only 1 order remaining)
+    })
     @Transactional
-    void testGetOrdersPaginated_FirstPage() {
+    void testGetOrdersPaginated_Pages(int page, int pageSize, int expectedCount) {
         // Given - create 5 orders
         for (int i = 0; i < 5; i++) {
             createTestOrder();
         }
 
-        // When - get first page of 2
-        List<CalendarOrder> orders = orderService.getOrdersPaginated(null, 0, 2);
+        // When
+        List<CalendarOrder> orders = orderService.getOrdersPaginated(null, page, pageSize);
 
         // Then
-        assertEquals(2, orders.size());
-    }
-
-    @Test
-    @Transactional
-    void testGetOrdersPaginated_SecondPage() {
-        // Given - create 5 orders
-        for (int i = 0; i < 5; i++) {
-            createTestOrder();
-        }
-
-        // When - get second page of 2
-        List<CalendarOrder> orders = orderService.getOrdersPaginated(null, 1, 2);
-
-        // Then
-        assertEquals(2, orders.size());
-    }
-
-    @Test
-    @Transactional
-    void testGetOrdersPaginated_LastPartialPage() {
-        // Given - create 5 orders
-        for (int i = 0; i < 5; i++) {
-            createTestOrder();
-        }
-
-        // When - get third page of 2 (only 1 order remaining)
-        List<CalendarOrder> orders = orderService.getOrdersPaginated(null, 2, 2);
-
-        // Then
-        assertEquals(1, orders.size());
+        assertEquals(expectedCount, orders.size());
     }
 
     @Test
