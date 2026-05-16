@@ -1,0 +1,20 @@
+{
+  "resources": {
+    "includes": [
+      {"pattern": "org/apache/pdfbox/resources/.*"},
+      {"pattern": "org/apache/fontbox/.*"},
+      {"pattern": "org/apache/batik/.*\\.properties"},
+      {"pattern": "org/apache/fop/.*\\.xml"},
+      {"pattern": "org/apache/fop/fonts/.*"},
+      {"pattern": "META-INF/services/.*"},
+      {"pattern": "emoji-svg/.*"},
+      {"pattern": "emoji-svg-mono/.*"},
+      {"pattern": "css/.*"},
+      {"pattern": "templates/.*"},
+      {"pattern": "content/.*"},
+      {"pattern": "data/.*"},
+      {"pattern": "jwt-private-key\\.pem"},
+      {"pattern": "jwt-public-key\\.pem"}
+    ]
+  }
+}

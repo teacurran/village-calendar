@@ -1,0 +1,92 @@
+####
+# Dockerfile.native — Build a GraalVM native-image of the Village Calendar service.
+#
+# This is INITIAL / EXPERIMENTAL. PDFBox + Batik + FOP make heavy use of
+# reflection and runtime resource discovery; expect this build to need additional
+# `@RegisterForReflection` hints and `quarkus.native.resources.includes` patterns
+# before it is fully green. See PR description for the current status.
+#
+# Build locally:
+#   docker buildx build -f Dockerfile.native -t village-calendar:native .
+#
+# Or build the native binary on the host and then assemble the runtime image:
+#   ./mvnw -B clean package -Pnative -Dquarkus.native.container-build=true -DskipTests
+#   docker build -f Dockerfile.native --target runtime -t village-calendar:native .
+#
+# The existing top-level `Dockerfile` (JVM-only) is unchanged and is still the
+# production-supported build path.
+####
+
+###
+# Stage 1: Build the application as a native binary using Mandrel
+###
+FROM quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 AS build
+
+USER root
+WORKDIR /build
+
+# Install Node 22 (matches CI / production JVM image) for the Quinoa frontend build.
+# Mandrel's base image is UBI 9 — use microdnf and the NodeSource RPM repo.
+RUN microdnf install -y --setopt=install_weak_deps=0 \
+        tar gzip findutils which \
+    && curl -fsSL https://rpm.nodesource.com/setup_22.x | bash - \
+    && microdnf install -y nodejs \
+    && microdnf clean all \
+    && node --version && npm --version
+
+# Copy Maven wrapper + POM first for better layer caching of dependency download.
+COPY --chown=quarkus:quarkus mvnw pom.xml ./
+COPY --chown=quarkus:quarkus .mvn .mvn
+
+# Warm the Maven cache. Failure is non-fatal — `package` will redo as needed.
+RUN ./mvnw -B -q -DskipTests dependency:go-offline || true
+
+# Copy the rest of the source tree (frontend + Java).
+COPY --chown=quarkus:quarkus src ./src
+
+# Run the native build. `container-build=false` here because we ARE the container
+# builder image — running it nested would try to launch another container.
+RUN ./mvnw -B package -Pnative -DskipTests \
+        -Dquarkus.native.container-build=false \
+        -Dquarkus.quinoa.build=true
+
+###
+# Stage 2: Runtime image
+#
+# Use ubi9-minimal + fontconfig because PDF rendering needs system fonts.
+# `quarkus-micro-image` is smaller but lacks fontconfig, and PDFBox/Batik will
+# silently render PDFs with missing glyphs if no fonts are present.
+###
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.6 AS runtime
+
+WORKDIR /work
+
+# Install fonts + fontconfig for PDF rendering (parallels the JVM Dockerfile's
+# Alpine package set: fontconfig + DejaVu + Noto Emoji).
+RUN microdnf install -y --setopt=install_weak_deps=0 \
+        fontconfig \
+        dejavu-sans-fonts \
+        dejavu-serif-fonts \
+        google-noto-emoji-color-fonts \
+        google-noto-emoji-fonts \
+    && microdnf clean all \
+    && fc-cache -f
+
+# Non-root user
+RUN echo 'quarkus:x:1001:1001::/work:/sbin/nologin' >> /etc/passwd \
+    && echo 'quarkus:x:1001:' >> /etc/group \
+    && chown -R 1001:1001 /work
+
+COPY --from=build --chown=1001:1001 /build/target/*-runner /work/application
+RUN chmod 0755 /work/application
+
+USER 1001
+
+EXPOSE 8030
+
+ENV QUARKUS_HTTP_HOST=0.0.0.0
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
+  CMD ["/work/application", "--health-check"] || exit 1
+
+ENTRYPOINT ["/work/application", "-Dquarkus.http.host=0.0.0.0"]
