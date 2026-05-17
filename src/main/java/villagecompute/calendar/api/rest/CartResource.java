@@ -97,8 +97,8 @@ public class CartResource {
         // Handle configuration - can be string or object
         if (requestBody.get("configuration") != null) {
             Object configObj = requestBody.get("configuration");
-            if (configObj instanceof String) {
-                input.configuration = (String) configObj;
+            if (configObj instanceof String configString) {
+                input.configuration = configString;
             } else {
                 try {
                     com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
