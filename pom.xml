@@ -200,10 +200,32 @@
       <artifactId>batik-transcoder</artifactId>
       <version>1.17</version>
     </dependency>
+    <!--
+      fop-core (NOT the legacy "fop" umbrella) keeps the SVG transcoder we
+      need while letting us excise the transitive Batik modules whose
+      image-loader/service-loader integration is incompatible with GraalVM
+      native compilation. We keep batik-transcoder + batik-codec as direct
+      deps because PDFRenderingService/CalendarRenderingService use the
+      Transcoder API directly.
+    -->
     <dependency>
       <groupId>org.apache.xmlgraphics</groupId>
-      <artifactId>fop</artifactId>
+      <artifactId>fop-core</artifactId>
       <version>2.9</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.xmlgraphics</groupId>
+          <artifactId>batik-anim</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.xmlgraphics</groupId>
+          <artifactId>batik-bridge</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.xmlgraphics</groupId>
+          <artifactId>batik-extension</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- Proj4J for geographic projections (orthographic projection for moon) -->
