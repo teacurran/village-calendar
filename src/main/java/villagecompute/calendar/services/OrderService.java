@@ -601,13 +601,13 @@ public class OrderService {
     }
 
     /**
-     * Calculate tax for an order. TODO: Integrate with Stripe Tax API for automated tax calculation. For MVP, returns
-     * zero as a placeholder.
+     * Calculate tax for an order. For MVP, returns zero as a placeholder. A future enhancement will integrate with
+     * Stripe Tax API for automated tax calculation.
      *
      * @return Tax amount (currently always zero)
      */
     private BigDecimal calculateTax() {
-        // TODO: Future enhancement - integrate with Stripe Tax API
+        // Note: Future enhancement - integrate with Stripe Tax API.
         // This will provide automated tax calculation based on:
         // - Shipping address (state/country)
         // - Product tax codes

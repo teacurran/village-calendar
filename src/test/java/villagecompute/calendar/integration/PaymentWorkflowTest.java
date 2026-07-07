@@ -180,8 +180,8 @@ class PaymentWorkflowTest {
         assertTrue(cancelledOrder.notes.contains("Customer requested cancellation"),
                 "Notes should contain cancellation reason");
 
-        // Note: Refund processing is handled separately by PaymentService (see I3.T3)
-        // OrderService.cancelOrder() only updates order status and adds a TODO note about refund
+        // Note: Refund processing is handled separately by PaymentService (see I3.T3).
+        // OrderService.cancelOrder() only updates order status and appends a refund-pending note.
         assertTrue(cancelledOrder.notes.contains("TODO: Process refund") || cancelledOrder.notes.contains("refund"),
                 "Notes should mention refund processing needed");
     }

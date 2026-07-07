@@ -543,10 +543,6 @@ class AuthenticationServiceTest {
                 return Set.of();
             }
 
-            public <T extends io.quarkus.security.credential.Credential> Set<T> getCredentials(Class<T> aClass) {
-                return Set.of();
-            }
-
             public io.smallrye.mutiny.Uni<Boolean> checkPermission(java.security.Permission permission) {
                 return io.smallrye.mutiny.Uni.createFrom().item(true);
             }
@@ -601,10 +597,6 @@ class AuthenticationServiceTest {
 
             @Override
             public Set<io.quarkus.security.credential.Credential> getCredentials() {
-                return Set.of();
-            }
-
-            public <T extends io.quarkus.security.credential.Credential> Set<T> getCredentials(Class<T> aClass) {
                 return Set.of();
             }
 

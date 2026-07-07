@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import villagecompute.calendar.data.models.CalendarTemplate;
 
+import io.quarkus.narayana.jta.QuarkusTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 
 /** Tests for CalendarsPageResource. Tests the calendar product pages at /calendars/ */
@@ -167,5 +168,118 @@ class CalendarsPageResourceTest {
         // When/Then: GET /calendars/test-calendar-template/somefile returns 404
         given().when().get("/calendars/test-calendar-template/somefile").then().statusCode(404)
                 .body(containsString("Asset not found"));
+    }
+
+    // ============================================================================
+    // SPA ROUTE TESTS
+    // ============================================================================
+    // The SPA index.html is not present on the classpath in test runs, so the
+    // fallback path attempts to reach the Vite dev server. In CI/test it
+    // returns 503 (dev server not running) or 200 if it has been started.
+
+    @Test
+    void testProduct_GeneratorSpaRoute_DoesNotReturn404() {
+        // When/Then: GET /calendars/generator hits the SPA serve path, not the
+        // CalendarTemplate 404 page. We accept any non-404 status because the
+        // dev server presence varies.
+        given().when().get("/calendars/generator").then().statusCode(anyOf(is(200), is(503)));
+    }
+
+    @Test
+    void testProduct_NewSpaRoute_DoesNotReturn404() {
+        // When/Then: GET /calendars/new hits the SPA serve path
+        given().when().get("/calendars/new").then().statusCode(anyOf(is(200), is(503)));
+    }
+
+    @Test
+    void testProduct_EditSpaRoute_DoesNotReturn404() {
+        // When/Then: GET /calendars/edit hits the SPA serve path
+        given().when().get("/calendars/edit").then().statusCode(anyOf(is(200), is(503)));
+    }
+
+    // ============================================================================
+    // PRODUCT PAGE - VIEW MODEL VARIANTS
+    // ============================================================================
+
+    @Test
+    void testProduct_UsesYearFromConfiguration() {
+        // Given: a template with year set in its configuration. Use a separate
+        // committed transaction so the HTTP call below sees the row.
+        QuarkusTransaction.requiringNew().run(() -> {
+            CalendarTemplate.delete("slug", "test-calendar-year");
+            CalendarTemplate yearTemplate = new CalendarTemplate();
+            yearTemplate.name = "Year Configured Template";
+            yearTemplate.slug = "test-calendar-year";
+            yearTemplate.description = "Calendar with explicit year";
+            yearTemplate.isActive = true;
+            yearTemplate.isFeatured = false;
+            yearTemplate.displayOrder = 2;
+            yearTemplate.priceCents = 3999;
+            yearTemplate.configuration = objectMapper.createObjectNode().put("theme", "vintage").put("year", 2042);
+            yearTemplate.persist();
+        });
+
+        try {
+            // When/Then: the rendered page reflects the configuration year
+            given().when().get("/calendars/test-calendar-year").then().statusCode(200)
+                    .contentType(containsString("text/html")).body(containsString("Year Configured Template"))
+                    .body(containsString("2042"));
+        } finally {
+            QuarkusTransaction.requiringNew().run(() -> CalendarTemplate.delete("slug", "test-calendar-year"));
+        }
+    }
+
+    @Test
+    void testProduct_HandlesNullPriceCents() {
+        // Given: a template with null priceCents (covers the default-fallback branch)
+        QuarkusTransaction.requiringNew().run(() -> {
+            CalendarTemplate.delete("slug", "test-calendar-null-price");
+            CalendarTemplate priceTemplate = new CalendarTemplate();
+            priceTemplate.name = "Null Price Template";
+            priceTemplate.slug = "test-calendar-null-price";
+            priceTemplate.description = "Calendar with null price";
+            priceTemplate.isActive = true;
+            priceTemplate.isFeatured = false;
+            priceTemplate.displayOrder = 3;
+            priceTemplate.priceCents = null;
+            priceTemplate.configuration = objectMapper.createObjectNode().put("theme", "classic");
+            priceTemplate.persist();
+        });
+
+        try {
+            // When/Then: the page still renders (defaults to $29.99)
+            given().when().get("/calendars/test-calendar-null-price").then().statusCode(200)
+                    .contentType(containsString("text/html")).body(containsString("Null Price Template"))
+                    .body(containsString("29.99"));
+        } finally {
+            QuarkusTransaction.requiringNew().run(() -> CalendarTemplate.delete("slug", "test-calendar-null-price"));
+        }
+    }
+
+    @Test
+    void testProduct_HandlesInvalidConfigurationGracefully() {
+        // Given: a template whose configuration cannot deserialize to CalendarConfigType
+        // (the "year" field is a string instead of an int)
+        QuarkusTransaction.requiringNew().run(() -> {
+            CalendarTemplate.delete("slug", "test-calendar-bad-config");
+            CalendarTemplate badTemplate = new CalendarTemplate();
+            badTemplate.name = "Bad Config Template";
+            badTemplate.slug = "test-calendar-bad-config";
+            badTemplate.description = "Calendar with bad configuration";
+            badTemplate.isActive = true;
+            badTemplate.isFeatured = false;
+            badTemplate.displayOrder = 4;
+            badTemplate.priceCents = 1999;
+            badTemplate.configuration = objectMapper.createObjectNode().put("year", "not-a-number");
+            badTemplate.persist();
+        });
+
+        try {
+            // When/Then: the resource catches the parse exception and still serves the page
+            given().when().get("/calendars/test-calendar-bad-config").then().statusCode(200)
+                    .contentType(containsString("text/html")).body(containsString("Bad Config Template"));
+        } finally {
+            QuarkusTransaction.requiringNew().run(() -> CalendarTemplate.delete("slug", "test-calendar-bad-config"));
+        }
     }
 }

@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,21 +29,12 @@ class JsonNodeAdapterTest {
 
     // ========== from() - String to JsonNode ==========
 
-    @Test
-    void testFrom_NullString_ReturnsNull() {
-        JsonNode result = adapter.from(null);
-        assertNull(result);
-    }
-
-    @Test
-    void testFrom_EmptyString_ReturnsNull() {
-        JsonNode result = adapter.from("");
-        assertNull(result);
-    }
-
-    @Test
-    void testFrom_BlankString_ReturnsNull() {
-        JsonNode result = adapter.from("   ");
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(
+            strings = {"   "})
+    void testFrom_NullEmptyOrBlankString_ReturnsNull(String input) {
+        JsonNode result = adapter.from(input);
         assertNull(result);
     }
 
@@ -163,40 +157,15 @@ class JsonNodeAdapterTest {
         assertEquals(3, parsed.size());
     }
 
-    @Test
-    void testTo_StringNode_ReturnsValidJson() throws Exception {
-        JsonNode node = mapper.readTree("\"hello world\"");
+    @ParameterizedTest
+    @ValueSource(
+            strings = {"\"hello world\"", "123.45", "false", "null"})
+    void testTo_PrimitiveNode_ReturnsValidJson(String json) throws Exception {
+        JsonNode node = mapper.readTree(json);
 
         String result = adapter.to(node);
 
-        assertEquals("\"hello world\"", result);
-    }
-
-    @Test
-    void testTo_NumberNode_ReturnsValidJson() throws Exception {
-        JsonNode node = mapper.readTree("123.45");
-
-        String result = adapter.to(node);
-
-        assertEquals("123.45", result);
-    }
-
-    @Test
-    void testTo_BooleanNode_ReturnsValidJson() throws Exception {
-        JsonNode node = mapper.readTree("false");
-
-        String result = adapter.to(node);
-
-        assertEquals("false", result);
-    }
-
-    @Test
-    void testTo_NullValueNode_ReturnsValidJson() throws Exception {
-        JsonNode node = mapper.readTree("null");
-
-        String result = adapter.to(node);
-
-        assertEquals("null", result);
+        assertEquals(json, result);
     }
 
     @Test
