@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import villagecompute.calendar.data.models.enums.MazeType;
 import villagecompute.calendar.services.MazeGenerationService.MazeGenerationConfig;
@@ -141,40 +143,16 @@ class MazeGenerationServiceTest {
     // Size parameter TESTS
     // ============================================================================
 
-    @Test
-    void testGeneratePreview_MinimumSize_Succeeds() {
+    @ParameterizedTest(
+            name = "generatePreview(size={0}, count={1}) succeeds")
+    @CsvSource({"1, 1", // minimum size
+            "20, 5", // maximum size
+            "0, 3", // size out of range low, clamped to minimum
+            "100, 3" // size out of range high, clamped to maximum
+    })
+    void testGeneratePreview_SizeVariants_Succeeds(int size, int count) {
         // When
-        String svg = mazeGenerationService.generatePreview(MazeType.ORTHOGONAL, 1, 1, false);
-
-        // Then
-        assertNotNull(svg);
-        assertTrue(svg.startsWith("<svg"));
-    }
-
-    @Test
-    void testGeneratePreview_MaximumSize_Succeeds() {
-        // When
-        String svg = mazeGenerationService.generatePreview(MazeType.ORTHOGONAL, 20, 5, false);
-
-        // Then
-        assertNotNull(svg);
-        assertTrue(svg.startsWith("<svg"));
-    }
-
-    @Test
-    void testGeneratePreview_SizeOutOfRangeLow_ClampedToMinimum() {
-        // When - size 0 should be clamped to 1
-        String svg = mazeGenerationService.generatePreview(MazeType.ORTHOGONAL, 0, 3, false);
-
-        // Then
-        assertNotNull(svg);
-        assertTrue(svg.startsWith("<svg"));
-    }
-
-    @Test
-    void testGeneratePreview_SizeOutOfRangeHigh_ClampedToMaximum() {
-        // When - size 100 should be clamped to 20
-        String svg = mazeGenerationService.generatePreview(MazeType.ORTHOGONAL, 100, 3, false);
+        String svg = mazeGenerationService.generatePreview(MazeType.ORTHOGONAL, size, count, false);
 
         // Then
         assertNotNull(svg);

@@ -1026,10 +1026,10 @@ class CalendarRenderingServiceTest {
     }
 
     // ========== MOON DISPLAY MODE BRANCH TESTS ==========
-    // Tests the shouldShowMoon flag for each moonDisplayMode option (illumination always shows;
-    // phases shows on moon phase days; full-only shows only on full moon days), and the
-    // largeMoonEnabled flag (enabled when moonDisplayMode is not "none" and moonSize is at
-    // least 15).
+    // These tests exercise the moon display branches. Illumination mode always shows the
+    // moon. Phases mode shows the moon on moon phase days. Full-only mode shows the moon
+    // only on full moon days. The large moon rendering branch is enabled when the display
+    // mode is anything other than none and the moon size is at least 15.
 
     @ParameterizedTest
     @ValueSource(

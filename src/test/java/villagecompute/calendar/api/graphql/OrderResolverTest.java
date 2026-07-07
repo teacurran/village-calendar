@@ -12,6 +12,8 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -218,52 +220,20 @@ class OrderResolverTest {
                 .statusCode(200).body("errors", notNullValue()); // Should return error for unauthenticated access
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(
+            strings = {"myOrders", "orders", "allOrders"})
     @Order(11)
-    void testQueryMyOrders_Unauthenticated() {
-        // Test: myOrders query without authentication should fail
-        String query = """
+    void testQueryOrderList_Unauthenticated(String queryField) {
+        // Test: list-style order queries without authentication should fail
+        String query = String.format("""
                 {
-                    myOrders {
+                    %s {
                         id
                         status
                     }
                 }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue()); // Should return error for unauthenticated access
-    }
-
-    @Test
-    @Order(12)
-    void testQueryOrders_Unauthenticated() {
-        // Test: orders query without authentication should fail
-        String query = """
-                {
-                    orders {
-                        id
-                        status
-                    }
-                }
-                """;
-
-        given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
-                .statusCode(200).body("errors", notNullValue()); // Should return error for unauthenticated access
-    }
-
-    @Test
-    @Order(13)
-    void testQueryAllOrders_Unauthenticated() {
-        // Test: allOrders query without authentication should fail (admin only)
-        String query = """
-                {
-                    allOrders {
-                        id
-                        status
-                    }
-                }
-                """;
+                """, queryField);
 
         given().contentType(ContentType.JSON).body(Map.of("query", query)).when().post("/graphql").then()
                 .statusCode(200).body("errors", notNullValue()); // Should return error for unauthenticated access

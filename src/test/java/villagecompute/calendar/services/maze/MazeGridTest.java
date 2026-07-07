@@ -451,7 +451,7 @@ class MazeGridTest {
             int dy = Math.abs(current[1] - next[1]);
 
             // Should be exactly one step in either x or y direction (Manhattan distance = 1)
-            assertTrue(dx + dy == 1, "Solution path should be contiguous at step " + i);
+            assertEquals(1, dx + dy, "Solution path should be contiguous at step " + i);
         }
     }
 
